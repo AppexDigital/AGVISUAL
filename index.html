@@ -3,80 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- CAMBIO: Versión actualizada a 2.9 -->
-    <title>Adán Gómez | Fotógrafo Profesional (v2.9)</title>
-
+    <!-- Versión actualizada a 5.8 -->
+    <title>Adán Gómez | Fotógrafo Profesional (v5.8)</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="imagenes/Icon.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;700&family=Playfair+Display:ital,wght@1,400..900&display=swap" rel="stylesheet">
-
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
     <style>
         :root {
             --bg-main: #FDFDFD;
             --text-dark: #1a1a1a;
             --text-light: #f8f9fa;
+            --accent: #3a3a3a;
         }
         html { scroll-behavior: smooth; }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-main);
             color: var(--text-dark);
+            overflow-x: hidden;
         }
         h1, h2, h3, h4, .font-display { font-family: 'Cormorant Garamond', serif; }
         .font-signature { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 500; }
         
-        /* --- Estructura de Páginas --- */
-        .page-container { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
-        .page-active { display: block; opacity: 1; }
+        /* --- Arquitectura de Transición (Crossfade) --- */
+        .page-container { 
+            display: none; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out;
+        }
+        .page-active { 
+            display: block; 
+            opacity: 1;
+        }
+        .page-exiting {
+            display: block;
+            opacity: 0;
+        }
         
-        /* CAMBIO: Animación de carga de imágenes refinada */
+        /* --- Animación de carga de imágenes (Fade-in) --- */
         .reveal {
             opacity: 0;
-            transform: scale(0.98);
-            transition: opacity 0.8s cubic-bezier(0.165, 0.84, 0.44, 1), transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+            transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
         .reveal.visible {
             opacity: 1;
-            transform: scale(1);
         }
-
-        /* --- Header Dinámico --- */
+        
+        /* --- Indicador de carga --- */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loader-circle {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* --- Header Dinámico Mejorado --- */
         #header {
-            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-            padding-top: 2rem;
-            padding-bottom: 2rem;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
         }
         #header.header-scrolled {
-            padding-top: 1.25rem;
-            padding-bottom: 1.25rem;
-            background-color: rgba(253, 253, 253, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-        }
-
-        /* --- Menú Móvil Mejorado --- */
-        #mobile-menu {
-            /* CAMBIO: Temática blanca */
-            background-color: rgba(253, 253, 253, 0.9);
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+            background-color: rgba(253, 253, 253, 0.95);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
-            transition: transform 0.5s cubic-bezier(0.76, 0, 0.24, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* --- Menú Móvil Mejorado --- */
+        #mobile-menu {
+            background-color: rgba(253, 253, 253, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transform: translateX(100%);
+            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+        }
+        #mobile-menu.open {
+            transform: translateX(0);
         }
         .mobile-nav-link {
             font-family: 'Cormorant Garamond', serif;
-            /* CAMBIO: Color de texto oscuro */
             color: var(--text-dark);
             opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.4s ease, transform 0.4s ease;
+            transform: translateY(30px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            position: relative;
+        }
+        .mobile-nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent);
+            transition: width 0.4s ease;
+        }
+        .mobile-nav-link:hover::after, .mobile-nav-link.nav-active::after {
+            width: 100%;
         }
         #mobile-menu-button .icon-bar {
             transition: transform 0.3s ease-in-out, opacity 0.2s;
@@ -84,106 +139,386 @@
         #mobile-menu-button.open .icon-bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
         #mobile-menu-button.open .icon-bar:nth-child(2) { opacity: 0; }
         #mobile-menu-button.open .icon-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-
-        /* --- Galería --- */
-        .gallery-item { cursor: pointer; transition: transform 0.4s ease, box-shadow 0.4s ease; }
-        .gallery-item:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); }
-        .gallery-item .overlay { opacity: 0; transition: opacity 0.4s ease; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%); }
-        .gallery-item:hover .overlay { opacity: 1; }
         
-        /* --- Lightbox --- */
-        #lightbox { background-color: rgba(15, 15, 15, 0.92); backdrop-filter: blur(5px); transition: opacity 0.3s ease-in-out; }
-        #lightbox-image { transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1); transform: scale(0.95); }
-        #lightbox.visible #lightbox-image { transform: scale(1); }
+        /* --- Estilo para el enlace de navegación activo --- */
+        .nav-link.nav-active > span {
+            width: 100%;
+        }
+
+        /* --- Galería Mejorada --- */
+        .gallery-item { 
+            cursor: pointer; 
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative;
+            overflow: hidden;
+        }
+        .gallery-item:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        .gallery-item img {
+            transition: transform 0.8s ease;
+        }
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+        .gallery-item .overlay { 
+            opacity: 0; 
+            transition: opacity 0.5s ease; 
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%);
+        }
+        .gallery-item:hover .overlay { 
+            opacity: 1; 
+        }
+        .gallery-item .overlay p {
+            transform: translateY(20px);
+            transition: transform 0.5s ease;
+        }
+        .gallery-item:hover .overlay p {
+            transform: translateY(0);
+        }
+        
+        /* --- Lightbox Mejorado --- */
+        #lightbox { 
+            background-color: rgba(10, 10, 10, 0.95); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: opacity 0.4s ease-in-out;
+        }
+        #lightbox-image { 
+            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); 
+            transform: scale(0.9);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            max-height: 80vh;
+        }
+        #lightbox.visible #lightbox-image { 
+            transform: scale(1); 
+        }
+        #lightbox-close {
+            transition: all 0.3s ease;
+        }
+        #lightbox-close:hover {
+            transform: rotate(90deg);
+            color: #ff5252;
+        }
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 101;
+        }
+        .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
+        #lightbox-prev { left: 20px; }
+        #lightbox-next { right: 20px; }
         
         /* --- Contacto y Mapa --- */
-        .contact-icon-link { background-color: #f3f4f6; transition: all 0.3s ease; }
-        .contact-icon-link:hover { background-color: var(--text-dark); color: white; transform: scale(1.1); }
-        #google-map { filter: grayscale(100%) contrast(90%) brightness(110%); transition: filter 0.3s ease; }
-        #google-map:hover { filter: grayscale(0%); }
-
+        .contact-icon-link { 
+            background-color: #f3f4f6; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        .contact-icon-link::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background-color: var(--accent);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+            z-index: -1;
+        }
+        .contact-icon-link:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        .contact-icon-link:hover { 
+            color: white; 
+            transform: scale(1.1);
+        }
+        #google-map { 
+            filter: grayscale(100%) contrast(90%) brightness(110%); 
+            transition: filter 0.5s ease;
+        }
+        #google-map:hover { 
+            filter: grayscale(0%);
+        }
+        
         /* --- Logos de Marcas --- */
         .client-logo {
             filter: grayscale(100%);
             opacity: 0.6;
-            transition: all 0.3s ease;
+            transition: all 0.4s ease;
         }
         .client-logo:hover {
             filter: grayscale(0%);
             opacity: 1;
+            transform: scale(1.05);
         }
+        
+        /* --- Botones y Enlaces Mejorados --- */
+        .btn-primary {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        /* --- Animación de aparición de texto --- */
+        .text-reveal {
+            position: relative;
+            overflow: hidden;
+        }
+        .text-reveal::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            transform: translateX(0);
+            transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .text-reveal.revealed::after {
+            transform: translateX(101%);
+        }
+        
+        /* --- Efecto parallax suave --- */
+        .parallax {
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* --- Animación de entrada para servicios --- */
+        .service-card {
+            transform: translateY(30px);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .service-card.animate {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        /* --- Mejoras de accesibilidad --- */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* --- Animación de carga de imágenes con placeholder --- */
+        .img-container {
+            position: relative;
+            overflow: hidden;
+            background-color: #f3f4f6;
+        }
+        .img-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+            animation: shimmer 1.5s infinite;
+            z-index: 1;
+        }
+        @keyframes shimmer {
+            100% { left: 100%; }
+        }
+        .img-container.loaded::before {
+            animation: none;
+            opacity: 0;
+        }
+
+        /* --- Estilos para la sección de Alquiler --- */
+        .rental-card {
+            transition: all 0.3s ease;
+        }
+        .rental-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .carousel-container {
+            overflow: hidden;
+            position: relative;
+        }
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        .carousel-item {
+            min-width: 100%;
+        }
+        .carousel-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .carousel-container:hover .carousel-button {
+            opacity: 1;
+        }
+        .carousel-button:hover {
+            background-color: rgba(0,0,0,0.8);
+        }
+        .carousel-button.prev { left: 10px; }
+        .carousel-button.next { right: 10px; }
     </style>
 </head>
 <body class="antialiased">
-
+    <!-- Indicador de carga -->
+    <div class="loader" id="page-loader">
+        <div class="flex flex-col items-center">
+            <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="h-[15rem] mb-8" onerror="this.onerror=null;this.src='https://placehold.co/200x64/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+            <div class="loader-circle"></div>
+        </div>
+    </div>
+    
     <!-- ===== HEADER ===== -->
     <header id="header" class="fixed top-0 left-0 right-0 z-50">
         <div class="container mx-auto px-6 flex justify-between items-center">
-            <a href="#" data-target="portfolio" class="nav-link text-2xl font-bold font-display tracking-wider hover:opacity-80 transition-opacity">ADÁN GÓMEZ</a>
+            <a href="#" data-target="portfolio" class="nav-link relative group">
+                <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-[250px] h-auto transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src='https://placehold.co/350x144/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+            </a>
             <nav class="hidden md:flex space-x-8 text-sm uppercase tracking-widest">
-                <a href="#" data-target="portfolio" class="nav-link hover:text-gray-500 transition-colors">Portafolio</a>
-                <a href="#" data-target="projects" class="nav-link hover:text-gray-500 transition-colors">Proyectos</a>
-                <a href="#" data-target="services" class="nav-link hover:text-gray-500 transition-colors">Servicios</a>
-                <a href="#" data-target="about" class="nav-link hover:text-gray-500 transition-colors">Quién Soy</a>
-                <a href="#" data-target="contact" class="nav-link hover:text-gray-500 transition-colors">Contacto</a>
+                <a href="#" data-target="portfolio" class="nav-link hover:text-gray-500 transition-colors relative group">
+                    Portafolio
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#" data-target="projects" class="nav-link hover:text-gray-500 transition-colors relative group">
+                    Proyectos
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#" data-target="services" class="nav-link hover:text-gray-500 transition-colors relative group">
+                    Servicios
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#" data-target="rental" class="nav-link hover:text-gray-500 transition-colors relative group">
+                    Alquiler
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#" data-target="about" class="nav-link hover:text-gray-500 transition-colors relative group">
+                    Quién Soy
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#" data-target="contact" class="nav-link hover:text-gray-500 transition-colors relative group">
+                    Contacto
+                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                </a>
             </nav>
-            <button id="mobile-menu-button" class="md:hidden z-50 w-8 h-6 flex flex-col justify-between">
+            <button id="mobile-menu-button" class="md:hidden z-50 w-8 h-6 flex flex-col justify-between" aria-label="Menú móvil" aria-expanded="false">
                 <span class="block w-full h-0.5 bg-black icon-bar"></span>
                 <span class="block w-full h-0.5 bg-black icon-bar"></span>
                 <span class="block w-full h-0.5 bg-black icon-bar"></span>
             </button>
         </div>
     </header>
-
     <!-- Menú Móvil Overlay (Rediseñado) -->
-    <div id="mobile-menu" class="fixed top-0 right-0 w-full h-full z-40 transform translate-x-full md:hidden">
-        <nav class="flex flex-col justify-center items-center h-full space-y-6 text-3xl">
-            <a href="#" data-target="portfolio" class="nav-link mobile-nav-link">Portafolio</a>
-            <a href="#" data-target="projects" class="nav-link mobile-nav-link">Proyectos</a>
-            <a href="#" data-target="services" class="nav-link mobile-nav-link">Servicios</a>
-            <a href="#" data-target="about" class="nav-link mobile-nav-link">Quién Soy</a>
-            <a href="#" data-target="contact" class="nav-link mobile-nav-link">Contacto</a>
+    <div id="mobile-menu" class="fixed top-0 right-0 w-full h-full z-40 md:hidden" aria-hidden="true">
+        <nav class="flex flex-col justify-center items-center h-full space-y-8 text-3xl">
+            <a href="#" data-target="portfolio" class="nav-link mobile-nav-link uppercase">Portafolio</a>
+            <a href="#" data-target="projects" class="nav-link mobile-nav-link uppercase">Proyectos</a>
+            <a href="#" data-target="services" class="nav-link mobile-nav-link uppercase">Servicios</a>
+            <a href="#" data-target="rental" class="nav-link mobile-nav-link uppercase">Alquiler</a>
+            <a href="#" data-target="about" class="nav-link mobile-nav-link uppercase">Quién Soy</a>
+            <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
     </div>
-
     <main id="main-content">
         <!-- ===== PORTFOLIO PAGE ===== -->
-        <section id="portfolio" class="page-container pt-32 md:pt-40 pb-20 md:pb-24">
+        <section id="portfolio" class="page-container pt-32 md:pt-40 pb-0" aria-label="Portafolio">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-12 reveal">
-                    <h1 class="text-5xl md:text-6xl font-display">El Arte de Contar Historias sin Palabras</h1>
-                    <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">Mi trabajo es mi carta de presentación. Explora una selección de mis proyectos más recientes.</p>
-                </div>
-                <div id="portfolio-filters" class="flex justify-center flex-wrap gap-2 md:gap-4 mb-12 reveal">
-                    <button class="filter-btn active px-5 py-2 rounded-full border border-gray-300" data-filter="all">Todos</button>
-                    <button class="filter-btn px-5 py-2 rounded-full border border-gray-300" data-filter="bodas">Bodas</button>
-                    <button class="filter-btn px-5 py-2 rounded-full border border-gray-300" data-filter="retratos">Retratos</button>
-                    <button class="filter-btn px-5 py-2 rounded-full border border-gray-300" data-filter="producto">Producto</button>
-                    <button class="filter-btn px-5 py-2 rounded-full border border-gray-300" data-filter="eventos">Eventos</button>
-                    <button class="filter-btn px-5 py-2 rounded-full border border-gray-300" data-filter="naturaleza">Naturaleza</button>
-                </div>
-                <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-4 gap-6 space-y-6">
-                    <!-- Las ~200 imágenes se insertan aquí desde JS -->
+                <div class="text-center mb-16 reveal">
+                    <h1 class="text-5xl md:text-6xl font-display text-reveal">El Arte de Contar Historias sin Palabras</h1>
+                    <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto text-reveal">Mi trabajo es mi carta de presentación. Explora una selección de mis proyectos más recientes.</p>
                 </div>
 
-                <div class="mt-24 reveal">
+                <div class="mb-24 reveal">
+                    <div class="text-center mb-12">
+                        <h2 class="text-4xl font-display text-gray-800 text-reveal">Galería Fotográfica</h2>
+                        <hr class="w-24 h-0.5 mx-auto mt-4 bg-gray-300 border-0">
+                    </div>
+                    <div id="portfolio-gallery" class="columns-3 sm:columns-3 lg:columns-5 gap-3 space-y-3">
+                        <!-- Las ~200 imágenes se insertan aquí desde JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-black text-white py-20 reveal">
+                <div class="container mx-auto px-6">
                     <div class="text-center mb-16">
-                        <h2 class="text-4xl md:text-5xl font-display">Historias en Movimiento</h2>
-                        <p class="text-lg text-gray-600 mt-2">Capturando la esencia más allá de la imagen fija.</p>
+                        <h2 class="text-4xl font-display text-reveal">Cinematografía</h2>
+                        <p class="text-lg text-gray-400 mt-2 text-reveal">Capturando la esencia más allá de la imagen fija.</p>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-                        <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden shadow-xl gallery-item">
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
                             <img src="https://placehold.co/1280x720/333333/ffffff?text=Cinematic+Wedding+Film" class="w-full h-full object-cover" alt="Cinematic Wedding Film">
                         </div>
-                        <div class="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden shadow-xl gallery-item">
-                             <img src="https://placehold.co/1280x720/cccccc/333333?text=Branding+Short+Film" class="w-full h-full object-cover" alt="Branding Short Film">
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
+                            <img src="https://placehold.co/1280x720/cccccc/333333?text=Branding+Short+Film" class="w-full h-full object-cover" alt="Branding Short Film">
+                        </div>
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
+                            <img src="https://placehold.co/1280x720/444444/ffffff?text=Travel+Diary" class="w-full h-full object-cover" alt="Travel Diary">
+                        </div>
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
+                            <img src="https://placehold.co/1280x720/bbbbbb/333333?text=Product+Reel" class="w-full h-full object-cover" alt="Product Reel">
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="mt-24 reveal">
+            <div class="bg-gray-100 py-20 reveal">
+                <div class="container mx-auto px-6">
                     <div class="text-center mb-12">
-                         <h3 class="text-3xl font-display text-gray-800">Marcas que han confiado en mi visión</h3>
+                         <h2 class="text-4xl font-display text-gray-800 text-reveal">Marcas Colaboradoras</h2>
+                         <p class="text-lg text-gray-600 mt-2 text-reveal">Una sinergia de visiones y valores.</p>
                     </div>
                     <div class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto">
                         <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+1" alt="Logo Cliente 1" class="client-logo">
@@ -193,109 +528,209 @@
                         <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+5" alt="Logo Cliente 5" class="client-logo">
                     </div>
                 </div>
-
-                <div class="text-center mt-24 reveal">
-                    <a href="#" data-target="projects" class="nav-link inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Explorar Proyectos Completos</a>
+            </div>
+            
+            <div class="bg-gray-100 pt-12 pb-24 reveal">
+                <div class="container mx-auto px-6 text-center">
+                     <div class="text-center mb-12">
+                        <h2 class="text-4xl font-display text-gray-800 text-reveal">¿Listo para el Siguiente Paso?</h2>
+                        <p class="text-lg text-gray-600 mt-2 text-reveal">Explora mis proyectos o contáctame para empezar a crear.</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                        <a href="#" data-target="projects" class="nav-link btn-primary inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105 w-full sm:w-auto">Explorar Proyectos</a>
+                        <a href="#" data-target="contact" class="nav-link btn-primary inline-block bg-gray-800 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-black transition-transform hover:scale-105 w-full sm:w-auto">Contactar Ahora</a>
+                    </div>
                 </div>
             </div>
         </section>
-
         <!-- ===== PROJECTS PAGE ===== -->
-        <section id="projects" class="page-container py-20 md:py-24 bg-gray-50">
+        <section id="projects" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-gray-50" aria-label="Proyectos">
             <div class="container mx-auto px-4 md:px-12">
                 <div class="text-center mb-16 reveal">
-                    <h2 class="text-5xl md:text-6xl font-display">Proyectos Destacados</h2>
-                    <p class="text-lg text-gray-600 mt-2">Historias completas contadas a través de mi lente.</p>
+                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Proyectos Destacados</h2>
+                    <p class="text-lg text-gray-600 mt-2 text-reveal">Historias completas contadas a través de mi lente.</p>
                 </div>
                 <div id="projects-container" class="space-y-20">
                     <!-- Los 7 proyectos se insertan aquí desde JS -->
                 </div>
                 <div class="text-center mt-24 reveal">
-                     <h3 class="text-3xl font-display text-gray-800">¿Listo para crear tu propia historia?</h3>
-                    <a href="#" data-target="services" class="nav-link mt-8 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Descubre mis Servicios</a>
+                     <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Listo para crear tu propia historia?</h3>
+                    <a href="#" data-target="services" class="nav-link btn-primary mt-8 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Descubre mis Servicios</a>
                 </div>
             </div>
         </section>
-
         <!-- ===== SERVICES PAGE ===== -->
-        <section id="services" class="page-container py-20 md:py-24">
+        <section id="services" class="page-container pt-32 md:pt-40 pb-20 md:pb-24" aria-label="Servicios">
             <div class="container mx-auto px-6">
                 <div class="text-center mb-16 reveal">
-                    <h2 class="text-5xl md:text-6xl font-display">Soluciones a Medida</h2>
-                    <p class="text-lg text-gray-600 mt-2">Más que fotos, creo experiencias visuales que cumplen tus objetivos.</p>
+                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Soluciones a Medida</h2>
+                    <p class="text-lg text-gray-600 mt-2 text-reveal">Más que fotos, creo experiencias visuales que cumplen tus objetivos.</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-                    <div class="p-8 border border-gray-200 rounded-lg reveal transition-all duration-300 hover:shadow-xl hover:border-black"><div class="text-4xl mb-4"><i class="fas fa-ring text-gray-400"></i></div><h3 class="text-2xl font-display mb-3">Fotografía de Bodas</h3><p class="text-gray-600 mb-4">Capturo la esencia y la emoción de tu día más especial con un enfoque documental y artístico.</p><p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p><ul class="list-disc list-inside text-gray-600 text-sm space-y-1"><li>Bodas íntimas y grandes celebraciones.</li><li>Sesiones pre-boda y post-boda.</li><li>Aniversarios y pedidas de mano.</li></ul></div>
-                    <div class="p-8 border border-gray-200 rounded-lg reveal transition-all duration-300 hover:shadow-xl hover:border-black" style="transition-delay: 200ms;"><div class="text-4xl mb-4"><i class="fas fa-portrait text-gray-400"></i></div><h3 class="text-2xl font-display mb-3">Retratos y Books</h3><p class="text-gray-600 mb-4">Creo imágenes que reflejan tu verdadera personalidad, ya sea para tu marca personal, tu familia o tu carrera.</p><p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p><ul class="list-disc list-inside text-gray-600 text-sm space-y-1"><li>Profesionales y emprendedores.</li><li>Actores, modelos y artistas.</li><li>Familias, parejas y maternidad.</li></ul></div>
-                    <div class="p-8 border border-gray-200 rounded-lg reveal transition-all duration-300 hover:shadow-xl hover:border-black" style="transition-delay: 400ms;"><div class="text-4xl mb-4"><i class="fas fa-camera-retro text-gray-400"></i></div><h3 class="text-2xl font-display mb-3">Producto y Marcas</h3><p class="text-gray-600 mb-4">Produzco imágenes limpias y atractivas que hacen que tus productos destaquen y comuniquen calidad.</p><p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p><ul class="list-disc list-inside text-gray-600 text-sm space-y-1"><li>Tiendas online (E-commerce).</li><li>Campañas en redes sociales.</li><li>Catálogos y material publicitario.</li></ul></div>
+                    <div class="service-card p-8 border border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-black">
+                        <div class="text-4xl mb-4"><i class="fas fa-ring text-gray-400"></i></div>
+                        <h3 class="text-2xl font-display mb-3">Fotografía de Bodas</h3>
+                        <p class="text-gray-600 mb-4">Capturo la esencia y la emoción de tu día más especial con un enfoque documental y artístico.</p>
+                        <p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p>
+                        <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                            <li>Bodas íntimas y grandes celebraciones.</li>
+                            <li>Sesiones pre-boda y post-boda.</li>
+                            <li>Aniversarios y pedidas de mano.</li>
+                        </ul>
+                    </div>
+                    <div class="service-card p-8 border border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-black" style="transition-delay: 200ms;">
+                        <div class="text-4xl mb-4"><i class="fas fa-portrait text-gray-400"></i></div>
+                        <h3 class="text-2xl font-display mb-3">Retratos y Books</h3>
+                        <p class="text-gray-600 mb-4">Creo imágenes que reflejan tu verdadera personalidad, ya sea para tu marca personal, tu familia o tu carrera.</p>
+                        <p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p>
+                        <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                            <li>Profesionales y emprendedores.</li>
+                            <li>Actores, modelos y artistas.</li>
+                            <li>Familias, parejas y maternidad.</li>
+                        </ul>
+                    </div>
+                    <div class="service-card p-8 border border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-black" style="transition-delay: 400ms;">
+                        <div class="text-4xl mb-4"><i class="fas fa-camera-retro text-gray-400"></i></div>
+                        <h3 class="text-2xl font-display mb-3">Producto y Marcas</h3>
+                        <p class="text-gray-600 mb-4">Produzco imágenes limpias y atractivas que hacen que tus productos destaquen y comuniquen calidad.</p>
+                        <p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p>
+                        <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
+                            <li>Tiendas online (E-commerce).</li>
+                            <li>Campañas en redes sociales.</li>
+                            <li>Catálogos y material publicitario.</li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="mt-24 reveal">
-                    <div class="text-center mb-12"><h3 class="text-4xl font-display">Servicios Adicionales</h3><p class="text-lg text-gray-600 mt-2">Llevando tu proyecto al siguiente nivel.</p></div>
+                    <div class="text-center mb-12">
+                        <h3 class="text-4xl font-display text-reveal">Servicios Adicionales</h3>
+                        <p class="text-lg text-gray-600 mt-2 text-reveal">Llevando tu proyecto al siguiente nivel.</p>
+                    </div>
                     <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                        <div><i class="fas fa-video fa-2x mb-3 text-gray-400"></i><h4 class="text-xl font-bold mb-2">Producción de Video</h4><p class="text-gray-600 text-sm">Desde videos cortos para redes sociales hasta cobertura de eventos.</p></div>
-                        <div><i class="fas fa-drone fa-2x mb-3 text-gray-400"></i><h4 class="text-xl font-bold mb-2">Fotografía con Dron</h4><p class="text-gray-600 text-sm">Perspectivas aéreas impresionantes para propiedades, eventos y paisajes.</p></div>
-                        <div><i class="fas fa-book-open fa-2x mb-3 text-gray-400"></i><h4 class="text-xl font-bold mb-2">Álbumes y Libros</h4><p class="text-gray-600 text-sm">Diseño e impresión de álbumes de alta calidad para un recuerdo tangible.</p></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===== ABOUT ME PAGE ===== -->
-        <section id="about" class="page-container py-20 md:py-24 bg-gray-50">
-            <div class="container mx-auto px-6">
-                <div class="max-w-4xl mx-auto">
-                    <div class="text-center reveal">
-                        <img src="https://placehold.co/200x200/999999/FFFFFF?text=Ad%C3%A1n" alt="Foto de Adán Gómez" class="rounded-full shadow-xl w-48 h-48 mx-auto mb-8">
-                        <h2 class="text-5xl md:text-6xl font-display mb-4">Mi Lente, Mi Historia</h2>
-                        <p class="text-xl text-gray-700 leading-relaxed max-w-2xl mx-auto italic">"No hago fotos para vivir, vivo para hacer fotos. Mi cámara no es una herramienta, es una extensión de mi curiosidad por el mundo y las historias que la gente tiene que contar."</p>
-                    </div>
-
-                    <div class="prose max-w-none lg:prose-lg mx-auto mt-16 text-gray-600 leading-relaxed space-y-8 reveal">
-                        <h3 class="text-3xl font-display text-black !mb-4">Mi Filosofía</h3>
-                        <p>Hola, soy Adán Gómez. Desde que tomé una cámara por primera vez hace más de diez años, me enamoré de la capacidad de congelar un instante y contar una historia sin palabras. Mi estilo se define por la naturalidad, la luz y la emoción. Busco la belleza en lo cotidiano y la autenticidad en cada retrato.</p>
-                        <p>Para mí, la fotografía no es solo técnica, es conexión. Es crear un espacio de confianza donde puedas ser tú mismo, para que juntos podamos crear algo verdaderamente memorable. Mi objetivo es que te veas en mis fotos y no solo reconozcas tu imagen, sino que sientas la emoción de ese momento una y otra vez.</p>
-                        
-                        <h3 class="text-3xl font-display text-black !mt-16 !mb-4">Mi Proceso Creativo</h3>
-                        <p>Cada proyecto es un viaje colaborativo. Comienza con una conversación, no con una sesión. Me sumerjo en tu visión para entender qué historia queremos contar. Durante la sesión, mi enfoque es crear una atmósfera relajada donde la magia pueda suceder de forma orgánica. Finalmente, en la postproducción, cada imagen es tratada con el mimo de un artesano para asegurar que el resultado final sea atemporal.</p>
-                        
-                        <div class="grid grid-cols-2 gap-4 !my-12">
-                            <img src="https://placehold.co/600x400/cccccc/333333?text=Mi+Equipo" class="rounded-lg gallery-item w-full" alt="Equipo fotográfico">
-                            <img src="https://placehold.co/600x400/cccccc/333333?text=Mi+Estudio" class="rounded-lg gallery-item w-full" alt="Estudio de fotografía">
+                        <div class="service-card">
+                            <i class="fas fa-video fa-2x mb-3 text-gray-400"></i>
+                            <h4 class="text-xl font-bold mb-2">Producción de Video</h4>
+                            <p class="text-gray-600 text-sm">Desde videos cortos para redes sociales hasta cobertura de eventos.</p>
+                        </div>
+                        <div class="service-card">
+                            <i class="fas fa-drone fa-2x mb-3 text-gray-400"></i>
+                            <h4 class="text-xl font-bold mb-2">Fotografía con Dron</h4>
+                            <p class="text-gray-600 text-sm">Perspectivas aéreas impresionantes para propiedades, eventos y paisajes.</p>
+                        </div>
+                        <div class="service-card">
+                            <i class="fas fa-book-open fa-2x mb-3 text-gray-400"></i>
+                            <h4 class="text-xl font-bold mb-2">Álbumes y Libros</h4>
+                            <p class="text-gray-600 text-sm">Diseño e impresión de álbumes de alta calidad para un recuerdo tangible.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
-
-        <!-- ===== CONTACT PAGE ===== -->
-        <section id="contact" class="page-container py-20 md:py-24">
-             <div class="container mx-auto px-6">
-                 <div class="text-center mb-16 reveal">
-                    <h2 class="text-5xl md:text-6xl font-display">Conectemos</h2>
-                    <p class="text-lg text-gray-600 mt-2 max-w-2xl mx-auto">Estoy listo para escuchar tu historia. Elige tu canal preferido y empecemos a crear algo increíble juntos.</p>
+        <!-- ===== RENTAL PAGE ===== -->
+        <section id="rental" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-gray-50" aria-label="Alquiler de Equipo">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16 reveal">
+                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Alquiler de Equipo Profesional</h2>
+                    <p class="text-lg text-gray-600 mt-2 text-reveal">El equipo que necesitas para llevar tu producción al siguiente nivel.</p>
                 </div>
-                <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
-                    <a href="#" class="contact-icon-link p-8 rounded-lg flex flex-col items-center justify-center"><i class="fab fa-instagram fa-3x mb-3"></i><span class="font-bold">Instagram</span></a>
-                    <a href="#" class="contact-icon-link p-8 rounded-lg flex flex-col items-center justify-center"><i class="fab fa-whatsapp fa-3x mb-3"></i><span class="font-bold">WhatsApp</span></a>
-                    <a href="#" class="contact-icon-link p-8 rounded-lg flex flex-col items-center justify-center"><i class="fas fa-envelope fa-3x mb-3"></i><span class="font-bold">Email</span></a>
-                    <a href="#" class="contact-icon-link p-8 rounded-lg flex flex-col items-center justify-center"><i class="fab fa-facebook-f fa-3x mb-3"></i><span class="font-bold">Facebook</span></a>
-                    <a href="#" class="contact-icon-link p-8 rounded-lg flex flex-col items-center justify-center"><i class="fab fa-linkedin-in fa-3x mb-3"></i><span class="font-bold">LinkedIn</span></a>
-                    <a href="#" class="contact-icon-link p-8 rounded-lg flex flex-col items-center justify-center"><i class="fas fa-phone fa-3x mb-3"></i><span class="font-bold">Teléfono</span></a>
-                </div>
-                
-                <div class="mt-20 reveal rounded-lg overflow-hidden shadow-xl">
-                    <iframe id="google-map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31431.83101261831!2d-84.0101680513672!3d10.023880900000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8fa0f3c43dd70743%3A0x18258b381d58552a!2sV%C3%A1squez%20de%20Coronado!5e0!3m2!1ses-419!2scr!4v1722547858413!5m2!1ses-419!2scr" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <div id="rental-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                    <!-- Las tarjetas de alquiler se insertan aquí desde JS -->
                 </div>
             </div>
         </section>
-
+        <!-- ===== ABOUT ME PAGE ===== -->
+        <section id="about" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-gray-50" aria-label="Sobre mí">
+            <div class="container mx-auto px-6">
+                <div class="max-w-4xl mx-auto">
+                    <div class="text-center reveal">
+                        <div class="relative inline-block">
+                            <img src="imagenes/FotoPerfil.png" alt="Adán" class="rounded-full shadow-xl w-60 h-60 mx-auto mb-8 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x240/999999/FFFFFF?text=Ad%C3%A1n';">
+                            <div class="absolute inset-0 rounded-full border-4 border-white border-opacity-30 animate-ping"></div>
+                        </div>
+                        <h2 class="text-5xl md:text-6xl font-display mb-4 text-reveal">Mi Lente, Mi Historia</h2>
+                        <p class="text-xl text-gray-700 leading-relaxed max-w-2xl mx-auto italic text-reveal">"No hago fotos para vivir, vivo para hacer fotos. Mi cámara no es una herramienta, es una extensión de mi curiosidad por el mundo y las historias que la gente tiene que contar."</p>
+                    </div>
+                    <div class="prose max-w-none lg:prose-lg mx-auto mt-16 text-gray-600 leading-relaxed space-y-8 reveal">
+                        <h3 class="text-3xl font-display text-black !mb-4 text-reveal">Mi Filosofía</h3>
+                        <p class="text-reveal">Hola, soy Adán Gómez. Desde que tomé una cámara por primera vez hace más de diez años, me enamoré de la capacidad de congelar un instante y contar una historia sin palabras. Mi estilo se define por la naturalidad, la luz y la emoción. Busco la belleza en lo cotidiano y la autenticidad en cada retrato.</p>
+                        <p class="text-reveal">Para mí, la fotografía no es solo técnica, es conexión. Es crear un espacio de confianza donde puedas ser tú mismo, para que juntos podamos crear algo verdaderamente memorable. Mi objetivo es que te veas en mis fotos y no solo reconozcas tu imagen, sino que sientas la emoción de ese momento una y otra vez.</p>
+                        
+                        <h3 class="text-3xl font-display text-black !mt-16 !mb-4 text-reveal">Mi Proceso Creativo</h3>
+                        <p class="text-reveal">Cada proyecto es un viaje colaborativo. Comienza con una conversación, no con una sesión. Me sumerjo en tu visión para entender qué historia queremos contar. Durante la sesión, mi enfoque es crear una atmósfera relajada donde la magia pueda suceder de forma orgánica. Finalmente, en la postproducción, cada imagen es tratada con el mimo de un artesano para asegurar que el resultado final sea atemporal.</p>
+                        
+                        <div class="grid grid-cols-2 gap-4 !my-12">
+                            <div class="gallery-item overflow-hidden img-container">
+                                <img src="https://placehold.co/600x400/cccccc/333333?text=Mi+Equipo" class="w-full" alt="Equipo fotográfico">
+                            </div>
+                            <div class="gallery-item overflow-hidden img-container">
+                                <img src="https://placehold.co/600x400/cccccc/333333?text=Mi+Estudio" class="w-full" alt="Estudio de fotografía">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ===== CONTACT PAGE ===== -->
+        <section id="contact" class="page-container pt-32 md:pt-40" aria-label="Contacto">
+             <div class="container mx-auto px-6 pb-20 md:pb-24">
+                 <div class="text-center mb-16 reveal">
+                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Conectemos</h2>
+                    <p class="text-lg text-gray-600 mt-2 max-w-2xl mx-auto text-reveal">Estoy listo para escuchar tu historia. Elige tu canal preferido y empecemos a crear algo increíble juntos.</p>
+                </div>
+                <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-instagram fa-3x mb-3"></i>
+                        <span class="font-bold">Instagram</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-whatsapp fa-3x mb-3"></i>
+                        <span class="font-bold">WhatsApp</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fas fa-envelope fa-3x mb-3"></i>
+                        <span class="font-bold">Email</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-facebook-f fa-3x mb-3"></i>
+                        <span class="font-bold">Facebook</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-linkedin-in fa-3x mb-3"></i>
+                        <span class="font-bold">LinkedIn</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fas fa-phone fa-3x mb-3"></i>
+                        <span class="font-bold">Teléfono</span>
+                    </a>
+                </div>
+            </div>
+            <div class="container mx-auto px-6 text-center mb-12 reveal">
+                <h2 class="text-4xl font-display text-gray-800 text-reveal">Mi Estudio</h2>
+                <p class="text-lg text-gray-600 mt-2 text-reveal">Ubicado en el corazón de Coronado, listo para dar vida a tu proyecto.</p>
+             </div>
+            <div class="reveal">
+                <iframe id="google-map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31431.83101261831!2d-84.0101680513672!3d10.023880900000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8fa0f3c43dd70743%3A0x18258b381d58552a!2sV%C3%A1squez%20de%20Coronado!5e0!3m2!1ses-419!2scr!4v1722547858413!5m2!1ses-419!2scr" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+        </section>
         <!-- PROJECT DETAIL PAGES CONTAINER -->
         <div id="project-detail-pages"></div>
+        <!-- RENTAL DETAIL PAGES CONTAINER -->
+        <div id="rental-detail-pages"></div>
     </main>
-
     <!-- Lightbox Modal -->
-    <div id="lightbox" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0"><button id="lightbox-close" class="absolute top-6 right-6 text-white text-5xl font-light hover:opacity-75 transition-opacity">&times;</button><img id="lightbox-image" src="" alt="Vista ampliada" class="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl"></div>
-
+    <div id="lightbox" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0" role="dialog" aria-modal="true" aria-label="Vista ampliada de imagen">
+        <button id="lightbox-close" class="absolute top-6 right-6 text-white text-5xl font-light hover:opacity-75 transition-opacity" aria-label="Cerrar vista ampliada">×</button>
+        <button id="lightbox-prev" class="lightbox-nav" aria-label="Imagen anterior">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button id="lightbox-next" class="lightbox-nav" aria-label="Imagen siguiente">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="text-white text-center absolute bottom-6 left-0 right-0">
+            <p id="lightbox-caption" class="text-lg"></p>
+        </div>
+        <img id="lightbox-image" src="" alt="Vista ampliada" class="max-w-[90vw] max-h-[85vh] shadow-2xl">
+    </div>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         // --- SELECTORES GLOBALES ---
@@ -303,23 +738,29 @@
         const header = document.getElementById('header');
         const mobileMenuButton = document.getElementById('mobile-menu-button');
         const mobileMenu = document.getElementById('mobile-menu');
-        const mobileNavLinks = document.querySelectorAll('#mobile-menu .mobile-nav-link');
+        const allNavLinks = document.querySelectorAll('.nav-link');
         const lightbox = document.getElementById('lightbox');
         const lightboxImage = document.getElementById('lightbox-image');
         const lightboxClose = document.getElementById('lightbox-close');
-
+        const lightboxPrev = document.getElementById('lightbox-prev');
+        const lightboxNext = document.getElementById('lightbox-next');
+        const lightboxCaption = document.getElementById('lightbox-caption');
+        const pageLoader = document.getElementById('page-loader');
+        
         // --- DATOS ---
         const categoryColors = {
-            bodas: { bg: 'a3b18a', text: '344e41' }, retratos: { bg: 'bc6c25', text: 'fefae0' },
-            producto: { bg: '606c38', text: 'dda15e' }, eventos: { bg: '283618', text: 'fefae0' },
+            bodas: { bg: 'a3b18a', text: '344e41' }, 
+            retratos: { bg: 'bc6c25', text: 'fefae0' },
+            producto: { bg: '606c38', text: 'dda15e' }, 
+            eventos: { bg: '283618', text: 'fefae0' },
             naturaleza: { bg: '588157', text: 'dad7cd' }
         };
-
+        
         const getRandomSize = () => {
             const sizes = ['600x800', '800x600', '600x600', '600x900', '700x500', '600x700'];
             return sizes[Math.floor(Math.random() * sizes.length)];
         };
-
+        
         const generatePortfolioData = (count) => {
             const data = [];
             const categories = Object.keys(categoryColors);
@@ -337,7 +778,6 @@
         };
         
         const portfolioData = generatePortfolioData(200);
-
         const generateProjectImages = (count, colorTheme) => {
             const images = [];
             for (let i = 0; i < count; i++) {
@@ -346,107 +786,373 @@
             }
             return images;
         };
-
+        
         const projectDetails = {
-            "project-detail-1": { title: "Boda de Ana y Carlos", description: "Un día mágico en los viñedos de la Toscana.", images: generateProjectImages(30, categoryColors.bodas) },
-            "project-detail-2": { title: 'Colección "NEÓN"', description: "Campaña de moda urbana con luces de la ciudad.", images: generateProjectImages(30, {bg: '333333', text: 'E2E2E2'}) },
-            "project-detail-3": { title: 'Retrato Corporativo', description: "Sesiones para equipos ejecutivos, enfocadas en profesionalismo.", images: generateProjectImages(30, categoryColors.retratos) },
-            "project-detail-4": { title: 'Sabor & Textura', description: "Fotografía de alimentos para restaurantes y marcas.", images: generateProjectImages(30, categoryColors.producto) },
-            "project-detail-5": { title: 'Noche de Gala', description: "Cobertura completa de eventos sociales y corporativos.", images: generateProjectImages(30, categoryColors.eventos) },
-            "project-detail-6": { title: 'Aventura en la Montaña', description: "Documentando la belleza salvaje de nuestros paisajes.", images: generateProjectImages(30, categoryColors.naturaleza) },
-            "project-detail-7": { title: 'Espacios que Inspiran', description: "Fotografía de arquitectura e interiores.", images: generateProjectImages(30, {bg: 'dad7cd', text: '588157'}) }
+            "project-detail-1": { 
+                title: "Boda de Ana y Carlos", 
+                description: "Un día mágico en los viñedos de la Toscana.", 
+                images: generateProjectImages(30, categoryColors.bodas) 
+            },
+            "project-detail-2": { 
+                title: 'Colección "NEÓN"', 
+                description: "Campaña de moda urbana con luces de la ciudad.", 
+                images: generateProjectImages(30, {bg: '333333', text: 'E2E2E2'}) 
+            },
+            "project-detail-3": { 
+                title: 'Retrato Corporativo', 
+                description: "Sesiones para equipos ejecutivos, enfocadas en profesionalismo.", 
+                images: generateProjectImages(30, categoryColors.retratos) 
+            },
+            "project-detail-4": { 
+                title: 'Sabor & Textura', 
+                description: "Fotografía de alimentos para restaurantes y marcas.", 
+                images: generateProjectImages(30, categoryColors.producto) 
+            },
+            "project-detail-5": { 
+                title: 'Noche de Gala', 
+                description: "Cobertura completa de eventos sociales y corporativos.", 
+                images: generateProjectImages(30, categoryColors.eventos) 
+            },
+            "project-detail-6": { 
+                title: 'Aventura en la Montaña', 
+                description: "Documentando la belleza salvaje de nuestros paisajes.", 
+                images: generateProjectImages(30, categoryColors.naturaleza) 
+            },
+            "project-detail-7": { 
+                title: 'Espacios que Inspiran', 
+                description: "Fotografía de arquitectura e interiores.", 
+                images: generateProjectImages(30, {bg: 'dad7cd', text: '588157'}) 
+            }
         };
-
+        
         const projectsData = [
             { id: 1, title: "Boda de Ana y Carlos", img: "https://placehold.co/800x600/a3b18a/344e41?text=Boda", description: "Un día mágico en los viñedos de la Toscana." },
             { id: 2, title: 'Colección "NEÓN"', img: "https://placehold.co/800x600/344e41/a3b18a?text=Moda", description: "Campaña de moda para una marca emergente." },
             { id: 3, title: "Retrato Corporativo", img: "https://placehold.co/800x600/bc6c25/fefae0?text=Corporativo", description: "Sesiones de retrato para equipos ejecutivos." },
             { id: 4, title: "Sabor & Textura", img: "https://placehold.co/800x600/606c38/dda15e?text=Alimentos", description: "Fotografía de alimentos para restaurantes y marcas." },
             { id: 5, title: "Noche de Gala", img: "https://placehold.co/800x600/283618/fefae0?text=Gala", description: "Cobertura completa de eventos sociales y corporativos." },
-            { id: 6, title: "Aventura en la Montaña", img: "https://placehold.co/800x600/588157/dad7cd?text=Aventura", description: "Documentando la belleza salvaje de nuestros paisajes." },
+            { id: 6, "title": "Aventura en la Montaña", img: "https://placehold.co/800x600/588157/dad7cd?text=Aventura", description: "Documentando la belleza salvaje de nuestros paisajes." },
             { id: 7, title: "Espacios que Inspiran", img: "https://placehold.co/800x600/dad7cd/588157?text=Arquitectura", description: "Fotografía de arquitectura e interiores." }
         ];
 
-        // --- FUNCIONES DE RENDERIZADO ---
+        const rentalData = [
+            { id: 1, name: "Canon EOS R5", short_desc: "Cámara mirrorless full-frame de alta resolución.", long_desc: "La Canon EOS R5 es ideal para profesionales que necesitan la máxima calidad de imagen. Con su sensor de 45MP, grabación de video 8K y un sistema de autoenfoque de vanguardia, es la herramienta perfecta para bodas, retratos y producciones de video.", images: ["https://placehold.co/800x600/333/fff?text=EOS+R5+Front", "https://placehold.co/800x600/444/fff?text=EOS+R5+Back", "https://placehold.co/800x600/555/fff?text=EOS+R5+Side"] },
+            { id: 2, name: "Sony A7S III", short_desc: "El rey de la grabación con poca luz.", long_desc: "La Sony A7S III es la elección predilecta para videógrafos. Su increíble rendimiento en condiciones de poca luz, grabación 4K a 120fps y perfiles de color profesionales la hacen ideal para cinematografía, documentales y eventos.", images: ["https://placehold.co/800x600/333/fff?text=A7S+III+Front", "https://placehold.co/800x600/444/fff?text=A7S+III+Top"] },
+            { id: 3, name: "Lente Canon RF 24-70mm f/2.8", short_desc: "El zoom estándar profesional por excelencia.", long_desc: "Un lente versátil y luminoso que cubre desde gran angular hasta teleobjetivo corto. Perfecto para eventos, retratos y viajes, ofreciendo una nitidez excepcional en todo su rango.", images: ["https://placehold.co/800x600/333/fff?text=RF+24-70mm"] },
+            { id: 4, name: "DJI Ronin-S", short_desc: "Estabilizador de 3 ejes para tomas fluidas.", long_desc: "Consigue tomas cinematográficas y sin vibraciones con el DJI Ronin-S. Compatible con una amplia gama de cámaras, es esencial para producciones de video profesionales.", images: ["https://placehold.co/800x600/333/fff?text=Ronin-S"] },
+            { id: 5, name: "Kit de Luces Aputure 120D II", short_desc: "Iluminación LED potente y versátil.", long_desc: "Este kit incluye una luz Aputure 120D II con montura Bowens, un trípode y un softbox. Ideal para entrevistas, retratos y videos de producto, ofreciendo una luz suave y de alta calidad.", images: ["https://placehold.co/800x600/333/fff?text=Aputure+Kit"] },
+            { id: 6, name: "DJI Mavic 3 Pro", short_desc: "Dron con cámara Hasselblad para tomas aéreas.", long_desc: "Captura imágenes aéreas impresionantes con calidad cinematográfica. El Mavic 3 Pro ofrece video 5.1K, un sistema de triple cámara y una autonomía de vuelo excepcional.", images: ["https://placehold.co/800x600/333/fff?text=Mavic+3+Pro"] },
+            { id: 7, name: "Lente Sigma 85mm f/1.4 ART", short_desc: "El lente definitivo para retratos.", long_desc: "Con una apertura de f/1.4, este lente produce un bokeh increíblemente suave y una nitidez asombrosa, haciendo que los sujetos resalten de manera espectacular. Disponible para monturas Sony E y Canon EF.", images: ["https://placehold.co/800x600/333/fff?text=Sigma+85mm"] },
+            { id: 8, name: "Grabadora de Audio Zoom H6", short_desc: "Grabadora de campo de 6 canales.", long_desc: "Captura audio profesional con la Zoom H6. Sus cápsulas de micrófono intercambiables y múltiples entradas la hacen perfecta para entrevistas, podcasts y diseño de sonido.", images: ["https://placehold.co/800x600/333/fff?text=Zoom+H6"] },
+            { id: 9, name: "Trípode Manfrotto 055", short_desc: "Trípode de aluminio robusto y estable.", long_desc: "Un trípode confiable para fotografía y video. Su columna central de 90° permite ángulos creativos, y su construcción robusta soporta equipos pesados con total seguridad.", images: ["https://placehold.co/800x600/333/fff?text=Manfrotto+055"] },
+            { id: 10, name: "Monitor Externo Atomos Ninja V", short_desc: "Monitor/Grabador de 5 pulgadas.", long_desc: "Mejora tu flujo de trabajo de video con el Ninja V. Graba en formatos ProRes y DNxHR directamente desde el sensor de tu cámara y monitorea con precisión gracias a su pantalla HDR brillante.", images: ["https://placehold.co/800x600/333/fff?text=Ninja+V"] },
+            { id: 11, name: "Canon EOS R6 Mark II", short_desc: "Cámara híbrida veloz y potente.", long_desc: "Excelente para fotografía de acción y video. Ofrece ráfagas de 40fps, video 4K/60p y un autoenfoque mejorado que sigue a los sujetos con tenacidad.", images: ["https://placehold.co/800x600/333/fff?text=R6+II"] },
+            { id: 12, name: "Lente Sony GM 70-200mm f/2.8 II", short_desc: "Teleobjetivo zoom de referencia.", long_desc: "El teleobjetivo preferido por profesionales de deportes, vida salvaje y eventos. Ofrece una nitidez increíble, un enfoque rápido y una construcción ligera.", images: ["https://placehold.co/800x600/333/fff?text=Sony+70-200"] },
+            { id: 13, name: "Kit Micrófonos Inalámbricos Rode", short_desc: "Sistema de doble micrófono inalámbrico.", long_desc: "El Rode Wireless GO II es un sistema ultracompacto y versátil, perfecto para entrevistas, vlogs y creación de contenido con audio de alta calidad y sin cables.", images: ["https://placehold.co/800x600/333/fff?text=Rode+Wireless"] },
+            { id: 14, name: "Filtro Polarizador Circular 82mm", short_desc: "Reduce reflejos y realza colores.", long_desc: "Un filtro esencial para fotógrafos de paisajes y arquitectura. Elimina los reflejos no deseados de superficies como el agua y el cristal, y aumenta la saturación de los cielos y el follaje.", images: ["https://placehold.co/800x600/333/fff?text=CPL+Filter"] },
+            { id: 15, name: "Mochila Peak Design Everyday 30L", short_desc: "Mochila versátil para fotógrafos.", long_desc: "Transporta tu equipo de forma segura y cómoda. Con divisores FlexFold personalizables y acceso rápido lateral, es la compañera ideal para cualquier sesión.", images: ["https://placehold.co/800x600/333/fff?text=Peak+Design+Bag"] },
+            { id: 16, name: "GoPro HERO12 Black", short_desc: "Cámara de acción líder en el mercado.", long_desc: "Captura tus aventuras en impresionante video 5.3K. Con estabilización HyperSmooth 6.0 y una construcción resistente al agua, está lista para cualquier desafío.", images: ["https://placehold.co/800x600/333/fff?text=GoPro+12"] },
+            { id: 17, name: "Lente Laowa 100mm 2x Ultra Macro", short_desc: "Explora el mundo en miniatura.", long_desc: "Este lente macro permite una magnificación de hasta 2:1, revelando detalles invisibles a simple vista. Ideal para fotografía de insectos, joyas y productos.", images: ["https://placehold.co/800x600/333/fff?text=Laowa+Macro"] },
+            { id: 18, name: "Panel LED RGB Godox", short_desc: "Luz creativa con millones de colores.", long_desc: "Añade un toque de color a tus escenas con este panel LED RGB. Controla el tono, la saturación y el brillo para crear cualquier ambiente que puedas imaginar.", images: ["https://placehold.co/800x600/333/fff?text=Godox+RGB"] },
+            { id: 19, name: "Teleprompter Feelworld", short_desc: "Para discursos y guiones fluidos.", long_desc: "Ideal para youtubers, presentadores y producciones corporativas. Se acopla a tu lente y refleja el texto desde un smartphone o tablet para una lectura natural a cámara.", images: ["https://placehold.co/800x600/333/fff?text=Teleprompter"] },
+            { id: 20, name: "Fondo de Papel Savage (Varios Colores)", short_desc: "Fondos de estudio sin arrugas.", long_desc: "Rollos de papel de 2.72m de ancho para un fondo liso y uniforme. Disponible en blanco, negro y gris. Incluye sistema de soporte portátil.", images: ["https://placehold.co/800x600/333/fff?text=Savage+Paper"] },
+            { id: 21, name: "Tableta Gráfica Wacom Intuos Pro", short_desc: "Precisión para retoque fotográfico.", long_desc: "La herramienta estándar de la industria para retocadores y diseñadores. Ofrece un control y una precisión inigualables para la edición de imágenes.", images: ["https://placehold.co/800x600/333/fff?text=Wacom+Tablet"] },
+            { id: 22, name: "Lente Canon RF 15-35mm f/2.8", short_desc: "Zoom ultra gran angular profesional.", long_desc: "Perfecto para arquitectura, interiores y paisajes espectaculares. Su estabilización de imagen y su apertura f/2.8 lo hacen increíblemente versátil.", images: ["https://placehold.co/800x600/333/fff?text=RF+15-35mm"] },
+            { id: 23, name: "Slider motorizado edelkrone", short_desc: "Movimientos de cámara suaves y programables.", long_desc: "Crea travellings y timelapses dinámicos con precisión. Controlable a través de una aplicación móvil para movimientos complejos y repetibles.", images: ["https://placehold.co/800x600/333/fff?text=edelkrone+Slider"] },
+            { id: 24, name: "Kit de reflectores 5 en 1", short_desc: "Modifica la luz de forma sencilla.", long_desc: "Un reflector plegable de 110cm con superficies plateada, dorada, blanca, negra y translúcida. La herramienta más versátil y económica para controlar la iluminación.", images: ["https://placehold.co/800x600/333/fff?text=Reflector+Kit"] },
+            { id: 25, name: "Tarjeta de Memoria CFexpress 512GB", short_desc: "Almacenamiento ultrarrápido y fiable.", long_desc: "Esencial para grabación de video en alta resolución y ráfagas de alta velocidad. Con velocidades de lectura de hasta 1700MB/s, optimiza tu flujo de trabajo.", images: ["https://placehold.co/800x600/333/fff?text=CFexpress+Card"] },
+        ];
+        
+        // --- FUNCIONES DE RENDERIZADO Y NAVEGACIÓN ---
         const navigateTo = (targetId) => {
-            document.querySelectorAll('.page-container').forEach(page => page.classList.remove('page-active'));
+            const currentPage = document.querySelector('.page-active');
             const targetPage = document.getElementById(targetId);
-            if (targetPage) {
-                targetPage.classList.add('page-active');
-                if (!targetId.startsWith('project-detail-')) {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-                observeElements(targetPage);
-            }
-        };
 
+            if (!targetPage || currentPage === targetPage) return;
+
+            if (currentPage) {
+                currentPage.classList.add('page-exiting');
+                currentPage.classList.remove('page-active');
+            }
+
+            targetPage.style.display = 'block';
+            setTimeout(() => {
+                targetPage.classList.add('page-active');
+            }, 10);
+            
+            if (currentPage) {
+                setTimeout(() => {
+                    currentPage.classList.remove('page-exiting');
+                    currentPage.style.display = 'none';
+                }, 500);
+            }
+
+            let activeTarget = targetId;
+            if (targetId.startsWith('project-detail-') || targetId.startsWith('rental-detail-')) {
+                activeTarget = targetId.startsWith('project') ? 'projects' : 'rental';
+            }
+            allNavLinks.forEach(link => {
+                link.classList.remove('nav-active');
+                if (link.dataset.target === activeTarget) {
+                    link.classList.add('nav-active');
+                }
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            observeElements(targetPage);
+        };
+        
         const renderProjectDetail = (projectId) => {
             const detailContainer = document.getElementById('project-detail-pages');
             const project = projectDetails[projectId];
             if (!project) return;
-            const imagesHTML = project.images.map(src => `<div class="gallery-item break-inside-avoid rounded-lg overflow-hidden relative reveal"><img src="${src}" alt="${project.title}" loading="lazy" class="w-full h-auto object-cover"></div>`).join('');
+            
+            const imagesHTML = project.images.map(src => `
+                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container">
+                    <img src="${src}" alt="${project.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
+                </div>
+            `).join('');
+            
             detailContainer.innerHTML = `
-                <section id="${projectId}" class="page-container py-20 md:py-24 bg-white">
+                <section id="${projectId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
                     <div class="container mx-auto px-6">
                         <div class="max-w-6xl mx-auto">
-                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver a Proyectos</a>
+                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block">
+                                <i class="fas fa-arrow-left mr-2"></i> Volver a Proyectos
+                            </a>
                             <div class="text-center mb-16 reveal">
-                                <h2 class="text-5xl md:text-6xl font-display">${project.title}</h2>
-                                <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto">${project.description}</p>
+                                <h2 class="text-5xl md:text-6xl font-display text-reveal">${project.title}</h2>
+                                <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto text-reveal">${project.description}</p>
                             </div>
-                            <div class="columns-2 md:columns-3 gap-6 space-y-6">${imagesHTML}</div>
+                            <div class="columns-2 md:columns-3 gap-6 space-y-6 reveal">${imagesHTML}</div>
                         </div>
                     </div>
                 </section>`;
+            
             navigateTo(projectId);
+        };
+
+        const renderRentalDetail = (rentalId) => {
+            const detailContainer = document.getElementById('rental-detail-pages');
+            const item = rentalData.find(r => r.id == rentalId.split('-')[2]);
+            if (!item) return;
+
+            const carouselItemsHTML = item.images.map(src => `
+                <div class="carousel-item">
+                    <img src="${src}" alt="${item.name}" class="w-full h-full object-cover">
+                </div>
+            `).join('');
+
+            detailContainer.innerHTML = `
+                <section id="${rentalId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
+                    <div class="container mx-auto px-6">
+                        <div class="max-w-5xl mx-auto">
+                            <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block">
+                                <i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo
+                            </a>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div class="carousel-container">
+                                    <div class="carousel-track">${carouselItemsHTML}</div>
+                                    <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
+                                    <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                                <div>
+                                    <h2 class="text-4xl md:text-5xl font-display mb-4">${item.name}</h2>
+                                    <p class="text-gray-600 leading-relaxed">${item.long_desc}</p>
+                                    <a href="#" data-target="contact" class="nav-link btn-primary mt-8 inline-block bg-black text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-gray-800">Contactar para Alquilar</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+            
+            navigateTo(rentalId);
+
+            // Carousel Logic
+            const track = detailContainer.querySelector('.carousel-track');
+            const slides = Array.from(track.children);
+            const nextButton = detailContainer.querySelector('.next');
+            const prevButton = detailContainer.querySelector('.prev');
+            let currentIndex = 0;
+
+            const updateSlidePosition = () => {
+                track.style.transform = 'translateX(' + -100 * currentIndex + '%)';
+            };
+
+            nextButton.addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % slides.length;
+                updateSlidePosition();
+            });
+
+            prevButton.addEventListener('click', () => {
+                currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+                updateSlidePosition();
+            });
         };
         
         const renderPortfolio = () => {
             const portfolioGallery = document.getElementById('portfolio-gallery');
-            if(portfolioGallery) portfolioGallery.innerHTML = portfolioData.map(item => `<div class="gallery-item break-inside-avoid rounded-lg overflow-hidden relative reveal" data-category="${item.category}"><img src="${item.src}" alt="${item.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';"><div class="overlay absolute inset-0 flex items-end p-4"><p class="text-white text-lg font-bold transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">${item.title}</p></div></div>`).join('');
+            if(portfolioGallery) {
+                portfolioGallery.innerHTML = portfolioData.map(item => `
+                    <div class="gallery-item break-inside-avoid overflow-hidden relative img-container" data-category="${item.category}">
+                        <img src="${item.src}" alt="${item.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
+                        <div class="overlay absolute inset-0 flex items-end p-4">
+                            <p class="text-white text-lg font-bold">${item.title}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
         };
 
+        const renderRentalGrid = () => {
+            const rentalGrid = document.getElementById('rental-grid');
+            if(rentalGrid) {
+                rentalGrid.innerHTML = rentalData.map(item => `
+                    <div class="rental-card border border-gray-200 bg-white group">
+                        <div class="aspect-w-1 aspect-h-1 overflow-hidden relative carousel-container">
+                            <div class="carousel-track flex" data-current-index="0">
+                                ${item.images.map(src => `<div class="carousel-item flex-shrink-0 w-full"><img src="${src}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('')}
+                            </div>
+                            <button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button>
+                            <button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-display text-xl mb-2 truncate">${item.name}</h3>
+                            <p class="text-gray-600 text-sm mb-4 h-10 overflow-hidden">${item.short_desc}</p>
+                            <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider">Ver Detalles</a>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        };
+        
         const renderProjects = () => {
             const projectsContainer = document.getElementById('projects-container');
-            if(projectsContainer) projectsContainer.innerHTML = projectsData.map((project, index) => `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center reveal">
-                    <div class="${index % 2 === 0 ? 'md:pr-10' : 'md:pl-10 md:order-last'}">
-                        <h3 class="text-4xl font-display mb-4">${project.title}</h3>
-                        <p class="text-gray-600 leading-relaxed mb-6">${project.description}</p>
-                        <a href="#" data-target="project-detail-${project.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group">
-                            Ver Galería Completa <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
-                        </a>
+            if(projectsContainer) {
+                projectsContainer.innerHTML = projectsData.map((project, index) => `
+                    <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal">
+                        <div class="p-8 ${index % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
+                            <h3 class="text-4xl font-display mb-4 text-reveal">${project.title}</h3>
+                            <p class="text-gray-600 leading-relaxed mb-6 text-reveal">${project.description}</p>
+                            <a href="#" data-target="project-detail-${project.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block">
+                                Ver Galería Completa <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
+                            </a>
+                        </div>
+                        <div class="overflow-hidden gallery-item img-container h-full">
+                            <img src="${project.img}" alt="${project.title}" class="w-full h-full object-cover">
+                        </div>
                     </div>
-                    <div class="rounded-lg overflow-hidden gallery-item">
-                        <img src="${project.img}" alt="${project.title}" class="w-full h-full object-cover">
-                    </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
         };
-
+        
         const observeElements = (container) => {
             if(!container) return;
-            const revealElements = container.querySelectorAll('.reveal');
-            const observer = new IntersectionObserver((entries, observer) => {
+            
+            const revealElements = container.querySelectorAll('.reveal:not(.visible)');
+            const revealObserver = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('visible');
                         observer.unobserve(entry.target);
+                        
+                        const textElements = entry.target.querySelectorAll('.text-reveal:not(.revealed)');
+                        textElements.forEach(textEl => {
+                            setTimeout(() => {
+                                textEl.classList.add('revealed');
+                            }, 200);
+                        });
                     }
                 });
             }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-            revealElements.forEach(el => observer.observe(el));
+            
+            revealElements.forEach(el => revealObserver.observe(el));
+            
+            const serviceCards = container.querySelectorAll('.service-card:not(.animate)');
+            const serviceObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        setTimeout(() => {
+                            entry.target.classList.add('animate');
+                        }, index * 100);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+            
+            serviceCards.forEach(card => serviceObserver.observe(card));
+            
+            const imgContainers = container.querySelectorAll('.img-container:not(.loaded)');
+            const imgObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target.querySelector('img');
+                        if (img && img.complete) {
+                            entry.target.classList.add('loaded');
+                            observer.unobserve(entry.target);
+                        } else if (img) {
+                            img.addEventListener('load', () => {
+                                entry.target.classList.add('loaded');
+                                observer.unobserve(entry.target);
+                            });
+                        }
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            imgContainers.forEach(container => imgObserver.observe(container));
         };
-
-        const filterPortfolio = (filter) => {
-            document.getElementById('portfolio-gallery').querySelectorAll('.gallery-item').forEach(item => {
-                item.style.display = (filter === 'all' || item.dataset.category === filter) ? 'block' : 'none';
-            });
+        
+        // Lightbox mejorado con navegación entre imágenes
+        let currentLightboxIndex = 0;
+        let lightboxImages = [];
+        
+        const openLightbox = (src, caption = '', imagesArray = [], index = 0) => {
+            lightboxImages = imagesArray;
+            currentLightboxIndex = index;
+            
+            lightboxImage.src = src;
+            lightboxCaption.textContent = caption;
+            
+            lightboxPrev.style.display = imagesArray.length > 1 ? 'flex' : 'none';
+            lightboxNext.style.display = imagesArray.length > 1 ? 'flex' : 'none';
+            
+            lightbox.classList.remove('hidden');
+            setTimeout(() => { 
+                lightbox.classList.add('visible'); 
+                lightbox.classList.remove('opacity-0'); 
+            }, 10);
         };
-
-        const openLightbox = (src) => { lightboxImage.src = src; lightbox.classList.remove('hidden'); setTimeout(() => { lightbox.classList.add('visible'); lightbox.classList.remove('opacity-0'); }, 10); };
-        const closeLightbox = () => { lightbox.classList.add('opacity-0'); setTimeout(() => { lightbox.classList.add('hidden'); lightbox.classList.remove('visible'); lightboxImage.src = ''; }, 300); };
-
+        
+        const closeLightbox = () => { 
+            lightbox.classList.add('opacity-0'); 
+            setTimeout(() => { 
+                lightbox.classList.add('hidden'); 
+                lightbox.classList.remove('visible'); 
+                lightboxImage.src = ''; 
+            }, 300); 
+        };
+        
+        const navigateLightbox = (direction) => {
+            if (lightboxImages.length === 0) return;
+            
+            if (direction === 'next') {
+                currentLightboxIndex = (currentLightboxIndex + 1) % lightboxImages.length;
+            } else {
+                currentLightboxIndex = (currentLightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+            }
+            
+            const newImage = lightboxImages[currentLightboxIndex];
+            lightboxImage.style.opacity = '0';
+            
+            setTimeout(() => {
+                lightboxImage.src = newImage.src;
+                lightboxCaption.textContent = newImage.title || '';
+                lightboxImage.style.opacity = '1';
+            }, 200);
+        };
+        
         // --- MANEJADORES DE EVENTOS ---
         document.addEventListener('click', function(e) {
             const navLink = e.target.closest('.nav-link');
@@ -455,71 +1161,135 @@
                 const targetId = navLink.dataset.target;
                 if (targetId.startsWith('project-detail-')) {
                     renderProjectDetail(targetId);
-                } else {
+                } else if (targetId.startsWith('rental-detail-')) {
+                    renderRentalDetail(targetId);
+                }
+                else {
                     navigateTo(targetId);
                 }
-                if (mobileMenu.classList.contains('translate-x-0')) {
+                if (mobileMenu.classList.contains('open')) {
                     toggleMobileMenu(false);
                 }
             }
             
             const galleryItem = e.target.closest('.gallery-item');
             if(galleryItem) {
-                openLightbox(galleryItem.querySelector('img').src);
+                const clickedImg = galleryItem.querySelector('img');
+                const allVisibleItems = Array.from(document.querySelectorAll('.page-active .gallery-item'));
+                
+                const imagesArray = allVisibleItems.map(item => {
+                    const img = item.querySelector('img');
+                    const itemCaption = item.querySelector('.overlay p')?.textContent || img.alt;
+                    return {
+                        src: img.src,
+                        title: itemCaption
+                    };
+                });
+
+                const currentIndex = allVisibleItems.indexOf(galleryItem);
+                
+                openLightbox(clickedImg.src, imagesArray[currentIndex].title, imagesArray, currentIndex);
+            }
+        });
+        
+        document.getElementById('rental-grid').addEventListener('click', function(e) {
+            const button = e.target.closest('.rental-carousel-button');
+            if (button) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const track = button.closest('.carousel-container').querySelector('.carousel-track');
+                const slides = Array.from(track.children);
+                const direction = parseInt(button.dataset.direction);
+                let currentIndex = parseInt(track.dataset.currentIndex);
+
+                currentIndex += direction;
+
+                if (currentIndex < 0) {
+                    currentIndex = slides.length - 1;
+                } else if (currentIndex >= slides.length) {
+                    currentIndex = 0;
+                }
+
+                track.style.transform = `translateX(-${currentIndex * 100}%)`;
+                track.dataset.currentIndex = currentIndex;
+            } else {
+                 const rentalCard = e.target.closest('.rental-card');
+                 if(rentalCard) {
+                    renderRentalDetail(rentalCard.dataset.target);
+                 }
             }
         });
 
-        window.addEventListener('scroll', () => header.classList.toggle('header-scrolled', window.scrollY > 50), { passive: true });
+        window.addEventListener('scroll', () => {
+            header.classList.toggle('header-scrolled', window.scrollY > 50);
+            
+            const parallaxElements = document.querySelectorAll('.parallax');
+            parallaxElements.forEach(el => {
+                const scrolled = window.pageYOffset;
+                const rate = scrolled * -0.2;
+                el.style.transform = `translateY(${rate}px)`;
+            });
+        }, { passive: true });
         
         const toggleMobileMenu = (open) => {
-            if (open) {
-                mobileMenu.classList.remove('translate-x-full');
-                mobileMenu.classList.add('translate-x-0');
-                mobileMenuButton.classList.add('open');
-                mobileNavLinks.forEach((link, index) => {
-                    setTimeout(() => {
-                        link.style.opacity = '1';
-                        link.style.transform = 'translateY(0)';
-                    }, 150 + index * 50);
-                });
-            } else {
-                mobileMenu.classList.add('translate-x-full');
-                mobileMenu.classList.remove('translate-x-0');
-                mobileMenuButton.classList.remove('open');
-                mobileNavLinks.forEach(link => {
-                    link.style.opacity = '0';
-                    link.style.transform = 'translateY(20px)';
-                });
-            }
+            mobileMenu.classList.toggle('open', open);
+            mobileMenuButton.classList.toggle('open', open);
+            mobileMenuButton.setAttribute('aria-expanded', open);
+            mobileMenu.setAttribute('aria-hidden', !open);
+            
+            const links = mobileMenu.querySelectorAll('.mobile-nav-link');
+            links.forEach((link, index) => {
+                setTimeout(() => {
+                    link.style.opacity = open ? '1' : '0';
+                    link.style.transform = open ? 'translateY(0)' : 'translateY(30px)';
+                }, 150 + index * 50);
+            });
         };
-
+        
         mobileMenuButton.addEventListener('click', () => {
-            const isOpen = mobileMenu.classList.contains('translate-x-0');
+            const isOpen = mobileMenu.classList.contains('open');
             toggleMobileMenu(!isOpen);
         });
-
-        lightboxClose.addEventListener('click', closeLightbox);
-        lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
         
-        document.getElementById('portfolio-filters').addEventListener('click', (e) => {
-            const button = e.target.closest('.filter-btn');
-            if (button) {
-                document.getElementById('portfolio-filters').querySelector('.active').classList.remove('active');
-                button.classList.add('active');
-                filterPortfolio(button.dataset.filter);
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (e) => { 
+            if (e.target === lightbox) closeLightbox(); 
+        });
+        
+        lightboxPrev.addEventListener('click', () => navigateLightbox('prev'));
+        lightboxNext.addEventListener('click', () => navigateLightbox('next'));
+        
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('hidden')) {
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowLeft') navigateLightbox('prev');
+                if (e.key === 'ArrowRight') navigateLightbox('next');
             }
         });
-
+        
         // --- INICIALIZACIÓN ---
         const initialize = () => {
             renderPortfolio();
             renderProjects();
-            navigateTo('portfolio');
+            renderRentalGrid();
+            
+            setTimeout(() => {
+                pageLoader.classList.add('hidden');
+            }, 2000);
+            
+            const initialPage = document.getElementById('portfolio');
+            if(initialPage) {
+                initialPage.classList.add('page-active');
+                observeElements(initialPage);
+                document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(link => {
+                    link.classList.add('nav-active');
+                });
+            }
         };
-
+        
         initialize();
     });
     </script>
-
 </body>
 </html>
