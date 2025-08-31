@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Versión actualizada a 5.8 -->
-    <title>AG VISULA</title>
+    <!-- Versión actualizada a 9.6 -->
+    <title>Adán Gómez | Fotógrafo Profesional (v9.6)</title>
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="imagenes/icon.png">
+    <link rel="icon" type="image/png" href="imagenes/Icon.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;700&family=Playfair+Display:ital,wght@1,400..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&family=Prata&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -22,15 +22,19 @@
             --text-light: #f8f9fa;
             --accent: #3a3a3a;
         }
-        html { scroll-behavior: smooth; }
+        html { 
+            scroll-behavior: smooth; 
+        }
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Montserrat', sans-serif;
             background-color: var(--bg-main);
             color: var(--text-dark);
             overflow-x: hidden;
         }
-        h1, h2, h3, h4, .font-display { font-family: 'Cormorant Garamond', serif; }
-        .font-signature { font-family: 'Playfair Display', serif; font-style: italic; font-weight: 500; }
+        h1, h2, h3, h4, .font-display { 
+            font-family: 'Prata', serif; 
+            line-height: 1.4; 
+        }
         
         /* --- Arquitectura de Transición (Crossfade) --- */
         .page-container { 
@@ -89,16 +93,36 @@
         /* --- Header Dinámico Mejorado --- */
         #header {
             transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-            padding-top: 0.5rem;
+            padding-top: 0.5rem; 
             padding-bottom: 0.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Sombra sutil permanente */
         }
-        #header.header-scrolled {
-            padding-top: 0.25rem;
-            padding-bottom: 0.25rem;
+        #header.header-scrolled, #header.header-light {
             background-color: rgba(253, 253, 253, 0.95);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        #header.header-dark {
+            background-color: transparent;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); /* Sombra más visible en fondo transparente */
+        }
+        #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon {
+            color: white;
+        }
+         #header.header-dark .nav-link-underline {
+            background-color: white;
+        }
+         #header.header-dark .logo-dark {
+            display: none;
+        }
+        #header.header-dark .logo-light {
+            display: block;
+        }
+        #header:not(.header-dark) .logo-light {
+            display: none;
+        }
+        #header:not(.header-dark) .logo-dark {
+            display: block;
         }
         
         /* --- Menú Móvil Mejorado --- */
@@ -113,7 +137,7 @@
             transform: translateX(0);
         }
         .mobile-nav-link {
-            font-family: 'Cormorant Garamond', serif;
+            font-family: 'Prata', serif;
             color: var(--text-dark);
             opacity: 0;
             transform: translateY(30px);
@@ -134,14 +158,14 @@
             width: 100%;
         }
         #mobile-menu-button .icon-bar {
-            transition: transform 0.3s ease-in-out, opacity 0.2s;
+            transition: all 0.3s ease-in-out;
         }
         #mobile-menu-button.open .icon-bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
         #mobile-menu-button.open .icon-bar:nth-child(2) { opacity: 0; }
         #mobile-menu-button.open .icon-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
         
         /* --- Estilo para el enlace de navegación activo --- */
-        .nav-link.nav-active > span {
+        .nav-link.nav-active > .nav-link-underline {
             width: 100%;
         }
 
@@ -321,17 +345,6 @@
             transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        /* --- Animación de entrada para servicios --- */
-        .service-card {
-            transform: translateY(30px);
-            opacity: 0;
-            transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-        }
-        .service-card.animate {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        
         /* --- Mejoras de accesibilidad --- */
         .sr-only {
             position: absolute;
@@ -370,13 +383,37 @@
             opacity: 0;
         }
 
-        /* --- Estilos para la sección de Alquiler --- */
-        .rental-card {
+        /* --- Estilos para la sección de Alquiler (Rediseño) --- */
+        .rental-category-btn {
+            padding: 0.5rem 1.5rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0; /* Cambio a esquinas cuadradas */
             transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap; /* Evita que el texto se parta */
+            flex-shrink: 0; 
+        }
+        .rental-category-btn.active, .rental-category-btn:hover {
+            background-color: var(--text-dark);
+            color: white;
+            border-color: var(--text-dark);
+        }
+        .rental-card {
+            background-color: white;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(20px);
+            display: flex;
+            flex-direction: column;
+        }
+         .rental-card.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         .rental-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
         .carousel-container {
             overflow: hidden;
@@ -393,10 +430,12 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.4);
             color: white;
             border: none;
-            padding: 0.5rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             cursor: pointer;
             z-index: 10;
             opacity: 0;
@@ -406,17 +445,63 @@
             opacity: 1;
         }
         .carousel-button:hover {
-            background-color: rgba(0,0,0,0.8);
+            background-color: rgba(0,0,0,0.7);
         }
         .carousel-button.prev { left: 10px; }
         .carousel-button.next { right: 10px; }
+        
+        /* --- Estilos para la nueva sección de Servicios (Reemplazo) --- */
+        .service-grid-item {
+            background-color: white;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0; /* Cambio de rounded-lg a esquinas cuadradas */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+        .service-grid-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            border-color: var(--accent);
+        }
+        .service-icon-wrapper {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f3f4f6; /* gray-100 */
+            margin-bottom: 1.5rem;
+            transition: all 0.4s ease;
+        }
+        .service-grid-item:hover .service-icon-wrapper {
+            background-color: var(--accent);
+            transform: rotate(15deg) scale(1.1);
+        }
+        .service-icon {
+            font-size: 2rem;
+            color: var(--accent);
+            transition: color 0.4s ease;
+        }
+        .service-grid-item:hover .service-icon {
+            color: white;
+        }
+        .service-grid-item h3 {
+            margin-bottom: 0.5rem;
+            transition: color 0.4s ease;
+        }
     </style>
 </head>
 <body class="antialiased">
     <!-- Indicador de carga -->
     <div class="loader" id="page-loader">
         <div class="flex flex-col items-center">
-            <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="h-[15rem] mb-8" onerror="this.onerror=null;this.src='https://placehold.co/200x64/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+            <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="h-[15rem] mb-8 logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/200x64/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+            <img src="imagenes/LogoBlanco.png" alt="Logo Adán Gómez" class="h-[15rem] mb-8 logo-light" style="display: none;" onerror="this.onerror=null;this.src='https://placehold.co/200x64/ffffff/1a1a1a?text=ADAN+GOMEZ';">
             <div class="loader-circle"></div>
         </div>
     </div>
@@ -425,44 +510,55 @@
     <header id="header" class="fixed top-0 left-0 right-0 z-50">
         <div class="container mx-auto px-6 flex justify-between items-center">
             <a href="#" data-target="portfolio" class="nav-link relative group">
-                <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-[250px] h-auto transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null;this.src='https://placehold.co/350x144/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+                <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/350x144/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+                <img src="imagenes/LogoBlanco.png" alt="Logo Adán Gómez Blanco" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-light" style="display: none;" onerror="this.onerror=null;this.src='https://placehold.co/350x144/ffffff/1a1a1a?text=ADAN+GOMEZ';">
             </a>
-            <nav class="hidden md:flex space-x-8 text-sm uppercase tracking-widest">
-                <a href="#" data-target="portfolio" class="nav-link hover:text-gray-500 transition-colors relative group">
-                    Portafolio
-                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                </a>
-                <a href="#" data-target="projects" class="nav-link hover:text-gray-500 transition-colors relative group">
-                    Proyectos
-                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                </a>
-                <a href="#" data-target="services" class="nav-link hover:text-gray-500 transition-colors relative group">
-                    Servicios
-                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                </a>
-                <a href="#" data-target="rental" class="nav-link hover:text-gray-500 transition-colors relative group">
-                    Alquiler
-                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                </a>
-                <a href="#" data-target="about" class="nav-link hover:text-gray-500 transition-colors relative group">
-                    Quién Soy
-                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                </a>
-                <a href="#" data-target="contact" class="nav-link hover:text-gray-500 transition-colors relative group">
-                    Contacto
-                    <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                </a>
-            </nav>
-            <button id="mobile-menu-button" class="md:hidden z-50 w-8 h-6 flex flex-col justify-between" aria-label="Menú móvil" aria-expanded="false">
-                <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                <span class="block w-full h-0.5 bg-black icon-bar"></span>
-            </button>
+
+            <div class="flex items-center">
+                <nav class="hidden lg:flex items-center space-x-8 text-sm uppercase tracking-widest">
+                    <a href="#" data-target="portfolio" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Portafolio</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="projects" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Proyectos</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="services" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Servicios</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="rental" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Alquiler</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="about" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Quién Soy</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="contact" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Contacto</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                </nav>
+
+                <div class="hidden lg:flex items-center space-x-4 ml-8">
+                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
+                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
+                    <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
+                </div>
+
+                <button id="mobile-menu-button" class="lg:hidden z-50 w-8 h-6 flex flex-col justify-between ml-6" aria-label="Menú móvil" aria-expanded="false">
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                </button>
+            </div>
         </div>
     </header>
     <!-- Menú Móvil Overlay (Rediseñado) -->
-    <div id="mobile-menu" class="fixed top-0 right-0 w-full h-full z-40 md:hidden" aria-hidden="true">
-        <nav class="flex flex-col justify-center items-center h-full space-y-8 text-3xl">
+    <div id="mobile-menu" class="fixed top-0 right-0 w-full h-full z-40 lg:hidden flex flex-col" aria-hidden="true">
+        <nav class="flex flex-col justify-center items-center h-full space-y-8 text-3xl flex-grow">
             <a href="#" data-target="portfolio" class="nav-link mobile-nav-link uppercase">Portafolio</a>
             <a href="#" data-target="projects" class="nav-link mobile-nav-link uppercase">Proyectos</a>
             <a href="#" data-target="services" class="nav-link mobile-nav-link uppercase">Servicios</a>
@@ -470,33 +566,26 @@
             <a href="#" data-target="about" class="nav-link mobile-nav-link uppercase">Quién Soy</a>
             <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
+        <div class="flex justify-center items-center space-x-6 pb-12">
+            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-2x"></i></a>
+            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-2x"></i></a>
+            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-2x"></i></a>
+        </div>
     </div>
     <main id="main-content">
         <!-- ===== PORTFOLIO PAGE ===== -->
-        <section id="portfolio" class="page-container pt-32 md:pt-40 pb-0" aria-label="Portafolio">
-            <div class="container mx-auto px-6">
-                <div class="text-center mb-16 reveal">
-                    <h1 class="text-5xl md:text-6xl font-display text-reveal">El Arte de Contar Historias sin Palabras</h1>
-                    <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto text-reveal">Mi trabajo es mi carta de presentación. Explora una selección de mis proyectos más recientes.</p>
-                </div>
-
-                <div class="mb-24 reveal">
-                    <div class="text-center mb-12">
-                        <h2 class="text-4xl font-display text-gray-800 text-reveal">Galería Fotográfica</h2>
-                        <hr class="w-24 h-0.5 mx-auto mt-4 bg-gray-300 border-0">
-                    </div>
-                    <div id="portfolio-gallery" class="columns-3 sm:columns-3 lg:columns-5 gap-3 space-y-3">
+        <section id="portfolio" class="page-container pt-28 md:pt-36 pb-0" aria-label="Portafolio">
+            <div class="container mx-auto px-4 sm:px-6">
+                <!-- El contenedor de la galería ahora es el elemento principal -->
+                <div class="reveal">
+                    <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-4 gap-6 space-y-6">
                         <!-- Las ~200 imágenes se insertan aquí desde JS -->
                     </div>
                 </div>
             </div>
 
-            <div class="bg-black text-white py-20 reveal">
+            <div class="bg-zinc-700 text-white py-20 mt-24 reveal">
                 <div class="container mx-auto px-6">
-                    <div class="text-center mb-16">
-                        <h2 class="text-4xl font-display text-reveal">Cinematografía</h2>
-                        <p class="text-lg text-gray-400 mt-2 text-reveal">Capturando la esencia más allá de la imagen fija.</p>
-                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
                         <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
                             <img src="https://placehold.co/1280x720/333333/ffffff?text=Cinematic+Wedding+Film" class="w-full h-full object-cover" alt="Cinematic Wedding Film">
@@ -517,8 +606,7 @@
             <div class="bg-gray-100 py-20 reveal">
                 <div class="container mx-auto px-6">
                     <div class="text-center mb-12">
-                         <h2 class="text-4xl font-display text-gray-800 text-reveal">Marcas Colaboradoras</h2>
-                         <p class="text-lg text-gray-600 mt-2 text-reveal">Una sinergia de visiones y valores.</p>
+                         <h2 class="text-4xl font-display text-gray-800 text-reveal">Confianza y Colaboración</h2>
                     </div>
                     <div class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto">
                         <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+1" alt="Logo Cliente 1" class="client-logo">
@@ -538,18 +626,14 @@
                     </div>
                     <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
                         <a href="#" data-target="projects" class="nav-link btn-primary inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105 w-full sm:w-auto">Explorar Proyectos</a>
-                        <a href="#" data-target="contact" class="nav-link btn-primary inline-block bg-gray-800 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-black transition-transform hover:scale-105 w-full sm:w-auto">Contactar Ahora</a>
+                        <a href="#" data-target="contact" class="nav-link btn-primary inline-block bg-zinc-700 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-zinc-800 transition-transform hover:scale-105 w-full sm:w-auto">Contactar Ahora</a>
                     </div>
                 </div>
             </div>
         </section>
         <!-- ===== PROJECTS PAGE ===== -->
-        <section id="projects" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-gray-50" aria-label="Proyectos">
+        <section id="projects" class="page-container pt-28 md:pt-36 pb-20 md:pb-24 bg-gray-50" aria-label="Proyectos">
             <div class="container mx-auto px-4 md:px-12">
-                <div class="text-center mb-16 reveal">
-                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Proyectos Destacados</h2>
-                    <p class="text-lg text-gray-600 mt-2 text-reveal">Historias completas contadas a través de mi lente.</p>
-                </div>
                 <div id="projects-container" class="space-y-20">
                     <!-- Los 7 proyectos se insertan aquí desde JS -->
                 </div>
@@ -559,124 +643,52 @@
                 </div>
             </div>
         </section>
-        <!-- ===== SERVICES PAGE ===== -->
-        <section id="services" class="page-container pt-32 md:pt-40 pb-20 md:pb-24" aria-label="Servicios">
+        <!-- ===== SERVICES PAGE (REDESIGNED) ===== -->
+        <section id="services" class="page-container pt-28 md:pt-36 pb-20 md:pb-24" aria-label="Servicios">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-16 reveal">
-                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Soluciones a Medida</h2>
-                    <p class="text-lg text-gray-600 mt-2 text-reveal">Más que fotos, creo experiencias visuales que cumplen tus objetivos.</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-                    <div class="service-card p-8 border border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-black">
-                        <div class="text-4xl mb-4"><i class="fas fa-ring text-gray-400"></i></div>
-                        <h3 class="text-2xl font-display mb-3">Fotografía de Bodas</h3>
-                        <p class="text-gray-600 mb-4">Capturo la esencia y la emoción de tu día más especial con un enfoque documental y artístico.</p>
-                        <p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p>
-                        <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                            <li>Bodas íntimas y grandes celebraciones.</li>
-                            <li>Sesiones pre-boda y post-boda.</li>
-                            <li>Aniversarios y pedidas de mano.</li>
-                        </ul>
-                    </div>
-                    <div class="service-card p-8 border border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-black" style="transition-delay: 200ms;">
-                        <div class="text-4xl mb-4"><i class="fas fa-portrait text-gray-400"></i></div>
-                        <h3 class="text-2xl font-display mb-3">Retratos y Books</h3>
-                        <p class="text-gray-600 mb-4">Creo imágenes que reflejan tu verdadera personalidad, ya sea para tu marca personal, tu familia o tu carrera.</p>
-                        <p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p>
-                        <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                            <li>Profesionales y emprendedores.</li>
-                            <li>Actores, modelos y artistas.</li>
-                            <li>Familias, parejas y maternidad.</li>
-                        </ul>
-                    </div>
-                    <div class="service-card p-8 border border-gray-200 transition-all duration-300 hover:shadow-xl hover:border-black" style="transition-delay: 400ms;">
-                        <div class="text-4xl mb-4"><i class="fas fa-camera-retro text-gray-400"></i></div>
-                        <h3 class="text-2xl font-display mb-3">Producto y Marcas</h3>
-                        <p class="text-gray-600 mb-4">Produzco imágenes limpias y atractivas que hacen que tus productos destaquen y comuniquen calidad.</p>
-                        <p class="font-bold text-sm uppercase tracking-wider mb-2">Ideal para:</p>
-                        <ul class="list-disc list-inside text-gray-600 text-sm space-y-1">
-                            <li>Tiendas online (E-commerce).</li>
-                            <li>Campañas en redes sociales.</li>
-                            <li>Catálogos y material publicitario.</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="mt-24 reveal">
-                    <div class="text-center mb-12">
-                        <h3 class="text-4xl font-display text-reveal">Servicios Adicionales</h3>
-                        <p class="text-lg text-gray-600 mt-2 text-reveal">Llevando tu proyecto al siguiente nivel.</p>
-                    </div>
-                    <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                        <div class="service-card">
-                            <i class="fas fa-video fa-2x mb-3 text-gray-400"></i>
-                            <h4 class="text-xl font-bold mb-2">Producción de Video</h4>
-                            <p class="text-gray-600 text-sm">Desde videos cortos para redes sociales hasta cobertura de eventos.</p>
-                        </div>
-                        <div class="service-card">
-                            <i class="fas fa-drone fa-2x mb-3 text-gray-400"></i>
-                            <h4 class="text-xl font-bold mb-2">Fotografía con Dron</h4>
-                            <p class="text-gray-600 text-sm">Perspectivas aéreas impresionantes para propiedades, eventos y paisajes.</p>
-                        </div>
-                        <div class="service-card">
-                            <i class="fas fa-book-open fa-2x mb-3 text-gray-400"></i>
-                            <h4 class="text-xl font-bold mb-2">Álbumes y Libros</h4>
-                            <p class="text-gray-600 text-sm">Diseño e impresión de álbumes de alta calidad para un recuerdo tangible.</p>
-                        </div>
-                    </div>
+                <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto reveal">
+                    <!-- Los servicios se insertan aquí desde JS -->
                 </div>
             </div>
         </section>
-        <!-- ===== RENTAL PAGE ===== -->
-        <section id="rental" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-gray-50" aria-label="Alquiler de Equipo">
+        <!-- ===== RENTAL PAGE (REDESIGNED) ===== -->
+        <section id="rental" class="page-container pt-28 md:pt-36 pb-20 md:pb-24 bg-white" aria-label="Alquiler de Equipo">
             <div class="container mx-auto px-6">
-                <div class="text-center mb-16 reveal">
-                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Alquiler de Equipo Profesional</h2>
-                    <p class="text-lg text-gray-600 mt-2 text-reveal">El equipo que necesitas para llevar tu producción al siguiente nivel.</p>
+                <div id="rental-filters-wrapper" class="reveal mb-12">
+                    <div id="rental-filters" class="flex justify-center flex-wrap gap-4">
+                        <!-- Filtros de categoría se insertan aquí -->
+                    </div>
                 </div>
-                <div id="rental-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                    <!-- Las tarjetas de alquiler se insertan aquí desde JS -->
+                <div id="rental-grid-categorized" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Las tarjetas de alquiler se insertan aquí -->
                 </div>
             </div>
         </section>
-        <!-- ===== ABOUT ME PAGE ===== -->
-        <section id="about" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-gray-50" aria-label="Sobre mí">
+        <!-- ===== ABOUT ME PAGE (REDESIGNED) ===== -->
+        <section id="about" class="page-container pt-24 md:pt-32 pb-20 md:pb-24 bg-gray-50" aria-label="Sobre mí">
             <div class="container mx-auto px-6">
                 <div class="max-w-4xl mx-auto">
                     <div class="text-center reveal">
                         <div class="relative inline-block">
-                            <img src="imagenes/FotoPerfil.png" alt="Adán" class="rounded-full shadow-xl w-60 h-60 mx-auto mb-8 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/240x240/999999/FFFFFF?text=Ad%C3%A1n';">
-                            <div class="absolute inset-0 rounded-full border-4 border-white border-opacity-30 animate-ping"></div>
+                            <img src="imagenes/FotoPerfil.png" alt="Adán" class="shadow-xl w-72 h-72 mx-auto mb-8 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/288x288/999999/FFFFFF?text=Ad%C3%A1n';">
+                            <div class="absolute inset-0 border-4 border-white border-opacity-30 animate-ping"></div>
                         </div>
-                        <h2 class="text-5xl md:text-6xl font-display mb-4 text-reveal">Mi Lente, Mi Historia</h2>
-                        <p class="text-xl text-gray-700 leading-relaxed max-w-2xl mx-auto italic text-reveal">"No hago fotos para vivir, vivo para hacer fotos. Mi cámara no es una herramienta, es una extensión de mi curiosidad por el mundo y las historias que la gente tiene que contar."</p>
+                        <p class="text-xl text-gray-700 leading-relaxed max-w-2xl mx-auto italic text-reveal mt-8">"No hago fotos para vivir, vivo para hacer fotos. Mi cámara no es una herramienta, es una extensión de mi curiosidad por el mundo y las historias que la gente tiene que contar."</p>
                     </div>
-                    <div class="prose max-w-none lg:prose-lg mx-auto mt-16 text-gray-600 leading-relaxed space-y-8 reveal">
+                    <div class="prose max-w-none lg:prose-lg mx-auto mt-16 text-gray-600 leading-relaxed space-y-8 reveal text-justify">
                         <h3 class="text-3xl font-display text-black !mb-4 text-reveal">Mi Filosofía</h3>
                         <p class="text-reveal">Hola, soy Adán Gómez. Desde que tomé una cámara por primera vez hace más de diez años, me enamoré de la capacidad de congelar un instante y contar una historia sin palabras. Mi estilo se define por la naturalidad, la luz y la emoción. Busco la belleza en lo cotidiano y la autenticidad en cada retrato.</p>
                         <p class="text-reveal">Para mí, la fotografía no es solo técnica, es conexión. Es crear un espacio de confianza donde puedas ser tú mismo, para que juntos podamos crear algo verdaderamente memorable. Mi objetivo es que te veas en mis fotos y no solo reconozcas tu imagen, sino que sientas la emoción de ese momento una y otra vez.</p>
                         
                         <h3 class="text-3xl font-display text-black !mt-16 !mb-4 text-reveal">Mi Proceso Creativo</h3>
                         <p class="text-reveal">Cada proyecto es un viaje colaborativo. Comienza con una conversación, no con una sesión. Me sumerjo en tu visión para entender qué historia queremos contar. Durante la sesión, mi enfoque es crear una atmósfera relajada donde la magia pueda suceder de forma orgánica. Finalmente, en la postproducción, cada imagen es tratada con el mimo de un artesano para asegurar que el resultado final sea atemporal.</p>
-                        
-                        <div class="grid grid-cols-2 gap-4 !my-12">
-                            <div class="gallery-item overflow-hidden img-container">
-                                <img src="https://placehold.co/600x400/cccccc/333333?text=Mi+Equipo" class="w-full" alt="Equipo fotográfico">
-                            </div>
-                            <div class="gallery-item overflow-hidden img-container">
-                                <img src="https://placehold.co/600x400/cccccc/333333?text=Mi+Estudio" class="w-full" alt="Estudio de fotografía">
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
         </section>
-        <!-- ===== CONTACT PAGE ===== -->
-        <section id="contact" class="page-container pt-32 md:pt-40" aria-label="Contacto">
+        <!-- ===== CONTACT PAGE (REDESIGNED) ===== -->
+        <section id="contact" class="page-container pt-28 md:pt-36" aria-label="Contacto">
              <div class="container mx-auto px-6 pb-20 md:pb-24">
-                 <div class="text-center mb-16 reveal">
-                    <h2 class="text-5xl md:text-6xl font-display text-reveal">Conectemos</h2>
-                    <p class="text-lg text-gray-600 mt-2 max-w-2xl mx-auto text-reveal">Estoy listo para escuchar tu historia. Elige tu canal preferido y empecemos a crear algo increíble juntos.</p>
-                </div>
                 <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
                         <i class="fab fa-instagram fa-3x mb-3"></i>
@@ -695,8 +707,8 @@
                         <span class="font-bold">Facebook</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fab fa-linkedin-in fa-3x mb-3"></i>
-                        <span class="font-bold">LinkedIn</span>
+                        <i class="fab fa-youtube fa-3x mb-3"></i>
+                        <span class="font-bold">Youtube</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
                         <i class="fas fa-phone fa-3x mb-3"></i>
@@ -709,13 +721,15 @@
                 <p class="text-lg text-gray-600 mt-2 text-reveal">Ubicado en el corazón de Coronado, listo para dar vida a tu proyecto.</p>
              </div>
             <div class="reveal">
-                <iframe id="google-map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31431.83101261831!2d-84.0101680513672!3d10.023880900000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8fa0f3c43dd70743%3A0x18258b381d58552a!2sV%C3%A1squez%20de%20Coronado!5e0!3m2!1ses-419!2scr!4v1722547858413!5m2!1ses-419!2scr" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <iframe id="google-map" src="https://www.google.com/maps/embed?pb=!1m18!m12!1m3!1d31431.83101261831!2d-84.0101680513672!3d10.023880900000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8fa0f3c43dd70743%3A0x18258b381d58552a!2sV%C3%A1squez%20de%20Coronado!5e0!3m2!1ses-419!2scr!4v1722547858413!5m2!1ses-419!2scr" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
         </section>
         <!-- PROJECT DETAIL PAGES CONTAINER -->
         <div id="project-detail-pages"></div>
         <!-- RENTAL DETAIL PAGES CONTAINER -->
         <div id="rental-detail-pages"></div>
+        <!-- SERVICE DETAIL PAGES CONTAINER -->
+        <div id="service-detail-pages"></div>
     </main>
     <!-- Lightbox Modal -->
     <div id="lightbox" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0" role="dialog" aria-modal="true" aria-label="Vista ampliada de imagen">
@@ -835,38 +849,137 @@
             { id: 7, title: "Espacios que Inspiran", img: "https://placehold.co/800x600/dad7cd/588157?text=Arquitectura", description: "Fotografía de arquitectura e interiores." }
         ];
 
-        const rentalData = [
-            { id: 1, name: "Canon EOS R5", short_desc: "Cámara mirrorless full-frame de alta resolución.", long_desc: "La Canon EOS R5 es ideal para profesionales que necesitan la máxima calidad de imagen. Con su sensor de 45MP, grabación de video 8K y un sistema de autoenfoque de vanguardia, es la herramienta perfecta para bodas, retratos y producciones de video.", images: ["https://placehold.co/800x600/333/fff?text=EOS+R5+Front", "https://placehold.co/800x600/444/fff?text=EOS+R5+Back", "https://placehold.co/800x600/555/fff?text=EOS+R5+Side"] },
-            { id: 2, name: "Sony A7S III", short_desc: "El rey de la grabación con poca luz.", long_desc: "La Sony A7S III es la elección predilecta para videógrafos. Su increíble rendimiento en condiciones de poca luz, grabación 4K a 120fps y perfiles de color profesionales la hacen ideal para cinematografía, documentales y eventos.", images: ["https://placehold.co/800x600/333/fff?text=A7S+III+Front", "https://placehold.co/800x600/444/fff?text=A7S+III+Top"] },
-            { id: 3, name: "Lente Canon RF 24-70mm f/2.8", short_desc: "El zoom estándar profesional por excelencia.", long_desc: "Un lente versátil y luminoso que cubre desde gran angular hasta teleobjetivo corto. Perfecto para eventos, retratos y viajes, ofreciendo una nitidez excepcional en todo su rango.", images: ["https://placehold.co/800x600/333/fff?text=RF+24-70mm"] },
-            { id: 4, name: "DJI Ronin-S", short_desc: "Estabilizador de 3 ejes para tomas fluidas.", long_desc: "Consigue tomas cinematográficas y sin vibraciones con el DJI Ronin-S. Compatible con una amplia gama de cámaras, es esencial para producciones de video profesionales.", images: ["https://placehold.co/800x600/333/fff?text=Ronin-S"] },
-            { id: 5, name: "Kit de Luces Aputure 120D II", short_desc: "Iluminación LED potente y versátil.", long_desc: "Este kit incluye una luz Aputure 120D II con montura Bowens, un trípode y un softbox. Ideal para entrevistas, retratos y videos de producto, ofreciendo una luz suave y de alta calidad.", images: ["https://placehold.co/800x600/333/fff?text=Aputure+Kit"] },
-            { id: 6, name: "DJI Mavic 3 Pro", short_desc: "Dron con cámara Hasselblad para tomas aéreas.", long_desc: "Captura imágenes aéreas impresionantes con calidad cinematográfica. El Mavic 3 Pro ofrece video 5.1K, un sistema de triple cámara y una autonomía de vuelo excepcional.", images: ["https://placehold.co/800x600/333/fff?text=Mavic+3+Pro"] },
-            { id: 7, name: "Lente Sigma 85mm f/1.4 ART", short_desc: "El lente definitivo para retratos.", long_desc: "Con una apertura de f/1.4, este lente produce un bokeh increíblemente suave y una nitidez asombrosa, haciendo que los sujetos resalten de manera espectacular. Disponible para monturas Sony E y Canon EF.", images: ["https://placehold.co/800x600/333/fff?text=Sigma+85mm"] },
-            { id: 8, name: "Grabadora de Audio Zoom H6", short_desc: "Grabadora de campo de 6 canales.", long_desc: "Captura audio profesional con la Zoom H6. Sus cápsulas de micrófono intercambiables y múltiples entradas la hacen perfecta para entrevistas, podcasts y diseño de sonido.", images: ["https://placehold.co/800x600/333/fff?text=Zoom+H6"] },
-            { id: 9, name: "Trípode Manfrotto 055", short_desc: "Trípode de aluminio robusto y estable.", long_desc: "Un trípode confiable para fotografía y video. Su columna central de 90° permite ángulos creativos, y su construcción robusta soporta equipos pesados con total seguridad.", images: ["https://placehold.co/800x600/333/fff?text=Manfrotto+055"] },
-            { id: 10, name: "Monitor Externo Atomos Ninja V", short_desc: "Monitor/Grabador de 5 pulgadas.", long_desc: "Mejora tu flujo de trabajo de video con el Ninja V. Graba en formatos ProRes y DNxHR directamente desde el sensor de tu cámara y monitorea con precisión gracias a su pantalla HDR brillante.", images: ["https://placehold.co/800x600/333/fff?text=Ninja+V"] },
-            { id: 11, name: "Canon EOS R6 Mark II", short_desc: "Cámara híbrida veloz y potente.", long_desc: "Excelente para fotografía de acción y video. Ofrece ráfagas de 40fps, video 4K/60p y un autoenfoque mejorado que sigue a los sujetos con tenacidad.", images: ["https://placehold.co/800x600/333/fff?text=R6+II"] },
-            { id: 12, name: "Lente Sony GM 70-200mm f/2.8 II", short_desc: "Teleobjetivo zoom de referencia.", long_desc: "El teleobjetivo preferido por profesionales de deportes, vida salvaje y eventos. Ofrece una nitidez increíble, un enfoque rápido y una construcción ligera.", images: ["https://placehold.co/800x600/333/fff?text=Sony+70-200"] },
-            { id: 13, name: "Kit Micrófonos Inalámbricos Rode", short_desc: "Sistema de doble micrófono inalámbrico.", long_desc: "El Rode Wireless GO II es un sistema ultracompacto y versátil, perfecto para entrevistas, vlogs y creación de contenido con audio de alta calidad y sin cables.", images: ["https://placehold.co/800x600/333/fff?text=Rode+Wireless"] },
-            { id: 14, name: "Filtro Polarizador Circular 82mm", short_desc: "Reduce reflejos y realza colores.", long_desc: "Un filtro esencial para fotógrafos de paisajes y arquitectura. Elimina los reflejos no deseados de superficies como el agua y el cristal, y aumenta la saturación de los cielos y el follaje.", images: ["https://placehold.co/800x600/333/fff?text=CPL+Filter"] },
-            { id: 15, name: "Mochila Peak Design Everyday 30L", short_desc: "Mochila versátil para fotógrafos.", long_desc: "Transporta tu equipo de forma segura y cómoda. Con divisores FlexFold personalizables y acceso rápido lateral, es la compañera ideal para cualquier sesión.", images: ["https://placehold.co/800x600/333/fff?text=Peak+Design+Bag"] },
-            { id: 16, name: "GoPro HERO12 Black", short_desc: "Cámara de acción líder en el mercado.", long_desc: "Captura tus aventuras en impresionante video 5.3K. Con estabilización HyperSmooth 6.0 y una construcción resistente al agua, está lista para cualquier desafío.", images: ["https://placehold.co/800x600/333/fff?text=GoPro+12"] },
-            { id: 17, name: "Lente Laowa 100mm 2x Ultra Macro", short_desc: "Explora el mundo en miniatura.", long_desc: "Este lente macro permite una magnificación de hasta 2:1, revelando detalles invisibles a simple vista. Ideal para fotografía de insectos, joyas y productos.", images: ["https://placehold.co/800x600/333/fff?text=Laowa+Macro"] },
-            { id: 18, name: "Panel LED RGB Godox", short_desc: "Luz creativa con millones de colores.", long_desc: "Añade un toque de color a tus escenas con este panel LED RGB. Controla el tono, la saturación y el brillo para crear cualquier ambiente que puedas imaginar.", images: ["https://placehold.co/800x600/333/fff?text=Godox+RGB"] },
-            { id: 19, name: "Teleprompter Feelworld", short_desc: "Para discursos y guiones fluidos.", long_desc: "Ideal para youtubers, presentadores y producciones corporativas. Se acopla a tu lente y refleja el texto desde un smartphone o tablet para una lectura natural a cámara.", images: ["https://placehold.co/800x600/333/fff?text=Teleprompter"] },
-            { id: 20, name: "Fondo de Papel Savage (Varios Colores)", short_desc: "Fondos de estudio sin arrugas.", long_desc: "Rollos de papel de 2.72m de ancho para un fondo liso y uniforme. Disponible en blanco, negro y gris. Incluye sistema de soporte portátil.", images: ["https://placehold.co/800x600/333/fff?text=Savage+Paper"] },
-            { id: 21, name: "Tableta Gráfica Wacom Intuos Pro", short_desc: "Precisión para retoque fotográfico.", long_desc: "La herramienta estándar de la industria para retocadores y diseñadores. Ofrece un control y una precisión inigualables para la edición de imágenes.", images: ["https://placehold.co/800x600/333/fff?text=Wacom+Tablet"] },
-            { id: 22, name: "Lente Canon RF 15-35mm f/2.8", short_desc: "Zoom ultra gran angular profesional.", long_desc: "Perfecto para arquitectura, interiores y paisajes espectaculares. Su estabilización de imagen y su apertura f/2.8 lo hacen increíblemente versátil.", images: ["https://placehold.co/800x600/333/fff?text=RF+15-35mm"] },
-            { id: 23, name: "Slider motorizado edelkrone", short_desc: "Movimientos de cámara suaves y programables.", long_desc: "Crea travellings y timelapses dinámicos con precisión. Controlable a través de una aplicación móvil para movimientos complejos y repetibles.", images: ["https://placehold.co/800x600/333/fff?text=edelkrone+Slider"] },
-            { id: 24, name: "Kit de reflectores 5 en 1", short_desc: "Modifica la luz de forma sencilla.", long_desc: "Un reflector plegable de 110cm con superficies plateada, dorada, blanca, negra y translúcida. La herramienta más versátil y económica para controlar la iluminación.", images: ["https://placehold.co/800x600/333/fff?text=Reflector+Kit"] },
-            { id: 25, name: "Tarjeta de Memoria CFexpress 512GB", short_desc: "Almacenamiento ultrarrápido y fiable.", long_desc: "Esencial para grabación de video en alta resolución y ráfagas de alta velocidad. Con velocidades de lectura de hasta 1700MB/s, optimiza tu flujo de trabajo.", images: ["https://placehold.co/800x600/333/fff?text=CFexpress+Card"] },
+        const servicesData = [
+            { id: 1, title: "Fotografía de Bodas", icon: "fas fa-ring" },
+            { id: 2, title: "Retratos y Books", icon: "fas fa-portrait" },
+            { id: 3, title: "Producto y Marcas", icon: "fas fa-camera-retro" },
+            { id: 4, title: "Producción de Video", icon: "fas fa-video" },
+            { id: 5, title: "Fotografía con Dron", icon: "fa-solid fa-helicopter" },
+            { id: 6, title: "Álbumes y Libros", icon: "fas fa-book-open" }
         ];
+
+        const serviceDetails = {
+            "service-detail-1": {
+                title: "Fotografía de Bodas",
+                intro: "Más que un evento, tu boda es el primer capítulo de una nueva historia. Mi misión es capturar cada risa, cada lágrima de alegría y cada mirada cómplice con un enfoque artístico y documental, creando un legado visual que atesorarás para siempre.",
+                sections: [
+                    { 
+                        title: "Mi Enfoque Cinematográfico", 
+                        content: "Combino la elegancia de la fotografía de bellas artes con la autenticidad del fotoperiodismo. Busco los momentos genuinos, las emociones no posadas. Me muevo discretamente a lo largo del día para documentar la historia tal como sucede, creando imágenes atemporales que cuentan tu verdad."
+                    },
+                    {
+                        title: "¿Qué Incluye el Servicio?",
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Reunión de planificación pre-boda.</li><li>Cobertura completa del día, desde los preparativos hasta la fiesta.</li><li>Galería online privada y protegida con contraseña para compartir.</li><li>Entrega de 500+ imágenes editadas en alta resolución.</li><li>Opción de añadir sesiones de compromiso, álbumes de lujo y segundo fotógrafo.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.bodas)
+            },
+            "service-detail-2": {
+                title: "Retratos y Books",
+                intro: "Un buen retrato es más que una simple imagen; es una declaración de quién eres. Ya sea para tu marca personal, tu perfil profesional o un recuerdo familiar, creo un ambiente de confianza para capturar tu esencia de una manera auténtica y poderosa.",
+                sections: [
+                    { 
+                        title: "Una Sesión a Tu Medida", 
+                        content: "Cada sesión de retratos es una colaboración. Antes de disparar, conversamos sobre tus objetivos, tu estilo y la historia que quieres contar. Podemos trabajar en mi estudio para un look clásico y controlado, o en exteriores para aprovechar la luz natural y el entorno, creando imágenes que realmente te representen."
+                    },
+                    {
+                        title: "Tipos de Sesiones",
+                        content: "<ul class='list-disc list-inside space-y-2'><li><strong>Marca Personal:</strong> Para emprendedores, ejecutivos y creativos que necesitan una imagen profesional.</li><li><strong>Books para Artistas:</strong> Sesiones para actores, modelos y músicos.</li><li><strong>Familia y Parejas:</strong> Capturando la conexión y el amor en momentos especiales.</li><li><strong>Maternidad:</strong> Celebrando la belleza de la espera.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.retratos)
+            },
+             "service-detail-3": {
+                title: "Producto y Marcas",
+                intro: "En un mercado saturado, la calidad visual no es una opción, es una necesidad. Produzco imágenes limpias, atractivas y profesionales que elevan la percepción de tu marca y convierten visitantes en clientes.",
+                sections: [
+                    { 
+                        title: "Fotografía que Vende", 
+                        content: "Mi proceso se centra en entender tu producto y tu cliente ideal. Planifico cada detalle, desde la iluminación hasta el estilismo, para crear imágenes que no solo muestren tu producto, sino que también comuniquen sus valores y beneficios. El resultado son fotografías que se integran perfectamente en tu e-commerce, redes sociales y campañas de marketing."
+                    },
+                    {
+                        title: "Servicios para Marcas",
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Fotografía de producto para e-commerce (fondo blanco/color).</li><li>Fotografía de lifestyle con modelos y en contexto.</li><li>Fotografía publicitaria para campañas.</li><li>Creación de contenido visual para redes sociales.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.producto)
+            },
+            "service-detail-4": {
+                title: "Producción de Video",
+                intro: "Del guion a la pantalla final, produzco videos cinematográficos que comunican tu mensaje de manera efectiva y emocional. Ya sea un comercial, un video corporativo o un cortometraje, mi enfoque es contar historias que resuenen.",
+                sections: [
+                    { 
+                        title: "Un Proceso Integral", 
+                        content: "Manejo todas las fases de la producción: preproducción (conceptualización, guion), producción (rodaje con equipo de cine digital) y postproducción (edición, colorización, sonido). Este enfoque integral asegura una visión cohesiva y un producto final de la más alta calidad."
+                    },
+                    {
+                        title: "Tipos de Producción",
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Videos de Marca (Brand Films).</li><li>Comerciales para TV y Redes Sociales.</li><li>Videos Corporativos e Institucionales.</li><li>Documentales y Cortometrajes.</li><li>Videos Musicales.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, {bg: '3a3a3a', text: 'fdfdfd'})
+            },
+            "service-detail-5": {
+                title: "Fotografía con Dron",
+                intro: "Eleva tu perspectiva y muestra tu proyecto desde un punto de vista imposible de alcanzar desde tierra. Ofrezco fotografía y videografía aérea de alta resolución para realzar la escala, la belleza y el contexto de tu sujeto.",
+                sections: [
+                    { 
+                        title: "Calidad y Seguridad Profesional", 
+                        content: "Como piloto certificado, opero con los más altos estándares de seguridad y cumpliendo con toda la normativa vigente. Utilizo drones de última generación equipados con cámaras Hasselblad para garantizar una calidad de imagen excepcional, con colores vivos y un detalle asombroso."
+                    },
+                    {
+                        title: "Aplicaciones Aéreas",
+                        content: "<ul class='list-disc list-inside space-y-2'><li><strong>Inmobiliaria:</strong> Muestra propiedades, terrenos y desarrollos desde el aire.</li><li><strong>Eventos:</strong> Captura la magnitud de conciertos, bodas y eventos deportivos.</li><li><strong>Cinematografía:</strong> Tomas aéreas espectaculares para producciones de video.</li><li><strong>Inspección:</strong> Seguimiento de obras y revisión de infraestructuras.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.naturaleza)
+            },
+            "service-detail-6": {
+                title: "Álbumes y Libros",
+                intro: "Tus fotografías merecen algo más que una pantalla. Diseño y produzco álbumes de lujo y libros de autor que transforman tus recuerdos en una obra de arte tangible, un tesoro familiar que pasará de generación en generación.",
+                sections: [
+                    { 
+                        title: "Artesanía y Calidad de Museo", 
+                        content: "Trabajo con los mejores encuadernadores y laboratorios de impresión para asegurar una calidad excepcional. Cada álbum se diseña a medida, contando la historia de tu día de una manera fluida y emotiva. Utilizamos papeles de archivo y materiales de la más alta calidad para garantizar su durabilidad y belleza."
+                    },
+                    {
+                        title: "Opciones de Personalización",
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Amplia selección de cubiertas: lino, cuero, madera.</li><li>Grabado personalizado de nombres y fechas.</li><li>Diferentes tamaños y tipos de papel (mate, lustre).</li><li>Cajas de presentación a juego para proteger tu álbum.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.bodas)
+            },
+        };
+
+        const rentalData = {
+            "Cámaras": [
+                { id: 1, name: "Canon EOS R5", tier: "Alta", description: "Sensor 45MP, video 8K. Ideal para máxima resolución.", long_desc: "La Canon EOS R5 es ideal para profesionales que necesitan la máxima calidad de imagen. Con su sensor de 45MP, grabación de video 8K y un sistema de autoenfoque de vanguardia, es la herramienta perfecta para bodas, retratos y producciones de video.", images: ["https://placehold.co/800x600/333/fff?text=EOS+R5+Front", "https://placehold.co/800x600/444/fff?text=EOS+R5+Back"] },
+                { id: 11, name: "Canon EOS R6 Mark II", tier: "Media", description: "Cámara híbrida veloz, 4K/60p. Perfecta para eventos.", long_desc: "Excelente para fotografía de acción y video. Ofrece ráfagas de 40fps, video 4K/60p y un autoenfoque mejorado que sigue a los sujetos con tenacidad.", images: ["https://placehold.co/800x600/333/fff?text=R6+II"] },
+                { id: 16, name: "GoPro HERO12 Black", tier: "Baja", description: "Video 5.3K, estabilización HyperSmooth 6.0.", long_desc: "Captura tus aventuras en impresionante video 5.3K. Con estabilización HyperSmooth 6.0 y una construcción resistente al agua, está lista para cualquier desafío.", images: ["https://placehold.co/800x600/333/fff?text=GoPro+12"] }
+            ],
+            "Lentes": [
+                { id: 3, name: "Canon RF 24-70mm f/2.8", tier: "Alta", description: "El zoom estándar profesional por excelencia. Versátil y luminoso.", long_desc: "Un lente versátil y luminoso que cubre desde gran angular hasta teleobjetivo corto. Perfecto para eventos, retratos y viajes, ofreciendo una nitidez excepcional en todo su rango.", images: ["https://placehold.co/800x600/333/fff?text=RF+24-70mm"] },
+                { id: 7, name: "Sigma 85mm f/1.4 ART", tier: "Alta", description: "El lente definitivo para retratos con bokeh espectacular.", long_desc: "Con una apertura de f/1.4, este lente produce un bokeh increíblemente suave y una nitidez asombrosa, haciendo que los sujetos resalten de manera espectacular. Disponible para monturas Sony E y Canon EF.", images: ["https://placehold.co/800x600/333/fff?text=Sigma+85mm"] },
+                { id: 22, name: "Canon RF 15-35mm f/2.8", tier: "Media", description: "Zoom ultra gran angular para paisajes y arquitectura.", long_desc: "Perfecto para arquitectura, interiores y paisajes espectaculares. Su estabilización de imagen y su apertura f/2.8 lo hacen increíblemente versátil.", images: ["https://placehold.co/800x600/333/fff?text=RF+15-35mm"] }
+            ],
+            "Estabilización": [
+                 { id: 4, name: "DJI Ronin-S", tier: "Alta", description: "Estabilizador de 3 ejes para tomas de cine fluidas.", long_desc: "Consigue tomas cinematográficas y sin vibraciones con el DJI Ronin-S. Compatible con una amplia gama de cámaras, es esencial para producciones de video profesionales.", images: ["https://placehold.co/800x600/333/fff?text=Ronin-S"] },
+                 { id: 23, name: "Slider Motorizado Edelkrone", tier: "Media", description: "Crea travellings y timelapses dinámicos con precisión.", long_desc: "Crea travellings y timelapses dinámicos con precisión. Controlable a través de una aplicación móvil para movimientos complejos y repetibles.", images: ["https://placehold.co/800x600/333/fff?text=edelkrone+Slider"] },
+                 { id: 9, name: "Trípode Manfrotto 055", tier: "Baja", description: "Trípode de aluminio robusto y estable para todo uso.", long_desc: "Un trípode confiable para fotografía y video. Su columna central de 90° permite ángulos creativos, y su construcción robusta soporta equipos pesados con total seguridad.", images: ["https://placehold.co/800x600/333/fff?text=Manfrotto+055"] }
+            ]
+        };
         
         // --- FUNCIONES DE RENDERIZADO Y NAVEGACIÓN ---
-        const navigateTo = (targetId) => {
+        const navigateTo = (targetId, isServiceDetail = false) => {
             const currentPage = document.querySelector('.page-active');
             const targetPage = document.getElementById(targetId);
+            
+            // Control de la apariencia del header
+            if (isServiceDetail) {
+                header.classList.add('header-dark');
+            } else {
+                header.classList.remove('header-dark');
+            }
 
             if (!targetPage || currentPage === targetPage) return;
 
@@ -888,8 +1001,12 @@
             }
 
             let activeTarget = targetId;
-            if (targetId.startsWith('project-detail-') || targetId.startsWith('rental-detail-')) {
-                activeTarget = targetId.startsWith('project') ? 'projects' : 'rental';
+             if (targetId.startsWith('project-detail-')) {
+                activeTarget = 'projects';
+            } else if (targetId.startsWith('rental-detail-')) {
+                activeTarget = 'rental';
+            } else if (targetId.startsWith('service-detail-')) {
+                activeTarget = 'services';
             }
             allNavLinks.forEach(link => {
                 link.classList.remove('nav-active');
@@ -899,6 +1016,7 @@
             });
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            
             observeElements(targetPage);
         };
         
@@ -921,10 +1039,10 @@
                                 <i class="fas fa-arrow-left mr-2"></i> Volver a Proyectos
                             </a>
                             <div class="text-center mb-16 reveal">
-                                <h2 class="text-5xl md:text-6xl font-display text-reveal">${project.title}</h2>
-                                <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto text-reveal">${project.description}</p>
+                                <h2 class="text-4xl md:text-5xl font-display text-reveal">${project.title}</h2>
+                                <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto text-reveal text-center">${project.description}</p>
                             </div>
-                            <div class="columns-2 md:columns-3 gap-6 space-y-6 reveal">${imagesHTML}</div>
+                            <div class="columns-2 md:columns-3 gap-8 space-y-8 reveal">${imagesHTML}</div>
                         </div>
                     </div>
                 </section>`;
@@ -932,9 +1050,69 @@
             navigateTo(projectId);
         };
 
+        const renderServiceDetail = (serviceId) => {
+            const detailContainer = document.getElementById('service-detail-pages');
+            const service = serviceDetails[serviceId];
+            if (!service) return;
+
+            const sectionsHTML = service.sections.map(section => `
+                <div class="reveal">
+                    <h3 class="text-3xl font-display text-black mb-4 text-reveal">${section.title}</h3>
+                    <div class="prose max-w-none lg:prose-lg text-gray-600 leading-relaxed text-reveal text-justify">${section.content}</div>
+                </div>
+            `).join('');
+
+            const galleryHTML = service.gallery.map(src => `
+                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container">
+                    <img src="${src}" alt="${service.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
+                </div>
+            `).join('');
+
+            detailContainer.innerHTML = `
+                <section id="${serviceId}" class="page-container bg-white">
+                     <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-32 pb-16 md:pt-0 md:pb-0">
+                        <div class="text-center reveal">
+                            <h1 class="text-5xl md:text-7xl font-display text-reveal">${service.title}</h1>
+                        </div>
+                    </div>
+                    <div class="container mx-auto px-6 py-20 md:py-24">
+                        <div class="max-w-4xl mx-auto">
+                             <a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block">
+                                <i class="fas fa-arrow-left mr-2"></i> Volver a Servicios
+                            </a>
+                            <div class="reveal">
+                                <p class="text-xl text-gray-700 leading-relaxed italic text-center mb-16 text-reveal">${service.intro}</p>
+                            </div>
+                            <div class="space-y-16">
+                                ${sectionsHTML}
+                            </div>
+                             <div class="mt-20 reveal">
+                                <h3 class="text-3xl font-display text-black mb-8 text-center text-reveal">Galería de Muestra</h3>
+                                <div class="columns-2 md:columns-3 gap-6 space-y-6">${galleryHTML}</div>
+                            </div>
+                            <div class="text-center mt-20 reveal">
+                                <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Interesado en este servicio?</h3>
+                                <a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Hablemos de tu Proyecto</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+            navigateTo(serviceId, true);
+        };
+
         const renderRentalDetail = (rentalId) => {
             const detailContainer = document.getElementById('rental-detail-pages');
-            const item = rentalData.find(r => r.id == rentalId.split('-')[2]);
+            
+            let item;
+            for (const category in rentalData) {
+                const found = rentalData[category].find(r => r.id == rentalId.split('-')[2]);
+                if (found) {
+                    item = found;
+                    break;
+                }
+            }
+            
             if (!item) return;
 
             const carouselItemsHTML = item.images.map(src => `
@@ -958,7 +1136,7 @@
                                 </div>
                                 <div>
                                     <h2 class="text-4xl md:text-5xl font-display mb-4">${item.name}</h2>
-                                    <p class="text-gray-600 leading-relaxed">${item.long_desc}</p>
+                                    <p class="text-gray-600 leading-relaxed text-justify">${item.long_desc}</p>
                                     <a href="#" data-target="contact" class="nav-link btn-primary mt-8 inline-block bg-black text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-gray-800">Contactar para Alquilar</a>
                                 </div>
                             </div>
@@ -1005,26 +1183,111 @@
             }
         };
 
-        const renderRentalGrid = () => {
-            const rentalGrid = document.getElementById('rental-grid');
-            if(rentalGrid) {
-                rentalGrid.innerHTML = rentalData.map(item => `
-                    <div class="rental-card border border-gray-200 bg-white group">
-                        <div class="aspect-w-1 aspect-h-1 overflow-hidden relative carousel-container">
+        const renderServicesGrid = () => {
+            const servicesGrid = document.getElementById('services-grid');
+            if(servicesGrid) {
+                servicesGrid.innerHTML = servicesData.map(service => `
+                    <a href="#" data-target="service-detail-${service.id}" class="nav-link service-grid-item items-center justify-center text-center py-12">
+                        <div class="service-icon-wrapper">
+                            <i class="${service.icon} service-icon"></i>
+                        </div>
+                        <h3 class="text-2xl font-display text-gray-900">${service.title}</h3>
+                    </a>
+                `).join('');
+            }
+        };
+
+        const renderRentalPage = () => {
+            const filtersContainer = document.getElementById('rental-filters');
+            const gridContainer = document.getElementById('rental-grid-categorized');
+            if (!filtersContainer || !gridContainer) return;
+
+            const categories = ['Todo', ...Object.keys(rentalData)];
+            filtersContainer.innerHTML = categories.map(cat => `
+                <button class="rental-category-btn ${cat === 'Todo' ? 'active' : ''}" data-category="${cat}">${cat}</button>
+            `).join('');
+
+            const renderItems = (category) => {
+                let itemsToRender = [];
+                if (category === 'Todo') {
+                    itemsToRender = Object.values(rentalData).flat();
+                } else {
+                    itemsToRender = rentalData[category];
+                }
+
+                // Ordenar por Baja, Media, Alta
+                const tierOrder = { "Baja": 1, "Media": 2, "Alta": 3 };
+                itemsToRender.sort((a, b) => (tierOrder[a.tier] || 0) - (tierOrder[b.tier] || 0));
+
+                gridContainer.innerHTML = itemsToRender.map(item => `
+                    <div class="rental-card reveal">
+                         <div class="carousel-container aspect-w-4 aspect-h-3">
                             <div class="carousel-track flex" data-current-index="0">
                                 ${item.images.map(src => `<div class="carousel-item flex-shrink-0 w-full"><img src="${src}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('')}
                             </div>
                             <button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button>
                             <button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>
                         </div>
-                        <div class="p-4">
-                            <h3 class="font-display text-xl mb-2 truncate">${item.name}</h3>
-                            <p class="text-gray-600 text-sm mb-4 h-10 overflow-hidden">${item.short_desc}</p>
-                            <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider">Ver Detalles</a>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <div class="flex items-baseline">
+                                <h3 class="font-display text-2xl">${item.name}</h3>
+                                <span class="ml-2 text-xs font-semibold uppercase tracking-wider text-gray-500">(${item.tier})</span>
+                            </div>
+                            <p class="text-gray-600 text-sm my-4 flex-grow">${item.description}</p>
+                            <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
+                                Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
+                            </a>
                         </div>
                     </div>
                 `).join('');
-            }
+                
+                const rentalCards = gridContainer.querySelectorAll('.rental-card');
+                const cardObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach((entry, index) => {
+                        if (entry.isIntersecting) {
+                            setTimeout(() => {
+                                entry.target.classList.add('visible');
+                            }, index * 75);
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1 });
+                rentalCards.forEach(card => cardObserver.observe(card));
+            };
+
+            filtersContainer.addEventListener('click', (e) => {
+                if (e.target.matches('.rental-category-btn')) {
+                    filtersContainer.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    renderItems(e.target.dataset.category);
+                }
+            });
+             gridContainer.addEventListener('click', function(e) {
+                const button = e.target.closest('.rental-carousel-button');
+                if (button) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const track = button.closest('.carousel-container').querySelector('.carousel-track');
+                    const slides = Array.from(track.children);
+                    const direction = parseInt(button.dataset.direction);
+                    let currentIndex = parseInt(track.dataset.currentIndex);
+
+                    currentIndex += direction;
+
+                    if (currentIndex < 0) {
+                        currentIndex = slides.length - 1;
+                    } else if (currentIndex >= slides.length) {
+                        currentIndex = 0;
+                    }
+
+                    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+                    track.dataset.currentIndex = currentIndex;
+                }
+            });
+
+
+            renderItems('Todo');
         };
         
         const renderProjects = () => {
@@ -1068,20 +1331,6 @@
             }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
             
             revealElements.forEach(el => revealObserver.observe(el));
-            
-            const serviceCards = container.querySelectorAll('.service-card:not(.animate)');
-            const serviceObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach((entry, index) => {
-                    if (entry.isIntersecting) {
-                        setTimeout(() => {
-                            entry.target.classList.add('animate');
-                        }, index * 100);
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-            
-            serviceCards.forEach(card => serviceObserver.observe(card));
             
             const imgContainers = container.querySelectorAll('.img-container:not(.loaded)');
             const imgObserver = new IntersectionObserver((entries, observer) => {
@@ -1163,6 +1412,8 @@
                     renderProjectDetail(targetId);
                 } else if (targetId.startsWith('rental-detail-')) {
                     renderRentalDetail(targetId);
+                } else if (targetId.startsWith('service-detail-')) {
+                    renderServiceDetail(targetId);
                 }
                 else {
                     navigateTo(targetId);
@@ -1192,37 +1443,19 @@
             }
         });
         
-        document.getElementById('rental-grid').addEventListener('click', function(e) {
-            const button = e.target.closest('.rental-carousel-button');
-            if (button) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const track = button.closest('.carousel-container').querySelector('.carousel-track');
-                const slides = Array.from(track.children);
-                const direction = parseInt(button.dataset.direction);
-                let currentIndex = parseInt(track.dataset.currentIndex);
-
-                currentIndex += direction;
-
-                if (currentIndex < 0) {
-                    currentIndex = slides.length - 1;
-                } else if (currentIndex >= slides.length) {
-                    currentIndex = 0;
-                }
-
-                track.style.transform = `translateX(-${currentIndex * 100}%)`;
-                track.dataset.currentIndex = currentIndex;
-            } else {
-                 const rentalCard = e.target.closest('.rental-card');
-                 if(rentalCard) {
-                    renderRentalDetail(rentalCard.dataset.target);
-                 }
-            }
-        });
-
         window.addEventListener('scroll', () => {
-            header.classList.toggle('header-scrolled', window.scrollY > 50);
+            const isServicePage = document.querySelector('.page-active[id^="service-detail-"]');
+            
+            // Lógica unificada para el scroll
+            if (window.scrollY > 50) {
+                header.classList.add('header-scrolled');
+                header.classList.remove('header-dark');
+            } else {
+                header.classList.remove('header-scrolled');
+                if (isServicePage) {
+                    header.classList.add('header-dark');
+                }
+            }
             
             const parallaxElements = document.querySelectorAll('.parallax');
             parallaxElements.forEach(el => {
@@ -1272,7 +1505,8 @@
         const initialize = () => {
             renderPortfolio();
             renderProjects();
-            renderRentalGrid();
+            renderServicesGrid();
+            renderRentalPage();
             
             setTimeout(() => {
                 pageLoader.classList.add('hidden');
@@ -1293,3 +1527,5 @@
     </script>
 </body>
 </html>
+
+
