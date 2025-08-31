@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Versión actualizada a 9.6 -->
-    <title>AGVISUAL</title>
+    <!-- Versión actualizada a 10.6 -->
+    <title>Adán Gómez | Fotógrafo Profesional (v10.6)</title>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="imagenes/Icon.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
+    <!-- Google Fonts (ACTUALIZADO) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&family=Prata&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -31,8 +31,9 @@
             color: var(--text-dark);
             overflow-x: hidden;
         }
+        /* TIPOGRAFÍA DE TÍTULOS ACTUALIZADA */
         h1, h2, h3, h4, .font-display { 
-            font-family: 'Prata', serif; 
+            font-family: 'Cormorant Garamond', serif; 
             line-height: 1.4; 
         }
         
@@ -97,14 +98,14 @@
             padding-bottom: 0.5rem;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Sombra sutil permanente */
         }
-        #header.header-scrolled, #header.header-light {
+        #header.header-scrolled {
             background-color: rgba(253, 253, 253, 0.95);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
         }
         #header.header-dark {
-            background-color: transparent;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); /* Sombra más visible en fondo transparente */
+            background-color: #52525b; /* bg-zinc-700 */
+            box-shadow: none;
         }
         #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon {
             color: white;
@@ -137,7 +138,7 @@
             transform: translateX(0);
         }
         .mobile-nav-link {
-            font-family: 'Prata', serif;
+            font-family: 'Cormorant Garamond', serif;
             color: var(--text-dark);
             opacity: 0;
             transform: translateY(30px);
@@ -621,7 +622,7 @@
             <div class="bg-gray-100 pt-12 pb-24 reveal">
                 <div class="container mx-auto px-6 text-center">
                      <div class="text-center mb-12">
-                        <h2 class="text-4xl font-display text-gray-800 text-reveal">¿Listo para el Siguiente Paso?</h2>
+                        <h2 class="text-4xl font-display text-gray-800 text-reveal py-2">¿Listo para el Siguiente Paso?</h2>
                         <p class="text-lg text-gray-600 mt-2 text-reveal">Explora mis proyectos o contáctame para empezar a crear.</p>
                     </div>
                     <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
@@ -974,12 +975,8 @@
             const currentPage = document.querySelector('.page-active');
             const targetPage = document.getElementById(targetId);
             
-            // Control de la apariencia del header
-            if (isServiceDetail) {
-                header.classList.add('header-dark');
-            } else {
-                header.classList.remove('header-dark');
-            }
+            // Lógica corregida para el header
+            handleScrollHeader(isServiceDetail);
 
             if (!targetPage || currentPage === targetPage) return;
 
@@ -991,6 +988,8 @@
             targetPage.style.display = 'block';
             setTimeout(() => {
                 targetPage.classList.add('page-active');
+                 // Volver a forzar la evaluación del header DESPUÉS de que la nueva página esté activa
+                handleScrollHeader();
             }, 10);
             
             if (currentPage) {
@@ -1069,10 +1068,10 @@
             `).join('');
 
             detailContainer.innerHTML = `
-                <section id="${serviceId}" class="page-container bg-white">
-                     <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-32 pb-16 md:pt-0 md:pb-0">
+                <section id="${serviceId}" class="page-container">
+                     <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-28 md:pt-36 pb-16">
                         <div class="text-center reveal">
-                            <h1 class="text-5xl md:text-7xl font-display text-reveal">${service.title}</h1>
+                            <h1 class="text-5xl md:text-7xl font-display text-reveal py-2">${service.title}</h1>
                         </div>
                     </div>
                     <div class="container mx-auto px-6 py-20 md:py-24">
@@ -1443,27 +1442,30 @@
             }
         });
         
-        window.addEventListener('scroll', () => {
-            const isServicePage = document.querySelector('.page-active[id^="service-detail-"]');
-            
-            // Lógica unificada para el scroll
+        const handleScrollHeader = (forceIsService = null) => {
+            let isServicePage;
+            if (forceIsService === true) {
+                isServicePage = true;
+            } else if (forceIsService === false) {
+                isServicePage = false;
+            } else {
+                isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
+            }
+
             if (window.scrollY > 50) {
-                header.classList.add('header-scrolled');
                 header.classList.remove('header-dark');
+                header.classList.add('header-scrolled');
             } else {
                 header.classList.remove('header-scrolled');
                 if (isServicePage) {
                     header.classList.add('header-dark');
+                } else {
+                    header.classList.remove('header-dark');
                 }
             }
-            
-            const parallaxElements = document.querySelectorAll('.parallax');
-            parallaxElements.forEach(el => {
-                const scrolled = window.pageYOffset;
-                const rate = scrolled * -0.2;
-                el.style.transform = `translateY(${rate}px)`;
-            });
-        }, { passive: true });
+        };
+
+        window.addEventListener('scroll', handleScrollHeader, { passive: true });
         
         const toggleMobileMenu = (open) => {
             mobileMenu.classList.toggle('open', open);
