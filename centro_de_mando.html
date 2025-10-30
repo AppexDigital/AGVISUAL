@@ -682,17 +682,17 @@ const Auth = {
             return;
         }
         
-        const client = google.accounts.oauth2.initCodeClient({
+         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
                 'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile',
-                'https://www.googleapis.com/auth/drive.file' // CRÍTICO para upload-image.js
+                'https://www.googleapis.com/auth/userinfo.profile'
+                // *** // *** PLANO DE CORRECCIÓN v2.3 ***
+                // *** Se elimina el scope 'drive.file' para solucionar el bloqueo de login.
+                // 'https://www.googleapis.com/auth/drive.file' 
+                // *** FIN DE LA CORRECCIÓN v2.3 ***
             ].join(' '),
-            // *** // *** PLANO DE CORRECCIÓN v2.1 ***
-            // *** Se usa la constante fija para eliminar ambigüedad.
             redirect_uri: GOOGLE_REDIRECT_URI
-            // *** FIN DE LA CORRECCIÓN v2.1 ***
         });
         client.requestCode();
     },
@@ -2005,6 +2005,7 @@ App.init();
 </script>
 </body>
 </html>
+
 
 
 
