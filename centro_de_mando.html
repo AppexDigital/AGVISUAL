@@ -432,7 +432,7 @@
                                         <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Equipo</th>
                                         <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Categoría</th>
                                         <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Precio/Día</th>
-                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                        <th classs="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rental-items-table-body" class="divide-y divide-gray-200"></tbody>
@@ -535,7 +535,8 @@
 <script>
 // --- Configuración Global ---
 let GOOGLE_OAUTH_CLIENT_ID = null;
-// *** CONSTANTE DE REDIRECCIÓN FIJA (Plano v2.1) ***
+// *** CONSTANTE GLOBAL: URI DE REDIRECCIÓN FIJA ***
+// Esta debe coincidir EXACTAMENTE con la URI en Google Cloud
 const GOOGLE_REDIRECT_URI = 'https://agvisual1.netlify.app/centro_de_mando.html';
 
 // Almacén de estado global
@@ -566,34 +567,30 @@ const API = {
      * Realiza una llamada de API genérica a nuestras funciones de Netlify.
      */
     async call(endpoint, options = {}, isRetry = false) {
-        // --- AJUSTE QUIRÚRGICO (v4.4): Reintroducir AbortController ---
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
             controller.abort();
             console.error(`Timeout de API: La solicitud a ${endpoint} tardó más de 25 segundos.`);
         }, 25000); // 25 segundos de timeout
-        // --- FIN AJUSTE ---
 
         const headers = new Headers(options.headers || {});
         if (appState.gAuthToken && appState.gAuthToken.access_token) {
             headers.set('Authorization', `Bearer ${appState.gAuthToken.access_token}`);
         }
-        if (options.body && typeof options.body !== 'object' && !(options.body instanceof FormData)) {
-             console.warn("API.call body no es un objeto, se asume FormData o string");
-        } else if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
-            headers.set('Content-Type', 'application/json');
+        if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+             headers.set('Content-Type', 'application/json');
             options.body = JSON.stringify(options.body);
         }
 
         const config = { 
             ...options, 
             headers,
-            signal: controller.signal // <-- AJUSTE QUIRÚRGICO: Añadir signal
+            signal: controller.signal
         };
 
         try {
             const response = await fetch(endpoint, config);
-            clearTimeout(timeoutId); // <-- AJUSTE QUIRÚRGICO: Limpiar timeout si hay respuesta
+            clearTimeout(timeoutId); 
 
             if (response.ok) {
                 const contentType = response.headers.get("content-type");
@@ -601,7 +598,7 @@ const API = {
                     return await response.json();
                 }
                 const text = await response.text();
-                return text ? (text.startsWith('{') ? JSON.parse(text) : { message: text }) : {}; // Devolver objeto para consistencia
+                return text ? (text.startsWith('{') ? JSON.parse(text) : { message: text }) : {}; 
             }
 
             // Error 401 (Token Expirado) - Lógica de Refresco
@@ -610,11 +607,15 @@ const API = {
                 const refreshed = await Auth.refreshToken();
                 if (refreshed) {
                     console.log('Token refrescado. Reintentando la llamada API...');
-                    // Remueve el body de config si es FormData, no se puede reenviar un stream
                     if (config.body instanceof FormData) {
                         delete config.body; 
                     }
-                    return await API.call(endpoint, config, true); // Marcar como reintento
+                    // IMPORTANTE: Re-crear headers para el reintento
+                    const newConfigForRetry = { ...config, headers: new Headers(config.headers) };
+                    if (appState.gAuthToken && appState.gAuthToken.access_token) {
+                         newConfigForRetry.headers.set('Authorization', `Bearer ${appState.gAuthToken.access_token}`);
+                    }
+                    return await API.call(endpoint, newConfigForRetry, true); // Marcar como reintento
                 } else {
                     throw new Error('No se pudo refrescar la sesión.');
                 }
@@ -633,7 +634,7 @@ const API = {
             }
             throw error; // Re-lanzar el error
         } finally {
-            clearTimeout(timeoutId); // <-- AJUSTE QUIRÚRGICO: Asegurar limpieza en cualquier caso
+            clearTimeout(timeoutId);
         }
     }
 };
@@ -642,7 +643,6 @@ const API = {
 const Auth = {
     async getAuthConfig() {
         try {
-            // AJUSTE v4.5: Usar API.call para que tenga el timeout
             const config = await API.call('/.netlify/functions/get-auth-config');
             if (!config.clientId) throw new Error("Client ID no fue devuelto.");
             GOOGLE_OAUTH_CLIENT_ID = config.clientId;
@@ -654,14 +654,9 @@ const Auth = {
             return false;
         }
     },
-    async redirectToGoogleLogin() { // <-- AJUSTE v4.5: convertida a async
-        // --- AJUSTE QUIRÚRGICO (v4.7): Eliminar este loader. Es innecesario y bloquea la UI.
-        // UI.showLoading("Conectando con Google..."); // <-- ESTA LÍNEA ES EL ERROR
-        // --- FIN AJUSTE ---
-
-        // --- AJUSTE QUIRÚRGICO (v4.5): Obtener config AL HACER CLIC ---
+    async redirectToGoogleLogin() { 
         if (!GOOGLE_OAUTH_CLIENT_ID) {
-            UI.showLoading("Preparando conexión..."); // <-- Loader alternativo
+            UI.showLoading("Preparando conexión..."); 
             try {
                 if (!await Auth.getAuthConfig()) {
                      UI.showLoginError("Error de configuración. No se pudo conectar.");
@@ -671,30 +666,25 @@ const Auth = {
                 UI.showLoginError(`Error de red: ${error.message}`);
                 return;
             } finally {
-                UI.showLoading(false); // <-- Asegurarse de ocultar el loader de config
+                UI.showLoading(false); 
                 UI.showLogin();
             }
         }
-        // --- AJUSTE QUIRÚRGICO (FIN) ---
-
-        if (!GOOGLE_OAUTH_CLIENT_ID) {
-            UI.showLoginError("Error de configuración. Intente de nuevo más tarde.");
-            return;
-        }
         
-         const client = google.accounts.oauth2.initCodeClient({
+        // *** // *** PLANO DE CORRECCIÓN v2.6 ***
+        // *** Forzar el flujo de REDIRECCIÓN.
+        // *** Se elimina `callback` y `error_callback`
+        const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
                 'https://www.googleapis.com/auth/userinfo.email',
                 'https://www.googleapis.com/auth/userinfo.profile'
-                // *** // *** PLANO DE CORRECCIÓN v2.3 ***
-                // *** Se elimina el scope 'drive.file' para solucionar el bloqueo de login.
-                // 'https://www.googleapis.com/auth/drive.file' 
-                // *** FIN DE LA CORRECCIÓN v2.3 ***
+                // Se quitó el scope de drive.file
             ].join(' '),
-            redirect_uri: GOOGLE_REDIRECT_URI
+            redirect_uri: GOOGLE_REDIRECT_URI // Usar la URI fija
         });
-        client.requestCode();
+        client.requestCode(); // Esto AHORA hará una redirección de página completa
+        // *** FIN DE LA CORRECCIÓN v2.6 ***
     },
     async handleAuthCallback(code) {
         UI.showLoading("Verificando código...");
@@ -703,30 +693,22 @@ const Auth = {
                 method: 'POST',
                 body: JSON.stringify({ 
                     code: code,
-                    // *** // *** PLANO DE CORRECCIÓN v2.1 ***
-                    // *** Se envía la misma URI fija al backend.
-                    redirectUri: GOOGLE_REDIRECT_URI
-                    // *** FIN DE LA CORRECCIÓN v2.1 ***
+                    redirectUri: GOOGLE_REDIRECT_URI // Enviar la URI fija para validación
                 }),
             }).then(res => res.json());
 
-            if (tokens.error) {
-                console.error("Error del backend al intercambiar código:", tokens.details || tokens.error);
-                throw new Error(tokens.details || tokens.error);
-            }
-
+            if (tokens.error) throw new Error(tokens.details || tokens.error);
             this.setAuthToken(tokens);
             window.history.replaceState({}, document.title, window.location.pathname);
-            // --- AJUSTE QUIRÚRGICO (v4.4): Llamar a checkAuth y LUEGO a showApp ---
+            
             if (await this.checkAuth()) {
-                 await UI.showApp(); // Mostrar la app DESPUÉS de verificar/refrescar token
+                 await UI.showApp(); 
             } else {
-                 UI.showLogin(); // Si checkAuth falló (ej. refresco imposible), ir a login
+                 UI.showLogin(); 
             }
-            // --- FIN AJUSTE ---
         } catch (error) {
-            console.error("Error en handleAuthCallback:", error);
-            UI.showLoginError(`Error al verificar: ${error.message}`);
+            console.error("Error al intercambiar el código:", error);
+            UI.showLoginError(error.message);
         }
     },
     async checkAuth() {
@@ -738,9 +720,7 @@ const Auth = {
         if (expiresIn < 300) {
             console.log("Token expirado, intentando refrescar...");
             try {
-                // --- AJUSTE QUIRÚRGICO (v4.5): Mostrar loader ANTES de refrescar ---
                 UI.showLoading("Refrescando sesión..."); 
-                // --- FIN AJUSTE ---
                 const refreshed = await this.refreshToken();
                 if (!refreshed) {
                     throw new Error("No se pudo refrescar la sesión.");
@@ -749,16 +729,16 @@ const Auth = {
             } catch (error) {
                 console.error("Error de refresco, forzando logout:", error);
                 this.logout(false);
-                return false; // <-- AJUSTE: Retorna false si falla el refresco
+                return false; 
             }
         }
-        return true; // <-- AJUSTE: Retorna true si el token es válido o se refrescó
+        return true; 
     },
     async refreshToken() {
         const localToken = this.getAuthToken();
         if (!localToken || !localToken.refresh_token) return false;
         try {
-            console.log("Intentando refrescar token..."); // Log para depuración
+            console.log("Intentando refrescar token..."); 
             const newTokens = await fetch('/.netlify/functions/auth-refresh', {
                 method: 'POST',
                 body: JSON.stringify({ refresh_token: localToken.refresh_token }),
@@ -772,35 +752,32 @@ const Auth = {
             return false;
         }
     },
-
-    // --- AJUSTE QUIRÚRGICO (v4.5): Nueva función ---
-    /**
-     * Maneja la carga inicial de la página. Decide qué mostrar
-     * basándose en el estado síncrono (URL y localStorage).
-     */
     async handlePageLoad() {
-        // *** INICIO DE DEPURACIÓN v2.2 ***
+        // *** // *** PLANO DE CORRECCIÓN v2.6 ***
+        // *** Lógica restaurada para el flujo de REDIRECCIÓN
         console.log('Auth.handlePageLoad() ejecutado.');
-        console.log('URL completa detectada:', window.location.href);
-
+        
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
-        const error = params.get('error'); // Comprobar si Google devuelve un error
+        const error = params.get('error');
 
-        // Si Google devuelve un error explícito en la URL
+        console.log(`URL completa detectada: ${window.location.href}`);
+
         if (error) {
             const errorDesc = params.get('error_description') || error;
             console.error('¡Error de Google en la URL!:', errorDesc);
             UI.showLoginError(`Error de Google: ${errorDesc}`);
+            window.history.replaceState({}, document.title, window.location.pathname);
             return; // Detener ejecución
         }
         
         if (code) {
-            console.log('Se encontró un "code" en la URL:', code);
-            // Es un callback, SÍ necesita red.
+            console.log(`"code" detectado en la URL. Iniciando handleAuthCallback...`);
+            // Es un callback de redirección, SÍ necesita red.
             await Auth.handleAuthCallback(code);
+        
         } else if (Auth.getAuthToken()) {
-            console.log('No se encontró "code". Buscando token local...');
+            console.log('Buscando token local...');
             // Hay un token, SÍ necesita red para verificarlo.
             if (await Auth.checkAuth()) {
                 console.log('Token local válido. Mostrando app.');
@@ -814,10 +791,8 @@ const Auth = {
             // No code, no token. Mostrar login. SIN RED.
             UI.showLogin();
         }
-        // *** FIN DE DEPURACIÓN v2.2 ***
+        // *** FIN DE LA CORRECCIÓN v2.6 ***
     },
-    // --- AJUSTE QUIRÚRGICO (FIN) ---
-
     async logout(notifyGoogle = true) {
         const localToken = this.getAuthToken();
         if (notifyGoogle && localToken && localToken.access_token) {
@@ -884,15 +859,11 @@ const UI = {
         loginScreen.style.display = 'none';
         appScreen.style.display = 'flex'; // Mostrar interfaz de la app
 
-        // --- AJUSTE QUIRÚRGICO v4.6: Cargar datos en segundo plano ---
-        // Se elimina el 'await' para que UI.showApp termine inmediatamente.
-        // loadAdminData manejará su propio indicador de carga interno.
         if (!appState.isDataLoaded) {
             this.loadAdminData(); // SIN await
         } else {
              this.renderView(appState.currentView);
         }
-        // --- FIN AJUSTE ---
     },
     showView(viewId) {
         if (appState.currentView === viewId && viewId !== 'rentals' && viewId !== 'bookings') return;
@@ -910,7 +881,6 @@ const UI = {
         const nav = document.querySelector(navSelector);
         if (!nav) return;
         
-        // Reset a la primera pestaña por si acaso
         nav.querySelectorAll('.tab-btn').forEach((b, index) => b.classList.toggle('active', index === 0));
         document.querySelectorAll(contentSelectorPrefix).forEach((c, index) => c.classList.toggle('active', index === 0));
         
@@ -1314,7 +1284,7 @@ const UI = {
             row.innerHTML = `
                 <td class="p-4 font-bold">${rentalItem ? rentalItem.name : 'Equipo no encontrado'}</td>
                 <td class="p-4 text-text-muted">${item.reason}</td>
-                <td classD="p-4 text-text-muted">${item.startDate}</td>
+                <td class="p-4 text-text-muted">${item.startDate}</td>
                 <td class="p-4 text-text-muted">${item.endDate}</td>
                 <td class="p-4">
                     <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('BlockedDates', '${item.blockId}')" title="Editar Bloqueo">
@@ -1468,24 +1438,19 @@ const UI = {
 // --- Módulo Principal de la App (Controlador) ---
 const App = {
     async init() {
-        UI.showLoading("Iniciando..."); // Loader inicial global
+        UI.showLoading("Iniciando..."); 
         
-        // --- AJUSTE QUIRÚRGICO (v4.5): Flujo Offline-First ---
         try {
-            // Bindea eventos globales (como clics en botones)
             this.bindGlobalEvents();
-            // Llama a la nueva función que decide qué mostrar
             await Auth.handlePageLoad(); 
         } catch (error) {
-            // Este catch es el "salvavidas" final.
             console.error("Error fatal durante la inicialización:", error);
             UI.showLoginError(`Error de inicialización: ${error.message}.`);
         }
-        // --- AJUSTE QUIRÚRGICO (FIN) ---
     },
 
     bindGlobalEvents() {
-        googleLoginBtn.addEventListener('click', Auth.redirectToGoogleLogin);
+        googleLoginBtn.addEventListener('click', () => Auth.redirectToGoogleLogin());
         logoutBtn.addEventListener('click', () => Auth.logout(true));
         
         mainNav.addEventListener('click', e => {
@@ -1497,8 +1462,8 @@ const App = {
         });
         
         // BINDINGS PARA VISTAS (v4.0)
-        $('save-settings-btn')?.addEventListener('click', this.handleSaveSettings);
-        $('save-about-btn')?.addEventListener('click', this.handleSaveAbout);
+        $('save-settings-btn')?.addEventListener('click', () => this.handleSaveSettings());
+        $('save-about-btn')?.addEventListener('click', () => this.handleSaveAbout());
         
         $('add-video-btn')?.addEventListener('click', () => this.handleEditCrudItem('Videos', null));
         $('add-clientlogo-btn')?.addEventListener('click', () => this.handleEditCrudItem('ClientLogos', null));
@@ -1947,7 +1912,7 @@ const App = {
                         <input type="text" class="form-input font-bold p-1 block-title" value="" placeholder="Nuevo Título">
                         <div class="flex items-center gap-2">
                              <label class="text-sm">Orden: <input type="number" class="form-input w-20 p-1 text-sm block-order" value="99"></label>
-                             <button class="text-red-600 hover:text-red-800" onclick="this.parentElement.parentElement.parentElement.remove()">
+                             <button class..."text-red-600 hover:text-red-800" onclick="this.parentElement.parentElement.parentElement.remove()">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -2005,6 +1970,8 @@ App.init();
 </script>
 </body>
 </html>
+
+
 
 
 
