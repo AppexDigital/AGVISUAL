@@ -213,7 +213,6 @@
                 <svg viewBox="0 0 18 18" class="w-5 h-5">
                     <g fill="none" fill-rule="evenodd">
                         <path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1699-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2582h2.9082c1.7018-1.5668 2.6836-3.8773 2.6836-6.6155z" fill="#4285F4"></path>
-                        <!-- AJUSTE QUIRÚRGICO v4.6: Corregido el espacio inválido en '4.47-.8055' -->
                         <path d="M9 18c2.43 0 4.47-.8055 5.96-2.1818l-2.91-2.2582c-.8.5364-1.82.8545-2.96.8545-2.28 0-4.22-1.53-4.91-3.5727H1.07v2.3318C2.55 16.2973 5.51 18 9 18z" fill="#34A853"></path>
                         <path d="M4.08 10.7564c-.1-.3-.15-.61-.15-.92 0-.3.05-.62.15-.92V6.5855H1.07C.38 7.8236 0 9.0618 0 10.42c0 1.35.38 2.58.98 3.72l3.1-2.38z" fill="#FBBC05"></path>
                         <path d="M9 3.8636c1.32 0 2.5.4545 3.44 1.3455l2.58-2.5818C13.46.9727 11.43 0 9 0 5.51 0 2.55 1.7027 1.07 4.1364l3.01 2.3318C4.78 4.4636 6.72 3.8636 9 3.8636z" fill="#EA4335"></path>
@@ -536,6 +535,8 @@
 <script>
 // --- Configuración Global ---
 let GOOGLE_OAUTH_CLIENT_ID = null;
+// *** CONSTANTE DE REDIRECCIÓN FIJA (Plano v2.1) ***
+const GOOGLE_REDIRECT_URI = 'https://agvisual1.netlify.app/centro_de_mando.html';
 
 // Almacén de estado global
 const appState = {
@@ -688,7 +689,10 @@ const Auth = {
                 'https://www.googleapis.com/auth/userinfo.profile',
                 'https://www.googleapis.com/auth/drive.file' // CRÍTICO para upload-image.js
             ].join(' '),
-            redirect_uri: window.location.origin + window.location.pathname,
+            // *** // *** PLANO DE CORRECCIÓN v2.1 ***
+            // *** Se usa la constante fija para eliminar ambigüedad.
+            redirect_uri: GOOGLE_REDIRECT_URI
+            // *** FIN DE LA CORRECCIÓN v2.1 ***
         });
         client.requestCode();
     },
@@ -699,10 +703,18 @@ const Auth = {
                 method: 'POST',
                 body: JSON.stringify({ 
                     code: code,
-                    redirectUri: window.location.origin + window.location.pathname
+                    // *** // *** PLANO DE CORRECCIÓN v2.1 ***
+                    // *** Se envía la misma URI fija al backend.
+                    redirectUri: GOOGLE_REDIRECT_URI
+                    // *** FIN DE LA CORRECCIÓN v2.1 ***
                 }),
             }).then(res => res.json());
-            if (tokens.error) throw new Error(tokens.details || tokens.error);
+
+            if (tokens.error) {
+                console.error("Error del backend al intercambiar código:", tokens.details || tokens.error);
+                throw new Error(tokens.details || tokens.error);
+            }
+
             this.setAuthToken(tokens);
             window.history.replaceState({}, document.title, window.location.pathname);
             // --- AJUSTE QUIRÚRGICO (v4.4): Llamar a checkAuth y LUEGO a showApp ---
@@ -713,8 +725,8 @@ const Auth = {
             }
             // --- FIN AJUSTE ---
         } catch (error) {
-            console.error("Error al intercambiar el código:", error);
-            UI.showLoginError(error.message);
+            console.error("Error en handleAuthCallback:", error);
+            UI.showLoginError(`Error al verificar: ${error.message}`);
         }
     },
     async checkAuth() {
@@ -1283,7 +1295,7 @@ const UI = {
             row.innerHTML = `
                 <td class="p-4 font-bold">${rentalItem ? rentalItem.name : 'Equipo no encontrado'}</td>
                 <td class="p-4 text-text-muted">${item.reason}</td>
-                <td class="p-4 text-text-muted">${item.startDate}</td>
+                <td classD="p-4 text-text-muted">${item.startDate}</td>
                 <td class="p-4 text-text-muted">${item.endDate}</td>
                 <td class="p-4">
                     <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('BlockedDates', '${item.blockId}')" title="Editar Bloqueo">
@@ -1974,6 +1986,5 @@ App.init();
 </script>
 </body>
 </html>
-
 
 
