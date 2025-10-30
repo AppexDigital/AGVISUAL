@@ -671,20 +671,19 @@ const Auth = {
             }
         }
         
-        // *** // *** PLANO DE CORRECCIÓN v2.6 ***
-        // *** Forzar el flujo de REDIRECCIÓN.
-        // *** Se elimina `callback` y `error_callback`
+        // *** // *** PLANO DE CORRECCIÓN v2.7 ***
+        // *** Ajuste de cirujano: Alinear scopes con Google Cloud (image_f40f62.png)
+        // *** Se elimina 'profile' y se añade 'openid'
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
                 'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile'
-                // Se quitó el scope de drive.file
+                'openid' // Coincide con tu captura de pantalla
             ].join(' '),
             redirect_uri: GOOGLE_REDIRECT_URI // Usar la URI fija
         });
         client.requestCode(); // Esto AHORA hará una redirección de página completa
-        // *** FIN DE LA CORRECCIÓN v2.6 ***
+        // *** FIN DE LA CORRECCIÓN v2.7 ***
     },
     async handleAuthCallback(code) {
         UI.showLoading("Verificando código...");
@@ -753,8 +752,7 @@ const Auth = {
         }
     },
     async handlePageLoad() {
-        // *** // *** PLANO DE CORRECCIÓN v2.6 ***
-        // *** Lógica restaurada para el flujo de REDIRECCIÓN
+        // Lógica de depuración de la v2.6
         console.log('Auth.handlePageLoad() ejecutado.');
         
         const params = new URLSearchParams(window.location.search);
@@ -791,7 +789,6 @@ const Auth = {
             // No code, no token. Mostrar login. SIN RED.
             UI.showLogin();
         }
-        // *** FIN DE LA CORRECCIÓN v2.6 ***
     },
     async logout(notifyGoogle = true) {
         const localToken = this.getAuthToken();
@@ -1912,7 +1909,7 @@ const App = {
                         <input type="text" class="form-input font-bold p-1 block-title" value="" placeholder="Nuevo Título">
                         <div class="flex items-center gap-2">
                              <label class="text-sm">Orden: <input type="number" class="form-input w-20 p-1 text-sm block-order" value="99"></label>
-                             <button class..."text-red-600 hover:text-red-800" onclick="this.parentElement.parentElement.parentElement.remove()">
+                             <button class="text-red-600 hover:text-red-800" onclick="this.parentElement.parentElement.parentElement.remove()">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
