@@ -1,0 +1,19 @@
+{
+  "name": "proyecto-final",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "dayjs": "^1.11.18",
+    "google-auth-library": "^10.4.2",
+    "google-spreadsheet": "^5.0.2",
+    "googleapis": "^164.1.0"
+  }
+}

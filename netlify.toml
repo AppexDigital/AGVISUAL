@@ -1,0 +1,16 @@
+[build]
+  # Si tu index.html está en la raíz, usa "."
+  # Si está en una carpeta 'public', usa "public/"
+  publish = "." 
+
+[functions]
+  directory = "functions/"
+  node_bundler = "esbuild" # Recomendado para mejor rendimiento
+
+# Añadir cabeceras para solucionar el error de Cross-Origin-Opener-Policy
+# que bloquea el popup de Google OAuth en el entorno de desarrollo local.
+[[headers]]
+  for = "/centro_de_mando.html"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    Cross-Origin-Embedder-Policy = "require-corp"

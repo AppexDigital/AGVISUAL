@@ -1,0 +1,1979 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Mando | Adán Gómez</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://placehold.co/32x32/1a1a1a/FDFDFD?text=AG">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Alineado con revolutionary_portfolio.html) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-main: #FDFDFD;
+            --text-dark: #1a1a1a;
+            --text-muted: #52525b; /* zinc-600 */
+            --accent: #3a3a3a;
+            --border-color: #e5e7eb; /* gray-200 */
+            --border-light: #f3f4f6; /* gray-100 */
+            --google-blue: #4285F4;
+        }
+        html { 
+            scroll-behavior: smooth; 
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        h1, h2, h3, h4, .font-display { 
+            font-family: 'Cormorant Garamond', serif; 
+        }
+        
+        /* --- Estilos de Componentes --- */
+        .loader-circle {
+            width: 50px; height: 50px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .btn {
+            padding: 0.75rem 1.5rem; border-radius: 0;
+            font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.05em; font-size: 0.875rem;
+            transition: all 0.3s ease;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn-primary {
+            background-color: var(--text-dark); color: var(--bg-main);
+        }
+        .btn-primary:hover {
+            background-color: var(--accent);
+        }
+        .btn-primary:disabled {
+            background-color: #9ca3af; cursor: not-allowed;
+        }
+        .btn-secondary {
+            background-color: transparent; color: var(--text-dark);
+            border: 1px solid var(--text-dark);
+        }
+        .btn-secondary:hover {
+            background-color: #f3f4f6; /* gray-100 */
+        }
+        .btn-danger {
+            background-color: #ef4444; color: white;
+        }
+        .btn-danger:hover { background-color: #dc2626; }
+
+        .google-btn {
+            background-color: var(--google-blue); color: white; font-weight: 600;
+            padding: 0.75rem 1.5rem; border-radius: 0; text-align: center;
+            display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .google-btn:hover { background-color: #357ae8; }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%; padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none; border-color: var(--text-dark);
+            box-shadow: 0 0 0 2px rgba(26,26,26,0.2);
+        }
+        .form-label {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700; font-size: 0.75rem;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem; display: block;
+        }
+        .form-checkbox {
+            width: 1.25rem; height: 1.25rem; border-radius: 0;
+            color: var(--text-dark); border-color: var(--border-color);
+        }
+        .form-checkbox:focus {
+            ring: var(--text-dark);
+        }
+        .form-checkbox:checked {
+            background-color: var(--text-dark);
+        }
+
+        .sidebar-link {
+            display: flex; align-items: center; padding: 0.75rem 1.5rem;
+            border-left: 4px solid transparent;
+            color: var(--text-muted);
+            transition: all 0.2s ease-in-out;
+            font-weight: 500;
+        }
+        .sidebar-link:hover { 
+            background-color: #f9fafb; /* gray-50 */
+            color: var(--text-dark); 
+        }
+        .sidebar-link.active {
+            background-color: #f3f4f6; /* gray-100 */
+            color: var(--text-dark);
+            border-left-color: var(--accent);
+            font-weight: 700;
+        }
+        .sidebar-link .icon { width: 1.5rem; margin-right: 1rem; text-align: center; }
+
+        .view { display: none; }
+        .view.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal-overlay {
+            position: fixed; inset: 0; background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px); z-index: 100; opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            display: flex; justify-content: center; align-items: flex-start;
+            padding: 4rem 1rem; overflow-y: auto; pointer-events: none;
+        }
+        .modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background-color: white; width: 100%;
+            max-width: 800px;
+            transform: scale(0.95); opacity: 0;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        .modal-overlay.visible .modal-content { transform: scale(1); opacity: 1; }
+
+        .toast-notification {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
+            padding: 1rem 1.5rem;
+            border-radius: 0;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transform: translateX(120%);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            font-family: 'Montserrat', sans-serif; font-weight: 600;
+        }
+        .toast-notification.show { transform: translateX(0); }
+        .toast-success { background-color: #10B981; color: white; }
+        .toast-error { background-color: #EF4444; color: white; }
+
+        /* Scrollbar Fino */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Estilo de Pestañas */
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            color: var(--text-dark);
+            border-bottom-color: var(--text-dark);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Pantalla de Carga -->
+    <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
+        <div class="loader-circle"></div>
+        <p id="loading-text" class="text-lg font-medium text-text-muted mt-4">Cargando...</p>
+    </div>
+
+    <!-- Pantalla de Login -->
+    <div id="login-screen" class="hidden min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div class="w-full max-w-md bg-white p-8 md:p-12 shadow-xl border border-gray-200">
+            <h2 class="font-display text-4xl font-bold text-center text-text-dark mb-2">Centro de Mando</h2>
+            <p class="text-center text-text-muted mb-8">Iniciar sesión para gestionar el contenido</p>
+            <button id="google-login-btn" class="google-btn w-full">
+                <svg viewBox="0 0 18 18" class="w-5 h-5">
+                    <g fill="none" fill-rule="evenodd">
+                        <path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1699-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2582h2.9082c1.7018-1.5668 2.6836-3.8773 2.6836-6.6155z" fill="#4285F4"></path>
+                        <!-- AJUSTE QUIRÚRGICO v4.6: Corregido el espacio inválido en '4.47-.8055' -->
+                        <path d="M9 18c2.43 0 4.47-.8055 5.96-2.1818l-2.91-2.2582c-.8.5364-1.82.8545-2.96.8545-2.28 0-4.22-1.53-4.91-3.5727H1.07v2.3318C2.55 16.2973 5.51 18 9 18z" fill="#34A853"></path>
+                        <path d="M4.08 10.7564c-.1-.3-.15-.61-.15-.92 0-.3.05-.62.15-.92V6.5855H1.07C.38 7.8236 0 9.0618 0 10.42c0 1.35.38 2.58.98 3.72l3.1-2.38z" fill="#FBBC05"></path>
+                        <path d="M9 3.8636c1.32 0 2.5.4545 3.44 1.3455l2.58-2.5818C13.46.9727 11.43 0 9 0 5.51 0 2.55 1.7027 1.07 4.1364l3.01 2.3318C4.78 4.4636 6.72 3.8636 9 3.8636z" fill="#EA4335"></path>
+                    </g>
+                </svg>
+                <span>Iniciar sesión con Google</span>
+            </button>
+            <p id="login-error" class="text-red-500 text-center text-sm mt-4"></p>
+        </div>
+    </div>
+
+    <!-- Aplicación Principal (Centro de Mando) -->
+    <div id="app-screen" class="hidden h-screen flex">
+        <!-- Barra Lateral (Rediseñada) -->
+        <aside class="w-72 bg-white flex flex-col flex-shrink-0 border-r border-gray-200">
+            <div class="px-6 py-5 border-b border-gray-200">
+                <h2 class="text-2xl font-bold font-display text-text-dark">Centro de Mando</h2>
+                <p id="user-email" class="text-sm text-text-muted truncate" title="Usuario"></p>
+            </div>
+            <nav id="main-nav" class="flex-grow mt-4 overflow-y-auto">
+                <a href="#" class="sidebar-link active" data-view="dashboard">
+                    <i class="fas fa-tachometer-alt icon"></i><span>Dashboard</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="settings">
+                    <i class="fas fa-cog icon"></i><span>Configuración General</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="about">
+                    <i class="fas fa-user icon"></i><span>Contenido "Quién Soy"</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="videos">
+                    <i class="fab fa-youtube icon"></i><span>Videos Portafolio</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="clientlogos">
+                    <i class="fas fa-star icon"></i><span>Logos de Clientes</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="projects">
+                    <i class="fas fa-camera-retro icon"></i><span>Proyectos y Galería</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="services">
+                    <i class="fas fa-concierge-bell icon"></i><span>Servicios</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="rentals">
+                    <i class="fas fa-video icon"></i><span>Alquiler de Equipo</span>
+                </a>
+                <a href="#" class="sidebar-link" data-view="bookings">
+                    <i class="fas fa-calendar-check icon"></i><span>Reservas y Bloqueos</span>
+                </a>
+            </nav>
+            <div class="p-4 border-t border-gray-200">
+                <button id="logout-btn" class="w-full text-left text-text-muted hover:text-red-600 transition-colors flex items-center p-2">
+                    <i class="fas fa-sign-out-alt icon"></i>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Área de Contenido Principal -->
+        <main class="flex-1 overflow-y-auto p-6 md:p-10">
+            
+            <!-- VISTA: Dashboard -->
+            <div id="view-dashboard" class="view active">
+                <h1 class="text-4xl font-display font-bold mb-6">Dashboard</h1>
+                <p class="text-text-muted text-lg">Bienvenido al Centro de Mando. Selecciona una sección en el menú de la izquierda para comenzar a gestionar el contenido de tu sitio web.</p>
+                <div class="mt-8 p-6 bg-gray-50 border border-gray-200">
+                    <h2 class="text-2xl font-display font-bold mb-4">Guía Rápida (Plano v1.3)</h2>
+                    <ul class="list-disc list-inside space-y-2 text-text-muted">
+                        <li>**Configuración General:** Administra tu email de contacto, enlaces de redes sociales y el logo principal. (Hoja: `Settings`)</li>
+                        <li>**"Quién Soy":** Edita la foto de perfil y los textos de tu biografía. (Hoja: `About`)</li>
+                        <li>**Videos Portafolio:** Gestiona la lista de videos de YouTube/Vimeo. (Hoja: `Videos`)</li>
+                        <li>**Logos de Clientes:** Administra los logos de clientes que se muestran. (Hoja: `ClientLogos`)</li>
+                        <li>**Proyectos y Galería:** Crea proyectos, sube imágenes y decide cuáles aparecen en la galería principal. (Hojas: `Projects`, `ProjectImages`)</li>
+                        <li>**Servicios:** Define los servicios que ofreces y su contenido detallado. (Hojas: `Services`, `ServiceContentBlocks`, `ServiceImages`)</li>
+                        <li>**Alquiler de Equipo:** Gestiona el catálogo de equipo de alquiler, categorías y precios. (Hojas: `RentalCategories`, `RentalItems`, `RentalItemImages`)</li>
+                        <li>**Reservas y Bloqueos:** Revisa las reservas de clientes y bloquea fechas para mantenimiento. (Hojas: `Bookings`, `BlockedDates`)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- VISTA: Configuración General (Settings) -->
+            <div id="view-settings" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-display font-bold">Configuración General</h1>
+                    <button id="save-settings-btn" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Guardar Cambios</button>
+                </div>
+                <div id="settings-form-container" class="space-y-6">
+                    <!-- El formulario se renderizará aquí dinámicamente -->
+                </div>
+            </div>
+
+            <!-- VISTA: "Quién Soy" (About) -->
+            <div id="view-about" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-display font-bold">Contenido "Quién Soy"</h1>
+                    <button id="save-about-btn" class="btn btn-primary"><i class="fas fa-save mr-2"></i>Guardar Cambios</button>
+                </div>
+                <div id="about-form-container" class="space-y-6">
+                    <!-- El formulario se renderizará aquí dinámicamente -->
+                </div>
+            </div>
+            
+            <!-- VISTA: Videos Portafolio -->
+            <div id="view-videos" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-display font-bold">Videos Portafolio</h1>
+                    <button id="add-video-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Nuevo Video</button>
+                </div>
+                <div class="bg-white border border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Orden</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Título</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">URL (Embed)</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="videos-table-body" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA: Logos de Clientes -->
+            <div id="view-clientlogos" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-display font-bold">Logos de Clientes</h1>
+                    <button id="add-clientlogo-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Nuevo Logo</button>
+                </div>
+                <div class="bg-white border border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Orden</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Logo</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Nombre Cliente (Alt)</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientlogos-table-body" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA: Proyectos y Galería -->
+            <div id="view-projects" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-display font-bold">Proyectos y Galería</h1>
+                    <button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Nuevo Proyecto</button>
+                </div>
+                <div class="bg-white border border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Orden</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Portada</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Título</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Descripción</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projects-table-body" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- VISTA: Servicios -->
+            <div id="view-services" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-4xl font-display font-bold">Servicios</h1>
+                    <button id="add-service-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Nuevo Servicio</button>
+                </div>
+                <div class="bg-white border border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Orden</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Icono</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Título</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Intro</th>
+                                    <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="services-table-body" class="divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+             
+            <!-- VISTA: Alquiler de Equipo -->
+            <div id="view-rentals" class="view">
+                <h1 class="text-4xl font-display font-bold mb-6">Alquiler de Equipo</h1>
+                <!-- Pestañas -->
+                <div class="border-b border-gray-200">
+                    <nav id="rentals-tab-nav" class="flex -mb-px">
+                        <button class="tab-btn active" data-target="tab-rental-items">Equipos</button>
+                        <button class="tab-btn" data-target="tab-rental-categories">Categorías</button>
+                    </nav>
+                </div>
+                
+                <!-- Pestaña 1: Equipos -->
+                <div id="tab-rental-items" class="tab-content active mt-6">
+                    <div class="flex justify-end mb-4">
+                        <button id="add-rental-item-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Nuevo Equipo</button>
+                    </div>
+                    <div class="bg-white border border-gray-200">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Orden</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Equipo</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Categoría</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Precio/Día</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rental-items-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pestaña 2: Categorías -->
+                <div id="tab-rental-categories" class="tab-content mt-6">
+                    <div class="flex justify-end mb-4">
+                        <button id="add-rental-category-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Nueva Categoría</button>
+                    </div>
+                    <div class="bg-white border border-gray-200">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Orden</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Nombre de Categoría</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rental-categories-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA: Reservas y Bloqueos -->
+            <div id="view-bookings" class="view">
+                <h1 class="text-4xl font-display font-bold mb-6">Reservas y Bloqueos</h1>
+                <!-- Pestañas -->
+                <div class="border-b border-gray-200">
+                    <nav id="bookings-tab-nav" class="flex -mb-px">
+                        <button class="tab-btn active" data-target="tab-bookings-list">Reservas de Clientes</button>
+                        <button class="tab-btn" data-target="tab-blocked-dates">Bloqueos Administrativos</button>
+                    </nav>
+                </div>
+                
+                <!-- Pestaña 1: Reservas de Clientes -->
+                <div id="tab-bookings-list" class="tab-content active mt-6">
+                    <div class="bg-white border border-gray-200">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Fecha Reserva</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Cliente</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Equipo</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Rango</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Total</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Estado</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bookings-list-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pestaña 2: Bloqueos Administrativos -->
+                <div id="tab-blocked-dates" class="tab-content mt-6">
+                    <div class="flex justify-end mb-4">
+                        <button id="add-blocked-date-btn" class="btn btn-primary"><i class="fas fa-plus mr-2"></i>Nuevo Bloqueo</button>
+                    </div>
+                    <div class="bg-white border border-gray-200">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Equipo</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Razón</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Desde</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Hasta</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="blocked-dates-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Contenedor de Modales -->
+    <div id="modal-container"></div>
+    
+    <!-- Contenedor de Notificaciones -->
+    <div id="notification-container" class="fixed bottom-5 right-5 z-[200] w-full max-w-sm space-y-3"></div>
+
+    <!-- Librería de Google API (para el frontend) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+// --- Configuración Global ---
+let GOOGLE_OAUTH_CLIENT_ID = null;
+
+// Almacén de estado global
+const appState = {
+    dataStore: null, // Almacenará TODOS los datos de get-admin-data
+    gAuthToken: null, // Almacenará el objeto de token (access_token, refresh_token, etc.)
+    currentView: 'dashboard',
+    isDataLoaded: false
+};
+
+// --- Referencias al DOM ---
+const $ = document.getElementById.bind(document);
+const loadingScreen = $('loading-screen');
+const loadingText = $('loading-text');
+const loginScreen = $('login-screen');
+const appScreen = $('app-screen');
+const googleLoginBtn = $('google-login-btn');
+const loginError = $('login-error');
+const userEmailEl = $('user-email');
+const logoutBtn = $('logout-btn');
+const mainNav = $('main-nav');
+const modalContainer = $('modal-container');
+const notificationContainer = $('notification-container');
+
+// --- Módulo de API (Nuestro wrapper de Fetch) ---
+const API = {
+    /**
+     * Realiza una llamada de API genérica a nuestras funciones de Netlify.
+     */
+    async call(endpoint, options = {}, isRetry = false) {
+        // --- AJUSTE QUIRÚRGICO (v4.4): Reintroducir AbortController ---
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.error(`Timeout de API: La solicitud a ${endpoint} tardó más de 25 segundos.`);
+        }, 25000); // 25 segundos de timeout
+        // --- FIN AJUSTE ---
+
+        const headers = new Headers(options.headers || {});
+        if (appState.gAuthToken && appState.gAuthToken.access_token) {
+            headers.set('Authorization', `Bearer ${appState.gAuthToken.access_token}`);
+        }
+        if (options.body && typeof options.body !== 'object' && !(options.body instanceof FormData)) {
+             console.warn("API.call body no es un objeto, se asume FormData o string");
+        } else if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
+            options.body = JSON.stringify(options.body);
+        }
+
+        const config = { 
+            ...options, 
+            headers,
+            signal: controller.signal // <-- AJUSTE QUIRÚRGICO: Añadir signal
+        };
+
+        try {
+            const response = await fetch(endpoint, config);
+            clearTimeout(timeoutId); // <-- AJUSTE QUIRÚRGICO: Limpiar timeout si hay respuesta
+
+            if (response.ok) {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    return await response.json();
+                }
+                const text = await response.text();
+                return text ? (text.startsWith('{') ? JSON.parse(text) : { message: text }) : {}; // Devolver objeto para consistencia
+            }
+
+            // Error 401 (Token Expirado) - Lógica de Refresco
+            if (response.status === 401 && !isRetry) {
+                console.warn('Token de acceso expirado. Intentando refrescar...');
+                const refreshed = await Auth.refreshToken();
+                if (refreshed) {
+                    console.log('Token refrescado. Reintentando la llamada API...');
+                    // Remueve el body de config si es FormData, no se puede reenviar un stream
+                    if (config.body instanceof FormData) {
+                        delete config.body; 
+                    }
+                    return await API.call(endpoint, config, true); // Marcar como reintento
+                } else {
+                    throw new Error('No se pudo refrescar la sesión.');
+                }
+            }
+
+            const errorData = await response.json().catch(() => ({ error: response.statusText, details: response.statusText }));
+            throw new Error(errorData.details || errorData.error || response.statusText);
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                 throw new Error(`La solicitud a ${endpoint} ha superado el tiempo límite de 25 segundos.`);
+            }
+            console.error(`Error en API.call a ${endpoint}:`, error);
+            if (error.message.includes('No se pudo refrescar la sesión.')) {
+                Auth.logout(); // Forzar logout si el refresco falla
+            }
+            throw error; // Re-lanzar el error
+        } finally {
+            clearTimeout(timeoutId); // <-- AJUSTE QUIRÚRGICO: Asegurar limpieza en cualquier caso
+        }
+    }
+};
+
+// --- Módulo de Autenticación (OAuth 2.0) ---
+const Auth = {
+    async getAuthConfig() {
+        try {
+            // AJUSTE v4.5: Usar API.call para que tenga el timeout
+            const config = await API.call('/.netlify/functions/get-auth-config');
+            if (!config.clientId) throw new Error("Client ID no fue devuelto.");
+            GOOGLE_OAUTH_CLIENT_ID = config.clientId;
+            console.log("Configuración de Auth cargada.");
+            return true;
+        } catch (error) {
+            console.error("Error FATAL al cargar la configuración de autenticación:", error);
+            UI.showLoginError("Error de configuración del servidor. No se puede iniciar sesión.");
+            return false;
+        }
+    },
+    async redirectToGoogleLogin() { // <-- AJUSTE v4.5: convertida a async
+        // --- AJUSTE QUIRÚRGICO (v4.7): Eliminar este loader. Es innecesario y bloquea la UI.
+        // UI.showLoading("Conectando con Google..."); // <-- ESTA LÍNEA ES EL ERROR
+        // --- FIN AJUSTE ---
+
+        // --- AJUSTE QUIRÚRGICO (v4.5): Obtener config AL HACER CLIC ---
+        if (!GOOGLE_OAUTH_CLIENT_ID) {
+            UI.showLoading("Preparando conexión..."); // <-- Loader alternativo
+            try {
+                if (!await Auth.getAuthConfig()) {
+                     UI.showLoginError("Error de configuración. No se pudo conectar.");
+                     return;
+                }
+            } catch (error) {
+                UI.showLoginError(`Error de red: ${error.message}`);
+                return;
+            } finally {
+                UI.showLoading(false); // <-- Asegurarse de ocultar el loader de config
+                UI.showLogin();
+            }
+        }
+        // --- AJUSTE QUIRÚRGICO (FIN) ---
+
+        if (!GOOGLE_OAUTH_CLIENT_ID) {
+            UI.showLoginError("Error de configuración. Intente de nuevo más tarde.");
+            return;
+        }
+        
+        const client = google.accounts.oauth2.initCodeClient({
+            client_id: GOOGLE_OAUTH_CLIENT_ID,
+            scope: [
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/drive.file' // CRÍTICO para upload-image.js
+            ].join(' '),
+            redirect_uri: window.location.origin + window.location.pathname,
+            callback: () => {},
+        });
+        client.requestCode();
+    },
+    async handleAuthCallback(code) {
+        UI.showLoading("Verificando código...");
+        try {
+            const tokens = await fetch('/.netlify/functions/auth-google', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    code: code,
+                    redirectUri: window.location.origin + window.location.pathname
+                }),
+            }).then(res => res.json());
+            if (tokens.error) throw new Error(tokens.details || tokens.error);
+            this.setAuthToken(tokens);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // --- AJUSTE QUIRÚRGICO (v4.4): Llamar a checkAuth y LUEGO a showApp ---
+            if (await this.checkAuth()) {
+                 await UI.showApp(); // Mostrar la app DESPUÉS de verificar/refrescar token
+            } else {
+                 UI.showLogin(); // Si checkAuth falló (ej. refresco imposible), ir a login
+            }
+            // --- FIN AJUSTE ---
+        } catch (error) {
+            console.error("Error al intercambiar el código:", error);
+            UI.showLoginError(error.message);
+        }
+    },
+    async checkAuth() {
+        appState.gAuthToken = this.getAuthToken();
+        if (!appState.gAuthToken) {
+            return false;
+        }
+        const expiresIn = (appState.gAuthToken.expires_at - Date.now()) / 1000;
+        if (expiresIn < 300) {
+            console.log("Token expirado, intentando refrescar...");
+            try {
+                // --- AJUSTE QUIRÚRGICO (v4.5): Mostrar loader ANTES de refrescar ---
+                UI.showLoading("Refrescando sesión..."); 
+                // --- FIN AJUSTE ---
+                const refreshed = await this.refreshToken();
+                if (!refreshed) {
+                    throw new Error("No se pudo refrescar la sesión.");
+                }
+                console.log("Token refrescado exitosamente.");
+            } catch (error) {
+                console.error("Error de refresco, forzando logout:", error);
+                this.logout(false);
+                return false; // <-- AJUSTE: Retorna false si falla el refresco
+            }
+        }
+        return true; // <-- AJUSTE: Retorna true si el token es válido o se refrescó
+    },
+    async refreshToken() {
+        const localToken = this.getAuthToken();
+        if (!localToken || !localToken.refresh_token) return false;
+        try {
+            console.log("Intentando refrescar token..."); // Log para depuración
+            const newTokens = await fetch('/.netlify/functions/auth-refresh', {
+                method: 'POST',
+                body: JSON.stringify({ refresh_token: localToken.refresh_token }),
+            }).then(res => res.json());
+            if (newTokens.error) throw new Error(newTokens.details || newTokens.error);
+            const combinedTokens = { ...localToken, ...newTokens };
+            this.setAuthToken(combinedTokens);
+            return true;
+        } catch (error) {
+            console.error("No se pudo refrescar el token:", error);
+            return false;
+        }
+    },
+
+    // --- AJUSTE QUIRÚRGICO (v4.5): Nueva función ---
+    /**
+     * Maneja la carga inicial de la página. Decide qué mostrar
+     * basándose en el estado síncrono (URL y localStorage).
+     */
+    async handlePageLoad() {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+
+        if (code) {
+            // Es un callback, SÍ necesita red.
+            await Auth.handleAuthCallback(code);
+        } else if (Auth.getAuthToken()) {
+            // Hay un token, SÍ necesita red para verificarlo.
+            if (await Auth.checkAuth()) {
+                await UI.showApp();
+            } else {
+                UI.showLogin(); // checkAuth falló (refresco imposible)
+            }
+        } else {
+            // No code, no token. Mostrar login. SIN RED.
+            UI.showLogin();
+        }
+    },
+    // --- AJUSTE QUIRÚRGICO (FIN) ---
+
+    async logout(notifyGoogle = true) {
+        const localToken = this.getAuthToken();
+        if (notifyGoogle && localToken && localToken.access_token) {
+            try {
+                await fetch('/.netlify/functions/auth-revoke', {
+                    method: 'POST',
+                    body: JSON.stringify({ token: localToken.access_token })
+                });
+            } catch (error) {
+                console.warn("Error al revocar el token:", error);
+            }
+        }
+        appState.gAuthToken = null;
+        appState.dataStore = null;
+        appState.isDataLoaded = false;
+        localStorage.removeItem('gAuthToken');
+        UI.showLogin();
+    },
+    setAuthToken(tokens) {
+        tokens.expires_at = Date.now() + (tokens.expires_in * 1000);
+        appState.gAuthToken = tokens;
+        localStorage.setItem('gAuthToken', JSON.stringify(tokens));
+    },
+    getAuthToken() {
+        const tokenString = localStorage.getItem('gAuthToken');
+        if (!tokenString) return null;
+        return JSON.parse(tokenString);
+    }
+};
+
+// --- Módulo de UI (Manejo de Vistas y Componentes) ---
+const UI = {
+    showLogin() {
+        loadingScreen.style.display = 'none';
+        appScreen.style.display = 'none';
+        loginScreen.style.display = 'flex';
+    },
+    showLoading(message = "Cargando...") {
+        loadingText.textContent = message;
+        loginScreen.style.display = 'none';
+        appScreen.style.display = 'none';
+        loadingScreen.style.display = 'flex';
+    },
+    showLoginError(message) {
+        loginError.textContent = message;
+        this.showLogin();
+    },
+    async showApp() {
+        if (!appState.gAuthToken) return this.showLogin(); // Doble chequeo
+        
+        if (!userEmailEl.textContent) { // Obtener email si no se tiene
+            try {
+                const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { 'Authorization': `Bearer ${appState.gAuthToken.access_token}` }
+                }).then(res => res.json());
+                userEmailEl.textContent = userInfo.email || 'Usuario';
+                userEmailEl.title = userInfo.email || 'Usuario';
+            } catch (error) {
+                userEmailEl.textContent = 'Usuario';
+                console.warn("No se pudo obtener el email:", error);
+            }
+        }
+        loadingScreen.style.display = 'none'; // Ocultar loader global
+        loginScreen.style.display = 'none';
+        appScreen.style.display = 'flex'; // Mostrar interfaz de la app
+
+        // --- AJUSTE QUIRÚRGICO v4.6: Cargar datos en segundo plano ---
+        // Se elimina el 'await' para que UI.showApp termine inmediatamente.
+        // loadAdminData manejará su propio indicador de carga interno.
+        if (!appState.isDataLoaded) {
+            this.loadAdminData(); // SIN await
+        } else {
+             this.renderView(appState.currentView);
+        }
+        // --- FIN AJUSTE ---
+    },
+    showView(viewId) {
+        if (appState.currentView === viewId && viewId !== 'rentals' && viewId !== 'bookings') return;
+
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(`view-${viewId}`)?.classList.add('active');
+
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        document.querySelector(`.sidebar-link[data-view="${viewId}"]`)?.classList.add('active');
+        
+        appState.currentView = viewId;
+        this.renderView(viewId);
+    },
+    bindTabs(navSelector, contentSelectorPrefix) {
+        const nav = document.querySelector(navSelector);
+        if (!nav) return;
+        
+        // Reset a la primera pestaña por si acaso
+        nav.querySelectorAll('.tab-btn').forEach((b, index) => b.classList.toggle('active', index === 0));
+        document.querySelectorAll(contentSelectorPrefix).forEach((c, index) => c.classList.toggle('active', index === 0));
+        
+        nav.addEventListener('click', e => {
+            const btn = e.target.closest('.tab-btn');
+            if (!btn) return;
+            
+            nav.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const targetId = btn.dataset.target;
+            document.querySelectorAll(contentSelectorPrefix).forEach(c => {
+                c.classList.toggle('active', c.id === targetId);
+            });
+        });
+    },
+    renderView(viewId) {
+        if (!appState.isDataLoaded && viewId !== 'dashboard') {
+            const viewContainer = $(`view-${viewId}`);
+            if (viewContainer) {
+                 viewContainer.innerHTML = `<div class="p-8 text-center text-text-muted">Cargando datos para esta sección...</div>`;
+            }
+            return; 
+        }
+
+        switch (viewId) {
+            case 'dashboard':
+                const dashView = $('view-dashboard');
+                if (dashView.querySelector('.loading-placeholder')) {
+                     dashView.innerHTML = `
+                        <h1 class="text-4xl font-display font-bold mb-6">Dashboard</h1>
+                        <p class="text-text-muted text-lg">Bienvenido al Centro de Mando. Selecciona una sección en el menú de la izquierda para comenzar a gestionar el contenido de tu sitio web.</p>
+                        <div class="mt-8 p-6 bg-gray-50 border border-gray-200">
+                            <h2 class="text-2xl font-display font-bold mb-4">Guía Rápida (Plano v1.3)</h2>
+                            <ul class="list-disc list-inside space-y-2 text-text-muted">
+                                <li>**Configuración General:** Administra tu email de contacto, enlaces de redes sociales y el logo principal. (Hoja: \`Settings\`)</li>
+                                <li>**"Quién Soy":** Edita la foto de perfil y los textos de tu biografía. (Hoja: \`About\`)</li>
+                                <li>**Videos Portafolio:** Gestiona la lista de videos de YouTube/Vimeo. (Hoja: \`Videos\`)</li>
+                                <li>**Logos de Clientes:** Administra los logos de clientes que se muestran. (Hoja: \`ClientLogos\`)</li>
+                                <li>**Proyectos y Galería:** Crea proyectos, sube imágenes y decide cuáles aparecen en la galería principal. (Hojas: \`Projects\`, \`ProjectImages\`)</li>
+                                <li>**Servicios:** Define los servicios que ofreces y su contenido detallado. (Hojas: \`Services\`, \`ServiceContentBlocks\`, \`ServiceImages\`)</li>
+                                <li>**Alquiler de Equipo:** Gestiona el catálogo de equipo de alquiler, categorías y precios. (Hojas: \`RentalCategories\`, \`RentalItems\`, \`RentalItemImages\`)</li>
+                                <li>**Reservas y Bloqueos:** Revisa las reservas de clientes y bloquea fechas para mantenimiento. (Hojas: \`Bookings\`, \`BlockedDates\`)</li>
+                            </ul>
+                        </div>
+                    `;
+                }
+                break;
+            case 'settings':
+                this.renderSettingsForm();
+                break;
+            case 'about':
+                this.renderAboutForm();
+                break;
+            case 'videos':
+                this.renderVideosTable();
+                break;
+            case 'clientlogos':
+                this.renderClientLogosTable();
+                break;
+            case 'projects':
+                this.renderProjectsTable();
+                break;
+            case 'services':
+                this.renderServicesTable();
+                break;
+            case 'rentals':
+                this.renderRentalItemsTable();
+                this.renderRentalCategoriesTable();
+                this.bindTabs('#rentals-tab-nav', '#view-rentals .tab-content');
+                break;
+            case 'bookings':
+                this.renderBookingsList();
+                this.renderBlockedDatesTable();
+                this.bindTabs('#bookings-tab-nav', '#view-bookings .tab-content');
+                break;
+        }
+    },
+    async loadAdminData() {
+        const dashboardView = $('view-dashboard');
+        const originalContent = dashboardView.innerHTML;
+        dashboardView.innerHTML = `<div class="p-8 text-center text-text-muted loading-placeholder"><div class="loader-circle mx-auto mb-4"></div>Cargando datos...</div>`;
+        try {
+            appState.dataStore = await API.call('/.netlify/functions/get-admin-data', { method: 'GET' });
+            appState.isDataLoaded = true;
+            console.log("Datos de admin cargados:", appState.dataStore);
+            this.renderView(appState.currentView);
+        } catch (error) {
+            console.error("Error cargando datos de admin:", error);
+            UI.showToast(`Error crítico al cargar datos: ${error.message}. Intente recargar.`, true);
+            dashboardView.innerHTML = `<div class="p-8 text-center text-red-600"><i class="fas fa-exclamation-triangle fa-2x mb-4"></i><p>Error al cargar datos: ${error.message}</p></div>`;
+        } finally {
+            if (appState.currentView !== 'dashboard' && dashboardView.querySelector('.loading-placeholder')) {
+                 dashboardView.innerHTML = originalContent;
+            }
+        }
+    },
+    
+    // --- Renderizadores de Formularios y Tablas ---
+    renderSettingsForm() {
+        const container = $('settings-form-container');
+        container.innerHTML = ''; // Limpiar
+        const settings = appState.dataStore.Settings.reduce((acc, item) => {
+            acc[item.key] = item.value;
+            return acc;
+        }, {});
+        const formStructure = [
+            { key: 'social_whatsapp', label: 'WhatsApp (URL completa)', icon: 'fab fa-whatsapp' },
+            { key: 'social_instagram', label: 'Instagram (URL completa)', icon: 'fab fa-instagram' },
+            { key: 'social_youtube', label: 'YouTube (URL completa)', icon: 'fab fa-youtube' },
+            { key: 'social_facebook', label: 'Facebook (URL completa)', icon: 'fab fa-facebook-f' },
+            { key: 'contact_email', label: 'Email de Contacto', icon: 'fas fa-envelope' },
+            { key: 'contact_phone', label: 'Teléfono de Contacto', icon: 'fas fa-phone' },
+            { key: 'map_embed_url', label: 'URL de Google Maps (Embed)', icon: 'fas fa-map-marker-alt' },
+            { key: 'logo_dark_url', label: 'URL Logo Oscuro (Drive)', icon: 'fas fa-image' },
+            { key: 'logo_light_url', label: 'URL Logo Claro (Drive)', icon: 'fas fa-image' },
+        ];
+        let formHTML = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+        formStructure.forEach(item => {
+            const value = settings[item.key] || '';
+            formHTML += '<div>';
+            if (item.key.includes('_url') && !item.key.includes('map_embed_url')) {
+                formHTML += UI.createImageUploader(`setting-${item.key}`, item.label, value, 'general');
+            } else {
+                 formHTML += UI.createFormInput(`setting-${item.key}`, item.label, value);
+            }
+            formHTML += `</div>`;
+        });
+        formHTML += '</div>';
+        container.innerHTML = formHTML;
+        
+        // Re-asignar data-key a los inputs correctos
+        container.querySelectorAll('input[type="text"]').forEach(input => {
+            const key = input.id.replace('setting-', '');
+            input.dataset.key = key;
+        });
+    },
+    renderAboutForm() {
+        const container = $('about-form-container');
+        container.innerHTML = '';
+        const aboutContent = appState.dataStore.About.reduce((acc, item) => {
+            acc[item.section] = item.content;
+            return acc;
+        }, {});
+        const formStructure = [
+            { key: 'quote', label: 'Cita Principal (Itálica)', type: 'textarea' },
+            { key: 'philosophy_p1', label: 'Filosofía (Párrafo 1)', type: 'textarea' },
+            { key: 'process_p1', label: 'Proceso Creativo (Párrafo 1)', type: 'textarea' },
+            { key: 'profile_image_url', label: 'URL Imagen de Perfil (Drive)', type: 'image' },
+        ];
+        let formHTML = '<div class="grid grid-cols-1 gap-6">';
+        formStructure.forEach(item => {
+            const value = aboutContent[item.key] || '';
+            formHTML += '<div>';
+            if (item.type === 'image') {
+                formHTML += UI.createImageUploader(`about-${item.key}`, item.label, value, 'about');
+            } else if (item.type === 'textarea') {
+                formHTML += UI.createFormTextarea(`about-${item.key}`, item.label, value, 5);
+            }
+            formHTML += '</div>';
+        });
+        formHTML += '</div>';
+        container.innerHTML = formHTML;
+
+        // Re-asignar data-key
+        container.querySelectorAll('input, textarea').forEach(input => {
+            const key = input.id.replace('about-', '');
+            input.dataset.key = key;
+        });
+    },
+    renderProjectsTable() {
+        const container = $('projects-table-body');
+        container.innerHTML = '';
+        const projects = appState.dataStore.Projects.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        if (projects.length === 0) {
+            container.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-text-muted">No hay proyectos creados.</td></tr>';
+            return;
+        }
+        projects.forEach(project => {
+            const coverImage = appState.dataStore.ProjectImages.find(img => img.projectId === project.id && img.isCover && img.isCover.toLowerCase() === 'si');
+            const imageUrl = coverImage ? coverImage.imageUrl : 'https://placehold.co/100x75/e5e7eb/a0aec0?text=S/P';
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 text-text-muted">${project.order || '99'}</td>
+                <td class="p-4"><img src="${imageUrl}" alt="Portada" class="w-24 h-16 object-cover border border-gray-200"></td>
+                <td class="p-4 font-bold">${project.title}</td>
+                <td class="p-4 text-text-muted text-sm max-w-sm truncate" title="${project.description}">${project.description}</td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditProject('${project.id}')" title="Editar Proyecto">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-green-600 hover:text-green-800 mr-4" onclick="App.handleManageChildImages('ProjectImages', '${project.id}', 'projectId', '${project.title.replace(/'/g, "\\'")}', 'projects')" title="Gestionar Imágenes">
+                        <i class="fas fa-images"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('Projects', '${project.id}', '${project.title.replace(/'/g, "\\'")}', 'ProjectImages', 'projectId')" title="Eliminar Proyecto">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+    renderVideosTable() {
+        const container = $('videos-table-body');
+        container.innerHTML = '';
+        const items = appState.dataStore.Videos.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-text-muted">No hay videos.</td></tr>';
+            return;
+        }
+        items.forEach(item => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 text-text-muted">${item.order || '99'}</td>
+                <td class="p-4 font-bold">${item.title}</td>
+                <td class="p-4 text-text-muted text-sm max-w-sm truncate">${item.embedUrl}</td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('Videos', '${item.id}')" title="Editar Video">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('Videos', '${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Eliminar Video">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+    renderClientLogosTable() {
+        const container = $('clientlogos-table-body');
+        container.innerHTML = '';
+        const items = appState.dataStore.ClientLogos.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-text-muted">No hay logos.</td></tr>';
+            return;
+        }
+        items.forEach(item => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 text-text-muted">${item.order || '99'}</td>
+                <td class="p-4"><img src="${item.logoUrl || 'https://placehold.co/100x75/e5e7eb/a0aec0?text=IMG'}" alt="Logo" class="w-24 h-16 object-contain bg-gray-50 border border-gray-200 p-1"></td>
+                <td class="p-4 font-bold">${item.clientName}</td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('ClientLogos', '${item.id}')" title="Editar Logo">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('ClientLogos', '${item.id}', '${item.clientName.replace(/'/g, "\\'")}')" title="Eliminar Logo">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+    renderServicesTable() {
+        const container = $('services-table-body');
+        container.innerHTML = '';
+        const items = appState.dataStore.Services.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-text-muted">No hay servicios.</td></tr>';
+            return;
+        }
+        items.forEach(item => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 text-text-muted">${item.order || '99'}</td>
+                <td class="p-4 text-text-muted"><i class="${item.iconClass || 'fas fa-star'} fa-2x"></i></td>
+                <td class="p-4 font-bold">${item.title}</td>
+                <td class="p-4 text-text-muted text-sm max-w-sm truncate" title="${item.introText}">${item.introText}</td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('Services', '${item.id}')" title="Editar Servicio">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-purple-600 hover:text-purple-800 mr-4" onclick="App.handleManageServiceContent('${item.id}', '${item.title.replace(/'/g, "\\'")}')" title="Gestionar Contenido">
+                        <i class="fas fa-file-alt"></i>
+                    </button>
+                    <button class="text-green-600 hover:text-green-800 mr-4" onclick="App.handleManageChildImages('ServiceImages', '${item.id}', 'serviceId', '${item.title.replace(/'/g, "\\'")}', 'services')" title="Gestionar Imágenes">
+                        <i class="fas fa-images"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('Services', '${item.id}', '${item.title.replace(/'/g, "\\'")}', 'ServiceContentBlocks', 'serviceId', 'ServiceImages', 'serviceId')" title="Eliminar Servicio">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+    renderRentalCategoriesTable() {
+        const container = $('rental-categories-table-body');
+        container.innerHTML = '';
+        const items = appState.dataStore.RentalCategories.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-text-muted">No hay categorías.</td></tr>';
+            return;
+        }
+        items.forEach(item => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 text-text-muted">${item.order || '99'}</td>
+                <td class="p-4 font-bold">${item.name}</td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('RentalCategories', '${item.id}')" title="Editar Categoría">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('RentalCategories', '${item.id}', '${item.name.replace(/'/g, "\\'")}', 'RentalItems', 'categoryId')" title="Eliminar Categoría">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+    renderRentalItemsTable() {
+        const container = $('rental-items-table-body');
+        container.innerHTML = '';
+        const items = appState.dataStore.RentalItems.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-text-muted">No hay equipos.</td></tr>';
+            return;
+        }
+        items.forEach(item => {
+            const category = appState.dataStore.RentalCategories.find(c => c.id === item.categoryId);
+            const coverImage = appState.dataStore.RentalItemImages.find(img => img.itemId === item.id); // Solo la primera
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 text-text-muted">${item.order || '99'}</td>
+                <td class="p-4"><img src="${coverImage ? coverImage.imageUrl : 'https://placehold.co/100x75/e5e7eb/a0aec0?text=IMG'}" alt="Equipo" class="w-20 h-16 object-cover border border-gray-200"></td>
+                <td class="p-4 font-bold">${item.name}</td>
+                <td class="p-4 text-text-muted">${category ? category.name : 'Sin Categoría'}</td>
+                <td class="p-4 text-text-muted">$${item.pricePerDay || '0'}</td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('RentalItems', '${item.id}')" title="Editar Equipo">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-green-600 hover:text-green-800 mr-4" onclick="App.handleManageChildImages('RentalItemImages', '${item.id}', 'itemId', '${item.name.replace(/'/g, "\\'")}', 'rentals')" title="Gestionar Imágenes">
+                        <i class="fas fa-images"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('RentalItems', '${item.id}', '${item.name.replace(/'/g, "\\'")}', 'RentalItemImages', 'itemId')" title="Eliminar Equipo">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+    renderBookingsList() {
+        const container = $('bookings-list-body');
+        container.innerHTML = '';
+        const items = appState.dataStore.Bookings.sort((a, b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)); // Más nuevas primero
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-text-muted">No hay reservas de clientes.</td></tr>';
+            return;
+        }
+        items.forEach(item => {
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 text-text-muted text-sm">${new Date(item.bookingTimestamp).toLocaleDateString('es-CR')}</td>
+                <td class="p-4 font-bold">${item.customerName}<br><span class="text-xs text-text-muted font-normal">${item.customerEmail}</span></td>
+                <td class="p-4 text-text-muted">${item.itemName}</td>
+                <td class="p-4 text-text-muted text-sm">${item.startDate} al ${item.endDate} (${item.totalDays} días)</td>
+                <td class="p-4 text-text-muted">$${item.totalPrice}</td>
+                <td class="p-4">
+                    ${UI.createFormSelect(`status-${item.id}`, '', item.status, [
+                        {value: 'Pendiente', text: 'Pendiente'},
+                        {value: 'Confirmado', text: 'Confirmado'},
+                        {value: 'Pagado', text: 'Pagado'},
+                        {value: 'Cancelado', text: 'Cancelado'}
+                    ], 'status', 'form-select text-sm py-1')}
+                </td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleUpdateBookingStatus('${item.id}')" title="Guardar Estado">
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('Bookings', '${item.id}', 'Reserva de ${item.customerName.replace(/'/g, "\\'")}')" title="Eliminar Reserva">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+    renderBlockedDatesTable() {
+        const container = $('blocked-dates-table-body');
+        container.innerHTML = '';
+        const items = appState.dataStore.BlockedDates.sort((a, b) => new Date(b.blockedTimestamp) - new Date(a.blockedTimestamp));
+        if (items.length === 0) {
+            container.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-text-muted">No hay fechas bloqueadas.</td></tr>';
+            return;
+        }
+        items.forEach(item => {
+            const rentalItem = appState.dataStore.RentalItems.find(r => r.id === item.itemId);
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-200 hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="p-4 font-bold">${rentalItem ? rentalItem.name : 'Equipo no encontrado'}</td>
+                <td class="p-4 text-text-muted">${item.reason}</td>
+                <td class="p-4 text-text-muted">${item.startDate}</td>
+                <td class="p-4 text-text-muted">${item.endDate}</td>
+                <td class="p-4">
+                    <button class="text-blue-600 hover:text-blue-800 mr-4" onclick="App.handleEditCrudItem('BlockedDates', '${item.blockId}')" title="Editar Bloqueo">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('BlockedDates', '${item.blockId}', 'Bloqueo para ${rentalItem ? rentalItem.name.replace(/'/g, "\\'") : 'N/A'}')" title="Eliminar Bloqueo">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            container.appendChild(row);
+        });
+    },
+
+    // --- Funciones de Modales y Notificaciones ---
+    showToast(message, isError = false) {
+        const id = `toast-${Date.now()}`;
+        const toast = document.createElement('div');
+        toast.id = id;
+        toast.className = `toast-notification ${isError ? 'toast-error' : 'toast-success'}`;
+        toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'} mr-3"></i><p>${message}</p>`;
+        notificationContainer.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 100);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => toast.remove());
+        }, 4000);
+    },
+    showModal(title, contentHTML, footerHTML, onOpen = () => {}) {
+        modalContainer.innerHTML = `
+            <div class="modal-overlay">
+                <div class="modal-content">
+                    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-3xl font-display font-bold">${title}</h2>
+                        <button class="modal-close-btn text-3xl text-gray-400 hover:text-text-dark">&times;</button>
+                    </div>
+                    <div class="p-6 overflow-y-auto">${contentHTML}</div>
+                    <div class="p-6 bg-gray-50 border-t border-gray-200 flex justify-end gap-4">${footerHTML}</div>
+                </div>
+            </div>
+        `;
+        const overlay = modalContainer.querySelector('.modal-overlay');
+        setTimeout(() => overlay.classList.add('visible'), 10);
+        const close = () => {
+            overlay.classList.remove('visible');
+            setTimeout(() => modalContainer.innerHTML = '', 300);
+        };
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        modalContainer.querySelector('.modal-close-btn').addEventListener('click', close);
+        
+        if (onOpen) onOpen(close);
+        return { overlay, close };
+    },
+    
+    // --- Helpers de Formulario ---
+    createFormInput(id, label, value, type = 'text', required = false) {
+        return `
+            <div>
+                <label class="form-label" for="${id}">${label}</label>
+                <input type="${type}" id="${id}" class="form-input" 
+                       value="${value || ''}" ${required ? 'required' : ''}
+                       ${type === 'number' ? 'min="0"' : ''}>
+            </div>
+        `;
+    },
+    createFormTextarea(id, label, value, rows = 3) {
+        return `
+            <div>
+                <label class="form-label" for="${id}">${label}</label>
+                <textarea id="${id}" class="form-input" rows="${rows}">${value || ''}</textarea>
+            </div>
+        `;
+    },
+    createFormSelect(id, label, value, optionsArray, keyField = 'id', extraClasses = 'form-select') {
+        return `
+            <div>
+                <label class="form-label" for="${id}">${label}</label>
+                <select id="${id}" class="${extraClasses} w-full" data-keyfield="${keyField}">
+                    <option value="">-- Seleccionar --</option>
+                    ${optionsArray.map(opt => 
+                        `<option value="${opt.value}" ${opt.value == value ? 'selected' : ''}>${opt.text}</option>`
+                    ).join('')}
+                </select>
+            </div>
+        `;
+    },
+    createImageUploader(id, label, value, subfolder) {
+        return `
+            <div>
+                <label class="form-label">${label}</label>
+                <div class="flex items-center gap-4">
+                    <img src="${value || 'https://placehold.co/100x100/e5e7eb/a0aec0?text=IMG'}" alt="Vista previa" class="w-24 h-24 object-cover border border-gray-200 bg-gray-50 p-1">
+                    <input type="text" id="${id}" class="form-input flex-grow" value="${value || ''}" readonly>
+                    <button type="button" class="btn-secondary" onclick="UI.handleImageUpload('${id}', '${subfolder}')">Subir</button>
+                </div>
+            </div>
+        `;
+    },
+    createCheckbox(id, label, checked) {
+        return `
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="${id}" class="form-checkbox" ${checked ? 'checked' : ''}>
+                <label class="form-label !mb-0" for="${id}">${label}</label>
+            </div>
+        `;
+    },
+    
+    handleImageUpload(targetInputId, subfolder) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            UI.showLoading(`Subiendo ${file.name}...`);
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('targetSubfolder', subfolder);
+            try {
+                // API.call se encarga de las cabeceras de Auth
+                const result = await API.call('/.netlify/functions/upload-image', {
+                    method: 'POST',
+                    body: formData // No setear Content-Type, el navegador lo hace por nosotros
+                });
+
+                if (!result.imageUrl) {
+                    throw new Error(result.error || "La subida de imagen falló, no se recibió URL.");
+                }
+
+                UI.showToast('Imagen subida con éxito.');
+                const targetInput = document.getElementById(targetInputId);
+                if (targetInput) {
+                    targetInput.value = result.imageUrl;
+                    const previewImg = targetInput.closest('div').querySelector('img');
+                    if (previewImg) {
+                        previewImg.src = result.imageUrl;
+                    }
+                }
+            } catch (error) {
+                console.error('Error en subida de imagen:', error);
+                UI.showToast(`Error al subir: ${error.message}`, true);
+            } finally {
+                UI.showLoading(false); 
+                appScreen.style.display = 'flex'; // Asegurarse que la app es visible
+            }
+        };
+        input.click();
+    }
+};
+
+// --- Módulo Principal de la App (Controlador) ---
+const App = {
+    async init() {
+        UI.showLoading("Iniciando..."); // Loader inicial global
+        
+        // --- AJUSTE QUIRÚRGICO (v4.5): Flujo Offline-First ---
+        try {
+            // Bindea eventos globales (como clics en botones)
+            this.bindGlobalEvents();
+            // Llama a la nueva función que decide qué mostrar
+            await Auth.handlePageLoad(); 
+        } catch (error) {
+            // Este catch es el "salvavidas" final.
+            console.error("Error fatal durante la inicialización:", error);
+            UI.showLoginError(`Error de inicialización: ${error.message}.`);
+        }
+        // --- AJUSTE QUIRÚRGICO (FIN) ---
+    },
+
+    bindGlobalEvents() {
+        googleLoginBtn.addEventListener('click', Auth.redirectToGoogleLogin);
+        logoutBtn.addEventListener('click', () => Auth.logout(true));
+        
+        mainNav.addEventListener('click', e => {
+            const link = e.target.closest('.sidebar-link');
+            if (link) {
+                e.preventDefault();
+                UI.showView(link.dataset.view);
+            }
+        });
+        
+        // BINDINGS PARA VISTAS (v4.0)
+        $('save-settings-btn')?.addEventListener('click', this.handleSaveSettings);
+        $('save-about-btn')?.addEventListener('click', this.handleSaveAbout);
+        
+        $('add-video-btn')?.addEventListener('click', () => this.handleEditCrudItem('Videos', null));
+        $('add-clientlogo-btn')?.addEventListener('click', () => this.handleEditCrudItem('ClientLogos', null));
+        $('add-project-btn')?.addEventListener('click', () => this.handleEditProject(null));
+        $('add-service-btn')?.addEventListener('click', () => this.handleEditCrudItem('Services', null));
+        
+        $('add-rental-item-btn')?.addEventListener('click', () => this.handleEditCrudItem('RentalItems', null));
+        $('add-rental-category-btn')?.addEventListener('click', () => this.handleEditCrudItem('RentalCategories', null));
+        
+        $('add-blocked-date-btn')?.addEventListener('click', () => this.handleEditCrudItem('BlockedDates', null));
+    },
+    
+    // --- Lógica de Negocio (Handlers v3.0) ---
+    async handleSaveSettings() {
+        UI.showLoading("Guardando configuración...");
+        try {
+            const inputs = document.querySelectorAll('#settings-form-container [data-key]');
+            const promises = [];
+            inputs.forEach(input => {
+                const key = input.dataset.key;
+                const newValue = input.value;
+                const existing = appState.dataStore.Settings.find(s => s.key === key);
+                
+                if (existing && existing.value !== newValue) {
+                    promises.push(API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: { key: key }, data: { value: newValue } }
+                    }));
+                } else if (!existing && newValue) {
+                     promises.push(API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST', body: { sheet: 'Settings', action: 'add', data: { key: key, value: newValue } }
+                    }));
+                }
+            });
+            await Promise.all(promises);
+            await UI.loadAdminData(); // Recargar datos
+            UI.showToast('Configuración guardada con éxito.');
+        } catch (error) {
+            UI.showToast(`Error al guardar: ${error.message}`, true);
+        } finally {
+            UI.showLoading(false); UI.showApp();
+        }
+    },
+    async handleSaveAbout() {
+        UI.showLoading("Guardando cambios...");
+        try {
+            const inputs = document.querySelectorAll('#about-form-container [data-key]');
+            const promises = [];
+            inputs.forEach(input => {
+                const key = input.dataset.key;
+                const newValue = input.value;
+                const existing = appState.dataStore.About.find(s => s.section === key);
+                if (existing && existing.content !== newValue) {
+                    promises.push(API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST', body: { sheet: 'About', action: 'update', criteria: { section: key }, data: { content: newValue } }
+                    }));
+                }
+            });
+            await Promise.all(promises);
+            await UI.loadAdminData(); // Recargar datos
+            UI.showToast('Contenido "Quién Soy" guardado.');
+        } catch (error) {
+            UI.showToast(`Error al guardar: ${error.message}`, true);
+        } finally {
+            UI.showLoading(false); UI.showApp();
+        }
+    },
+    
+    // --- Lógica de Negocio (Handlers CRUD Genéricos v4.0) ---
+    async handleEditCrudItem(sheetName, itemId) {
+        const isNew = !itemId;
+        let item = {};
+        let modalTitle = '';
+        let formHTML = '';
+
+        try {
+            switch (sheetName) {
+                case 'Videos':
+                    modalTitle = isNew ? 'Nuevo Video' : 'Editar Video';
+                    if (!isNew) item = appState.dataStore.Videos.find(i => i.id === itemId);
+                    formHTML = `
+                        ${UI.createFormInput('order', 'Orden', item.order, 'number')}
+                        ${UI.createFormInput('title', 'Título', item.title, 'text', true)}
+                        ${UI.createFormInput('embedUrl', 'URL (Embed)', item.embedUrl, 'text', true)}
+                    `;
+                    break;
+                case 'ClientLogos':
+                    modalTitle = isNew ? 'Nuevo Logo de Cliente' : 'Editar Logo de Cliente';
+                    if (!isNew) item = appState.dataStore.ClientLogos.find(i => i.id === itemId);
+                    formHTML = `
+                        ${UI.createFormInput('order', 'Orden', item.order, 'number')}
+                        ${UI.createFormInput('clientName', 'Nombre Cliente (Alt Text)', item.clientName, 'text', true)}
+                        ${UI.createImageUploader('logoUrl', 'Imagen del Logo', item.logoUrl, 'logos')}
+                    `;
+                    break;
+                case 'Services':
+                    modalTitle = isNew ? 'Nuevo Servicio' : 'Editar Servicio';
+                    if (!isNew) item = appState.dataStore.Services.find(i => i.id === itemId);
+                    formHTML = `
+                        ${UI.createFormInput('order', 'Orden', item.order, 'number')}
+                        ${UI.createFormInput('title', 'Título', item.title, 'text', true)}
+                        ${UI.createFormInput('iconClass', 'Clase del Icono (FontAwesome)', item.iconClass, 'text')}
+                        ${UI.createFormTextarea('introText', 'Texto Introductorio', item.introText, 5)}
+                    `;
+                    break;
+                case 'RentalCategories':
+                    modalTitle = isNew ? 'Nueva Categoría de Alquiler' : 'Editar Categoría';
+                    if (!isNew) item = appState.dataStore.RentalCategories.find(i => i.id === itemId);
+                    formHTML = `
+                        ${UI.createFormInput('order', 'Orden', item.order, 'number')}
+                        ${UI.createFormInput('name', 'Nombre', item.name, 'text', true)}
+                    `;
+                    break;
+                case 'RentalItems':
+                    modalTitle = isNew ? 'Nuevo Equipo de Alquiler' : 'Editar Equipo';
+                    if (!isNew) item = appState.dataStore.RentalItems.find(i => i.id === itemId);
+                    const categoryOptions = appState.dataStore.RentalCategories.map(c => ({ value: c.id, text: c.name }));
+                    formHTML = `
+                        ${UI.createFormInput('order', 'Orden', item.order, 'number')}
+                        ${UI.createFormSelect('categoryId', 'Categoría', item.categoryId, categoryOptions, 'id')}
+                        ${UI.createFormInput('name', 'Nombre del Equipo', item.name, 'text', true)}
+                        ${UI.createFormInput('pricePerDay', 'Precio por Día', item.pricePerDay, 'number', true)}
+                        ${UI.createFormTextarea('description', 'Descripción Corta', item.description, 3)}
+                        ${UI.createFormTextarea('longDescription', 'Descripción Larga', item.longDescription, 6)}
+                    `;
+                    break;
+                case 'BlockedDates':
+                    modalTitle = isNew ? 'Nuevo Bloqueo' : 'Editar Bloqueo';
+                    if (!isNew) item = appState.dataStore.BlockedDates.find(i => i.blockId === itemId);
+                    const itemOptions = appState.dataStore.RentalItems.map(i => ({ value: i.id, text: i.name }));
+                    formHTML = `
+                        ${UI.createFormSelect('itemId', 'Equipo a Bloquear', item.itemId, itemOptions, 'id')}
+                        ${UI.createFormInput('startDate', 'Fecha Inicio', item.startDate, 'date', true)}
+                        ${UI.createFormInput('endDate', 'Fecha Fin', item.endDate, 'date', true)}
+                        ${UI.createFormInput('reason', 'Razón (Mantenimiento, etc.)', item.reason, 'text', true)}
+                    `;
+                    break;
+                default:
+                    throw new Error(`Tipo de CRUD no reconocido: ${sheetName}`);
+            }
+        } catch (error) {
+            UI.showToast(`Error al preparar el formulario: ${error.message}`, true);
+            return;
+        }
+
+        const footerHTML = `
+            <button class="btn-secondary" id="modal-cancel">Cancelar</button>
+            <button class="btn-primary" id="modal-save-crud">${isNew ? 'Crear' : 'Guardar Cambios'}</button>
+        `;
+        const { close } = UI.showModal(modalTitle, `<form id="crud-form" class="space-y-4">${formHTML}</form>`, footerHTML);
+
+        $('modal-cancel').addEventListener('click', close);
+        $('modal-save-crud').addEventListener('click', async () => {
+            const form = $('crud-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            const data = {};
+            form.querySelectorAll('input, textarea, select').forEach(el => {
+                if (el.id) data[el.id] = el.value;
+            });
+            
+            const keyField = (sheetName === 'BlockedDates') ? 'blockId' : 'id';
+            
+            if (isNew) {
+                data[keyField] = (sheetName === 'BlockedDates') ? `block_${Date.now()}` : `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}`;
+                if(sheetName === 'BlockedDates') data.blockedTimestamp = new Date().toISOString();
+            }
+
+            UI.showLoading(isNew ? 'Creando...' : 'Actualizando...');
+            close();
+
+            try {
+                await API.call('/.netlify/functions/update-sheet-data', {
+                    method: 'POST',
+                    body: {
+                        sheet: sheetName,
+                        action: isNew ? 'add' : 'update',
+                        criteria: isNew ? null : { [keyField]: itemId },
+                        data: data
+                    }
+                });
+                
+                await UI.loadAdminData();
+                UI.renderView(appState.currentView);
+                UI.showToast(isNew ? 'Item creado.' : 'Item actualizado.');
+            } catch (error) {
+                UI.showToast(`Error: ${error.message}`, true);
+            } finally {
+                UI.showLoading(false); UI.showApp();
+            }
+        });
+    },
+
+    async handleDeleteCrudItem(sheetName, itemId, itemName, childSheetName = null, childForeignKey = null, childSheetName2 = null, childForeignKey2 = null) {
+        const keyField = (sheetName === 'BlockedDates') ? 'blockId' : 'id';
+        UI.showModal(
+            `Eliminar ${sheetName.slice(0, -1)}`,
+            `<p>¿Estás seguro de que quieres eliminar "<strong>${itemName}</strong>"?</p>
+             ${childSheetName ? `<p class="mt-2 text-sm text-red-600"><strong>Advertencia:</strong> Esto también eliminará todos los datos asociados (imágenes, contenido, etc.). Esta acción no se puede deshacer.</p>` : ''}`,
+            '<button class="btn-secondary" id="modal-cancel">Cancelar</button><button class="btn-danger" id="modal-confirm-delete">Eliminar</button>',
+            ({ close }) => {
+                $('modal-cancel').addEventListener('click', close);
+                $('modal-confirm-delete').addEventListener('click', async () => {
+                    UI.showLoading(`Eliminando ${itemName}...`);
+                    close();
+                    
+                    try {
+                        const deleteChildPromises = [];
+                        if (childSheetName && childForeignKey) {
+                            const children = appState.dataStore[childSheetName].filter(c => c[childForeignKey] === itemId);
+                            children.forEach(child => {
+                                deleteChildPromises.push(API.call('/.netlify/functions/update-sheet-data', {
+                                    method: 'POST',
+                                    body: { sheet: childSheetName, action: 'delete', criteria: { id: child.id } }
+                                }));
+                            });
+                        }
+                        if (childSheetName2 && childForeignKey2) {
+                            const children2 = appState.dataStore[childSheetName2].filter(c => c[childForeignKey2] === itemId);
+                            children2.forEach(child => {
+                                deleteChildPromises.push(API.call('/.netlify/functions/update-sheet-data', {
+                                    method: 'POST',
+                                    body: { sheet: childSheetName2, action: 'delete', criteria: { id: child.id } }
+                                }));
+                            });
+                        }
+                        await Promise.all(deleteChildPromises);
+
+                        await API.call('/.netlify/functions/update-sheet-data', {
+                            method: 'POST',
+                            body: { sheet: sheetName, action: 'delete', criteria: { [keyField]: itemId } }
+                        });
+
+                        await UI.loadAdminData();
+                        UI.renderView(appState.currentView);
+                        UI.showToast('Item eliminado.');
+                    } catch (error) {
+                        UI.showToast(`Error al eliminar: ${error.message}`, true);
+                    } finally {
+                        UI.showLoading(false); UI.showApp();
+                    }
+                });
+            }
+        );
+    },
+
+    // --- Lógica de Negocio (Handlers Específicos v4.0) ---
+    handleEditProject(projectId) {
+        this.handleEditCrudItem('Projects', projectId);
+    },
+    async handleUpdateBookingStatus(bookingId) {
+        const select = $(`status-${bookingId}`);
+        const newStatus = select.value;
+        UI.showLoading('Actualizando estado...');
+        try {
+            await API.call('/.netlify/functions/update-sheet-data', {
+                method: 'POST',
+                body: {
+                    sheet: 'Bookings',
+                    action: 'update',
+                    criteria: { id: bookingId },
+                    data: { status: newStatus }
+                }
+            });
+            await UI.loadAdminData();
+            UI.renderBookingsList();
+            UI.showToast('Estado de la reserva actualizado.');
+        } catch (error) {
+            UI.showToast(`Error al actualizar: ${error.message}`, true);
+        } finally {
+            UI.showLoading(false); UI.showApp();
+        }
+    },
+    handleManageChildImages(sheetName, parentId, foreignKey, parentName, subfolder) {
+        const images = appState.dataStore[sheetName].filter(img => img[foreignKey] === parentId).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        
+        let imagesHTML = images.map(img => `
+            <div class="flex items-center gap-4 p-2 border-b border-gray-100" data-img-id="${img.id}">
+                <img src="${img.imageUrl}" alt="img" class="w-16 h-16 object-cover border border-gray-200">
+                <div class="flex-grow">
+                    ${sheetName === 'ProjectImages' ? `<input type="text" class="form-input text-sm p-1 mb-2" value="${img.caption || ''}" placeholder="Descripción (opcional)...">` : ''}
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm">Orden: <input type="number" class="form-input w-20 p-1 text-sm" value="${img.order || ''}"></label>
+                        ${sheetName === 'ProjectImages' ? `
+                        <label class="flex items-center text-sm gap-1">
+                            <input type="checkbox" class="form-checkbox is-cover-cb" ${img.isCover && img.isCover.toLowerCase() === 'si' ? 'checked' : ''}> Portada
+                        </label>
+                        <label class="flex items-center text-sm gap-1">
+                            <input type="checkbox" class="form-checkbox" ${img.showInPortfolio && img.showInPortfolio.toLowerCase() === 'si' ? 'checked' : ''}> Gal. Principal
+                        </label>
+                        ` : ''}
+                    </div>
+                </div>
+                <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('${sheetName}', '${img.id}', 'imagen')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+
+        const modalTitle = `Imágenes para: ${parentName}`;
+        const modalContent = `
+            <div id="child-image-list" class="space-y-2 max-h-[40vh] overflow-y-auto p-1">${imagesHTML || '<p class="text-text-muted text-center p-4">No hay imágenes.</p>'}</div>
+            <div class="mt-4">
+                <label class="form-label">Añadir Nueva Imagen</label>
+                <input type="file" id="image-upload-input" class="form-input" accept="image/*" multiple>
+            </div>
+        `;
+        const modalFooter = `
+            <button class="btn-secondary" id="modal-cancel">Cerrar</button>
+            <button class="btn-primary" id="modal-save-images">Guardar Cambios</button>
+        `;
+
+        UI.showModal(modalTitle, modalContent, modalFooter, ({ close }) => {
+            $('modal-cancel').addEventListener('click', close);
+            
+            // Guardar todos los cambios (orden, captions, etc.)
+            $('modal-save-images').addEventListener('click', async () => {
+                UI.showLoading('Guardando cambios...');
+                const promises = [];
+                let hasCover = false;
+                document.querySelectorAll('#child-image-list > div[data-img-id]').forEach(row => {
+                    const imgId = row.dataset.imgId;
+                    const data = {
+                        order: row.querySelector('input[type="number"]').value || 99
+                    };
+                    if (sheetName === 'ProjectImages') {
+                        data.caption = row.querySelector('input[type="text"]').value;
+                        data.showInPortfolio = row.querySelector('.form-checkbox:not(.is-cover-cb)').checked ? 'Si' : 'No';
+                        const isCoverChecked = row.querySelector('.is-cover-cb').checked;
+                        if (isCoverChecked && !hasCover) {
+                            data.isCover = 'Si';
+                            hasCover = true;
+                        } else {
+                            data.isCover = 'No';
+                        }
+                    }
+                    
+                    promises.push(API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST',
+                        body: { sheet: sheetName, action: 'update', criteria: { id: imgId }, data: data }
+                    }));
+                });
+
+                try {
+                    await Promise.all(promises);
+                    await UI.loadAdminData();
+                    UI.renderView(appState.currentView);
+                    close();
+                    UI.showToast('Cambios guardados.');
+                } catch (error) {
+                    UI.showToast(`Error: ${error.message}`, true);
+                } finally {
+                    UI.showLoading(false); UI.showApp();
+                }
+            });
+
+            // Manejar subida de nuevos archivos
+            $('image-upload-input').addEventListener('change', async (e) => {
+                const files = e.target.files;
+                if (files.length === 0) return;
+                UI.showLoading(`Subiendo ${files.length} imagen(es)...`);
+                
+                const uploadPromises = [];
+                for (const file of files) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('targetSubfolder', subfolder);
+                    
+                    uploadPromises.push(
+                        API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData })
+                            .then(result => {
+                                if (result.error) throw new Error(result.details || result.error);
+                                return API.call('/.netlify/functions/update-sheet-data', {
+                                    method: 'POST',
+                                    body: {
+                                        sheet: sheetName,
+                                        action: 'add',
+                                        data: {
+                                            id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                                            [foreignKey]: parentId,
+                                            imageUrl: result.imageUrl,
+                                            caption: file.name,
+                                            order: 99,
+                                            isCover: 'No',
+                                            showInPortfolio: 'No'
+                                        }
+                                    }
+                                });
+                            })
+                    );
+                }
+
+                try {
+                    await Promise.all(uploadPromises);
+                    await UI.loadAdminData();
+                    close();
+                    UI.showToast(`${files.length} imagen(es) subida(s) y añadida(s).`);
+                } catch (error) {
+                    UI.showToast(`Error al subir: ${error.message}`, true);
+                } finally {
+                    UI.showLoading(false); UI.showApp();
+                }
+            });
+        });
+    },
+    handleManageServiceContent(serviceId, serviceName) {
+        const blocks = appState.dataStore.ServiceContentBlocks.filter(b => b.serviceId === serviceId).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        
+        let blocksHTML = blocks.map(block => `
+            <div class="p-2 border border-gray-200 rounded mb-2" data-block-id="${block.id}">
+                <div class="flex justify-between items-center mb-2">
+                    <input type="text" class="form-input font-bold p-1 block-title" value="${block.blockTitle || ''}" placeholder="Título del Bloque">
+                    <div class="flex items-center gap-2">
+                         <label class="text-sm">Orden: <input type="number" class="form-input w-20 p-1 text-sm block-order" value="${block.order || ''}"></label>
+                         <button class="text-red-600 hover:text-red-800" onclick="App.handleDeleteCrudItem('ServiceContentBlocks', '${block.id}', 'bloque de contenido')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <textarea class="form-input block-content" rows="4" placeholder="Contenido del bloque...">${block.blockContentHtml || ''}</textarea>
+            </div>
+        `).join('');
+
+        const modalTitle = `Contenido de: ${serviceName}`;
+        const modalContent = `
+            <div id="child-content-list" class="space-y-2 max-h-[50vh] overflow-y-auto p-1">${blocksHTML || '<p class="text-text-muted text-center p-4">No hay bloques de contenido.</p>'}</div>
+            <button id="add-content-block-btn" class="btn-secondary mt-4 w-full"><i class="fas fa-plus mr-2"></i>Añadir Bloque</button>
+        `;
+        const modalFooter = `
+            <button class="btn-secondary" id="modal-cancel">Cerrar</button>
+            <button class="btn-primary" id="modal-save-content">Guardar Cambios</button>
+        `;
+
+        UI.showModal(modalTitle, modalContent, modalFooter, ({ close }) => {
+            $('modal-cancel').addEventListener('click', close);
+            
+            // Añadir nuevo bloque (solo en UI)
+            $('add-content-block-btn').addEventListener('click', () => {
+                const newId = `new_${Date.now()}`;
+                const div = document.createElement('div');
+                div.className = 'p-2 border border-gray-200 rounded mb-2';
+                div.dataset.blockId = newId;
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <input type="text" class="form-input font-bold p-1 block-title" value="" placeholder="Nuevo Título">
+                        <div class="flex items-center gap-2">
+                             <label class="text-sm">Orden: <input type="number" class="form-input w-20 p-1 text-sm block-order" value="99"></label>
+                             <button class="text-red-600 hover:text-red-800" onclick="this.parentElement.parentElement.parentElement.remove()">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <textarea class="form-input block-content" rows="4" placeholder="Contenido del bloque..."></textarea>
+                `;
+                $('child-content-list').appendChild(div);
+            });
+
+            // Guardar todos los bloques
+            $('modal-save-content').addEventListener('click', async () => {
+                UI.showLoading('Guardando bloques...');
+                const promises = [];
+                document.querySelectorAll('#child-content-list > div').forEach(row => {
+                    const blockId = row.dataset.blockId;
+                    const isNew = blockId.startsWith('new_');
+                    const data = {
+                        blockTitle: row.querySelector('.block-title').value,
+                        blockContentHtml: row.querySelector('.block-content').value,
+                        order: row.querySelector('.block-order').value || 99,
+                        serviceId: serviceId,
+                        id: isNew ? `block_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` : blockId
+                    };
+
+                    promises.push(API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST',
+                        body: { 
+                            sheet: 'ServiceContentBlocks', 
+                            action: isNew ? 'add' : 'update', 
+                            criteria: isNew ? null : { id: blockId }, 
+                            data: data 
+                        }
+                    }));
+                });
+
+                try {
+                    await Promise.all(promises);
+                    await UI.loadAdminData();
+                    UI.renderView(appState.currentView);
+                    close();
+                    UI.showToast('Contenido guardado.');
+                } catch (error) {
+                    UI.showToast(`Error: ${error.message}`, true);
+                } finally {
+                    UI.showLoading(false); UI.showApp();
+                }
+            });
+        });
+    }
+};
+
+// Iniciar la aplicación
+App.init();
+
+</script>
+</body>
+</html>
+
+
