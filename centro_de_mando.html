@@ -537,7 +537,8 @@
 let GOOGLE_OAUTH_CLIENT_ID = null;
 // *** CONSTANTE GLOBAL: URI DE REDIRECCIÓN FIJA ***
 // Esta debe coincidir EXACTAMENTE con la URI en Google Cloud
-const GOOGLE_REDIRECT_URI = 'https://agvisual1.netlify.app/centro_de_mando.html';
+// *** AJUSTE v2.8: Se cambia a 'postmessage' para el flujo de popup
+const GOOGLE_REDIRECT_URI = 'postmessage';
 
 // Almacén de estado global
 const appState = {
@@ -671,19 +672,32 @@ const Auth = {
             }
         }
         
-        // *** // *** PLANO DE CORRECCIÓN v2.7 ***
-        // *** Ajuste de cirujano: Alinear scopes con Google Cloud (image_f40f62.png)
-        // *** Se elimina 'profile' y se añade 'openid'
+        // *** // *** PLANO DE CORRECCIÓN v2.8 ***
+        // *** Se re-implementa el 'callback' para manejar el flujo de POPUP
+        // *** Se eliminan los scopes de 'profile' y se usa 'openid'
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
                 'https://www.googleapis.com/auth/userinfo.email',
-                'openid' // Coincide con tu captura de pantalla
+                'openid'
+                // 'https://www.googleapis.com/auth/userinfo.profile' // Eliminado para coincidir con scopes
             ].join(' '),
-            redirect_uri: GOOGLE_REDIRECT_URI // Usar la URI fija
+            
+            // *** ESTE ES EL CAMBIO CLAVE ***
+            callback: (response) => {
+                console.log("GSI Callback ejecutado.");
+                if (response.code) {
+                    console.log(`Recibido 'code' desde el popup: ${response.code}`);
+                    // Llamar a handleAuthCallback DIRECTAMENTE desde el callback
+                    Auth.handleAuthCallback(response.code);
+                } else if (response.error) {
+                    console.error('Error en el callback de GSI:', response.error, response.error_description);
+                    UI.showLoginError(`Error de Google: ${response.error_description || response.error}`);
+                }
+            },
+            // *** FIN DE LA CORRECCIÓN v2.8 ***
         });
-        client.requestCode(); // Esto AHORA hará una redirección de página completa
-        // *** FIN DE LA CORRECCIÓN v2.7 ***
+        client.requestCode();
     },
     async handleAuthCallback(code) {
         UI.showLoading("Verificando código...");
@@ -692,7 +706,10 @@ const Auth = {
                 method: 'POST',
                 body: JSON.stringify({ 
                     code: code,
-                    redirectUri: GOOGLE_REDIRECT_URI // Enviar la URI fija para validación
+                    // *** // *** PLANO DE CORRECCIÓN v2.8 ***
+                    // *** Para el flujo de popup (callback), la URI de redirección debe ser 'postmessage'
+                    redirectUri: GOOGLE_REDIRECT_URI // 'postmessage'
+                    // *** FIN DE LA CORRECCIÓN v2.8 ***
                 }),
             }).then(res => res.json());
 
@@ -752,31 +769,13 @@ const Auth = {
         }
     },
     async handlePageLoad() {
-        // Lógica de depuración de la v2.6
-        console.log('Auth.handlePageLoad() ejecutado.');
+        // *** // *** PLANO DE CORRECCIÓN v2.8 ***
+        // *** Ya no buscamos 'code' o 'error' en la URL.
+        // *** Solo nos importa si hay un token local.
+        console.log('Auth.handlePageLoad() (v2.8) ejecutado.');
         
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
-        const error = params.get('error');
-
-        console.log(`URL completa detectada: ${window.location.href}`);
-
-        if (error) {
-            const errorDesc = params.get('error_description') || error;
-            console.error('¡Error de Google en la URL!:', errorDesc);
-            UI.showLoginError(`Error de Google: ${errorDesc}`);
-            window.history.replaceState({}, document.title, window.location.pathname);
-            return; // Detener ejecución
-        }
-        
-        if (code) {
-            console.log(`"code" detectado en la URL. Iniciando handleAuthCallback...`);
-            // Es un callback de redirección, SÍ necesita red.
-            await Auth.handleAuthCallback(code);
-        
-        } else if (Auth.getAuthToken()) {
+        if (Auth.getAuthToken()) {
             console.log('Buscando token local...');
-            // Hay un token, SÍ necesita red para verificarlo.
             if (await Auth.checkAuth()) {
                 console.log('Token local válido. Mostrando app.');
                 await UI.showApp();
@@ -785,10 +784,11 @@ const Auth = {
                 UI.showLogin(); // checkAuth falló (refresco imposible)
             }
         } else {
-            console.log('No se encontró "code" ni token local. Mostrando login.');
+            console.log('No se encontró token local. Mostrando login.');
             // No code, no token. Mostrar login. SIN RED.
             UI.showLogin();
         }
+        // *** FIN DE LA CORRECCIÓN v2.8 ***
     },
     async logout(notifyGoogle = true) {
         const localToken = this.getAuthToken();
@@ -1967,7 +1967,6 @@ App.init();
 </script>
 </body>
 </html>
-
 
 
 
