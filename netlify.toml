@@ -1,8 +1,0 @@
-[build]
-  # Si tu index.html está en la raíz, usa "."
-  # Si está en una carpeta 'public', usa "public/"
-  publish = "." 
-
-[functions]
-  directory = "functions/"
-  node_bundler = "esbuild" # Recomendado para mejor rendimiento
