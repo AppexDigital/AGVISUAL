@@ -779,23 +779,42 @@ const Auth = {
      * basándose en el estado síncrono (URL y localStorage).
      */
     async handlePageLoad() {
+        // *** INICIO DE DEPURACIÓN v2.2 ***
+        console.log('Auth.handlePageLoad() ejecutado.');
+        console.log('URL completa detectada:', window.location.href);
+
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
+        const error = params.get('error'); // Comprobar si Google devuelve un error
 
+        // Si Google devuelve un error explícito en la URL
+        if (error) {
+            const errorDesc = params.get('error_description') || error;
+            console.error('¡Error de Google en la URL!:', errorDesc);
+            UI.showLoginError(`Error de Google: ${errorDesc}`);
+            return; // Detener ejecución
+        }
+        
         if (code) {
+            console.log('Se encontró un "code" en la URL:', code);
             // Es un callback, SÍ necesita red.
             await Auth.handleAuthCallback(code);
         } else if (Auth.getAuthToken()) {
+            console.log('No se encontró "code". Buscando token local...');
             // Hay un token, SÍ necesita red para verificarlo.
             if (await Auth.checkAuth()) {
+                console.log('Token local válido. Mostrando app.');
                 await UI.showApp();
             } else {
+                console.log('Token local inválido o expirado. Mostrando login.');
                 UI.showLogin(); // checkAuth falló (refresco imposible)
             }
         } else {
+            console.log('No se encontró "code" ni token local. Mostrando login.');
             // No code, no token. Mostrar login. SIN RED.
             UI.showLogin();
         }
+        // *** FIN DE DEPURACIÓN v2.2 ***
     },
     // --- AJUSTE QUIRÚRGICO (FIN) ---
 
@@ -1986,5 +2005,6 @@ App.init();
 </script>
 </body>
 </html>
+
 
 
