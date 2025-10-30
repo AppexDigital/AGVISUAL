@@ -674,13 +674,11 @@ const Auth = {
         
         // *** // *** PLANO DE CORRECCIÓN v2.8 ***
         // *** Se re-implementa el 'callback' para manejar el flujo de POPUP
-        // *** Se eliminan los scopes de 'profile' y se usa 'openid'
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
                 'https://www.googleapis.com/auth/userinfo.email',
                 'openid'
-                // 'https://www.googleapis.com/auth/userinfo.profile' // Eliminado para coincidir con scopes
             ].join(' '),
             
             // *** ESTE ES EL CAMBIO CLAVE ***
@@ -706,10 +704,7 @@ const Auth = {
                 method: 'POST',
                 body: JSON.stringify({ 
                     code: code,
-                    // *** // *** PLANO DE CORRECCIÓN v2.8 ***
-                    // *** Para el flujo de popup (callback), la URI de redirección debe ser 'postmessage'
                     redirectUri: GOOGLE_REDIRECT_URI // 'postmessage'
-                    // *** FIN DE LA CORRECCIÓN v2.8 ***
                 }),
             }).then(res => res.json());
 
@@ -769,9 +764,6 @@ const Auth = {
         }
     },
     async handlePageLoad() {
-        // *** // *** PLANO DE CORRECCIÓN v2.8 ***
-        // *** Ya no buscamos 'code' o 'error' en la URL.
-        // *** Solo nos importa si hay un token local.
         console.log('Auth.handlePageLoad() (v2.8) ejecutado.');
         
         if (Auth.getAuthToken()) {
@@ -781,14 +773,12 @@ const Auth = {
                 await UI.showApp();
             } else {
                 console.log('Token local inválido o expirado. Mostrando login.');
-                UI.showLogin(); // checkAuth falló (refresco imposible)
+                UI.showLogin(); 
             }
         } else {
             console.log('No se encontró token local. Mostrando login.');
-            // No code, no token. Mostrar login. SIN RED.
             UI.showLogin();
         }
-        // *** FIN DE LA CORRECCIÓN v2.8 ***
     },
     async logout(notifyGoogle = true) {
         const localToken = this.getAuthToken();
@@ -809,7 +799,12 @@ const Auth = {
         UI.showLogin();
     },
     setAuthToken(tokens) {
-        tokens.expires_at = Date.now() + (tokens.expires_in * 1000);
+        // *** // *** PLANO DE CORRECCIÓN v2.9 ***
+        // *** Google devuelve 'expiry_date' (un timestamp) no 'expires_in' (una duración)
+        // tokens.expires_at = Date.now() + (tokens.expires_in * 1000); // <-- BUG
+        tokens.expires_at = tokens.expiry_date; // <-- CORRECCIÓN
+        // *** FIN DE LA CORRECCIÓN v2.9 ***
+        
         appState.gAuthToken = tokens;
         localStorage.setItem('gAuthToken', JSON.stringify(tokens));
     },
@@ -1967,6 +1962,7 @@ App.init();
 </script>
 </body>
 </html>
+
 
 
 
