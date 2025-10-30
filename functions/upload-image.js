@@ -1,15 +1,19 @@
 // functions/upload-image.js
-// v2.0 - PIVOTE A OAUTH 2.0 (TOKEN DE USUARIO)
-// Utiliza el access_token del usuario (obtenido vía OAuth) para la autenticación de Drive.
+// v3.0 - RE-ARQUITECTADA PARA USAR SERVICE ACCOUNT
+// Ahora usa el Service Account (robot) para subir, igual que update-sheet-data.
+// Sigue protegida por el token de usuario (OAuth).
 
 const { google } = require('googleapis');
+const { JWT } = require('google-auth-library'); // Importar JWT
 const { Readable } = require('stream');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const Busboy = require('busboy'); // Mantenemos busboy
+const Busboy = require('busboy');
+// Importar el validador de token de admin
+const { validateGoogleToken } = require('./google-auth-helper');
 
-// Helper para parsear el form data (usando busboy)
+// Helper para parsear el form data (sin cambios)
 function parseMultipartForm(event) {
   return new Promise((resolve, reject) => {
     try {
@@ -42,7 +46,6 @@ function parseMultipartForm(event) {
       busboy.on('close', () => resolve({ fields, files }));
       busboy.on('error', err => reject(err));
 
-      // Decodificar el body si es base64
       const bodyBuffer = Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'binary');
       busboy.end(bodyBuffer);
 
@@ -52,14 +55,15 @@ function parseMultipartForm(event) {
   });
 }
 
-// --- Handler Principal ---
+// --- Handler Principal (v3.0) ---
 exports.handler = async (event, context) => {
-  // 1. Verificar Autorización (¡NUEVO MÉTODO!)
-  if (!event.headers.authorization || !event.headers.authorization.startsWith('Bearer ')) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado. Falta token de usuario.' }) };
+  // 1. **SEGURIDAD:** Verificar el token de Google del usuario (Admin).
+  if (!(await validateGoogleToken(event))) {
+    return {
+      statusCode: 401, // No autorizado
+      body: JSON.stringify({ error: 'No autorizado. Token de Google inválido o expirado.' }),
+    };
   }
-  // Extraer el Token de Usuario (Access Token de Google)
-  const userAccessToken = event.headers.authorization.split(' ')[1];
 
   // 2. Solo permitir POST
   if (event.httpMethod !== 'POST') {
@@ -75,7 +79,7 @@ exports.handler = async (event, context) => {
   let tempFilePath = null;
 
   try {
-    // 3. Parsear el Form Data (usando busboy)
+    // 3. Parsear el Form Data
     const { fields, files } = await parseMultipartForm(event);
     const file = files.file;
     const targetSubfolder = fields.targetSubfolder || 'general';
@@ -84,20 +88,19 @@ exports.handler = async (event, context) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'No se recibió ningún archivo (key="file").' }) };
     }
     
-    tempFilePath = file.filepath; // Guardar ruta para limpieza
+    tempFilePath = file.filepath;
 
-    // 4. Crear Cliente OAuth2 y Drive Service (¡NUEVO MÉTODO!)
-    const oAuth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_OAUTH_CLIENT_ID,
-      process.env.GOOGLE_OAUTH_CLIENT_SECRET
-    );
-    // Establecer el token del usuario como credencial
-    oAuth2Client.setCredentials({ access_token: userAccessToken });
+    // 4. **NUEVA AUTENTICACIÓN:** Usar el Service Account (Robot)
+    const serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/drive'], // Scope de Drive para el robot
+    });
     
-    // Crear el servicio de Drive usando la autenticación del USUARIO
-    const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+    // Crear el servicio de Drive usando la autenticación del ROBOT
+    const drive = google.drive({ version: 'v3', auth: serviceAccountAuth });
 
-    // 5. Buscar o crear la subcarpeta
+    // 5. Buscar o crear la subcarpeta (sin cambios)
     let targetFolderId = parentFolderId;
     if (targetSubfolder && targetSubfolder !== 'general') {
         const folderQuery = `mimeType='application/vnd.google-apps.folder' and name='${targetSubfolder}' and '${parentFolderId}' in parents and trashed = false`;
@@ -119,7 +122,7 @@ exports.handler = async (event, context) => {
         }
     }
 
-    // 6. Preparar metadatos y media
+    // 6. Preparar metadatos y media (sin cambios)
     const fileMetadata = {
       name: file.filename || `upload_${Date.now()}`,
       parents: [targetFolderId]
@@ -129,7 +132,7 @@ exports.handler = async (event, context) => {
       body: fs.createReadStream(tempFilePath),
     };
 
-    // 7. Subir el archivo
+    // 7. Subir el archivo (sin cambios)
     const driveResponse = await drive.files.create({
       resource: fileMetadata,
       media: media,
@@ -138,19 +141,19 @@ exports.handler = async (event, context) => {
     
     const fileId = driveResponse.data.id;
 
-    // 8. Hacer público
+    // 8. Hacer público (sin cambios)
     await drive.permissions.create({
       fileId: fileId,
       requestBody: { role: 'reader', type: 'anyone' },
     });
 
-    // 9. Obtener metadatos
+    // 9. Obtener metadatos (sin cambios)
      const updatedFile = await drive.files.get({
        fileId: fileId,
        fields: 'webViewLink, webContentLink',
      });
 
-    // 10. Devolver URL
+    // 10. Devolver URL (sin cambios)
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -163,22 +166,15 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Error subiendo archivo a Drive (v2.0):', error);
-    // Manejar errores de token inválido
-    if (error.code === 401 || (error.response && error.response.status === 401)) {
-        return { statusCode: 401, body: JSON.stringify({ error: 'Token de Google inválido o expirado.', details: error.message }) };
-    }
+    console.error('Error subiendo archivo a Drive (v3.0):', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Error interno al subir el archivo.', details: error.message }),
     };
   } finally {
-      // 11. Limpiar
+      // 11. Limpiar (sin cambios)
       if (tempFilePath) {
         try { fs.unlinkSync(tempFilePath); } catch (e) { console.error("Error limpiando archivo temporal:", e); }
       }
   }
 };
-
-
-
