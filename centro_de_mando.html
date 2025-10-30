@@ -689,7 +689,6 @@ const Auth = {
                 'https://www.googleapis.com/auth/drive.file' // CRÍTICO para upload-image.js
             ].join(' '),
             redirect_uri: window.location.origin + window.location.pathname,
-            callback: () => {},
         });
         client.requestCode();
     },
@@ -1975,5 +1974,6 @@ App.init();
 </script>
 </body>
 </html>
+
 
 
