@@ -1,10 +1,10 @@
 // functions/upload-image.js
-// v3.0 - ARQUITECTURA DE SERVICE ACCOUNT (ROBOT)
-// Esta versión valida el token del usuario, pero usa el Service Account
-// para realizar la subida, evitando el error de "storage quota" y el de "scopes".
+// v2.1 - ARQUITECTURA DE DELEGACIÓN OAUTH (TOKEN DE USUARIO)
+// Esta versión usa el access_token del usuario (que ahora tendrá el scope 'drive.file')
+// para realizar la subida, usando la cuota de almacenamiento del usuario.
 
 const { google } = require('googleapis');
-const { JWT } = require('google-auth-library');
+const { Readable } = require('stream');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -12,7 +12,7 @@ const Busboy = require('busboy');
 // Importamos el validador de token del usuario
 const { validateGoogleToken } = require('./google-auth-helper');
 
-// Helper para parsear el form data (sin cambios)
+// Helper para parsear el form data (usando busboy)
 function parseMultipartForm(event) {
   return new Promise((resolve, reject) => {
     try {
@@ -45,6 +45,7 @@ function parseMultipartForm(event) {
       busboy.on('close', () => resolve({ fields, files }));
       busboy.on('error', err => reject(err));
 
+      // Decodificar el body si es base64
       const bodyBuffer = Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'binary');
       busboy.end(bodyBuffer);
 
@@ -54,17 +55,20 @@ function parseMultipartForm(event) {
   });
 }
 
-// --- Handler Principal (v3.0) ---
+// --- Handler Principal ---
 exports.handler = async (event, context) => {
   // 1. **SEGURIDAD:** Validar el token de acceso del USUARIO.
-  // Esto asegura que solo un usuario logueado puede intentar subir archivos.
+  // Esto no solo valida que es un usuario logueado, sino que el token
+  // que nos pasa es el que usaremos para la subida.
   if (!(await validateGoogleToken(event))) {
     return {
       statusCode: 401, // No autorizado
       body: JSON.stringify({ error: 'No autorizado. Token de Google inválido o expirado.' }),
     };
   }
-  // Si llegamos aquí, el usuario está logueado y es válido.
+  
+  // Extraer el Token de Usuario (Access Token de Google)
+  const userAccessToken = event.headers.authorization.split(' ')[1];
 
   // 2. Solo permitir POST
   if (event.httpMethod !== 'POST') {
@@ -80,7 +84,7 @@ exports.handler = async (event, context) => {
   let tempFilePath = null;
 
   try {
-    // 3. Parsear el Form Data (sin cambios)
+    // 3. Parsear el Form Data (usando busboy)
     const { fields, files } = await parseMultipartForm(event);
     const file = files.file;
     const targetSubfolder = fields.targetSubfolder || 'general';
@@ -89,25 +93,22 @@ exports.handler = async (event, context) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'No se recibió ningún archivo (key="file").' }) };
     }
     
-    tempFilePath = file.filepath;
+    tempFilePath = file.filepath; // Guardar ruta para limpieza
 
     // 4. *** INICIO DEL AJUSTE DE CIRUJANO v9.0 ***
-    // Crear Cliente JWT (ROBOT / SERVICE ACCOUNT) para la subida
-    const serviceAccountAuth = new JWT({
-      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      scopes: [
-        'https://www.googleapis.com/auth/drive' 
-        // Nota: El robot necesita el scope 'drive' completo para crear,
-        // modificar permisos y gestionar carpetas.
-      ],
-    });
+    // Crear Cliente OAuth2 y Drive Service (usando el TOKEN DE USUARIO)
+    const oAuth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_OAUTH_CLIENT_ID,
+      process.env.GOOGLE_OAUTH_CLIENT_SECRET
+    );
+    // Establecer el token del usuario como credencial
+    oAuth2Client.setCredentials({ access_token: userAccessToken });
     
-    // Crear el servicio de Drive usando la autenticación del ROBOT
-    const drive = google.drive({ version: 'v3', auth: serviceAccountAuth });
+    // Crear el servicio de Drive usando la autenticación del USUARIO
+    const drive = google.drive({ version: 'v3', auth: oAuth2Client });
     // *** FIN DEL AJUSTE DE CIRUJANO v9.0 ***
 
-    // 5. Buscar o crear la subcarpeta (sin cambios)
+    // 5. Buscar o crear la subcarpeta
     let targetFolderId = parentFolderId;
     if (targetSubfolder && targetSubfolder !== 'general') {
         const folderQuery = `mimeType='application/vnd.google-apps.folder' and name='${targetSubfolder}' and '${parentFolderId}' in parents and trashed = false`;
@@ -122,14 +123,14 @@ exports.handler = async (event, context) => {
                 parents: [parentFolderId]
             };
             const createdFolder = await drive.files.create({
-                resource: folderMetadata,
+                resource: fileMetadata,
                 fields: 'id'
             });
             targetFolderId = createdFolder.data.id;
         }
     }
 
-    // 6. Preparar metadatos y media (sin cambios)
+    // 6. Preparar metadatos y media
     const fileMetadata = {
       name: file.filename || `upload_${Date.now()}`,
       parents: [targetFolderId]
@@ -139,7 +140,7 @@ exports.handler = async (event, context) => {
       body: fs.createReadStream(tempFilePath),
     };
 
-    // 7. Subir el archivo (sin cambios)
+    // 7. Subir el archivo
     const driveResponse = await drive.files.create({
       resource: fileMetadata,
       media: media,
@@ -148,19 +149,19 @@ exports.handler = async (event, context) => {
     
     const fileId = driveResponse.data.id;
 
-    // 8. Hacer público (sin cambios)
+    // 8. Hacer público
     await drive.permissions.create({
       fileId: fileId,
       requestBody: { role: 'reader', type: 'anyone' },
     });
 
-    // 9. Obtener metadatos (sin cambios)
+    // 9. Obtener metadatos
      const updatedFile = await drive.files.get({
        fileId: fileId,
        fields: 'webViewLink, webContentLink',
      });
 
-    // 10. Devolver URL (sin cambios)
+    // 10. Devolver URL
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -174,19 +175,23 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Error subiendo archivo a Drive (v3.0 - Robot):', error);
+    console.error('Error subiendo archivo a Drive (v2.1 - Usuario):', error);
     
-    // ESTE ES EL ERROR QUE YA SOLUCIONASTE AL COMPARTIR LA CARPETA
-    if (error.message && error.message.includes('storage quota')) {
-        return { statusCode: 403, body: JSON.stringify({ error: 'Error de Cuota de Almacenamiento. Revisa los permisos del Service Account en la carpeta de Drive.', details: error.message })};
+    // ESTE ES EL ERROR QUE ESTÁBAMOS VIENDO ANTES
+    if (error.message && error.message.includes('insufficient authentication scopes')) {
+        return { statusCode: 403, body: JSON.stringify({ error: 'Error de Permisos. El token del usuario no tiene el scope de "drive.file".', details: error.message })};
     }
-
+    
+    // Manejar errores de token inválido
+    if (error.code === 401 || (error.response && error.response.status === 401)) {
+        return { statusCode: 401, body: JSON.stringify({ error: 'Token de Google inválido o expirado.', details: error.message }) };
+    }
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Error interno al subir el archivo.', details: error.message }),
     };
   } finally {
-      // 11. Limpiar (sin cambios)
+      // 11. Limpiar
       if (tempFilePath) {
         try { fs.unlinkSync(tempFilePath); } catch (e) { console.error("Error limpiando archivo temporal:", e); }
       }
