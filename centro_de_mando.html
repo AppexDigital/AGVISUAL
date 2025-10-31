@@ -39,7 +39,7 @@
             font-family: 'Cormorant Garamond', serif; 
         }
         
-        /* --- Estilos de Componentes --- */
+        /* ... (Estilos sin cambios) ... */
         .loader-circle {
             width: 50px; height: 50px;
             border: 4px solid rgba(0, 0, 0, 0.1);
@@ -683,11 +683,10 @@ const Auth = {
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
-                // *** AJUSTE DE CIRUJANO v4.0 ***
-                // Se quitan los scopes de DRIVE para desbloquear el login
+                // *** AJUSTE DE CIRUJANO v4.0 -> v2.7 ***
                 'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile'
-                // 'https://www.googleapis.com/auth/drive.file' // <--- ELIMINADO
+                'openid'
+                // 'https://www.googleapis.com/auth/userinfo.profile' // <-- ELIMINADO en v2.7
             ].join(' '),
             
             // *** ESTE ES EL CAMBIO CLAVE ***
@@ -1596,13 +1595,12 @@ const App = {
                 const newValue = input.value;
                 const existing = appState.dataStore.About.find(s => s.section === key);
                 
+                // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
+                // Esta es la lógica que faltaba.
                 if (existing && existing.content !== newValue) {
                     promises.push(API.call('/.netlify/functions/update-sheet-data', {
                         method: 'POST', body: { sheet: 'About', action: 'update', criteria: { section: key }, data: { content: newValue } }
                     }));
-                
-                // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
-                // Esta es la lógica que faltaba.
                 } else if (!existing && newValue) {
                      promises.push(API.call('/.netlify/functions/update-sheet-data', {
                         method: 'POST', body: { sheet: 'About', action: 'add', data: { section: key, content: newValue } }
@@ -1648,6 +1646,20 @@ const App = {
                         ${UI.createImageUploader('logoUrl', 'Imagen del Logo', item.logoUrl, 'logos')}
                     `;
                     break;
+                
+                // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
+                // Se añade el 'case' que faltaba para 'Projects'
+                case 'Projects':
+                    modalTitle = isNew ? 'Nuevo Proyecto' : 'Editar Proyecto';
+                    if (!isNew) item = appState.dataStore.Projects.find(i => i.id === itemId);
+                    formHTML = `
+                        ${UI.createFormInput('order', 'Orden', item.order, 'number')}
+                        ${UI.createFormInput('title', 'Título del Proyecto', item.title, 'text', true)}
+                        ${UI.createFormTextarea('description', 'Descripción', item.description, 4)}
+                    `;
+                    break;
+                // *** FIN DEL AJUSTE DE CIRUJANO v7.1 ***
+
                 case 'Services':
                     modalTitle = isNew ? 'Nuevo Servicio' : 'Editar Servicio';
                     if (!isNew) item = appState.dataStore.Services.find(i => i.id === itemId);
@@ -1713,13 +1725,25 @@ const App = {
             }
             const data = {};
             form.querySelectorAll('input, textarea, select').forEach(el => {
-                if (el.id) data[el.id] = el.value;
+                // *** AJUSTE DE CIRUJANO v7.1: Usar 'name' o 'id' como clave
+                const key = el.name || el.id;
+                if (key) {
+                    // Manejar checkboxes
+                    if (el.type === 'checkbox') {
+                        data[key] = el.checked;
+                    } else {
+                        data[key] = el.value;
+                    }
+                }
             });
             
             const keyField = (sheetName === 'BlockedDates') ? 'blockId' : 'id';
             
             if (isNew) {
-                data[keyField] = (sheetName === 'BlockedDates') ? `block_${Date.now()}` : `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}`;
+                // *** AJUSTE DE CIRUJANO v7.1: Asignar ID solo si la hoja no es Settings/About
+                if (sheetName !== 'Settings' && sheetName !== 'About') {
+                    data[keyField] = (sheetName === 'BlockedDates') ? `block_${Date.now()}` : `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}`;
+                }
                 if(sheetName === 'BlockedDates') data.blockedTimestamp = new Date().toISOString();
             }
 
@@ -1766,6 +1790,7 @@ const App = {
                         if (childSheetName && childForeignKey) {
                             const children = appState.dataStore[childSheetName].filter(c => c[childForeignKey] === itemId);
                             children.forEach(child => {
+                                // *** AJUSTE DE CIRUJANO v7.1: Usar el keyField correcto para el hijo (asumir 'id')
                                 deleteChildPromises.push(API.call('/.netlify/functions/update-sheet-data', {
                                     method: 'POST',
                                     body: { sheet: childSheetName, action: 'delete', criteria: { id: child.id } }
@@ -1775,6 +1800,7 @@ const App = {
                         if (childSheetName2 && childForeignKey2) {
                             const children2 = appState.dataStore[childSheetName2].filter(c => c[childForeignKey2] === itemId);
                             children2.forEach(child => {
+                                // *** AJUSTE DE CIRUJANO v7.1: Usar el keyField correcto para el hijo (asumir 'id')
                                 deleteChildPromises.push(API.call('/.netlify/functions/update-sheet-data', {
                                     method: 'POST',
                                     body: { sheet: childSheetName2, action: 'delete', criteria: { id: child.id } }
@@ -1803,6 +1829,7 @@ const App = {
 
     // --- Lógica de Negocio (Handlers Específicos v4.0) ---
     handleEditProject(projectId) {
+        // Esta función ahora llamará a handleEditCrudItem con el 'case' correcto
         this.handleEditCrudItem('Projects', projectId);
     },
     async handleUpdateBookingStatus(bookingId) {
@@ -1829,21 +1856,21 @@ const App = {
         }
     },
     handleManageChildImages(sheetName, parentId, foreignKey, parentName, subfolder) {
-        const images = appState.dataStore[sheetName].filter(img => img[foreignKey] === parentId).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const images = (appState.dataStore[sheetName] || []).filter(img => img[foreignKey] === parentId).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         
         let imagesHTML = images.map(img => `
             <div class="flex items-center gap-4 p-2 border-b border-gray-100" data-img-id="${img.id}">
                 <img src="${img.imageUrl}" alt="img" class="w-16 h-16 object-cover border border-gray-200">
                 <div class="flex-grow">
-                    ${sheetName === 'ProjectImages' ? `<input type="text" class="form-input text-sm p-1 mb-2" value="${img.caption || ''}" placeholder="Descripción (opcional)...">` : ''}
+                    ${sheetName === 'ProjectImages' ? `<input type="text" name="caption" class="form-input text-sm p-1 mb-2" value="${img.caption || ''}" placeholder="Descripción (opcional)...">` : ''}
                     <div class="flex items-center gap-4">
-                        <label class="text-sm">Orden: <input type="number" class="form-input w-20 p-1 text-sm" value="${img.order || ''}"></label>
+                        <label class="text-sm">Orden: <input type="number" name="order" class="form-input w-20 p-1 text-sm" value="${img.order || ''}"></label>
                         ${sheetName === 'ProjectImages' ? `
                         <label class="flex items-center text-sm gap-1">
-                            <input type="checkbox" class="form-checkbox is-cover-cb" ${img.isCover && img.isCover.toLowerCase() === 'si' ? 'checked' : ''}> Portada
+                            <input type="checkbox" name="isCover" class="form-checkbox is-cover-cb" ${img.isCover && img.isCover.toLowerCase() === 'si' ? 'checked' : ''}> Portada
                         </label>
                         <label class="flex items-center text-sm gap-1">
-                            <input type="checkbox" class="form-checkbox" ${img.showInPortfolio && img.showInPortfolio.toLowerCase() === 'si' ? 'checked' : ''}> Gal. Principal
+                            <input type="checkbox" name="showInPortfolio" class="form-checkbox" ${img.showInPortfolio && img.showInPortfolio.toLowerCase() === 'si' ? 'checked' : ''}> Gal. Principal
                         </label>
                         ` : ''}
                     </div>
@@ -1878,12 +1905,12 @@ const App = {
                 document.querySelectorAll('#child-image-list > div[data-img-id]').forEach(row => {
                     const imgId = row.dataset.imgId;
                     const data = {
-                        order: row.querySelector('input[type="number"]').value || 99
+                        order: row.querySelector('input[name="order"]').value || 99
                     };
                     if (sheetName === 'ProjectImages') {
-                        data.caption = row.querySelector('input[type="text"]').value;
-                        data.showInPortfolio = row.querySelector('.form-checkbox:not(.is-cover-cb)').checked ? 'Si' : 'No';
-                        const isCoverChecked = row.querySelector('.is-cover-cb').checked;
+                        data.caption = row.querySelector('input[name="caption"]').value;
+                        data.showInPortfolio = row.querySelector('input[name="showInPortfolio"]').checked ? 'Si' : 'No';
+                        const isCoverChecked = row.querySelector('input[name="isCover"]').checked;
                         if (isCoverChecked && !hasCover) {
                             data.isCover = 'Si';
                             hasCover = true;
@@ -1901,8 +1928,10 @@ const App = {
                 try {
                     await Promise.all(promises);
                     await UI.loadAdminData();
-                    UI.renderView(appState.currentView);
+                    UI.renderView(appState.currentView); // Re-renderizar la vista actual (ej. Proyectos)
+                    // Volver a abrir el modal con los datos actualizados
                     close();
+                    App.handleManageChildImages(sheetName, parentId, foreignKey, parentName, subfolder);
                     UI.showToast('Cambios guardados.');
                 } catch (error) {
                     UI.showToast(`Error: ${error.message}`, true);
@@ -1951,6 +1980,8 @@ const App = {
                     await Promise.all(uploadPromises);
                     await UI.loadAdminData();
                     close();
+                    // Volver a abrir el modal para mostrar las nuevas imágenes
+                    App.handleManageChildImages(sheetName, parentId, foreignKey, parentName, subfolder);
                     UI.showToast(`${files.length} imagen(es) subida(s) y añadida(s).`);
                 } catch (error) {
                     UI.showToast(`Error al subir: ${error.message}`, true);
@@ -1961,7 +1992,7 @@ const App = {
         });
     },
     handleManageServiceContent(serviceId, serviceName) {
-        const blocks = appState.dataStore.ServiceContentBlocks.filter(b => b.serviceId === serviceId).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const blocks = (appState.dataStore.ServiceContentBlocks || []).filter(b => b.serviceId === serviceId).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         
         let blocksHTML = blocks.map(block => `
             <div class="p-2 border border-gray-200 rounded mb-2" data-block-id="${block.id}">
@@ -2060,7 +2091,6 @@ App.init();
 </script>
 </body>
 </html>
-
 
 
 
