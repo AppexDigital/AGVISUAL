@@ -800,6 +800,7 @@ const Auth = {
     async handlePageLoad() {
         // *** // *** AJUSTE DE CIRUJANO v2.11 (Flujo de Redirección) ***
         console.log('Auth.handlePageLoad() (v2.11 - Flujo de Redirección) ejecutado.');
+        console.log("URL actual:", window.location.href);
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         const error = params.get('error');
@@ -2104,6 +2105,7 @@ App.init();
 </script>
 </body>
 </html>
+
 
 
 
