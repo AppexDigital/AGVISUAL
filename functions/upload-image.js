@@ -1,13 +1,16 @@
 // functions/upload-image.js
-// v2.1 - REVERTIDO A ARQUITECTURA OAUTH (TOKEN DE USUARIO)
-// Esto es necesario para usar la cuota de almacenamiento del usuario
-// y evitar el error "Service Accounts do not have storage quota".
+// v3.0 - ARQUITECTURA DE SERVICE ACCOUNT (ROBOT)
+// Esta versión valida el token del usuario, pero usa el Service Account
+// para realizar la subida, evitando el error de "storage quota" y el de "scopes".
 
 const { google } = require('googleapis');
+const { JWT } = require('google-auth-library');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const Busboy = require('busboy');
+// Importamos el validador de token del usuario
+const { validateGoogleToken } = require('./google-auth-helper');
 
 // Helper para parsear el form data (sin cambios)
 function parseMultipartForm(event) {
@@ -51,14 +54,17 @@ function parseMultipartForm(event) {
   });
 }
 
-// --- Handler Principal (v2.1) ---
+// --- Handler Principal (v3.0) ---
 exports.handler = async (event, context) => {
-  // 1. **SEGURIDAD:** Verificar el token de autorización del USUARIO.
-  if (!event.headers.authorization || !event.headers.authorization.startsWith('Bearer ')) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado. Falta token de usuario.' }) };
+  // 1. **SEGURIDAD:** Validar el token de acceso del USUARIO.
+  // Esto asegura que solo un usuario logueado puede intentar subir archivos.
+  if (!(await validateGoogleToken(event))) {
+    return {
+      statusCode: 401, // No autorizado
+      body: JSON.stringify({ error: 'No autorizado. Token de Google inválido o expirado.' }),
+    };
   }
-  // Extraer el Token de Usuario (Access Token de Google)
-  const userAccessToken = event.headers.authorization.split(' ')[1];
+  // Si llegamos aquí, el usuario está logueado y es válido.
 
   // 2. Solo permitir POST
   if (event.httpMethod !== 'POST') {
@@ -86,16 +92,19 @@ exports.handler = async (event, context) => {
     tempFilePath = file.filepath;
 
     // 4. *** INICIO DEL AJUSTE DE CIRUJANO v9.0 ***
-    // Crear Cliente OAuth2 y Drive Service (Usando el token del USUARIO)
-    const oAuth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_OAUTH_CLIENT_ID,
-      process.env.GOOGLE_OAUTH_CLIENT_SECRET
-    );
-    // Establecer el token del usuario como credencial
-    oAuth2Client.setCredentials({ access_token: userAccessToken });
+    // Crear Cliente JWT (ROBOT / SERVICE ACCOUNT) para la subida
+    const serviceAccountAuth = new JWT({
+      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      scopes: [
+        'https://www.googleapis.com/auth/drive' 
+        // Nota: El robot necesita el scope 'drive' completo para crear,
+        // modificar permisos y gestionar carpetas.
+      ],
+    });
     
-    // Crear el servicio de Drive usando la autenticación del USUARIO
-    const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+    // Crear el servicio de Drive usando la autenticación del ROBOT
+    const drive = google.drive({ version: 'v3', auth: serviceAccountAuth });
     // *** FIN DEL AJUSTE DE CIRUJANO v9.0 ***
 
     // 5. Buscar o crear la subcarpeta (sin cambios)
@@ -159,20 +168,19 @@ exports.handler = async (event, context) => {
           message: 'Archivo subido con éxito.',
           fileId: fileId,
           fileName: driveResponse.data.name,
-          imageUrl: updatedFile.data.webViewLink.replace('/view', '/preview')
+          // Usar 'preview' es más robusto para <img src>
+          imageUrl: updatedFile.data.webViewLink.replace('/view', '/preview') 
       }),
     };
 
   } catch (error) {
-    console.error('Error subiendo archivo a Drive (v2.1):', error);
-    // Manejar errores de token inválido
-    if (error.code === 401 || (error.response && error.response.status === 401)) {
-        return { statusCode: 401, body: JSON.stringify({ error: 'Token de Google inválido o expirado.', details: error.message }) };
-    }
-     // Manejar el error de cuota si, por alguna razón, aún ocurre
+    console.error('Error subiendo archivo a Drive (v3.0 - Robot):', error);
+    
+    // ESTE ES EL ERROR QUE YA SOLUCIONASTE AL COMPARTIR LA CARPETA
     if (error.message && error.message.includes('storage quota')) {
-        return { statusCode: 403, body: JSON.stringify({ error: 'Error de cuota de almacenamiento de Google Drive.', details: error.message })};
+        return { statusCode: 403, body: JSON.stringify({ error: 'Error de Cuota de Almacenamiento. Revisa los permisos del Service Account en la carpeta de Drive.', details: error.message })};
     }
+
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Error interno al subir el archivo.', details: error.message }),
