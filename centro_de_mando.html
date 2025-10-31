@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
+/* ... (estilos existentes sin cambios) ... */
         :root {
             --bg-main: #FDFDFD;
             --text-dark: #1a1a1a;
@@ -39,7 +40,7 @@
             font-family: 'Cormorant Garamond', serif; 
         }
         
-        /* ... (Estilos sin cambios) ... */
+        /* --- Estilos de Componentes --- */
         .loader-circle {
             width: 50px; height: 50px;
             border: 4px solid rgba(0, 0, 0, 0.1);
@@ -683,10 +684,8 @@ const Auth = {
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
-                // *** AJUSTE DE CIRUJANO v4.0 -> v2.7 ***
                 'https://www.googleapis.com/auth/userinfo.email',
                 'openid'
-                // 'https://www.googleapis.com/auth/userinfo.profile' // <-- ELIMINADO en v2.7
             ].join(' '),
             
             // *** ESTE ES EL CAMBIO CLAVE ***
@@ -860,7 +859,6 @@ const Auth = {
     setAuthToken(tokens) {
         // *** // *** PLANO DE CORRECCIÓN v2.10 ***
         // *** Google devuelve 'expiry_date' (segundos) y no 'expires_in' (milisegundos)
-        // const expiresAt = tokens.expiry_date; // <-- BUG v2.9: Esto está en segundos
         const expiresAt = Number(tokens.expiry_date) * 1000; // <-- CORRECCIÓN: Convertir a milisegundos
         
         if (isNaN(expiresAt) || expiresAt < Date.now()) {
@@ -1053,7 +1051,7 @@ const UI = {
         const container = $('settings-form-container');
         if (!container) return;
         container.innerHTML = ''; // Limpiar
-        const settings = appState.dataStore.Settings.reduce((acc, item) => {
+        const settings = (appState.dataStore.Settings || []).reduce((acc, item) => {
             acc[item.key] = item.value;
             return acc;
         }, {});
@@ -1092,7 +1090,7 @@ const UI = {
         const container = $('about-form-container');
         if (!container) return;
         container.innerHTML = '';
-        const aboutContent = appState.dataStore.About.reduce((acc, item) => {
+        const aboutContent = (appState.dataStore.About || []).reduce((acc, item) => {
             acc[item.section] = item.content;
             return acc;
         }, {});
@@ -1126,13 +1124,13 @@ const UI = {
         const container = $('projects-table-body');
         if (!container) return;
         container.innerHTML = '';
-        const projects = appState.dataStore.Projects.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const projects = (appState.dataStore.Projects || []).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (projects.length === 0) {
             container.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-text-muted">No hay proyectos creados.</td></tr>';
             return;
         }
         projects.forEach(project => {
-            const coverImage = appState.dataStore.ProjectImages.find(img => img.projectId === project.id && img.isCover && img.isCover.toLowerCase() === 'si');
+            const coverImage = (appState.dataStore.ProjectImages || []).find(img => img.projectId === project.id && img.isCover && img.isCover.toLowerCase() === 'si');
             const imageUrl = coverImage ? coverImage.imageUrl : 'https://placehold.co/100x75/e5e7eb/a0aec0?text=S/P';
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-200 hover:bg-gray-50';
@@ -1160,7 +1158,7 @@ const UI = {
         const container = $('videos-table-body');
         if (!container) return;
         container.innerHTML = '';
-        const items = appState.dataStore.Videos.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const items = (appState.dataStore.Videos || []).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
             container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-text-muted">No hay videos.</td></tr>';
             return;
@@ -1188,7 +1186,7 @@ const UI = {
         const container = $('clientlogos-table-body');
         if (!container) return;
         container.innerHTML = '';
-        const items = appState.dataStore.ClientLogos.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const items = (appState.dataStore.ClientLogos || []).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
             container.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-text-muted">No hay logos.</td></tr>';
             return;
@@ -1216,7 +1214,7 @@ const UI = {
         const container = $('services-table-body');
         if (!container) return;
         container.innerHTML = '';
-        const items = appState.dataStore.Services.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const items = (appState.dataStore.Services || []).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
             container.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-text-muted">No hay servicios.</td></tr>';
             return;
@@ -1251,7 +1249,7 @@ const UI = {
         const container = $('rental-categories-table-body');
         if (!container) return;
         container.innerHTML = '';
-        const items = appState.dataStore.RentalCategories.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const items = (appState.dataStore.RentalCategories || []).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
             container.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-text-muted">No hay categorías.</td></tr>';
             return;
@@ -1278,14 +1276,14 @@ const UI = {
         const container = $('rental-items-table-body');
         if (!container) return;
         container.innerHTML = '';
-        const items = appState.dataStore.RentalItems.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        const items = (appState.dataStore.RentalItems || []).sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
             container.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-text-muted">No hay equipos.</td></tr>';
             return;
         }
         items.forEach(item => {
-            const category = appState.dataStore.RentalCategories.find(c => c.id === item.categoryId);
-            const coverImage = appState.dataStore.RentalItemImages.find(img => img.itemId === item.id); // Solo la primera
+            const category = (appState.dataStore.RentalCategories || []).find(c => c.id === item.categoryId);
+            const coverImage = (appState.dataStore.RentalItemImages || []).find(img => img.itemId === item.id); // Solo la primera
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-200 hover:bg-gray-50';
             row.innerHTML = `
@@ -1313,7 +1311,7 @@ const UI = {
         const container = $('bookings-list-body');
         if (!container) return;
         container.innerHTML = '';
-        const items = appState.dataStore.Bookings.sort((a, b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)); // Más nuevas primero
+        const items = (appState.dataStore.Bookings || []).sort((a, b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)); // Más nuevas primero
         if (items.length === 0) {
             container.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-text-muted">No hay reservas de clientes.</td></tr>';
             return;
@@ -1351,13 +1349,13 @@ const UI = {
         const container = $('blocked-dates-table-body');
         if (!container) return;
         container.innerHTML = '';
-        const items = appState.dataStore.BlockedDates.sort((a, b) => new Date(b.blockedTimestamp) - new Date(a.blockedTimestamp));
+        const items = (appState.dataStore.BlockedDates || []).sort((a, b) => new Date(b.blockedTimestamp) - new Date(a.blockedTimestamp));
         if (items.length === 0) {
             container.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-text-muted">No hay fechas bloqueadas.</td></tr>';
             return;
         }
         items.forEach(item => {
-            const rentalItem = appState.dataStore.RentalItems.find(r => r.id === item.itemId);
+            const rentalItem = (appState.dataStore.RentalItems || []).find(r => r.id === item.itemId);
             const row = document.createElement('tr');
             row.className = 'border-b border-gray-200 hover:bg-gray-50';
             row.innerHTML = `
@@ -1423,7 +1421,7 @@ const UI = {
         return `
             <div>
                 <label class="form-label" for="${id}">${label}</label>
-                <input type="${type}" id="${id}" class="form-input" 
+                <input type="${type}" id="${id}" name="${id}" class="form-input" 
                        value="${value || ''}" ${required ? 'required' : ''}
                        ${type === 'number' ? 'min="0"' : ''}>
             </div>
@@ -1433,7 +1431,7 @@ const UI = {
         return `
             <div>
                 <label class="form-label" for="${id}">${label}</label>
-                <textarea id="${id}" class="form-input" rows="${rows}">${value || ''}</textarea>
+                <textarea id="${id}" name="${id}" class="form-input" rows="${rows}">${value || ''}</textarea>
             </div>
         `;
     },
@@ -1441,7 +1439,7 @@ const UI = {
         return `
             <div>
                 <label class="form-label" for="${id}">${label}</label>
-                <select id="${id}" class="${extraClasses} w-full" data-keyfield="${keyField}">
+                <select id="${id}" name="${id}" class="${extraClasses} w-full" data-keyfield="${keyField}">
                     <option value="">-- Seleccionar --</option>
                     ${optionsArray.map(opt => 
                         `<option value="${opt.value}" ${opt.value == value ? 'selected' : ''}>${opt.text}</option>`
@@ -1456,7 +1454,7 @@ const UI = {
                 <label class="form-label">${label}</label>
                 <div class="flex items-center gap-4">
                     <img src="${value || 'https://placehold.co/100x100/e5e7eb/a0aec0?text=IMG'}" alt="Vista previa" class="w-24 h-24 object-cover border border-gray-200 bg-gray-50 p-1">
-                    <input type="text" id="${id}" class="form-input flex-grow" value="${value || ''}" readonly>
+                    <input type="text" id="${id}" name="${id}" class="form-input flex-grow" value="${value || ''}" readonly>
                     <button type="button" class="btn-secondary" onclick="UI.handleImageUpload('${id}', '${subfolder}')">Subir</button>
                 </div>
             </div>
@@ -1465,7 +1463,7 @@ const UI = {
     createCheckbox(id, label, checked) {
         return `
             <div class="flex items-center gap-2">
-                <input type="checkbox" id="${id}" class="form-checkbox" ${checked ? 'checked' : ''}>
+                <input type="checkbox" id="${id}" name="${id}" class="form-checkbox" ${checked ? 'checked' : ''}>
                 <label class="form-label !mb-0" for="${id}">${label}</label>
             </div>
         `;
@@ -1564,7 +1562,7 @@ const App = {
             inputs.forEach(input => {
                 const key = input.dataset.key;
                 const newValue = input.value;
-                const existing = appState.dataStore.Settings.find(s => s.key === key);
+                const existing = (appState.dataStore.Settings || []).find(s => s.key === key);
                 
                 if (existing && existing.value !== newValue) {
                     promises.push(API.call('/.netlify/functions/update-sheet-data', {
@@ -1593,7 +1591,7 @@ const App = {
             inputs.forEach(input => {
                 const key = input.dataset.key;
                 const newValue = input.value;
-                const existing = appState.dataStore.About.find(s => s.section === key);
+                const existing = (appState.dataStore.About || []).find(s => s.section === key);
                 
                 // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
                 // Esta es la lógica que faltaba.
@@ -1681,7 +1679,7 @@ const App = {
                 case 'RentalItems':
                     modalTitle = isNew ? 'Nuevo Equipo de Alquiler' : 'Editar Equipo';
                     if (!isNew) item = appState.dataStore.RentalItems.find(i => i.id === itemId);
-                    const categoryOptions = appState.dataStore.RentalCategories.map(c => ({ value: c.id, text: c.name }));
+                    const categoryOptions = (appState.dataStore.RentalCategories || []).map(c => ({ value: c.id, text: c.name }));
                     formHTML = `
                         ${UI.createFormInput('order', 'Orden', item.order, 'number')}
                         ${UI.createFormSelect('categoryId', 'Categoría', item.categoryId, categoryOptions, 'id')}
@@ -1694,7 +1692,7 @@ const App = {
                 case 'BlockedDates':
                     modalTitle = isNew ? 'Nuevo Bloqueo' : 'Editar Bloqueo';
                     if (!isNew) item = appState.dataStore.BlockedDates.find(i => i.blockId === itemId);
-                    const itemOptions = appState.dataStore.RentalItems.map(i => ({ value: i.id, text: i.name }));
+                    const itemOptions = (appState.dataStore.RentalItems || []).map(i => ({ value: i.id, text: i.name }));
                     formHTML = `
                         ${UI.createFormSelect('itemId', 'Equipo a Bloquear', item.itemId, itemOptions, 'id')}
                         ${UI.createFormInput('startDate', 'Fecha Inicio', item.startDate, 'date', true)}
@@ -1788,7 +1786,7 @@ const App = {
                     try {
                         const deleteChildPromises = [];
                         if (childSheetName && childForeignKey) {
-                            const children = appState.dataStore[childSheetName].filter(c => c[childForeignKey] === itemId);
+                            const children = (appState.dataStore[childSheetName] || []).filter(c => c[childForeignKey] === itemId);
                             children.forEach(child => {
                                 // *** AJUSTE DE CIRUJANO v7.1: Usar el keyField correcto para el hijo (asumir 'id')
                                 deleteChildPromises.push(API.call('/.netlify/functions/update-sheet-data', {
@@ -1798,7 +1796,7 @@ const App = {
                             });
                         }
                         if (childSheetName2 && childForeignKey2) {
-                            const children2 = appState.dataStore[childSheetName2].filter(c => c[childForeignKey2] === itemId);
+                            const children2 = (appState.dataStore[childSheetName2] || []).filter(c => c[childForeignKey2] === itemId);
                             children2.forEach(child => {
                                 // *** AJUSTE DE CIRUJANO v7.1: Usar el keyField correcto para el hijo (asumir 'id')
                                 deleteChildPromises.push(API.call('/.netlify/functions/update-sheet-data', {
@@ -1863,15 +1861,20 @@ const App = {
                 <img src="${img.imageUrl}" alt="img" class="w-16 h-16 object-cover border border-gray-200">
                 <div class="flex-grow">
                     ${sheetName === 'ProjectImages' ? `<input type="text" name="caption" class="form-input text-sm p-1 mb-2" value="${img.caption || ''}" placeholder="Descripción (opcional)...">` : ''}
-                    <div class="flex items-center gap-4">
-                        <label class="text-sm">Orden: <input type="number" name="order" class="form-input w-20 p-1 text-sm" value="${img.order || ''}"></label>
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <label class="text-sm">Orden: <input type="number" name="order" class="form-input w-20 p-1 text-sm" value="${img.order || ''}" placeholder="99"></label>
                         ${sheetName === 'ProjectImages' ? `
                         <label class="flex items-center text-sm gap-1">
                             <input type="checkbox" name="isCover" class="form-checkbox is-cover-cb" ${img.isCover && img.isCover.toLowerCase() === 'si' ? 'checked' : ''}> Portada
                         </label>
                         <label class="flex items-center text-sm gap-1">
-                            <input type="checkbox" name="showInPortfolio" class="form-checkbox" ${img.showInPortfolio && img.showInPortfolio.toLowerCase() === 'si' ? 'checked' : ''}> Gal. Principal
+                            <input type="checkbox" name="showInPortfolio" class="form-checkbox show-in-portfolio-cb" ${img.showInPortfolio && img.showInPortfolio.toLowerCase() === 'si' ? 'checked' : ''}> Gal. Principal
                         </label>
+                        <!-- *** INICIO DEL AJUSTE DE CIRUJANO v7.2 *** -->
+                        <label class="text-sm portfolio-order-label ${img.showInPortfolio && img.showInPortfolio.toLowerCase() === 'si' ? '' : 'hidden'}">
+                            Orden Portafolio: <input type="number" name="portfolioOrder" class="form-input w-20 p-1 text-sm" value="${img.portfolioOrder || ''}" placeholder="99">
+                        </label>
+                        <!-- *** FIN DEL AJUSTE DE CIRUJANO v7.2 *** -->
                         ` : ''}
                     </div>
                 </div>
@@ -1897,6 +1900,21 @@ const App = {
         UI.showModal(modalTitle, modalContent, modalFooter, ({ close }) => {
             $('modal-cancel').addEventListener('click', close);
             
+            // *** INICIO DE NUEVA LÓGICA v7.2 ***
+            const imageList = $('child-image-list');
+            if (imageList) {
+                imageList.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('show-in-portfolio-cb')) {
+                        const row = e.target.closest('.flex-wrap'); // Apuntar al contenedor de checkboxes
+                        const orderLabel = row.querySelector('.portfolio-order-label');
+                        if (orderLabel) {
+                            orderLabel.classList.toggle('hidden', !e.target.checked);
+                        }
+                    }
+                });
+            }
+            // *** FIN DE NUEVA LÓGICA v7.2 ***
+
             // Guardar todos los cambios (orden, captions, etc.)
             $('modal-save-images').addEventListener('click', async () => {
                 UI.showLoading('Guardando cambios...');
@@ -1910,6 +1928,11 @@ const App = {
                     if (sheetName === 'ProjectImages') {
                         data.caption = row.querySelector('input[name="caption"]').value;
                         data.showInPortfolio = row.querySelector('input[name="showInPortfolio"]').checked ? 'Si' : 'No';
+                        
+                        // *** INICIO DE NUEVA LÓGICA v7.2 ***
+                        data.portfolioOrder = row.querySelector('input[name="portfolioOrder"]').value || 99;
+                        // *** FIN DE NUEVA LÓGICA v7.2 ***
+
                         const isCoverChecked = row.querySelector('input[name="isCover"]').checked;
                         if (isCoverChecked && !hasCover) {
                             data.isCover = 'Si';
@@ -1968,7 +1991,8 @@ const App = {
                                             caption: file.name,
                                             order: 99,
                                             isCover: 'No',
-                                            showInPortfolio: 'No'
+                                            showInPortfolio: 'No',
+                                            portfolioOrder: 99 // *** NUEVA LÓGICA v7.2 ***
                                         }
                                     }
                                 });
@@ -2091,6 +2115,8 @@ App.init();
 </script>
 </body>
 </html>
+
+
 
 
 
