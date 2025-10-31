@@ -535,8 +535,6 @@
 <script>
 // --- Configuración Global ---
 let GOOGLE_OAUTH_CLIENT_ID = null;
-// *** CONSTANTE GLOBAL: URI DE REDIRECCIÓN FIJA ***
-// Esta debe coincidir EXACTAMENTE con la URI en Google Cloud
 // *** AJUSTE v2.8: Se cambia a 'postmessage' para el flujo de popup
 const GOOGLE_REDIRECT_URI = 'postmessage';
 
@@ -680,18 +678,17 @@ const Auth = {
             }
         }
         
-        // *** // *** PLANO DE CORRECCIÓN v2.10 (Flujo de Popup) ***
-        // *** Se revierte al flujo de POPUP que sabemos que funciona.
-        // *** NO se pide el scope 'drive.file' para que el login no falle.
+        // *** // *** PLANO DE CORRECCIÓN v2.11 (Flujo de Popup + Scope de Drive) ***
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
                 'https://www.googleapis.com/auth/userinfo.email',
                 'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/drive.file', // <-- RE-AÑADIDO
                 'openid'
             ].join(' '),
             
-            // *** ESTE ES EL CAMBIO CLAVE ***
+            // *** Se mantiene el 'callback' para manejar el flujo de POPUP
             callback: (response) => {
                 console.log("GSI Callback ejecutado.");
                 if (response.code) {
@@ -703,7 +700,7 @@ const Auth = {
                     UI.showLoginError(`Error de Google: ${response.error_description || response.error}`);
                 }
             },
-            // *** FIN DE LA CORRECCIÓN v2.10 ***
+            // *** FIN DE LA CORRECCIÓN v2.11 ***
         });
         client.requestCode();
     },
@@ -714,8 +711,7 @@ const Auth = {
                 method: 'POST',
                 body: JSON.stringify({ 
                     code: code,
-                    // *** AJUSTE v2.10: 'postmessage' es la redirect_uri para el flujo de popup
-                    redirectUri: 'postmessage'
+                    redirectUri: GOOGLE_REDIRECT_URI // 'postmessage'
                 }),
             }).then(res => {
                 if (!res.ok) {
@@ -1594,7 +1590,6 @@ const App = {
                 const existing = (appState.dataStore.About || []).find(s => s.section === key);
                 
                 // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
-                // Esta es la lógica que faltaba.
                 if (existing && existing.content !== newValue) {
                     promises.push(API.call('/.netlify/functions/update-sheet-data', {
                         method: 'POST', body: { sheet: 'About', action: 'update', criteria: { section: key }, data: { content: newValue } }
@@ -2115,8 +2110,6 @@ App.init();
 </script>
 </body>
 </html>
-
-
 
 
 
