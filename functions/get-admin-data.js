@@ -1,54 +1,58 @@
-  // functions/get-admin-data.js
-  // v2.0 - Actualizado a Google OAuth
-  // API protegida para obtener TODOS los datos necesarios para el Centro de Mando.
+// functions/get-admin-data.js
+// v2.1 - Corregido el bug 'headerValues'
+// API protegida para obtener TODOS los datos necesarios para el Centro de Mando.
 
-  const { GoogleSpreadsheet } = require('google-spreadsheet');
-  const { JWT } = require('google-auth-library');
-  // Importamos nuestro NUEVO verificador de autorización
-  const { validateGoogleToken } = require('./google-auth-helper');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { JWT } = require('google-auth-library');
+const { validateGoogleToken } = require('./google-auth-helper');
 
-  // --- Helpers (Sin cambios) ---
-  async function getDoc() {
-    // Esta función SIGUE USANDO LA CUENTA DE SERVICIO (ROBOT)
-    // para leer/escribir en la hoja. ¡Esto es correcto!
-    // Autenticamos al USUARIO con OAuth, pero el SERVIDOR actúa como el robot.
-    const serviceAccountAuth = new JWT({
-      email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+// --- Helpers (Sin cambios) ---
+async function getDoc() {
+  // ... (código existente sin cambios) ...
+  const serviceAccountAuth = new JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+  const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+  await doc.loadInfo();
+  return doc;
+}
+
+// *** INICIO DEL AJUSTE DE CIRUJANO v6.1 ***
+
+// Convertir filas a objetos (con encabezados completos)
+// Modificado: Ahora acepta 'sheet' para leer headerValues de forma segura
+function rowsToObjects(sheet, rows) {
+  if (!rows || rows.length === 0) return [];
+  
+  // CORRECCIÓN: Leer 'headerValues' desde el objeto 'sheet' (que ya los tiene cargados)
+  // en lugar de 'rows[0]._sheet' que es propenso a fallos.
+  const headers = sheet.headerValues || []; 
+  
+  return rows.map(row => {
+    const obj = {};
+    headers.forEach(header => {
+      // Asignar el valor o un string vacío si es undefined/null
+      obj[header] = row.get(header) !== undefined && row.get(header) !== null ? row.get(header) : '';
     });
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
-    await doc.loadInfo();
-    return doc;
-  }
+    return obj;
+  });
+}
 
-  // Convertir filas a objetos (con encabezados completos)
-  function rowsToObjects(rows) {
-    if (!rows || rows.length === 0) return [];
-    // Usar los encabezados de la hoja para asegurar que todas las columnas existan
-    const headers = rows[0]._sheet.headerValues || [];
-    return rows.map(row => {
-      const obj = {};
-      headers.forEach(header => {
-        // Asignar el valor o un string vacío si es undefined/null
-        obj[header] = row.get(header) !== undefined && row.get(header) !== null ? row.get(header) : '';
-      });
-      return obj;
-    });
-  }
+// *** FIN DEL AJUSTE DE CIRUJANO v6.1 ***
 
-  // --- Handler Principal (Actualizado) ---
-  exports.handler = async (event, context) => {
-    // 1. **SEGURIDAD (Actualizado):** Verificar el token de Google del usuario.
-    if (!(await validateGoogleToken(event))) {
-      return {
-        statusCode: 401, // No autorizado
-        body: JSON.stringify({ error: 'No autorizado. Token de Google inválido o expirado.' }),
+// --- Handler Principal (Actualizado) ---
+exports.handler = async (event, context) => {
+  // 1. **SEGURIDAD (Actualizado):** Verificar el token de Google del usuario.
+  if (!(await validateGoogleToken(event))) {
+    return {
+// ... (código existente sin cambios) ...
       };
     }
     // Si llegamos aquí, el usuario está autenticado.
 
-    // 2. Método HTTP: Solo permitir GET
+// ... (código existente sin cambios) ...
     if (event.httpMethod !== 'GET') {
       return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
@@ -58,19 +62,7 @@
 
       // 3. Definir TODAS las hojas que el Centro de Mando necesita (v1.3)
       const sheetTitles = [
-        'Settings',
-        'About',
-        'Videos',
-        'ClientLogos',
-        'Projects',
-        'ProjectImages',
-        // 'ProjectVideos' fue eliminada en v1.2
-        'Services',
-        'ServiceContentBlocks',
-        'ServiceImages',
-        'RentalCategories',
-        'RentalItems',
-        'RentalItemImages',
+// ... (código existente sin cambios) ...
         'Bookings',
         'BlockedDates'
       ];
@@ -84,27 +76,34 @@
         }
         await sheet.loadHeaderRow(); // Asegurarse de que los encabezados están cargados
         const rows = await sheet.getRows();
-        return { title, data: rowsToObjects(rows) };
+        
+        // *** INICIO DEL AJUSTE DE CIRUJANO v6.1 ***
+        // Pasamos el objeto 'sheet' junto con 'rows'
+        return { title, data: rowsToObjects(sheet, rows) };
+        // *** FIN DEL AJUSTE DE CIRUJANO v6.1 ***
       });
 
       const results = await Promise.all(sheetPromises);
-
+// ... (código existente sin cambios) ...
       // 5. Estructurar los datos como un objeto
       const adminData = results.reduce((acc, sheetResult) => {
+// ... (código existente sin cambios) ...
         acc[sheetResult.title] = sheetResult.data;
         return acc;
       }, {});
 
       // 6. Devolver la respuesta exitosa
-      return {
+// ... (código existente sin cambios) ...
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(adminData),
       };
 
     } catch (error) {
+// ... (código existente sin cambios) ...
       console.error('Error fetching admin data:', error);
       return {
+// ... (código existente sin cambios) ...
         statusCode: 500,
         body: JSON.stringify({
             error: 'Falló la obtención de datos para el admin',
@@ -113,4 +112,3 @@
       };
     }
   };
-
