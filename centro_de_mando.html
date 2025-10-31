@@ -537,8 +537,7 @@
 let GOOGLE_OAUTH_CLIENT_ID = null;
 // *** CONSTANTE GLOBAL: URI DE REDIRECCIÓN FIJA ***
 // Esta debe coincidir EXACTAMENTE con la URI en Google Cloud
-// *** AJUSTE v2.8: Se cambia a 'postmessage' para el flujo de popup
-const GOOGLE_REDIRECT_URI = 'postmessage';
+const GOOGLE_REDIRECT_URI = 'https://agvisual1.netlify.app/centro_de_mando.html';
 
 // Almacén de estado global
 const appState = {
@@ -568,30 +567,34 @@ const API = {
      * Realiza una llamada de API genérica a nuestras funciones de Netlify.
      */
     async call(endpoint, options = {}, isRetry = false) {
+        // --- AJUSTE QUIRÚRGICO (v4.4): Reintroducir AbortController ---
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
             controller.abort();
             console.error(`Timeout de API: La solicitud a ${endpoint} tardó más de 25 segundos.`);
         }, 25000); // 25 segundos de timeout
+        // --- FIN AJUSTE ---
 
         const headers = new Headers(options.headers || {});
         if (appState.gAuthToken && appState.gAuthToken.access_token) {
             headers.set('Authorization', `Bearer ${appState.gAuthToken.access_token}`);
         }
-        if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
-             headers.set('Content-Type', 'application/json');
+        if (options.body && typeof options.body !== 'object' && !(options.body instanceof FormData)) {
+             console.warn("API.call body no es un objeto, se asume FormData o string");
+        } else if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
             options.body = JSON.stringify(options.body);
         }
 
         const config = { 
             ...options, 
             headers,
-            signal: controller.signal
+            signal: controller.signal // <-- AJUSTE QUIRÚRGICO: Añadir signal
         };
 
         try {
             const response = await fetch(endpoint, config);
-            clearTimeout(timeoutId); 
+            clearTimeout(timeoutId); // <-- AJUSTE QUIRÚRGICO: Limpiar timeout si hay respuesta
 
             if (response.ok) {
                 const contentType = response.headers.get("content-type");
@@ -599,7 +602,7 @@ const API = {
                     return await response.json();
                 }
                 const text = await response.text();
-                return text ? (text.startsWith('{') ? JSON.parse(text) : { message: text }) : {}; 
+                return text ? (text.startsWith('{') ? JSON.parse(text) : { message: text }) : {}; // Devolver objeto para consistencia
             }
 
             // Error 401 (Token Expirado) - Lógica de Refresco
@@ -608,10 +611,13 @@ const API = {
                 const refreshed = await Auth.refreshToken();
                 if (refreshed) {
                     console.log('Token refrescado. Reintentando la llamada API...');
+                    // Remueve el body de config si es FormData, no se puede reenviar un stream
                     if (config.body instanceof FormData) {
                         delete config.body; 
                     }
-                    // IMPORTANTE: Re-crear headers para el reintento
+                    
+                    // *** AJUSTE DE CIRUJANO v7.0: Re-crear headers para el reintento ***
+                    // El token en 'config.headers' está obsoleto. Debemos crear nuevos headers.
                     const newConfigForRetry = { ...config, headers: new Headers(config.headers) };
                     if (appState.gAuthToken && appState.gAuthToken.access_token) {
                          newConfigForRetry.headers.set('Authorization', `Bearer ${appState.gAuthToken.access_token}`);
@@ -635,7 +641,7 @@ const API = {
             }
             throw error; // Re-lanzar el error
         } finally {
-            clearTimeout(timeoutId);
+            clearTimeout(timeoutId); // <-- AJUSTE QUIRÚRGICO: Asegurar limpieza en cualquier caso
         }
     }
 };
@@ -644,6 +650,7 @@ const API = {
 const Auth = {
     async getAuthConfig() {
         try {
+            // AJUSTE v4.5: Usar API.call para que tenga el timeout
             const config = await API.call('/.netlify/functions/get-auth-config');
             if (!config.clientId) throw new Error("Client ID no fue devuelto.");
             GOOGLE_OAUTH_CLIENT_ID = config.clientId;
@@ -672,20 +679,22 @@ const Auth = {
             }
         }
         
-        // *** // *** PLANO DE CORRECCIÓN v2.8 ***
-        // *** Se re-implementa el 'callback' para manejar el flujo de POPUP
+        // *** // *** PLANO DE CORRECCIÓN v2.8 (Flujo de Popup) ***
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
+                // *** AJUSTE DE CIRUJANO v4.0 ***
+                // Se quitan los scopes de DRIVE para desbloquear el login
                 'https://www.googleapis.com/auth/userinfo.email',
-                'openid'
+                'https://www.googleapis.com/auth/userinfo.profile'
+                // 'https://www.googleapis.com/auth/drive.file' // <--- ELIMINADO
             ].join(' '),
             
             // *** ESTE ES EL CAMBIO CLAVE ***
             callback: (response) => {
                 console.log("GSI Callback ejecutado.");
                 if (response.code) {
-                    console.log(`Recibido 'code' desde el popup: ${response.code}`);
+                    console.log(`Recibido 'code' desde el popup: ${response.code.substring(0, 15)}...`);
                     // Llamar a handleAuthCallback DIRECTAMENTE desde el callback
                     Auth.handleAuthCallback(response.code);
                 } else if (response.error) {
@@ -704,11 +713,25 @@ const Auth = {
                 method: 'POST',
                 body: JSON.stringify({ 
                     code: code,
-                    redirectUri: GOOGLE_REDIRECT_URI // 'postmessage'
+                    // *** AJUSTE v2.8: 'postmessage' es la redirect_uri para el flujo de popup
+                    redirectUri: 'postmessage'
                 }),
-            }).then(res => res.json());
+            }).then(res => {
+                if (!res.ok) {
+                    // Capturar errores 500 de la función de Netlify
+                    throw new Error(`El servidor de autenticación falló (status: ${res.status}).`);
+                }
+                return res.json();
+            });
 
             if (tokens.error) throw new Error(tokens.details || tokens.error);
+            
+            // *** AJUSTE DE CIRUJANO v7.0: Verificar que 'expiry_date' existe ***
+            if (!tokens.expiry_date) {
+                console.error("Respuesta de token inválida, falta 'expiry_date':", tokens);
+                throw new Error("Respuesta de autenticación inválida del servidor.");
+            }
+
             this.setAuthToken(tokens);
             window.history.replaceState({}, document.title, window.location.pathname);
             
@@ -720,6 +743,7 @@ const Auth = {
         } catch (error) {
             console.error("Error al intercambiar el código:", error);
             UI.showLoginError(error.message);
+            UI.showLoading(false); // Asegurarse de ocultar el loading en caso de error
         }
     },
     async checkAuth() {
@@ -727,9 +751,19 @@ const Auth = {
         if (!appState.gAuthToken) {
             return false;
         }
-        const expiresIn = (appState.gAuthToken.expires_at - Date.now()) / 1000;
+        
+        // *** AJUSTE DE CIRUJANO v7.0: Asegurar que expires_at es un número ***
+        const expiresAt = Number(appState.gAuthToken.expires_at);
+        if (isNaN(expiresAt)) {
+            console.warn("expires_at inválido (NaN). Forzando logout.");
+            this.logout(false);
+            return false;
+        }
+
+        const expiresIn = (expiresAt - Date.now()) / 1000;
+        
         if (expiresIn < 300) {
-            console.log("Token expirado, intentando refrescar...");
+            console.log(`Token expira en ${Math.round(expiresIn)}s, intentando refrescar...`);
             try {
                 UI.showLoading("Refrescando sesión..."); 
                 const refreshed = await this.refreshToken();
@@ -747,14 +781,30 @@ const Auth = {
     },
     async refreshToken() {
         const localToken = this.getAuthToken();
-        if (!localToken || !localToken.refresh_token) return false;
+        if (!localToken || !localToken.refresh_token) {
+            console.warn("No hay refresh_token para refrescar.");
+            return false;
+        }
         try {
             console.log("Intentando refrescar token..."); 
             const newTokens = await fetch('/.netlify/functions/auth-refresh', {
                 method: 'POST',
                 body: JSON.stringify({ refresh_token: localToken.refresh_token }),
-            }).then(res => res.json());
+            }).then(res => {
+                 if (!res.ok) {
+                    // Capturar errores 500 de la función de Netlify
+                    throw new Error(`El servidor de refresco falló (status: ${res.status}).`);
+                }
+                return res.json();
+            });
             if (newTokens.error) throw new Error(newTokens.details || newTokens.error);
+            
+            // *** AJUSTE DE CIRUJANO v7.0: Asegurar que 'expiry_date' existe en el refresco ***
+             if (!newTokens.expiry_date) {
+                console.error("Respuesta de refresco inválida, falta 'expiry_date':", newTokens);
+                throw new Error("Respuesta de refresco inválida del servidor.");
+            }
+
             const combinedTokens = { ...localToken, ...newTokens };
             this.setAuthToken(combinedTokens);
             return true;
@@ -766,6 +816,15 @@ const Auth = {
     async handlePageLoad() {
         console.log('Auth.handlePageLoad() (v2.8) ejecutado.');
         
+        // *** AJUSTE DE CIRUJANO v2.8 (Flujo de Popup) ***
+        // Ya no buscamos 'code' en la URL.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('code')) {
+             console.warn("Se detectó un 'code' de redirección. Limpiando la URL.");
+             window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        // *** FIN DEL AJUSTE ***
+
         if (Auth.getAuthToken()) {
             console.log('Buscando token local...');
             if (await Auth.checkAuth()) {
@@ -784,12 +843,13 @@ const Auth = {
         const localToken = this.getAuthToken();
         if (notifyGoogle && localToken && localToken.access_token) {
             try {
+                // No usamos API.call() aquí porque podría intentar refrescar un token que estamos revocando
                 await fetch('/.netlify/functions/auth-revoke', {
                     method: 'POST',
                     body: JSON.stringify({ token: localToken.access_token })
                 });
             } catch (error) {
-                console.warn("Error al revocar el token:", error);
+                console.warn("Error al revocar el token (puede ser normal si ya expiró):", error);
             }
         }
         appState.gAuthToken = null;
@@ -799,11 +859,19 @@ const Auth = {
         UI.showLogin();
     },
     setAuthToken(tokens) {
-        // *** // *** PLANO DE CORRECCIÓN v2.9 ***
-        // *** Google devuelve 'expiry_date' (un timestamp) no 'expires_in' (una duración)
-        // tokens.expires_at = Date.now() + (tokens.expires_in * 1000); // <-- BUG
-        tokens.expires_at = tokens.expiry_date; // <-- CORRECCIÓN
-        // *** FIN DE LA CORRECCIÓN v2.9 ***
+        // *** // *** PLANO DE CORRECCIÓN v2.10 ***
+        // *** Google devuelve 'expiry_date' (segundos) y no 'expires_in' (milisegundos)
+        // const expiresAt = tokens.expiry_date; // <-- BUG v2.9: Esto está en segundos
+        const expiresAt = Number(tokens.expiry_date) * 1000; // <-- CORRECCIÓN: Convertir a milisegundos
+        
+        if (isNaN(expiresAt) || expiresAt < Date.now()) {
+             console.error("expiry_date inválido o ya expirado:", tokens.expiry_date);
+             // Asignar una expiración corta para forzar un refresco si es posible
+             tokens.expires_at = Date.now() + 5000; 
+        } else {
+            tokens.expires_at = expiresAt;
+        }
+        // *** FIN DE LA CORRECCIÓN v2.10 ***
         
         appState.gAuthToken = tokens;
         localStorage.setItem('gAuthToken', JSON.stringify(tokens));
@@ -837,14 +905,18 @@ const UI = {
         
         if (!userEmailEl.textContent) { // Obtener email si no se tiene
             try {
-                const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { 'Authorization': `Bearer ${appState.gAuthToken.access_token}` }
-                }).then(res => res.json());
+                // Usamos API.call() para que maneje el refresco si es necesario
+                const userInfo = await API.call('https://www.googleapis.com/oauth2/v3/userinfo');
                 userEmailEl.textContent = userInfo.email || 'Usuario';
                 userEmailEl.title = userInfo.email || 'Usuario';
             } catch (error) {
-                userEmailEl.textContent = 'Usuario';
+                userEmailEl.textContent = 'Usuario (Error)';
                 console.warn("No se pudo obtener el email:", error);
+                // Si falla obtener el email (ej. token expirado y refresco falló), forzar logout
+                if (error.message.includes('No se pudo refrescar la sesión')) {
+                    Auth.logout();
+                    return;
+                }
             }
         }
         loadingScreen.style.display = 'none'; // Ocultar loader global
@@ -861,10 +933,12 @@ const UI = {
         if (appState.currentView === viewId && viewId !== 'rentals' && viewId !== 'bookings') return;
 
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(`view-${viewId}`)?.classList.add('active');
+        const viewEl = document.getElementById(`view-${viewId}`);
+        if(viewEl) viewEl.classList.add('active');
 
         document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-        document.querySelector(`.sidebar-link[data-view="${viewId}"]`)?.classList.add('active');
+        const linkEl = document.querySelector(`.sidebar-link[data-view="${viewId}"]`);
+        if(linkEl) linkEl.classList.add('active');
         
         appState.currentView = viewId;
         this.renderView(viewId);
@@ -901,7 +975,7 @@ const UI = {
         switch (viewId) {
             case 'dashboard':
                 const dashView = $('view-dashboard');
-                if (dashView.querySelector('.loading-placeholder')) {
+                if (dashView && dashView.querySelector('.loading-placeholder')) {
                      dashView.innerHTML = `
                         <h1 class="text-4xl font-display font-bold mb-6">Dashboard</h1>
                         <p class="text-text-muted text-lg">Bienvenido al Centro de Mando. Selecciona una sección en el menú de la izquierda para comenzar a gestionar el contenido de tu sitio web.</p>
@@ -953,8 +1027,10 @@ const UI = {
     },
     async loadAdminData() {
         const dashboardView = $('view-dashboard');
-        const originalContent = dashboardView.innerHTML;
-        dashboardView.innerHTML = `<div class="p-8 text-center text-text-muted loading-placeholder"><div class="loader-circle mx-auto mb-4"></div>Cargando datos...</div>`;
+        const originalContent = dashboardView ? dashboardView.innerHTML : '';
+        if(dashboardView) {
+            dashboardView.innerHTML = `<div class="p-8 text-center text-text-muted loading-placeholder"><div class="loader-circle mx-auto mb-4"></div>Cargando datos...</div>`;
+        }
         try {
             appState.dataStore = await API.call('/.netlify/functions/get-admin-data', { method: 'GET' });
             appState.isDataLoaded = true;
@@ -963,9 +1039,11 @@ const UI = {
         } catch (error) {
             console.error("Error cargando datos de admin:", error);
             UI.showToast(`Error crítico al cargar datos: ${error.message}. Intente recargar.`, true);
-            dashboardView.innerHTML = `<div class="p-8 text-center text-red-600"><i class="fas fa-exclamation-triangle fa-2x mb-4"></i><p>Error al cargar datos: ${error.message}</p></div>`;
+            if(dashboardView) {
+                dashboardView.innerHTML = `<div class="p-8 text-center text-red-600"><i class="fas fa-exclamation-triangle fa-2x mb-4"></i><p>Error al cargar datos: ${error.message}</p></div>`;
+            }
         } finally {
-            if (appState.currentView !== 'dashboard' && dashboardView.querySelector('.loading-placeholder')) {
+            if (appState.currentView !== 'dashboard' && dashboardView && dashboardView.querySelector('.loading-placeholder')) {
                  dashboardView.innerHTML = originalContent;
             }
         }
@@ -974,6 +1052,7 @@ const UI = {
     // --- Renderizadores de Formularios y Tablas ---
     renderSettingsForm() {
         const container = $('settings-form-container');
+        if (!container) return;
         container.innerHTML = ''; // Limpiar
         const settings = appState.dataStore.Settings.reduce((acc, item) => {
             acc[item.key] = item.value;
@@ -1012,6 +1091,7 @@ const UI = {
     },
     renderAboutForm() {
         const container = $('about-form-container');
+        if (!container) return;
         container.innerHTML = '';
         const aboutContent = appState.dataStore.About.reduce((acc, item) => {
             acc[item.section] = item.content;
@@ -1045,6 +1125,7 @@ const UI = {
     },
     renderProjectsTable() {
         const container = $('projects-table-body');
+        if (!container) return;
         container.innerHTML = '';
         const projects = appState.dataStore.Projects.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (projects.length === 0) {
@@ -1078,6 +1159,7 @@ const UI = {
     },
     renderVideosTable() {
         const container = $('videos-table-body');
+        if (!container) return;
         container.innerHTML = '';
         const items = appState.dataStore.Videos.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
@@ -1105,6 +1187,7 @@ const UI = {
     },
     renderClientLogosTable() {
         const container = $('clientlogos-table-body');
+        if (!container) return;
         container.innerHTML = '';
         const items = appState.dataStore.ClientLogos.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
@@ -1132,6 +1215,7 @@ const UI = {
     },
     renderServicesTable() {
         const container = $('services-table-body');
+        if (!container) return;
         container.innerHTML = '';
         const items = appState.dataStore.Services.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
@@ -1166,6 +1250,7 @@ const UI = {
     },
     renderRentalCategoriesTable() {
         const container = $('rental-categories-table-body');
+        if (!container) return;
         container.innerHTML = '';
         const items = appState.dataStore.RentalCategories.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
@@ -1192,6 +1277,7 @@ const UI = {
     },
     renderRentalItemsTable() {
         const container = $('rental-items-table-body');
+        if (!container) return;
         container.innerHTML = '';
         const items = appState.dataStore.RentalItems.sort((a,b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         if (items.length === 0) {
@@ -1226,6 +1312,7 @@ const UI = {
     },
     renderBookingsList() {
         const container = $('bookings-list-body');
+        if (!container) return;
         container.innerHTML = '';
         const items = appState.dataStore.Bookings.sort((a, b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)); // Más nuevas primero
         if (items.length === 0) {
@@ -1263,6 +1350,7 @@ const UI = {
     },
     renderBlockedDatesTable() {
         const container = $('blocked-dates-table-body');
+        if (!container) return;
         container.innerHTML = '';
         const items = appState.dataStore.BlockedDates.sort((a, b) => new Date(b.blockedTimestamp) - new Date(a.blockedTimestamp));
         if (items.length === 0) {
@@ -1507,11 +1595,21 @@ const App = {
                 const key = input.dataset.key;
                 const newValue = input.value;
                 const existing = appState.dataStore.About.find(s => s.section === key);
+                
                 if (existing && existing.content !== newValue) {
                     promises.push(API.call('/.netlify/functions/update-sheet-data', {
                         method: 'POST', body: { sheet: 'About', action: 'update', criteria: { section: key }, data: { content: newValue } }
                     }));
+                
+                // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
+                // Esta es la lógica que faltaba.
+                } else if (!existing && newValue) {
+                     promises.push(API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST', body: { sheet: 'About', action: 'add', data: { section: key, content: newValue } }
+                    }));
                 }
+                // *** FIN DEL AJUSTE DE CIRUJANO v7.1 ***
+
             });
             await Promise.all(promises);
             await UI.loadAdminData(); // Recargar datos
@@ -1962,6 +2060,7 @@ App.init();
 </script>
 </body>
 </html>
+
 
 
 
