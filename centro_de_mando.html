@@ -16,7 +16,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
-/* ... (estilos existentes sin cambios) ... */
         :root {
             --bg-main: #FDFDFD;
             --text-dark: #1a1a1a;
@@ -433,7 +432,7 @@
                                         <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Equipo</th>
                                         <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Categoría</th>
                                         <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Precio/Día</th>
-                                        <th classs="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
+                                        <th class="p-4 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="rental-items-table-body" class="divide-y divide-gray-200"></tbody>
@@ -680,27 +679,19 @@ const Auth = {
             }
         }
         
-        // *** // *** PLANO DE CORRECCIÓN v2.8 (Flujo de Popup) ***
+        // *** // *** PLANO DE CORRECCIÓN v2.11 (Flujo de Redirección) ***
         const client = google.accounts.oauth2.initCodeClient({
             client_id: GOOGLE_OAUTH_CLIENT_ID,
             scope: [
+                // *** AJUSTE DE CIRUJANO v9.0 ***
                 'https://www.googleapis.com/auth/userinfo.email',
-                'openid'
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/drive.file' // Re-añadido para la subida con token de usuario
             ].join(' '),
             
-            // *** ESTE ES EL CAMBIO CLAVE ***
-            callback: (response) => {
-                console.log("GSI Callback ejecutado.");
-                if (response.code) {
-                    console.log(`Recibido 'code' desde el popup: ${response.code.substring(0, 15)}...`);
-                    // Llamar a handleAuthCallback DIRECTAMENTE desde el callback
-                    Auth.handleAuthCallback(response.code);
-                } else if (response.error) {
-                    console.error('Error en el callback de GSI:', response.error, response.error_description);
-                    UI.showLoginError(`Error de Google: ${response.error_description || response.error}`);
-                }
-            },
-            // *** FIN DE LA CORRECCIÓN v2.8 ***
+            // *** Se elimina 'callback' y se usa 'redirect_uri' para forzar el flujo de redirección
+            redirect_uri: GOOGLE_REDIRECT_URI
+            // *** FIN DE LA CORRECCIÓN v2.11 ***
         });
         client.requestCode();
     },
@@ -711,12 +702,11 @@ const Auth = {
                 method: 'POST',
                 body: JSON.stringify({ 
                     code: code,
-                    // *** AJUSTE v2.8: 'postmessage' es la redirect_uri para el flujo de popup
-                    redirectUri: 'postmessage'
+                    // *** AJUSTE v2.11: Enviar la URI de redirección correcta
+                    redirectUri: GOOGLE_REDIRECT_URI
                 }),
             }).then(res => {
                 if (!res.ok) {
-                    // Capturar errores 500 de la función de Netlify
                     throw new Error(`El servidor de autenticación falló (status: ${res.status}).`);
                 }
                 return res.json();
@@ -724,7 +714,6 @@ const Auth = {
 
             if (tokens.error) throw new Error(tokens.details || tokens.error);
             
-            // *** AJUSTE DE CIRUJANO v7.0: Verificar que 'expiry_date' existe ***
             if (!tokens.expiry_date) {
                 console.error("Respuesta de token inválida, falta 'expiry_date':", tokens);
                 throw new Error("Respuesta de autenticación inválida del servidor.");
@@ -741,7 +730,7 @@ const Auth = {
         } catch (error) {
             console.error("Error al intercambiar el código:", error);
             UI.showLoginError(error.message);
-            UI.showLoading(false); // Asegurarse de ocultar el loading en caso de error
+            UI.showLoading(false); 
         }
     },
     async checkAuth() {
@@ -750,7 +739,6 @@ const Auth = {
             return false;
         }
         
-        // *** AJUSTE DE CIRUJANO v7.0: Asegurar que expires_at es un número ***
         const expiresAt = Number(appState.gAuthToken.expires_at);
         if (isNaN(expiresAt)) {
             console.warn("expires_at inválido (NaN). Forzando logout.");
@@ -790,14 +778,12 @@ const Auth = {
                 body: JSON.stringify({ refresh_token: localToken.refresh_token }),
             }).then(res => {
                  if (!res.ok) {
-                    // Capturar errores 500 de la función de Netlify
                     throw new Error(`El servidor de refresco falló (status: ${res.status}).`);
                 }
                 return res.json();
             });
             if (newTokens.error) throw new Error(newTokens.details || newTokens.error);
             
-            // *** AJUSTE DE CIRUJANO v7.0: Asegurar que 'expiry_date' existe en el refresco ***
              if (!newTokens.expiry_date) {
                 console.error("Respuesta de refresco inválida, falta 'expiry_date':", newTokens);
                 throw new Error("Respuesta de refresco inválida del servidor.");
@@ -812,18 +798,24 @@ const Auth = {
         }
     },
     async handlePageLoad() {
-        console.log('Auth.handlePageLoad() (v2.8) ejecutado.');
-        
-        // *** AJUSTE DE CIRUJANO v2.8 (Flujo de Popup) ***
-        // Ya no buscamos 'code' en la URL.
+        // *** // *** AJUSTE DE CIRUJANO v2.11 (Flujo de Redirección) ***
+        console.log('Auth.handlePageLoad() (v2.11 - Flujo de Redirección) ejecutado.');
         const params = new URLSearchParams(window.location.search);
-        if (params.get('code')) {
-             console.warn("Se detectó un 'code' de redirección. Limpiando la URL.");
-             window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        // *** FIN DEL AJUSTE ***
+        const code = params.get('code');
+        const error = params.get('error');
 
-        if (Auth.getAuthToken()) {
+        if (error) {
+            console.error('Error en el callback de Google:', error);
+            UI.showLoginError(`Error de Google: ${error}.`);
+            // Limpiar la URL de parámetros de error
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return;
+        }
+
+        if (code) {
+            console.log(`Recibido 'code' desde redirección: ${code.substring(0, 15)}...`);
+            await Auth.handleAuthCallback(code);
+        } else if (Auth.getAuthToken()) {
             console.log('Buscando token local...');
             if (await Auth.checkAuth()) {
                 console.log('Token local válido. Mostrando app.');
@@ -833,15 +825,15 @@ const Auth = {
                 UI.showLogin(); 
             }
         } else {
-            console.log('No se encontró token local. Mostrando login.');
+            console.log('No se encontró "code" ni token local. Mostrando login.');
             UI.showLogin();
         }
+        // *** FIN DEL AJUSTE ***
     },
     async logout(notifyGoogle = true) {
         const localToken = this.getAuthToken();
         if (notifyGoogle && localToken && localToken.access_token) {
             try {
-                // No usamos API.call() aquí porque podría intentar refrescar un token que estamos revocando
                 await fetch('/.netlify/functions/auth-revoke', {
                     method: 'POST',
                     body: JSON.stringify({ token: localToken.access_token })
@@ -909,7 +901,6 @@ const UI = {
             } catch (error) {
                 userEmailEl.textContent = 'Usuario (Error)';
                 console.warn("No se pudo obtener el email:", error);
-                // Si falla obtener el email (ej. token expirado y refresco falló), forzar logout
                 if (error.message.includes('No se pudo refrescar la sesión')) {
                     Auth.logout();
                     return;
@@ -1594,7 +1585,6 @@ const App = {
                 const existing = (appState.dataStore.About || []).find(s => s.section === key);
                 
                 // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
-                // Esta es la lógica que faltaba.
                 if (existing && existing.content !== newValue) {
                     promises.push(API.call('/.netlify/functions/update-sheet-data', {
                         method: 'POST', body: { sheet: 'About', action: 'update', criteria: { section: key }, data: { content: newValue } }
@@ -1646,7 +1636,6 @@ const App = {
                     break;
                 
                 // *** INICIO DEL AJUSTE DE CIRUJANO v7.1 ***
-                // Se añade el 'case' que faltaba para 'Projects'
                 case 'Projects':
                     modalTitle = isNew ? 'Nuevo Proyecto' : 'Editar Proyecto';
                     if (!isNew) item = appState.dataStore.Projects.find(i => i.id === itemId);
@@ -2115,6 +2104,9 @@ App.init();
 </script>
 </body>
 </html>
+
+
+
 
 
 
