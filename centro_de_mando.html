@@ -59,7 +59,6 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
-        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -114,7 +113,7 @@
 
             <div id="view-videos" class="view">
                 <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Videos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL Embed</th><th class="p-4">Acciones</th></tr></thead><tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody></table></div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL</th><th class="p-4">Acciones</th></tr></thead><tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody></table></div>
             </div>
 
             <div id="view-services" class="view">
@@ -306,11 +305,34 @@ const App = {
     
     async loadData(mode = 'all') { const p = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); AppState.data = { ...AppState.data, ...nd }; },
 
+    // --- CARGA DE VIDEOS ---
+    async uploadVideo(input, targetIdField) {
+        const file = input.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            alert("⚠️ ADVERTENCIA: El archivo supera los 5MB. Es muy probable que falle la subida por límites de Netlify. Se recomienda usar enlaces de YouTube/Vimeo para videos largos.");
+        }
+        
+        UI.showLoading('Subiendo video...');
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('targetSubfolder', 'Videos');
+            formData.append('parentFolderName', 'WebVideos');
+            
+            const upRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
+            // Llenar el input del formulario
+            document.getElementById('crud-' + targetIdField).value = upRes.imageUrl;
+            UI.showToast('Video subido. Guardando enlace...');
+        } catch (e) {
+            console.error(e); UI.showToast('Error subiendo video: ' + e.message, 'error');
+        } finally { UI.hideLoading(); }
+    },
+
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files); if (!files.length) return;
         let driveFolderId = null, sheetTarget='', subfolder='', idField='';
         
-        // Mapeo correcto de columnas
         if (type === 'Projects') { const row = AppState.data.Projects.find(p => p.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='ProjectImages'; subfolder='Proyectos'; idField='projectId'; }
         else if (type === 'RentalItems') { const row = AppState.data.RentalItems.find(r => r.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='RentalItemImages'; subfolder='Alquiler'; idField='itemId'; }
         else if (type === 'Services') { sheetTarget='ServiceImages'; subfolder='Servicios'; idField='serviceId'; parentTitle = parentTitle || 'General'; }
@@ -339,8 +361,7 @@ const App = {
                     document.getElementById('about-profile-preview').src = upRes.imageUrl;
                 } else {
                     const newData = { id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, imageUrl: type === 'ClientLogos' ? upRes.imageUrl : upRes.imageUrl, fileId: upRes.fileId, order: 99 };
-                    // Nombres de campo específicos
-                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; // Tu sheet usa logoUrl
+                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; 
                     else newData.imageUrl = upRes.imageUrl;
 
                     if (type !== 'ClientLogos') { newData.isCover = 'No'; newData.showInPortfolio = 'No'; }
@@ -353,7 +374,6 @@ const App = {
         UI.hideLoading();
         if(successCount) UI.showToast('Subida completa');
         
-        // Recargar vista
         if(['Projects','RentalItems','Services','ClientLogos'].includes(type)) {
              const sheet = type === 'Projects' ? 'ProjectImages' : type === 'RentalItems' ? 'RentalItemImages' : type === 'Services' ? 'ServiceImages' : 'ClientLogos';
              const fresh = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
@@ -373,14 +393,20 @@ const App = {
              html=`${UI.inputHTML('c','order','Orden',p?.order||99,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
         } else if(sheet==='Videos'){
              const v=isNew?{}:AppState.data.Videos.find(x=>x.id===id);
-             html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL Embed',v?.embedUrl)}`;
+             html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL (YouTube/Vimeo) o Archivo',v?.embedUrl)} <div class="text-right mb-4"><label class="btn btn-secondary btn-sm cursor-pointer"><i class="fas fa-file-video"></i> Subir Video <input type="file" accept="video/*" class="hidden" onchange="App.uploadVideo(this, 'embedUrl')"></label></div>`;
         } else if(sheet==='Services'){
              const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
-             html=`${UI.inputHTML('c','order','Orden',s?.order||99,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${UI.inputHTML('c','iconClass','Clase Icono',s?.iconClass)} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
+             html=`${UI.inputHTML('c','order','Orden',s?.order||99,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${UI.inputHTML('c','iconClass','Icono (FontAwesome)',s?.iconClass)} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
         } else if(sheet==='RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
              html = `${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
+        } else if(sheet==='RentalCategories'){
+             const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
+             html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
+        } else if(sheet==='BlockedDates'){
+             const items = AppState.data.RentalItems || [];
+             html = `${UI.selectHTML('c', 'itemId', 'Equipo', items)} ${UI.inputHTML('c', 'reason', 'Motivo')} ${UI.inputHTML('c', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('c', 'endDate', 'Hasta', '', 'date')}`;
         }
         UI.showModal(isNew?'Nuevo':'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>`);
     },
@@ -390,13 +416,17 @@ const App = {
         const html = blocks.map(b => `
             <div class="p-3 border rounded mb-2 bg-white relative group">
                 <button class="absolute top-2 right-2 text-red-400 hover:text-red-600" onclick="App.handleDelete('ServiceContentBlocks', '${b.id}')">&times;</button>
-                <input type="text" class="font-bold w-full border-b mb-2 p-1" value="${b.blockTitle}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockTitle', this.value)" placeholder="Título">
-                <textarea class="w-full border p-1 text-sm" rows="3" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockContentHtml', this.value)" placeholder="HTML Contenido...">${b.blockContentHtml}</textarea>
+                <input type="text" class="font-bold w-full border-b mb-2 p-1" value="${b.blockTitle}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockTitle', this.value)" placeholder="Título Sección">
+                <textarea class="w-full border p-1 text-sm" rows="3" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockContentHtml', this.value)" placeholder="Contenido...">${b.blockContentHtml}</textarea>
                 <input type="number" class="w-16 text-xs border p-1" value="${b.order||99}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'order', this.value)" placeholder="Orden">
             </div>
         `).join('');
-        UI.showModal(`Contenido: ${title}`, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><button class="btn btn-primary w-full" onclick="App.addServiceBlock('${id}')">+ Añadir Bloque</button>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+        UI.showModal(`Contenido: ${title}`, 
+            `<div class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><button class="btn btn-primary w-full" onclick="App.addServiceBlock('${id}')">+ Añadir Bloque</button>`, 
+            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
+        );
     },
+    
     async addServiceBlock(sid) {
         try { await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'ServiceContentBlocks',action:'add',data:{id:`blk_${Date.now()}`,serviceId:sid,blockTitle:'Nuevo',blockContentHtml:'',order:99}}}); await App.ensureDataForView('services'); const s=AppState.data.Services.find(x=>x.id===sid); this.handleServiceContent(sid,s.title); } catch(e){alert(e.message);}
     },
@@ -406,7 +436,7 @@ const App = {
             const isNew = !id || id === 'null';
             const data = {};
             document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.dataset.key] = el.value);
-            const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
+            const idField = sheet === 'BlockedDates' ? 'blockId' : 'id'; 
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
             UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
@@ -415,8 +445,7 @@ const App = {
             UI.closeModal(); UI.renderView(AppState.view); UI.showToast('Guardado');
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
-    
-    // Funciones de utilidad
+
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
     async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
     async quickUpdate(sheet, id, key, val) { try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'update',criteria:{id},data:{[key]:val===true?'Si':val===false?'No':val}}}); UI.showToast('Guardado'); }catch(e){console.error(e);} },
@@ -429,8 +458,7 @@ document.getElementById('logout-btn').addEventListener('click', () => Auth.logou
 document.getElementById('main-nav').addEventListener('click', e => { const link = e.target.closest('.sidebar-link'); if(link) { e.preventDefault(); UI.renderView(link.dataset.view); } });
 Auth.init();
 </script>
-</body>
-</html>
+
 
 
 
