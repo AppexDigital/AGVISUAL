@@ -1,12 +1,12 @@
 // functions/update-sheet-data.js
-// v10.1 - CORRECCIÓN DE SEGURIDAD Y VALIDACIÓN
+// v10.0 - ESTABILIDAD MÁXIMA Y FILTRADO DE DATOS
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
 const { validateGoogleToken } = require('./google-auth-helper');
 
 exports.handler = async (event, context) => {
-  // 1. Seguridad Básica
+  // 1. Seguridad
   if (!(await validateGoogleToken(event))) {
     return { statusCode: 401, body: JSON.stringify({ error: 'Token inválido o expirado.' }) };
   }
@@ -15,23 +15,9 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // 2. Parseo y Validación del Cuerpo
-    let body;
-    try {
-        body = JSON.parse(event.body);
-    } catch (e) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'JSON del cuerpo inválido.' }) };
-    }
+    const { sheet: sheetTitle, action, data, criteria } = JSON.parse(event.body);
 
-    const { sheet: sheetTitle, action, data, criteria } = body;
-
-    // ---> VALIDACIÓN CRÍTICA <---
-    if (!sheetTitle || sheetTitle === 'undefined' || sheetTitle === 'null') {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Falta el parámetro obligatorio "sheet" (nombre de la hoja).' }) };
-    }
-    // ---------------------------
-
-    // 3. Autenticación con Google
+    // 2. Autenticación Robusta
     const auth = new JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
       key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -42,23 +28,24 @@ exports.handler = async (event, context) => {
     await doc.loadInfo();
 
     const sheet = doc.sheetsByTitle[sheetTitle];
-    if (!sheet) {
-        // Si el nombre de la hoja no existe en el Sheet
-        return { statusCode: 404, body: JSON.stringify({ error: `La hoja "${sheetTitle}" no se encontró en el documento.` }) };
-    }
+    if (!sheet) throw new Error(`Hoja "${sheetTitle}" no encontrada.`);
     
     await sheet.loadHeaderRow();
-    const headers = sheet.headerValues;
+    const headers = sheet.headerValues; // Obtener headers reales
 
-    // 4. Lógica de Acciones (CRUD)
+    // 3. Lógica CRUD
     if (action === 'add') {
         if (!data.id) data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}`;
 
+        // Limpieza de datos: Solo guardar campos que existen en los headers del Sheet
         const cleanData = {};
-        headers.forEach(h => { if (data[h] !== undefined) cleanData[h] = data[h]; });
+        headers.forEach(h => {
+            if (data[h] !== undefined) cleanData[h] = data[h];
+        });
+        // Asegurar que el ID siempre vaya
         cleanData['id'] = data.id; 
 
-        // Lógica Portada Única
+        // Lógica Portada Única (Solo para imágenes)
         if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && data.isCover === 'Si') {
            const rows = await sheet.getRows();
            const parentKey = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
@@ -78,13 +65,14 @@ exports.handler = async (event, context) => {
     const key = Object.keys(criteria)[0];
     const row = rows.find(r => String(r.get(key)) === String(criteria[key]));
 
-    if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado para actualizar/borrar.' }) };
+    if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado.' }) };
 
     if (action === 'update') {
-        // Lógica Portada Única
+        // Lógica Portada Única en Update
         if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && data.isCover === 'Si') {
              const parentKey = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
              const parentId = row.get(parentKey);
+             // Recorrer rows ya cargados
              for (const r of rows) {
                  if (r.get(parentKey) === parentId && r.get('id') !== row.get('id') && r.get('isCover') === 'Si') {
                      r.set('isCover', 'No'); await r.save();
@@ -92,21 +80,24 @@ exports.handler = async (event, context) => {
              }
         }
 
-        Object.keys(data).forEach(k => { if (headers.includes(k)) row.set(k, data[k]); });
+        Object.keys(data).forEach(k => { 
+            if (headers.includes(k)) row.set(k, data[k]); 
+        });
         await row.save();
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
     if (action === 'delete') {
+        // Lógica de Drive (Eliminación física)
         const drive = google.drive({ version: 'v3', auth });
 
-        // A. Borrar Archivo
+        // A. Borrar Archivo (Si tiene fileId)
         const fileId = row.get('fileId');
         if (fileId) {
             try { await drive.files.delete({ fileId, supportsAllDrives: true }); } catch (e) { console.warn('Error borrando archivo Drive:', e.message); }
         }
 
-        // B. Borrar Carpeta
+        // B. Borrar Carpeta (Si es Proyecto/Item)
         const folderId = row.get('driveFolderId');
         if (folderId) {
             try { await drive.files.delete({ fileId: folderId, supportsAllDrives: true }); } catch (e) { console.warn('Error borrando carpeta Drive:', e.message); }
@@ -116,11 +107,10 @@ exports.handler = async (event, context) => {
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    return { statusCode: 400, body: JSON.stringify({ error: `Acción "${action}" desconocida.` }) };
+    return { statusCode: 400, body: JSON.stringify({ error: 'Acción desconocida' }) };
 
   } catch (error) {
-    console.error('Critical Backend Error:', error);
-    // Devolver el mensaje de error exacto para depuración
-    return { statusCode: 500, body: JSON.stringify({ error: error.message || 'Error interno crítico.' }) };
+    console.error('Sheet Error:', error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message || 'Error interno del servidor' }) };
   }
 };
