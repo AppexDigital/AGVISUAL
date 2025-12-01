@@ -172,13 +172,12 @@
 
 <script>
 const GOOGLE_REDIRECT_URI = 'postmessage';
-// Estado Local
 const AppState = { data: { Projects: [], Services: [], ProjectImages: [], Bookings: [] }, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
 
 const API = {
     async call(endpoint, options = {}, isRetry = false) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s para procesos largos
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
         
         const headers = new Headers(options.headers || {});
         if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
@@ -195,11 +194,22 @@ const API = {
                 if (await Auth.refresh()) return API.call(endpoint, options, true);
                 else { Auth.logout(); throw new Error('Sesión expirada'); }
             }
-            if (!res.ok) throw new Error((await res.json()).error || 'Error servidor');
-            return await res.json();
+
+            // MANEJO DE ERRORES MEJORADO (Para ver el mensaje real y no [object Object])
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error(`Error del servidor (No JSON): ${text.substring(0, 100)}`);
+            }
+
+            if (!res.ok) throw new Error(data.error || data.message || 'Error desconocido en servidor');
+            return data;
+
         } catch (e) { 
             clearTimeout(timeoutId);
-            if (e.name === 'AbortError') throw new Error('La operación tardó demasiado.');
+            if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado.');
             throw e; 
         }
     }
@@ -252,7 +262,7 @@ const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; },
     showApp: async () => {
         document.getElementById('login-screen').style.display = 'none';
-        await App.loadData('dashboard'); // Carga ligera inicial
+        await App.loadData('dashboard');
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'flex';
         UI.renderView(AppState.view);
@@ -279,15 +289,6 @@ const UI = {
         newCancel.addEventListener('click', () => overlay.classList.remove('visible'));
         overlay.classList.add('visible');
     },
-    switchTab(tabId) {
-        const activeView = document.querySelector('.view.active');
-        if(!activeView) return;
-        activeView.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        activeView.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        const btns = activeView.querySelectorAll('.tab-btn');
-        btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
-        document.getElementById(`tab-${tabId}`).classList.add('active');
-    },
     renderView: async (view) => {
         await App.ensureDataForView(view);
         AppState.view = view;
@@ -304,8 +305,10 @@ const UI = {
             document.getElementById('dash-bookings').innerText = (data.Bookings || []).filter(b => b.status === 'Pendiente').length;
         } else if (view === 'projects') {
             document.getElementById('projects-table-body').innerHTML = (data.Projects || []).sort((a,b) => (a.order||99)-(b.order||99)).map(p => {
-                const cover = (data.ProjectImages || []).find(i => i.projectId === p.id && i.isCover === 'Si');
-                return `<tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleProjectImages('${p.id}', '${p.title.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+                // Usar projectID O projectId, lo que venga en la data
+                const cover = (data.ProjectImages || []).find(i => (i.projectId === p.id || i.projectID === p.id) && i.isCover === 'Si');
+                const coverUrl = cover?.imageUrl || 'https://placehold.co/50';
+                return `<tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${p.order||99}</td><td class="p-4"><img src="${coverUrl}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleProjectImages('${p.id}', '${p.title.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         } else if (view === 'portfolio-manager') {
             const images = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').sort((a,b) => (a.portfolioOrder||99)-(b.portfolioOrder||99));
@@ -380,7 +383,7 @@ const App = {
                 UI.hideLoading();
             } catch(e) {
                 console.error(e);
-                UI.showToast('Error cargando datos', 'error');
+                UI.showToast('Error cargando datos: ' + e.message, 'error');
                 UI.hideLoading();
             }
         }
@@ -400,11 +403,13 @@ const App = {
             ? AppState.data.Projects.find(p => p.id === parentId)
             : AppState.data.RentalItems.find(r => r.id === parentId);
         
-        // Obtenemos el ID si ya existe
         let driveFolderId = parentRow?.driveFolderId || null;
         
         const sheetTarget = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
         const subfolder = type === 'Projects' ? 'Proyectos' : type === 'ClientLogos' ? 'Logos' : 'Alquiler';
+        
+        // *** CORRECCIÓN CRÍTICA: NOMBRE DE COLUMNA ***
+        // Tu sheet usa 'projectId' (camelCase), no 'projectID'.
         const idField = type === 'Projects' ? 'projectId' : type === 'RentalItems' ? 'itemId' : 'refId';
         
         if (type === 'ClientLogos') parentId = 'general';
@@ -427,23 +432,23 @@ const App = {
                 const formData = new FormData();
                 formData.append('file', compressedFile, file.name);
                 formData.append('targetSubfolder', subfolder);
-                // CLAVE: Enviamos ID y NOMBRE por separado
                 formData.append('targetFolderId', driveFolderId || ''); 
                 formData.append('parentFolderName', parentTitle); 
 
                 const uploadRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
                 
-                // Si el backend creó una carpeta nueva, guardamos su ID
                 if (uploadRes.driveFolderId && uploadRes.driveFolderId !== driveFolderId && type !== 'ClientLogos') {
                     driveFolderId = uploadRes.driveFolderId;
                     if(parentRow) parentRow.driveFolderId = driveFolderId;
                     
+                    // Guardar ID de carpeta en el PROYECTO
                     await API.call('/.netlify/functions/update-sheet-data', { 
                         method: 'POST', 
                         body: { sheet: type, action: 'update', criteria: { id: parentId }, data: { driveFolderId: driveFolderId } } 
                     });
                 }
 
+                // Guardar en PROJECT IMAGES (Con la columna corregida)
                 await API.call('/.netlify/functions/update-sheet-data', {
                     method: 'POST',
                     body: {
@@ -451,7 +456,7 @@ const App = {
                         action: 'add',
                         data: {
                             id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                            [idField]: parentId,
+                            [idField]: parentId, // projectId
                             imageUrl: uploadRes.imageUrl,
                             fileId: uploadRes.fileId,
                             isCover: 'No',
@@ -460,9 +465,10 @@ const App = {
                     }
                 });
                 successCount++;
+
             } catch (error) {
                 console.error(`Error subiendo ${file.name}:`, error);
-                UI.showToast(`Error en ${file.name}`, 'error');
+                UI.showToast(`Error: ${error.message}`, 'error');
             }
         }
         
@@ -471,8 +477,8 @@ const App = {
         await App.ensureDataForView(AppState.view);
         
         const refreshSheet = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
-        const freshImages = await API.call(`/.netlify/functions/get-admin-data?sheets=${refreshSheet}`);
-        AppState.data[refreshSheet] = freshImages[refreshSheet];
+        const freshData = await API.call(`/.netlify/functions/get-admin-data?sheets=${refreshSheet}`);
+        AppState.data[refreshSheet] = freshData[refreshSheet];
 
         if (type === 'Projects') this.handleProjectImages(parentId, parentTitle);
         else if (type === 'ClientLogos') this.handleClientLogos();
@@ -480,7 +486,8 @@ const App = {
     },
 
     async handleProjectImages(projectId, title) {
-        const images = (AppState.data.ProjectImages || []).filter(i => i.projectId === projectId).sort((a,b) => (a.order||99)-(b.order||99));
+        // Soporte para ambas nomenclaturas para visualización por si acaso
+        const images = (AppState.data.ProjectImages || []).filter(i => i.projectId === projectId || i.projectID === projectId).sort((a,b) => (a.order||99)-(b.order||99));
         this.renderImageModal(images, projectId, title, 'Projects');
     },
     
@@ -668,5 +675,6 @@ Auth.init();
 </script>
 </body>
 </html>
+
 
 
