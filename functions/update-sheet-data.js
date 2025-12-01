@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v17.0 - BORRADO A PRUEBA DE FALLOS & OPTIMIZADO
+// v18.0 - MANEJO DE ERRORES MEJORADO Y SOPORTE PARA PROJECTIMAGES
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -66,7 +66,17 @@ exports.handler = async (event, context) => {
                  }
              }
         }
-        await executeWithRetry(() => sheet.addRow(data));
+
+        // Validar columnas antes de insertar
+        const headerValues = sheet.headerValues;
+        const rowToAdd = {};
+        Object.keys(data).forEach(key => {
+            if (headerValues.includes(key)) {
+                rowToAdd[key] = data[key];
+            }
+        });
+
+        await executeWithRetry(() => sheet.addRow(rowToAdd));
         return { statusCode: 200, body: JSON.stringify({ message: 'OK', newId: data.id }) };
     }
 
@@ -86,7 +96,11 @@ exports.handler = async (event, context) => {
                  }
              }
         }
-        Object.keys(data).forEach(key => row.set(key, data[key]));
+        Object.keys(data).forEach(key => {
+            if (sheet.headerValues.includes(key)) {
+                row.set(key, data[key]);
+            }
+        });
         await executeWithRetry(() => row.save());
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
@@ -127,12 +141,10 @@ exports.handler = async (event, context) => {
             const childSheet = doc.sheetsByTitle[childSheetName];
             
             if (childSheet) {
-                // Obtenemos todas las filas y filtramos manualmente para evitar muchas llamadas a la API
                 const allChildRows = await executeWithRetry(() => childSheet.getRows());
                 const parentIdStr = String(row.get('id'));
                 const childrenToDelete = allChildRows.filter(r => String(r.get(childFk)) === parentIdStr);
                 
-                // Borramos hijos uno por uno (Sheets API no tiene delete batch para filas no contiguas fácilmente)
                 for (const childRow of childrenToDelete) {
                      await executeWithRetry(() => childRow.delete());
                 }
@@ -148,6 +160,6 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('Backend Fatal Error:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, body: JSON.stringify({ error: error.message, stack: error.stack }) };
   }
 };
