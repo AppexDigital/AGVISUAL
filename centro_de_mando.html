@@ -40,10 +40,15 @@
         .toast.visible { transform: translateY(0); }
         .toast.error { background: #ef4444; }
         .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
+        .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
+        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         
-        /* UI Portafolio Corregida */
+        /* UI Portafolio Corregida: Hover Effects */
         .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; }
-        .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+        .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
         .portfolio-grid-overlay { 
             position: absolute; inset: 0; background: rgba(0,0,0,0.7); 
             opacity: 0; transition: opacity 0.2s; 
@@ -51,12 +56,6 @@
         }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
         .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
-        .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
-        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; }
-        .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -64,6 +63,7 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
+        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -148,6 +148,7 @@
             <div id="view-settings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Configuración</h1>
                 <div id="settings-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
+                
                 <h2 class="text-2xl font-display font-bold mt-10 mb-4">Logos Clientes</h2>
                 <button class="btn btn-secondary mb-4" onclick="App.handleClientLogos()">+ Gestionar Logos</button>
             </div>
@@ -171,13 +172,13 @@
 
 <script>
 const GOOGLE_REDIRECT_URI = 'postmessage';
-// Estado Local: data = { Projects: [], Services: [] ... }
+// Estado Local
 const AppState = { data: { Projects: [], Services: [], ProjectImages: [], Bookings: [] }, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
 
 const API = {
     async call(endpoint, options = {}, isRetry = false) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s para subidas pesadas
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s para procesos largos
         
         const headers = new Headers(options.headers || {});
         if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
@@ -186,7 +187,6 @@ const API = {
             options.body = JSON.stringify(options.body);
         }
         try {
-            // Añadir timestamp para evitar cache
             const sep = endpoint.includes('?') ? '&' : '?';
             const res = await fetch(`${endpoint}${sep}t=${Date.now()}`, { ...options, headers, signal: controller.signal });
             clearTimeout(timeoutId);
@@ -199,7 +199,7 @@ const API = {
             return await res.json();
         } catch (e) { 
             clearTimeout(timeoutId);
-            if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado. Verifica tu conexión.');
+            if (e.name === 'AbortError') throw new Error('La operación tardó demasiado.');
             throw e; 
         }
     }
@@ -252,13 +252,13 @@ const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; },
     showApp: async () => {
         document.getElementById('login-screen').style.display = 'none';
-        await App.loadData('dashboard'); // Carga inicial ligera
+        await App.loadData('dashboard'); // Carga ligera inicial
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'flex';
         UI.renderView(AppState.view);
     },
     forceReload: () => location.reload(),
-    showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; },
+    showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; document.getElementById('reload-btn').classList.add('hidden'); },
     hideLoading: () => document.getElementById('loading-screen').style.display = 'none',
     showToast: (msg, type='success') => {
         const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
@@ -289,13 +289,12 @@ const UI = {
         document.getElementById(`tab-${tabId}`).classList.add('active');
     },
     renderView: async (view) => {
-        await App.ensureDataForView(view); // Carga diferida inteligente
+        await App.ensureDataForView(view);
         AppState.view = view;
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`view-${view}`).classList.add('active');
         document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
         document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
-        
         const data = AppState.data;
 
         if (view === 'dashboard') {
@@ -358,10 +357,8 @@ const UI = {
 };
 
 const App = {
-    // CARGA DIFERIDA INTELIGENTE
     async ensureDataForView(view) {
         let sheetsNeeded = [];
-        // Lógica de qué cargar según la vista
         if (view === 'projects' || view === 'portfolio-manager') {
             if(!AppState.data.Projects) sheetsNeeded.push('Projects');
             if(!AppState.data.ProjectImages) sheetsNeeded.push('ProjectImages');
@@ -379,7 +376,6 @@ const App = {
             UI.showLoading('Cargando detalles...');
             try {
                 const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheetsNeeded.join(',')}`);
-                // Merge
                 AppState.data = { ...AppState.data, ...newData };
                 UI.hideLoading();
             } catch(e) {
@@ -391,13 +387,11 @@ const App = {
     },
     
     async loadData(mode = 'all') { 
-        // Modo 'dashboard' solo carga lo básico. Modo 'all' fuerza recarga.
         const params = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
         const newData = await API.call(`/.netlify/functions/get-admin-data${params}`);
         AppState.data = { ...AppState.data, ...newData };
     },
 
-    // --- GESTIÓN DE IMÁGENES OPTIMIZADA ---
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files);
         if (!files.length) return;
@@ -406,13 +400,13 @@ const App = {
             ? AppState.data.Projects.find(p => p.id === parentId)
             : AppState.data.RentalItems.find(r => r.id === parentId);
         
+        // Obtenemos el ID si ya existe
         let driveFolderId = parentRow?.driveFolderId || null;
         
         const sheetTarget = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
         const subfolder = type === 'Projects' ? 'Proyectos' : type === 'ClientLogos' ? 'Logos' : 'Alquiler';
         const idField = type === 'Projects' ? 'projectId' : type === 'RentalItems' ? 'itemId' : 'refId';
         
-        // Si es logo, el parentId es genérico
         if (type === 'ClientLogos') parentId = 'general';
 
         let successCount = 0;
@@ -433,15 +427,15 @@ const App = {
                 const formData = new FormData();
                 formData.append('file', compressedFile, file.name);
                 formData.append('targetSubfolder', subfolder);
-                // Envía Nombre si no hay ID, o ID si existe. El backend maneja la lógica.
-                formData.append('parentFolderName', driveFolderId || parentTitle); 
+                // CLAVE: Enviamos ID y NOMBRE por separado
+                formData.append('targetFolderId', driveFolderId || ''); 
+                formData.append('parentFolderName', parentTitle); 
 
                 const uploadRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
                 
-                // Guardar ID de carpeta si es nuevo
-                if (uploadRes.driveFolderId && !driveFolderId && type !== 'ClientLogos') {
+                // Si el backend creó una carpeta nueva, guardamos su ID
+                if (uploadRes.driveFolderId && uploadRes.driveFolderId !== driveFolderId && type !== 'ClientLogos') {
                     driveFolderId = uploadRes.driveFolderId;
-                    // Actualizar padre localmente para siguientes fotos del loop
                     if(parentRow) parentRow.driveFolderId = driveFolderId;
                     
                     await API.call('/.netlify/functions/update-sheet-data', { 
@@ -474,11 +468,8 @@ const App = {
         
         UI.hideLoading();
         UI.showToast(`${successCount} imágenes subidas`);
+        await App.ensureDataForView(AppState.view);
         
-        // Recargar SOLO las imágenes para refrescar el modal
-        await App.ensureDataForView(AppState.view); // Refresca datos necesarios
-        
-        // Forzar recarga específica de la hoja de imágenes
         const refreshSheet = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
         const freshImages = await API.call(`/.netlify/functions/get-admin-data?sheets=${refreshSheet}`);
         AppState.data[refreshSheet] = freshImages[refreshSheet];
@@ -587,7 +578,6 @@ const App = {
             UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
             
-            // Recargar solo la hoja necesaria
             const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
             AppState.data[sheet] = newData[sheet];
             
@@ -604,7 +594,6 @@ const App = {
                 const criteria = { id };
                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria } });
                 rowEl.remove();
-                // Actualizar datos locales para que no reaparezca
                 AppState.data[sheet] = AppState.data[sheet].filter(i => i.id !== id);
                 UI.showToast('Imagen eliminada');
             } catch(e) {
@@ -618,7 +607,6 @@ const App = {
              UI.showLoading('Eliminando...');
              try {
                  await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
-                 // Actualizar local
                  AppState.data[sheet] = AppState.data[sheet].filter(i => i[idField] !== id);
                  UI.renderView(AppState.view);
                  UI.showToast('Registro eliminado');
@@ -629,7 +617,6 @@ const App = {
     async quickUpdate(sheet, id, field, val) { 
         const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
         try {
-            // Update optimista
             const item = AppState.data[sheet].find(i => i.id === id);
             if(item) item[field] = valStr;
 
@@ -656,7 +643,6 @@ const App = {
 
     async removeFromPortfolio(id) {
         await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No');
-        // Refrescar vista localmente
         AppState.data.ProjectImages = AppState.data.ProjectImages.map(i => i.id === id ? {...i, showInPortfolio: 'No'} : i);
         UI.renderView('portfolio-manager');
     },
