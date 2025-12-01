@@ -1,21 +1,19 @@
 // functions/get-admin-data.js
-// v3.0 - CON CONTROL DE FLUJO Y RETRY (Anti-429)
+// v4.0 - CARGA SELECTIVA (SCALABLE ARCHITECTURE)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { validateGoogleToken } = require('./google-auth-helper');
 
-// --- UTILS: Retry Logic ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 async function executeWithRetry(operation, retries = 3, delay = 1000) {
     try {
         return await operation();
     } catch (error) {
-        // Si es error de cuota (429) o error de servidor (5xx)
         if (retries > 0 && (error.response?.status === 429 || error.code === 429 || error.code === 500)) {
-            console.warn(`API Rate Limit hit. Waiting ${delay}ms... Retries left: ${retries}`);
+            console.warn(`API Limit. Waiting ${delay}ms...`);
             await wait(delay);
-            return executeWithRetry(operation, retries - 1, delay * 2); // Backoff exponencial
+            return executeWithRetry(operation, retries - 1, delay * 2);
         }
         throw error;
     }
@@ -45,40 +43,33 @@ function rowsToObjects(sheet, rows) {
 }
 
 exports.handler = async (event, context) => {
-    if (!(await validateGoogleToken(event))) {
-        return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
-    }
-    if (event.httpMethod !== 'GET') {
-        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
-    }
-
+    if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+    
     try {
         const doc = await getDoc();
-        const sheetTitles = [
-            'Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages',
-            'Services', 'ServiceContentBlocks', 'ServiceImages',
-            'RentalCategories', 'RentalItems', 'RentalItemImages',
-            'Bookings', 'BlockedDates'
-        ];
+        
+        // ESTRATEGIA ESCALABLE: Leer parámetros de consulta
+        // Si ?sheets=Projects,ProjectImages viene en la URL, solo cargamos eso.
+        // Si no viene nada, cargamos solo la configuración básica (Dashboard).
+        const requestedSheets = event.queryStringParameters?.sheets 
+            ? event.queryStringParameters.sheets.split(',') 
+            : ['Settings', 'Projects', 'ProjectImages', 'Bookings']; // Default Dashboard Data
 
         const adminData = {};
-
-        // LECTURA SECUENCIAL OPTIMIZADA (Para evitar golpear el límite de 60 req/min)
-        // Leemos en bloques de 3 en 3 para balancear velocidad y seguridad
-        const chunkSize = 3;
-        for (let i = 0; i < sheetTitles.length; i += chunkSize) {
-            const chunk = sheetTitles.slice(i, i + chunkSize);
+        
+        // Procesamiento paralelo limitado (Batch de 4 para no saturar)
+        const chunkSize = 4;
+        for (let i = 0; i < requestedSheets.length; i += chunkSize) {
+            const chunk = requestedSheets.slice(i, i + chunkSize);
             const promises = chunk.map(async (title) => {
                 const sheet = doc.sheetsByTitle[title];
                 if (!sheet) return { title, data: [] };
-                
                 return executeWithRetry(async () => {
                     await sheet.loadHeaderRow();
                     const rows = await sheet.getRows();
                     return { title, data: rowsToObjects(sheet, rows) };
                 });
             });
-
             const results = await Promise.all(promises);
             results.forEach(r => adminData[r.title] = r.data);
         }
@@ -90,10 +81,7 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        console.error('Error Admin Data:', error);
-        return {
-            statusCode: 500, // Si falla después de los reintentos
-            body: JSON.stringify({ error: 'Error obteniendo datos (API Busy). Intenta en unos segundos.', details: error.message }),
-        };
+        console.error('Data Error:', error);
+        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     }
 };
