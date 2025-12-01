@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v16.0 - ROBUST DELETE & RETRY SYSTEM
+// v17.0 - BORRADO A PRUEBA DE FALLOS & OPTIMIZADO
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -12,7 +12,7 @@ async function executeWithRetry(operation, retries = 3, delay = 1000) {
         return await operation();
     } catch (error) {
         if (retries > 0 && (error.response?.status === 429 || error.code === 429)) {
-            console.log(`Quota hit in Update. Retrying in ${delay}ms...`);
+            console.log(`Quota hit. Retrying in ${delay}ms...`);
             await wait(delay);
             return executeWithRetry(operation, retries - 1, delay * 2);
         }
@@ -39,18 +39,8 @@ async function findRows(sheet, criteria) {
     return rows.filter(row => String(row.get(key)) === String(criteria[key]));
 }
 
-async function deleteFileFromDrive(drive, fileId) {
-    if (!fileId) return;
-    try {
-        await executeWithRetry(() => drive.files.delete({ fileId: fileId, supportsAllDrives: true }));
-        console.log(`Drive Deleted: ${fileId}`);
-    } catch (e) {
-        console.warn(`Drive Delete Warn (${fileId}): ${e.message}`);
-    }
-}
-
 exports.handler = async (event, context) => {
-  if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+  if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
@@ -59,7 +49,7 @@ exports.handler = async (event, context) => {
     const { doc, drive } = await getServices();
     const sheet = doc.sheetsByTitle[sheetTitle];
     
-    if (!sheet) return { statusCode: 404, body: JSON.stringify({ error: `Hoja ${sheetTitle} no existe` }) };
+    if (!sheet) return { statusCode: 404, body: JSON.stringify({ error: `Hoja ${sheetTitle} no encontrada` }) };
     await executeWithRetry(() => sheet.loadHeaderRow());
 
     // --- ADD ---
@@ -88,9 +78,10 @@ exports.handler = async (event, context) => {
 
         if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && data.isCover === 'Si') {
              const parentKey = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
+             const parentId = row.get(parentKey);
              const allRows = await sheet.getRows();
              for (const r of allRows) {
-                 if (r.get(parentKey) === row.get(parentKey) && r.get('id') !== row.get('id') && r.get('isCover') === 'Si') {
+                 if (r.get(parentKey) === parentId && String(r.get('id')) !== String(row.get('id')) && r.get('isCover') === 'Si') {
                      r.set('isCover', 'No'); await executeWithRetry(() => r.save());
                  }
              }
@@ -100,47 +91,63 @@ exports.handler = async (event, context) => {
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    // --- DELETE (CASCADA MAESTRA) ---
+    // --- DELETE (BLINDADO) ---
     if (action === 'delete') {
         const rows = await findRows(sheet, criteria);
         const row = rows[0];
         if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado' }) };
 
-        // 1. Si es una IMAGEN INDIVIDUAL
-        if (sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages' || sheetTitle === 'ClientLogos') {
-            await deleteFileFromDrive(drive, row.get('fileId'));
+        // 1. Borrar archivo de Drive (Solo si existe ID)
+        const fileId = row.get('fileId');
+        if (fileId) {
+            try {
+                await executeWithRetry(() => drive.files.delete({ fileId: fileId, supportsAllDrives: true }));
+                console.log(`Archivo eliminado: ${fileId}`);
+            } catch (e) {
+                console.warn(`No se pudo borrar archivo Drive (no crítico): ${e.message}`);
+            }
         }
 
-        // 2. Si es un PROYECTO o RENTAL ITEM (Borrar hijos + Carpeta)
+        // 2. Si es Proyecto/Item, borrar carpeta y fotos hijas
         if (sheetTitle === 'Projects' || sheetTitle === 'RentalItems') {
-            const parentId = row.get('id');
-            const driveFolderId = row.get('driveFolderId');
-            const childSheetName = sheetTitle === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
-            const childFk = sheetTitle === 'Projects' ? 'projectId' : 'itemId';
-
-            // A. Borrar Imágenes Hijas (Drive + Rows)
-            const childSheet = doc.sheetsByTitle[childSheetName];
-            if (childSheet) {
-                const childRows = await findRows(childSheet, { [childFk]: parentId });
-                for (const childRow of childRows) {
-                    await deleteFileFromDrive(drive, childRow.get('fileId'));
-                    await executeWithRetry(() => childRow.delete());
+            const folderId = row.get('driveFolderId');
+            // Solo intentamos borrar carpeta si folderId existe y no está vacío
+            if (folderId && folderId.trim() !== '') {
+                try {
+                    await executeWithRetry(() => drive.files.delete({ fileId: folderId, supportsAllDrives: true }));
+                    console.log(`Carpeta eliminada: ${folderId}`);
+                } catch (e) {
+                    console.warn(`No se pudo borrar carpeta Drive (no crítico): ${e.message}`);
                 }
             }
 
-            // B. Borrar Carpeta Principal de Drive
-            await deleteFileFromDrive(drive, driveFolderId);
+            // Borrar filas hijas en cascada
+            const childSheetName = sheetTitle === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
+            const childFk = sheetTitle === 'Projects' ? 'projectId' : 'itemId';
+            const childSheet = doc.sheetsByTitle[childSheetName];
+            
+            if (childSheet) {
+                // Obtenemos todas las filas y filtramos manualmente para evitar muchas llamadas a la API
+                const allChildRows = await executeWithRetry(() => childSheet.getRows());
+                const parentIdStr = String(row.get('id'));
+                const childrenToDelete = allChildRows.filter(r => String(r.get(childFk)) === parentIdStr);
+                
+                // Borramos hijos uno por uno (Sheets API no tiene delete batch para filas no contiguas fácilmente)
+                for (const childRow of childrenToDelete) {
+                     await executeWithRetry(() => childRow.delete());
+                }
+            }
         }
 
-        // 3. Borrar la fila principal
+        // 3. Borrar la fila principal (LO MÁS IMPORTANTE)
         await executeWithRetry(() => row.delete());
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    return { statusCode: 400, body: JSON.stringify({ error: 'Acción no válida' }) };
+    return { statusCode: 400, body: JSON.stringify({ error: 'Acción desconocida' }) };
 
   } catch (error) {
-    console.error('Update Error:', error);
+    console.error('Backend Fatal Error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
