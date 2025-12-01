@@ -28,7 +28,6 @@
         .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); background: transparent; }
         .btn-secondary:hover { background: #f3f4f6; }
         .btn-danger { background-color: #ef4444; color: white; }
-        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
         
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; background: white; }
         .form-input:focus { border-color: var(--text-dark); outline: none; }
@@ -62,19 +61,12 @@
         
         .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; transition: transform 0.2s; }
         .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
-        .portfolio-grid-overlay { 
-            position: absolute; inset: 0; background: rgba(0,0,0,0.8); 
-            opacity: 0; transition: opacity 0.2s; 
-            display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; 
-        }
+        .portfolio-grid-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); opacity: 0; transition: opacity 0.2s; display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
         .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         
         .status-badge { padding: 2px 8px; border-radius: 10px; color: white; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
-        .status-Pendiente { background: var(--status-pending); }
-        .status-Confirmado { background: var(--status-confirmed); }
-        .status-Pagado { background: var(--status-paid); }
-        .status-Cancelado { background: var(--status-canceled); }
+        .status-Pendiente { background: var(--status-pending); } .status-Confirmado { background: var(--status-confirmed); } .status-Pagado { background: var(--status-paid); } .status-Cancelado { background: var(--status-canceled); }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -82,7 +74,6 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
-        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -97,9 +88,7 @@
 
     <div id="app-screen" class="hidden flex-1 flex h-full overflow-hidden">
         <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-sm z-20">
-            <div class="p-6 border-b border-gray-100">
-                <h2 class="font-display text-2xl font-bold">AG Admin</h2>
-            </div>
+            <div class="p-6 border-b border-gray-100"><h2 class="font-display text-2xl font-bold">AG Admin</h2></div>
             <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
                 <a href="#" class="sidebar-link active" data-view="dashboard"><i class="fas fa-home"></i>Inicio</a>
                 <a href="#" class="sidebar-link" data-view="projects"><i class="fas fa-camera"></i>Proyectos</a>
@@ -110,221 +99,89 @@
                 <a href="#" class="sidebar-link" data-view="bookings"><i class="fas fa-calendar-check"></i>Reservas</a>
                 <a href="#" class="sidebar-link" data-view="settings"><i class="fas fa-cog"></i>Configuración</a>
             </nav>
-            <div class="p-4 border-t border-gray-100">
-                <button id="logout-btn" class="w-full text-left px-4 py-2 text-text-muted hover:text-red-600 transition-colors text-xs font-bold uppercase"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button>
-            </div>
+            <div class="p-4 border-t border-gray-100"><button id="logout-btn" class="w-full text-left px-4 py-2 text-text-muted hover:text-red-600 transition-colors text-xs font-bold uppercase"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button></div>
         </aside>
 
         <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative">
-            
             <div id="view-dashboard" class="view active">
                 <h1 class="text-4xl font-display font-bold mb-6">Resumen</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
-                        <h3 class="text-xs text-text-muted uppercase font-bold">Proyectos Activos</h3>
-                        <p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p>
-                    </div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
-                        <h3 class="text-xs text-text-muted uppercase font-bold">Fotos en Portafolio</h3>
-                        <p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p>
-                    </div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
-                        <h3 class="text-xs text-text-muted uppercase font-bold">Reservas Pendientes</h3>
-                        <p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p>
-                    </div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Fotos Portafolio</h3><p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Reservas</h3><p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p></div>
                 </div>
             </div>
 
             <div id="view-projects" class="view">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-display font-bold">Proyectos</h1>
-                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo</button>
-                </div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                            <tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr>
-                        </thead>
-                        <tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                </div>
+                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Proyectos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr></thead><tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody></table></div>
             </div>
 
             <div id="view-portfolio-manager" class="view">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-display font-bold">Portafolio Principal</h1>
-                    <button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button>
-                </div>
+                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Portafolio Principal</h1><button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button></div>
                 <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
 
             <div id="view-videos" class="view">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-display font-bold">Videos</h1>
-                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Nuevo</button>
-                </div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                            <tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL</th><th class="p-4">Acciones</th></tr>
-                        </thead>
-                        <tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                </div>
+                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Videos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL</th><th class="p-4">Acciones</th></tr></thead><tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody></table></div>
             </div>
 
             <div id="view-services" class="view">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-display font-bold">Servicios</h1>
-                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Services', null)"><i class="fas fa-plus"></i> Nuevo</button>
-                </div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                            <tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr>
-                        </thead>
-                        <tbody id="services-table-body" class="divide-y divide-gray-100"></tbody>
-                    </table>
-                </div>
+                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Servicios</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Services', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr></thead><tbody id="services-table-body" class="divide-y divide-gray-100"></tbody></table></div>
             </div>
 
             <div id="view-rentals" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Alquiler</h1>
-                <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button>
-                    <button class="tab-btn" onclick="UI.switchTab('rental-cats')">Categorías</button>
-                </div>
+                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button><button class="tab-btn" onclick="UI.switchTab('rental-cats')">Categorías</button></div>
                 <div id="tab-rental-items" class="tab-content active">
-                    <div class="flex justify-end mb-4">
-                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button>
-                    </div>
-                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                                <tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr>
-                            </thead>
-                            <tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
+                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button></div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr></thead><tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody></table></div>
                 </div>
                 <div id="tab-rental-cats" class="tab-content">
-                    <div class="flex justify-end mb-4">
-                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalCategories', null)"><i class="fas fa-plus"></i> Nueva Categoría</button>
-                    </div>
-                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                                <tr><th class="p-4">Orden</th><th class="p-4">Nombre</th><th class="p-4">Acciones</th></tr>
-                            </thead>
-                            <tbody id="rental-categories-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
+                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalCategories', null)"><i class="fas fa-plus"></i> Nueva Categoría</button></div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Nombre</th><th class="p-4">Acciones</th></tr></thead><tbody id="rental-categories-table-body" class="divide-y divide-gray-100"></tbody></table></div>
                 </div>
             </div>
 
             <div id="view-bookings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Reservas</h1>
-                <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('booking-list')">Solicitudes</button>
-                    <button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos</button>
-                </div>
+                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('booking-list')">Solicitudes</button><button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos</button></div>
                 <div id="tab-booking-list" class="tab-content active">
-                     <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                                <tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr>
-                            </thead>
-                            <tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
+                     <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr></thead><tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody></table></div>
                 </div>
                 <div id="tab-blocked-dates" class="tab-content">
-                    <div class="flex justify-end mb-4">
-                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('BlockedDates', null)"><i class="fas fa-ban"></i> Nuevo Bloqueo</button>
-                    </div>
-                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                                <tr><th class="p-4">Equipo</th><th class="p-4">Motivo</th><th class="p-4">Desde</th><th class="p-4">Hasta</th><th class="p-4">Acciones</th></tr>
-                            </thead>
-                            <tbody id="blocked-dates-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
+                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('BlockedDates', null)"><i class="fas fa-ban"></i> Nuevo Bloqueo</button></div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Equipo</th><th class="p-4">Motivo</th><th class="p-4">Desde</th><th class="p-4">Hasta</th><th class="p-4">Acciones</th></tr></thead><tbody id="blocked-dates-table-body" class="divide-y divide-gray-100"></tbody></table></div>
                 </div>
             </div>
             
             <div id="view-settings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Configuración Global</h1>
-                <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad & Redes</button>
-                    <button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio (Sobre Mí)</button>
-                    <button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button>
-                </div>
-                
+                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad & Redes</button><button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio (Sobre Mí)</button><button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button></div>
                 <div id="tab-settings-gen" class="tab-content active space-y-8">
                      <div class="bg-white p-6 rounded border border-gray-200">
                          <h3 class="font-bold text-lg mb-4 border-b pb-2">Identidad de Marca</h3>
                          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                             <div class="text-center">
-                                <p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p>
-                                <div class="h-24 bg-gray-100 border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain">
-                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_black').click()">
-                                        <i class="fas fa-camera text-white"></i>
-                                    </div>
-                                </div>
-                                <input type="file" id="upload-logo_black" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_black', 'Marca', 'SettingImage')">
-                            </div>
-                             <div class="text-center">
-                                <p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p>
-                                <div class="h-24 bg-gray-800 border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain">
-                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_white').click()">
-                                        <i class="fas fa-camera text-white"></i>
-                                    </div>
-                                </div>
-                                <input type="file" id="upload-logo_white" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_white', 'Marca', 'SettingImage')">
-                            </div>
-                             <div class="text-center">
-                                <p class="text-xs font-bold text-gray-500 mb-2">Favicon</p>
-                                <div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain">
-                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-favicon').click()">
-                                        <i class="fas fa-camera text-white"></i>
-                                    </div>
-                                </div>
-                                <input type="file" id="upload-favicon" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'favicon', 'Marca', 'SettingImage')">
-                            </div>
+                             <div class="text-center"><p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p><div class="h-24 bg-gray-100 border rounded flex items-center justify-center mb-2 relative group"><img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain"><div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_black').click()"><i class="fas fa-camera text-white"></i></div></div><input type="file" id="upload-logo_black" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_black', 'Marca', 'SettingImage')"></div>
+                             <div class="text-center"><p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p><div class="h-24 bg-gray-800 border rounded flex items-center justify-center mb-2 relative group"><img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain"><div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_white').click()"><i class="fas fa-camera text-white"></i></div></div><input type="file" id="upload-logo_white" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_white', 'Marca', 'SettingImage')"></div>
+                             <div class="text-center"><p class="text-xs font-bold text-gray-500 mb-2">Favicon</p><div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group"><img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain"><div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-favicon').click()"><i class="fas fa-camera text-white"></i></div></div><input type="file" id="upload-favicon" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'favicon', 'Marca', 'SettingImage')"></div>
                          </div>
                      </div>
                      <div id="settings-form-container" class="bg-white p-6 rounded border border-gray-200"></div>
                 </div>
-
                 <div id="tab-settings-about" class="tab-content">
                     <div class="bg-white p-6 rounded border border-gray-200 max-w-3xl">
                         <div class="mb-6 flex items-center gap-6">
-                            <div class="relative group w-32 h-32 flex-shrink-0">
-                                <img id="about-profile-preview" src="https://placehold.co/128" class="w-full h-full rounded-full object-cover border shadow-sm">
-                                <div class="absolute inset-0 bg-black/50 rounded-full hidden group-hover:flex items-center justify-center cursor-pointer" onclick="document.getElementById('upload-profile-pic').click()">
-                                    <i class="fas fa-camera text-white text-2xl"></i>
-                                </div>
-                                <input type="file" id="upload-profile-pic" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'profile_image', 'Perfil', 'AboutProfile')">
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="font-display text-xl font-bold">Foto de Perfil</h3>
-                                <p class="text-sm text-gray-500">Aparece en la sección "Quién Soy".</p>
-                            </div>
+                            <div class="relative group w-32 h-32 flex-shrink-0"><img id="about-profile-preview" src="https://placehold.co/128" class="w-full h-full rounded-full object-cover border shadow-sm"><div class="absolute inset-0 bg-black/50 rounded-full hidden group-hover:flex items-center justify-center cursor-pointer" onclick="document.getElementById('upload-profile-pic').click()"><i class="fas fa-camera text-white text-2xl"></i></div><input type="file" id="upload-profile-pic" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'profile_image', 'Perfil', 'AboutProfile')"></div>
+                            <div class="flex-1"><h3 class="font-display text-xl font-bold">Foto de Perfil</h3></div>
                         </div>
-                        <div id="about-form-container" class="space-y-4"></div>
-                        <button class="btn btn-primary mt-4" onclick="App.handleSaveAbout()">Guardar Bio</button>
+                        <div id="about-form-container" class="space-y-4"></div><button class="btn btn-primary mt-4" onclick="App.handleSaveAbout()">Guardar Bio</button>
                     </div>
                 </div>
-                
                 <div id="tab-settings-clients" class="tab-content">
-                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold">Logos de Clientes</h3>
-                        <button class="btn btn-primary" onclick="App.handleClientLogos()">+ Subir Logos</button>
-                    </div>
+                     <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Logos de Clientes</h3><button class="btn btn-primary" onclick="App.handleClientLogos()">+ Subir Logos</button></div>
                      <div id="clientlogos-grid" class="grid grid-cols-2 md:grid-cols-6 gap-4 bg-white p-4 rounded border"></div>
                 </div>
             </div>
@@ -348,7 +205,6 @@
 const GOOGLE_REDIRECT_URI = 'postmessage';
 const AppState = { data: {}, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
 
-// --- CAPA API ---
 const API = {
     async call(endpoint, options = {}, isRetry = false) {
         const controller = new AbortController();
@@ -376,11 +232,10 @@ const API = {
     }
 };
 
-// --- CAPA AUTH ---
 const Auth = {
     async init() { if (AppState.token) { if (Date.now() >= AppState.token.expires_at) await this.refresh(); UI.showApp(); } else UI.showLogin(); },
     async login() { 
-        if (typeof google === 'undefined') { alert("Error: La librería de Google no ha cargado. Refresca la página."); return; }
+        if (typeof google === 'undefined') { alert("Error: Google JS no cargó."); return; }
         try { const c = await fetch('/.netlify/functions/get-auth-config').then(r=>r.json()); google.accounts.oauth2.initCodeClient({ client_id: c.clientId, scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive', callback: (r) => r.code && this.exchangeCode(r.code) }).requestCode(); } catch(e){alert(e.message);} 
     },
     async exchangeCode(code) { UI.showLoading('Autenticando...'); try { const t = await fetch('/.netlify/functions/auth-google', { method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI }) }).then(r=>r.json()); if(t.error) throw new Error(t.error); this.setToken(t); UI.showApp(); } catch(e){alert(e.message); UI.showLogin();} },
@@ -389,45 +244,34 @@ const Auth = {
     logout() { localStorage.removeItem('gAuthToken'); location.reload(); }
 };
 
-// --- CAPA UI ---
 const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; },
     showApp: async () => {
         document.getElementById('login-screen').style.display = 'none';
         const loader = document.getElementById('loading-screen');
         if(loader) loader.style.display = 'flex';
-        
         try {
-            await App.loadData('dashboard');
+            await App.loadData('dashboard'); 
             document.getElementById('app-screen').style.display = 'flex';
             if(loader) loader.style.display = 'none';
-            if (typeof App.switchView === 'function') App.switchView('dashboard');
-            else UI.renderView('dashboard');
+            if (typeof App.switchView === 'function') App.switchView('dashboard'); else UI.renderView('dashboard');
         } catch (e) {
-            console.error("Error crítico al iniciar:", e);
+            console.error("Error inicio:", e);
             if(loader) loader.style.display = 'none';
-            alert("No se pudo conectar con el sistema:\n" + e.message);
+            alert("Error al iniciar: " + e.message);
             document.getElementById('login-screen').style.display = 'flex';
         }
     },
     forceReload: () => location.reload(),
     showLoading: (msg) => { 
-        const txt = document.getElementById('loading-text');
-        const scr = document.getElementById('loading-screen');
-        const btn = document.getElementById('reload-btn');
-        if(txt) txt.innerText=msg; 
-        if(scr) scr.style.display='flex'; 
-        if(btn) btn.classList.add('hidden'); 
+        const txt = document.getElementById('loading-text'); const scr = document.getElementById('loading-screen'); const btn = document.getElementById('reload-btn');
+        if(txt) txt.innerText=msg; if(scr) scr.style.display='flex'; if(btn) btn.classList.add('hidden'); 
     },
-    hideLoading: () => { 
-        const scr = document.getElementById('loading-screen');
-        if(scr) scr.style.display='none'; 
-    },
+    hideLoading: () => { const scr = document.getElementById('loading-screen'); if(scr) scr.style.display='none'; },
     showToast: (msg, type='success') => { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.classList.add('visible'),10); setTimeout(()=>t.remove(),3000); },
     showConfirm: (msg, cb) => { const o=document.getElementById('confirm-modal-overlay'); document.getElementById('confirm-message').textContent=msg; const ok=document.getElementById('confirm-ok-btn'), ca=document.getElementById('confirm-cancel-btn'); const nok=ok.cloneNode(true), nca=ca.cloneNode(true); ok.parentNode.replaceChild(nok,ok); ca.parentNode.replaceChild(nca,ca); nok.addEventListener('click', ()=>{o.classList.remove('visible'); cb();}); nca.addEventListener('click', ()=>o.classList.remove('visible')); o.classList.add('visible'); },
     switchTab(id) { const v=document.querySelector('.view.active'); if(!v)return; v.querySelectorAll('.tab-btn,.tab-content').forEach(e=>e.classList.remove('active')); v.querySelectorAll(`.tab-btn[onclick*="${id}"]`).forEach(b=>b.classList.add('active')); document.getElementById(`tab-${id}`).classList.add('active'); },
     
-    // Helpers HTML
     inputHTML: (p,k,l,v='',t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
     textareaHTML: (p,k,l,v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
     selectHTML: (p,k,l,opts,v='') => `<div class="mb-4"><label class="form-label">${l}</label><select id="${p}-${k}" data-key="${k}" class="form-select">${opts.map(o=>`<option value="${o.id}" ${o.id==v?'selected':''}>${o.name}</option>`).join('')}</select></div>`,
@@ -441,6 +285,7 @@ const UI = {
         document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
         const data = AppState.data;
 
+        // Helper robusto
         const getVal = (item, key) => {
             const foundKey = Object.keys(item).find(k => k.toLowerCase().trim() === key.toLowerCase().trim());
             return foundKey ? item[foundKey] : undefined;
@@ -469,16 +314,16 @@ const UI = {
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
                 const cover = (data.ProjectImages||[]).find(i => {
                     const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
-                    const isCover = String(getVal(i, 'isCover')).toLowerCase().trim();
-                    return pid === p.id && (isCover === 'si' || isCover === 'yes');
+                    const isCov = String(getVal(i, 'isCover')).toLowerCase().trim();
+                    return pid === p.id && (isCov === 'si' || isCov === 'yes');
                 });
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         } else if (view === 'portfolio-manager') {
             const images = (data.ProjectImages || [])
                 .filter(i => {
-                    const val = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
-                    return val === 'si' || val === 'yes' || val === 'true' || val === '1';
+                    const v = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
+                    return v === 'si' || v === 'yes' || v === 'true' || v === '1';
                 })
                 .sort((a,b) => (parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
 
@@ -525,6 +370,7 @@ const UI = {
 
 // --- CAPA LÓGICA ---
 const App = {
+    // LAZY LOADING INTELIGENTE
     async switchView(viewId) {
         UI.showLoading('Cargando sección...');
         try {
@@ -538,30 +384,36 @@ const App = {
         }
     },
 
-    async ensureDataForView(view) {
+    async ensureDataForView(view, force = false) {
         let sheets = []; const d = AppState.data;
         
+        // Lógica: Si 'force' es true, pedimos las hojas AUNQUE ya las tengamos.
+        // Si 'force' es false, solo las pedimos si no existen en AppState.
+        const need = (key) => force || !d[key];
+
         if (view === 'projects' || view === 'portfolio-manager') { 
-            if(!d.Projects) sheets.push('Projects');
-            sheets.push('ProjectImages'); 
+            if(need('Projects')) sheets.push('Projects');
+            if(need('ProjectImages')) sheets.push('ProjectImages'); 
         }
         else if (view === 'rentals') { 
-            if(!d.RentalItems) sheets.push('RentalItems','RentalCategories','RentalItemImages'); 
+            if(need('RentalItems')) sheets.push('RentalItems','RentalCategories','RentalItemImages'); 
         }
         else if (view === 'services') { 
-            sheets.push('Services','ServiceContentBlocks','ServiceImages'); 
+            if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); 
         }
         else if (view === 'videos') { 
-            if(!d.Videos) sheets.push('Videos'); 
+            if(need('Videos')) sheets.push('Videos'); 
         }
         else if (view === 'bookings') { 
-            if(!d.Bookings) sheets.push('Bookings','BlockedDates','RentalItems'); 
+            if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); 
         }
         else if (view === 'settings') { 
-            if(!d.Settings) sheets.push('Settings','About','ClientLogos'); 
+            if(need('Settings')) sheets.push('Settings','About','ClientLogos'); 
         }
         
+        // Si hay hojas que pedir, llamamos al backend
         if (sheets.length > 0) { 
+            // Eliminar duplicados
             sheets = [...new Set(sheets)];
             const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets.join(',')}`); 
             AppState.data = { ...AppState.data, ...nd }; 
@@ -589,11 +441,17 @@ const App = {
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files); if (!files.length) return;
         let driveFolderId = null, sheetTarget='', subfolder='', idField='';
-        
+        let extraData = {}; // Datos adicionales (ej. nombre cliente)
+
         if (type === 'Projects') { const row = AppState.data.Projects.find(p => p.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='ProjectImages'; subfolder='Proyectos'; idField='projectId'; }
         else if (type === 'RentalItems') { const row = AppState.data.RentalItems.find(r => r.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='RentalItemImages'; subfolder='Alquiler'; idField='itemId'; }
         else if (type === 'Services') { sheetTarget='ServiceImages'; subfolder='Servicios'; idField='serviceId'; parentTitle = parentTitle || 'General'; }
-        else if (type === 'ClientLogos') { sheetTarget='ClientLogos'; subfolder='Logos'; parentId='general'; }
+        else if (type === 'ClientLogos') { 
+            sheetTarget='ClientLogos'; subfolder='Logos'; parentId='general'; 
+            // Prompt para nombre del cliente
+            const cName = prompt("Nombre del Cliente (Opcional):");
+            if(cName) extraData.clientName = cName;
+        }
         else if (type === 'AboutProfile') { sheetTarget='About'; subfolder='Perfil'; parentId='profile_image'; }
         else if (type === 'SettingImage') { sheetTarget='Settings'; subfolder='Marca'; }
 
@@ -617,10 +475,19 @@ const App = {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'About', action: 'update', criteria: {section: 'profile_image'}, data: {content: upRes.imageUrl} } });
                     document.getElementById('about-profile-preview').src = upRes.imageUrl;
                 } else {
-                    const newData = { id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, imageUrl: upRes.imageUrl, fileId: upRes.fileId, order: 99 };
-                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; else newData.imageUrl = upRes.imageUrl;
+                    const newData = { 
+                        id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, 
+                        imageUrl: type === 'ClientLogos' ? upRes.imageUrl : upRes.imageUrl, // En clientlogos suele ser logoUrl
+                        fileId: upRes.fileId, 
+                        order: 99,
+                        ...extraData
+                    };
+                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; 
+                    else newData.imageUrl = upRes.imageUrl;
+
                     if (type !== 'ClientLogos') { newData.isCover = 'No'; newData.showInPortfolio = 'No'; }
                     if(idField) newData[idField] = parentId;
+                    
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: sheetTarget, action: 'add', data: newData } });
                 }
                 successCount++;
@@ -630,8 +497,10 @@ const App = {
         UI.hideLoading();
         if(successCount) UI.showToast('Subida completa');
         
-        await this.ensureDataForView(AppState.view);
+        // RECARGA FORZADA DE DATOS PARA VER CAMBIOS
+        await this.ensureDataForView(AppState.view, true); // TRUE fuerza la recarga
         
+        // Re-renderizar modal o vista
         if(type==='Projects') this.handleProjectImages(parentId, parentTitle);
         else if(type==='RentalItems') this.handleRentalImages(parentId, parentTitle);
         else if(type==='Services') this.handleServiceImages(parentId, parentTitle);
@@ -639,6 +508,14 @@ const App = {
     },
 
     async handleEditCrudItem(sheet, id) {
+        // Si voy a editar Bloqueos, necesito tener cargados los Items de Alquiler para el select
+        if (sheet === 'BlockedDates' && !AppState.data.RentalItems) {
+             UI.showLoading('Cargando equipos...');
+             const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems');
+             AppState.data = { ...AppState.data, ...d };
+             UI.hideLoading();
+        }
+
         const isNew = !id; let html = '';
         if(sheet==='Projects'){
              const p=isNew?{}:AppState.data.Projects.find(x=>x.id===id);
@@ -652,14 +529,20 @@ const App = {
         } else if(sheet==='RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
-             html = `${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
+             // Aquí agregamos el campo ORDEN que faltaba
+             html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
         } else if(sheet==='RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
         } else if(sheet==='BlockedDates'){
              const items = AppState.data.RentalItems || [];
              html = `${UI.selectHTML('c', 'itemId', 'Equipo', items)} ${UI.inputHTML('c', 'reason', 'Motivo')} ${UI.inputHTML('c', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('c', 'endDate', 'Hasta', '', 'date')}`;
+        } else if(sheet==='ClientLogos'){
+             // Edición manual de logos si se requiere
+             const l = AppState.data.ClientLogos.find(x=>x.id===id);
+             html = `${UI.inputHTML('c', 'order', 'Orden', l?.order||99, 'number')} ${UI.inputHTML('c', 'clientName', 'Cliente', l?.clientName)}`;
         }
+        
         UI.showModal(isNew?'Nuevo':'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>`);
     },
 
@@ -677,7 +560,7 @@ const App = {
     },
     
     async addServiceBlock(sid) {
-        try { await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'ServiceContentBlocks',action:'add',data:{id:`blk_${Date.now()}`,serviceId:sid,blockTitle:'Nuevo',blockContentHtml:'',order:99}}}); await App.ensureDataForView('services'); const s=AppState.data.Services.find(x=>x.id===sid); this.handleServiceContent(sid,s.title); } catch(e){alert(e.message);}
+        try { await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'ServiceContentBlocks',action:'add',data:{id:`blk_${Date.now()}`,serviceId:sid,blockTitle:'Nuevo',blockContentHtml:'',order:99}}}); await App.ensureDataForView('services', true); const s=AppState.data.Services.find(x=>x.id===sid); this.handleServiceContent(sid,s.title); } catch(e){alert(e.message);}
     },
 
     async saveCrud(sheet, id) {
@@ -689,13 +572,14 @@ const App = {
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
             UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
-            await this.ensureDataForView(AppState.view);
+            // Recarga forzada para ver cambios
+            await App.ensureDataForView(AppState.view, true);
             UI.closeModal(); UI.renderView(AppState.view); UI.showToast('Guardado');
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
-    async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await this.ensureDataForView(AppState.view); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
+    async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view, true); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
     
     async quickUpdate(sheet, id, key, val) { 
         try {
@@ -727,7 +611,8 @@ const App = {
     async handleServiceImages(id, t) { this.renderImageModal((AppState.data.ServiceImages||[]).filter(i => i.serviceId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Services'); },
     async handleRentalImages(id, t) { this.renderImageModal((AppState.data.RentalItemImages||[]).filter(i => i.itemId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'RentalItems'); },
     async handleClientLogos() { 
-        UI.showModal('Gestión de Logos de Clientes', `<div class="text-center p-8"><p class="mb-4">Sube los logos de tus clientes.</p><button class="btn btn-primary" onclick="document.getElementById('up-cl-logos').click()">Seleccionar Archivos</button><input type="file" id="up-cl-logos" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, 'general', 'Logos Clientes', 'ClientLogos')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'); 
+        // Botón directo en la vista de settings para editar nombre
+        this.renderImageModal((AppState.data.ClientLogos||[]).sort((a,b)=>(a.order||99)-(b.order||99)), 'general', 'Logos Clientes', 'ClientLogos');
     },
     renderImageModal(images, parentId, title, type) {
         const getChecked = (val) => {
@@ -735,22 +620,28 @@ const App = {
             return (v === 'si' || v === 'yes' || v === 'true') ? 'checked' : '';
         };
 
-        const sheet = type === 'Projects' ? 'ProjectImages' : type === 'Services' ? 'ServiceImages' : 'RentalItemImages';
+        const sheet = type === 'Projects' ? 'ProjectImages' : type === 'Services' ? 'ServiceImages' : (type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages');
+        
         const html = images.map(i => `
             <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" id="img-row-${i.id}">
-                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
+                <img src="${type === 'ClientLogos' ? i.logoUrl : i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
                 <div class="flex-1 grid grid-cols-2 gap-2">
                     <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'order', this.value)"></label>
                     ${type==='Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'caption', this.value)"></label>` : ''}
+                    ${type==='ClientLogos' ? `<label class="text-xs font-bold text-gray-500">Cliente <input type="text" class="border p-1 w-full rounded" value="${i.clientName||''}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'clientName', this.value)"></label>` : ''}
                 </div>
                 <div class="flex flex-col gap-1">
-                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.isCover)} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>` : ''}
+                    ${type !== 'Services' && type !== 'ClientLogos' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.isCover)} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>` : ''}
                     ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.showInPortfolio)} onchange="App.quickUpdate('${sheet}', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>` : ''}
                 </div>
                 <button class="text-red-500 p-2 hover:bg-red-50 rounded" onclick="App.handleDeleteImage('${sheet}', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
             </div>
         `).join('');
-        UI.showModal(title, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p class="text-center text-gray-400 py-4">Sin imágenes.</p>'}</div><div class="border-t pt-4 text-center"><button class="btn btn-primary" onclick="document.getElementById('up-imgs-${parentId}').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button><input type="file" id="up-imgs-${parentId}" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+        
+        // Botón de subida
+        let uploadBtn = `<div class="border-t pt-4 text-center"><button class="btn btn-primary" onclick="document.getElementById('up-imgs-${parentId}').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button><input type="file" id="up-imgs-${parentId}" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')"></div>`;
+        
+        UI.showModal(title, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p class="text-center text-gray-400 py-4">Sin imágenes.</p>'}</div>${uploadBtn}`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
     }
 };
 
