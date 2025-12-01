@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v19.0 - ESCRITURA PERMISIVA (Garantiza que los datos entren)
+// v20.0 - SMART DELETE (Flexible Column Names & Cascading Fix)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -36,7 +36,36 @@ async function findRows(sheet, criteria) {
     await executeWithRetry(() => sheet.loadHeaderRow());
     const rows = await executeWithRetry(() => sheet.getRows());
     const key = Object.keys(criteria)[0];
+    // Comparación flexible para encontrar la fila
     return rows.filter(row => String(row.get(key)) === String(criteria[key]));
+}
+
+// HELPER MAESTRO: Busca el valor de una columna probando variantes de nombre
+// Esto soluciona problemas como "driveFolderld" vs "driveFolderId" o "fileid" vs "fileId"
+function getFlexibleValue(row, keyCandidates) {
+    for (const key of keyCandidates) {
+        const val = row.get(key);
+        if (val && val !== '') return val;
+    }
+    return null;
+}
+
+async function deleteFileFromDrive(drive, fileId, resourceName = 'Archivo') {
+    if (!fileId) {
+        console.warn(`[Drive] No se proporcionó ID para borrar ${resourceName}.`);
+        return;
+    }
+    try {
+        await executeWithRetry(() => drive.files.delete({ fileId: fileId, supportsAllDrives: true }));
+        console.log(`[Drive] Eliminado ${resourceName}: ${fileId}`);
+    } catch (e) {
+        // 404 significa que ya no existe, lo cual es bueno en un delete.
+        if (e.code === 404) {
+            console.log(`[Drive] ${resourceName} ${fileId} ya no existía (404).`);
+        } else {
+            console.warn(`[Drive] Error borrando ${resourceName} (${fileId}): ${e.message}`);
+        }
+    }
 }
 
 exports.handler = async (event, context) => {
@@ -50,15 +79,13 @@ exports.handler = async (event, context) => {
     const sheet = doc.sheetsByTitle[sheetTitle];
     
     if (!sheet) return { statusCode: 404, body: JSON.stringify({ error: `Hoja ${sheetTitle} no encontrada` }) };
-    
-    // Carga de encabezados robusta
     await executeWithRetry(() => sheet.loadHeaderRow());
 
     // --- ADD ---
     if (action === 'add') {
         if (!data.id && sheetTitle !== 'BlockedDates') data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}`;
-
-        // Lógica de portada (sin cambios)
+        
+        // Lógica Portada Única
         if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && data.isCover === 'Si') {
            const rows = await sheet.getRows();
            const parentKey = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
@@ -68,12 +95,8 @@ exports.handler = async (event, context) => {
                } 
            }
         }
-
-        // ESCRITURA PERMISIVA: Escribimos el objeto completo. 
-        // La librería GoogleSpreadsheet intentará mapear todo lo que coincida con los encabezados.
-        // Si una columna no existe en el sheet, la ignorará, pero NO lanzará error por ello.
+        // Escritura directa del objeto data
         await executeWithRetry(() => sheet.addRow(data));
-        
         return { statusCode: 200, body: JSON.stringify({ message: 'OK', newId: data.id }) };
     }
 
@@ -93,49 +116,60 @@ exports.handler = async (event, context) => {
                  }
              }
         }
-        
-        // Actualización directa
-        Object.keys(data).forEach(key => { 
-            // Intentamos setear todos los valores. Si la columna no existe, row.set puede fallar silenciosamente o funcionar dependiendo de la versión
-            try { row.set(key, data[key]); } catch(e) {}
-        });
+        Object.keys(data).forEach(key => { try { row.set(key, data[key]); } catch(e){} });
         await executeWithRetry(() => row.save());
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    // --- DELETE ---
+    // --- DELETE (SUPER BLINDADO) ---
     if (action === 'delete') {
         const rows = await findRows(sheet, criteria);
         const row = rows[0];
         if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado' }) };
 
-        // Intento de borrado en Drive (No fatal)
-        const fileId = row.get('fileId');
-        const folderId = row.get('driveFolderId');
-
+        // 1. Borrar archivo de Drive (Imagen individual)
+        // Buscamos el ID en todas las variantes posibles de nombre de columna
+        const fileId = getFlexibleValue(row, ['fileId', 'fileid', 'FileId', 'FILEID']);
         if (fileId) {
-            try { await drive.files.delete({ fileId: fileId, supportsAllDrives: true }); } catch (e) {}
+            await deleteFileFromDrive(drive, fileId, 'Imagen');
         }
 
-        if ((sheetTitle === 'Projects' || sheetTitle === 'RentalItems') && folderId) {
-            try { await drive.files.delete({ fileId: folderId, supportsAllDrives: true }); } catch (e) {}
+        // 2. Si es Proyecto/Item (Borrar Carpeta y Hijos)
+        if (sheetTitle === 'Projects' || sheetTitle === 'RentalItems') {
+            // Buscar ID de carpeta con variantes (incluyendo el typo común 'driveFolderld')
+            const folderId = getFlexibleValue(row, ['driveFolderId', 'driveFolderld', 'drivefolderid', 'DriveFolderId']);
             
-            // Borrado en cascada de hijos
             const childSheetName = sheetTitle === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
-            const childFk = sheetTitle === 'Projects' ? 'projectId' : 'itemId';
+            const childFk = sheetTitle === 'Projects' ? 'projectId' : 'itemId'; // projectId es lo que arreglamos en el frontend
             const childSheet = doc.sheetsByTitle[childSheetName];
             
+            // A. Borrar Imágenes Hijas
             if (childSheet) {
+                await executeWithRetry(() => childSheet.loadHeaderRow()); // CRÍTICO: Cargar headers de la hoja hija
                 const allChildRows = await executeWithRetry(() => childSheet.getRows());
                 const parentIdStr = String(row.get('id'));
-                const childrenToDelete = allChildRows.filter(r => String(r.get(childFk)) === parentIdStr);
+                
+                // Filtrar hijos
+                const childrenToDelete = allChildRows.filter(r => String(r.get(childFk) || r.get('projectID') || r.get('ItemID')) === parentIdStr);
+                
+                console.log(`[Delete] Encontrados ${childrenToDelete.length} hijos para borrar en ${childSheetName}`);
+
                 for (const childRow of childrenToDelete) {
-                     try { await drive.files.delete({ fileId: childRow.get('fileId'), supportsAllDrives: true }); } catch(e) {}
+                     const childFileId = getFlexibleValue(childRow, ['fileId', 'fileid', 'FileId']);
+                     if (childFileId) {
+                         await deleteFileFromDrive(drive, childFileId, 'Imagen Hija');
+                     }
                      await executeWithRetry(() => childRow.delete());
                 }
             }
+
+            // B. Borrar Carpeta Principal de Drive (Al final, cuando está vacía)
+            if (folderId) {
+                await deleteFileFromDrive(drive, folderId, 'Carpeta de Proyecto');
+            }
         }
 
+        // 3. Borrar la fila principal
         await executeWithRetry(() => row.delete());
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
