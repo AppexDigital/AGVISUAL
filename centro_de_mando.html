@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Centro de Mando | AG Visual Info</title>
     <link rel="icon" type="image/png" href="https://placehold.co/32x32/1a1a1a/FDFDFD?text=AG">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
@@ -14,51 +17,65 @@
         :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-muted: #52525b; --accent: #3a3a3a; --border-color: #e5e7eb; --status-pending: #f59e0b; --status-confirmed: #10b981; --status-paid: #3b82f6; --status-canceled: #ef4444; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-dark); }
         h1, h2, h3, .font-display { font-family: 'Cormorant Garamond', serif; }
+        
+        /* UI Components */
         .loader-circle { width: 50px; height: 50px; border: 4px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
         .btn { padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; border-radius: 4px; }
         .btn-primary { background-color: var(--text-dark); color: white; }
         .btn-primary:hover { background-color: var(--accent); }
         .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); background: transparent; }
         .btn-secondary:hover { background: #f3f4f6; }
         .btn-danger { background-color: #ef4444; color: white; }
-        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; }
+        
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; background: white; }
         .form-input:focus { border-color: var(--text-dark); outline: none; }
         .form-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem; display: block; }
+        
         .sidebar-link { display: flex; align-items: center; padding: 0.75rem 1.5rem; color: var(--text-muted); border-left: 4px solid transparent; transition: all 0.2s; font-size: 0.9rem; }
         .sidebar-link:hover { background-color: #f3f4f6; color: var(--text-dark); }
         .sidebar-link.active { background-color: #f3f4f6; color: var(--text-dark); border-left-color: var(--text-dark); font-weight: 700; }
         .sidebar-link i { width: 1.5rem; text-align: center; margin-right: 0.75rem; }
+        
         .view { display: none; animation: fadeIn 0.3s ease-out; }
         .view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
         .modal-content { background: white; width: 95%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; border-radius: 8px; }
         .modal-overlay.visible .modal-content { transform: scale(1); }
+        
         .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-dark); color: white; padding: 1rem 1.5rem; z-index: 100; transform: translateY(100px); transition: transform 0.3s; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 600; border-radius: 4px; }
         .toast.visible { transform: translateY(0); }
         .toast.error { background: #ef4444; }
+        
         .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
+        
         .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
-        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; cursor: pointer; }
         .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; }
-        .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
-        .portfolio-grid-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); opacity: 0; transition: opacity 0.2s; display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; }
+        
+        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; transition: transform 0.2s; }
+        .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+        .portfolio-grid-overlay { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8); 
+            opacity: 0; transition: opacity 0.2s; 
+            display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; 
+        }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
         .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
+        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -92,71 +109,185 @@
         </aside>
 
         <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative">
+            
             <div id="view-dashboard" class="view active">
                 <h1 class="text-4xl font-display font-bold mb-6">Resumen</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p></div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Portafolio</h3><p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p></div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Reservas</h3><p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Proyectos Activos</h3>
+                        <p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p>
+                    </div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Fotos en Portafolio</h3>
+                        <p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p>
+                    </div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Reservas Pendientes</h3>
+                        <p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p>
+                    </div>
                 </div>
             </div>
 
             <div id="view-projects" class="view">
-                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Proyectos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr></thead><tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody></table></div>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Proyectos</h1>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo</button>
+                </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr>
+                        </thead>
+                        <tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="view-portfolio-manager" class="view">
-                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Portafolio</h1><button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button></div>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Portafolio Principal</h1>
+                    <button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button>
+                </div>
                 <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
 
             <div id="view-videos" class="view">
-                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Videos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL</th><th class="p-4">Acciones</th></tr></thead><tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody></table></div>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Videos</h1>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Nuevo</button>
+                </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL</th><th class="p-4">Acciones</th></tr>
+                        </thead>
+                        <tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="view-services" class="view">
-                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Servicios</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Services', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr></thead><tbody id="services-table-body" class="divide-y divide-gray-100"></tbody></table></div>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Servicios</h1>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Services', null)"><i class="fas fa-plus"></i> Nuevo</button>
+                </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr>
+                        </thead>
+                        <tbody id="services-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="view-rentals" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Alquiler</h1>
-                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button><button class="tab-btn" onclick="UI.switchTab('rental-cats')">Categorías</button></div>
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button>
+                    <button class="tab-btn" onclick="UI.switchTab('rental-cats')">Categorías</button>
+                </div>
                 <div id="tab-rental-items" class="tab-content active">
-                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button></div>
-                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr></thead><tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody></table></div>
+                    <div class="flex justify-end mb-4">
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button>
+                    </div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
                 </div>
                 <div id="tab-rental-cats" class="tab-content">
-                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalCategories', null)"><i class="fas fa-plus"></i> Nueva Categoría</button></div>
-                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Nombre</th><th class="p-4">Acciones</th></tr></thead><tbody id="rental-categories-table-body" class="divide-y divide-gray-100"></tbody></table></div>
+                    <div class="flex justify-end mb-4">
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalCategories', null)"><i class="fas fa-plus"></i> Nueva Categoría</button>
+                    </div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Orden</th><th class="p-4">Nombre</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="rental-categories-table-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <div id="view-bookings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Reservas</h1>
-                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('booking-list')">Solicitudes</button><button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos</button></div>
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="UI.switchTab('booking-list')">Solicitudes</button>
+                    <button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos</button>
+                </div>
                 <div id="tab-booking-list" class="tab-content active">
-                     <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr></thead><tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody></table></div>
+                     <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
                 </div>
                 <div id="tab-blocked-dates" class="tab-content">
-                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('BlockedDates', null)"><i class="fas fa-ban"></i> Nuevo Bloqueo</button></div>
-                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Equipo</th><th class="p-4">Motivo</th><th class="p-4">Desde</th><th class="p-4">Hasta</th><th class="p-4">Acciones</th></tr></thead><tbody id="blocked-dates-table-body" class="divide-y divide-gray-100"></tbody></table></div>
+                    <div class="flex justify-end mb-4">
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('BlockedDates', null)"><i class="fas fa-ban"></i> Nuevo Bloqueo</button>
+                    </div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Equipo</th><th class="p-4">Motivo</th><th class="p-4">Desde</th><th class="p-4">Hasta</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="blocked-dates-table-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             
             <div id="view-settings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Configuración Global</h1>
-                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad & Redes</button><button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio (Sobre Mí)</button><button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button></div>
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad & Redes</button>
+                    <button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio (Sobre Mí)</button>
+                    <button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button>
+                </div>
                 
                 <div id="tab-settings-gen" class="tab-content active space-y-8">
                      <div class="bg-white p-6 rounded border border-gray-200">
                          <h3 class="font-bold text-lg mb-4 border-b pb-2">Identidad de Marca</h3>
                          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                             <div class="text-center"><p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p><div class="h-24 bg-gray-100 border rounded flex items-center justify-center mb-2 relative group"><img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain"><div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_black').click()"><i class="fas fa-camera text-white"></i></div></div><input type="file" id="upload-logo_black" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_black', 'Marca', 'SettingImage')"></div>
-                             <div class="text-center"><p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p><div class="h-24 bg-gray-800 border rounded flex items-center justify-center mb-2 relative group"><img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain"><div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_white').click()"><i class="fas fa-camera text-white"></i></div></div><input type="file" id="upload-logo_white" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_white', 'Marca', 'SettingImage')"></div>
-                             <div class="text-center"><p class="text-xs font-bold text-gray-500 mb-2">Favicon</p><div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group"><img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain"><div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-favicon').click()"><i class="fas fa-camera text-white"></i></div></div><input type="file" id="upload-favicon" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'favicon', 'Marca', 'SettingImage')"></div>
+                             <div class="text-center">
+                                <p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p>
+                                <div class="h-24 bg-gray-100 border rounded flex items-center justify-center mb-2 relative group">
+                                    <img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_black').click()">
+                                        <i class="fas fa-camera text-white"></i>
+                                    </div>
+                                </div>
+                                <input type="file" id="upload-logo_black" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_black', 'Marca', 'SettingImage')">
+                            </div>
+                             <div class="text-center">
+                                <p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p>
+                                <div class="h-24 bg-gray-800 border rounded flex items-center justify-center mb-2 relative group">
+                                    <img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_white').click()">
+                                        <i class="fas fa-camera text-white"></i>
+                                    </div>
+                                </div>
+                                <input type="file" id="upload-logo_white" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_white', 'Marca', 'SettingImage')">
+                            </div>
+                             <div class="text-center">
+                                <p class="text-xs font-bold text-gray-500 mb-2">Favicon</p>
+                                <div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group">
+                                    <img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-favicon').click()">
+                                        <i class="fas fa-camera text-white"></i>
+                                    </div>
+                                </div>
+                                <input type="file" id="upload-favicon" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'favicon', 'Marca', 'SettingImage')">
+                            </div>
                          </div>
                      </div>
                      <div id="settings-form-container" class="bg-white p-6 rounded border border-gray-200"></div>
@@ -167,10 +298,15 @@
                         <div class="mb-6 flex items-center gap-6">
                             <div class="relative group w-32 h-32 flex-shrink-0">
                                 <img id="about-profile-preview" src="https://placehold.co/128" class="w-full h-full rounded-full object-cover border shadow-sm">
-                                <div class="absolute inset-0 bg-black/50 rounded-full hidden group-hover:flex items-center justify-center cursor-pointer" onclick="document.getElementById('upload-profile-pic').click()"><i class="fas fa-camera text-white text-2xl"></i></div>
+                                <div class="absolute inset-0 bg-black/50 rounded-full hidden group-hover:flex items-center justify-center cursor-pointer" onclick="document.getElementById('upload-profile-pic').click()">
+                                    <i class="fas fa-camera text-white text-2xl"></i>
+                                </div>
                                 <input type="file" id="upload-profile-pic" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'profile_image', 'Perfil', 'AboutProfile')">
                             </div>
-                            <div class="flex-1"><h3 class="font-display text-xl font-bold">Foto de Perfil</h3><p class="text-sm text-gray-500">Aparece en la sección "Quién Soy".</p></div>
+                            <div class="flex-1">
+                                <h3 class="font-display text-xl font-bold">Foto de Perfil</h3>
+                                <p class="text-sm text-gray-500">Aparece en la sección "Quién Soy".</p>
+                            </div>
                         </div>
                         <div id="about-form-container" class="space-y-4"></div>
                         <button class="btn btn-primary mt-4" onclick="App.handleSaveAbout()">Guardar Bio</button>
@@ -178,7 +314,10 @@
                 </div>
                 
                 <div id="tab-settings-clients" class="tab-content">
-                     <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Logos de Clientes</h3><button class="btn btn-primary" onclick="App.handleClientLogos()">+ Subir Logos</button></div>
+                     <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">Logos de Clientes</h3>
+                        <button class="btn btn-primary" onclick="App.handleClientLogos()">+ Subir Logos</button>
+                    </div>
                      <div id="clientlogos-grid" class="grid grid-cols-2 md:grid-cols-6 gap-4 bg-white p-4 rounded border"></div>
                 </div>
             </div>
@@ -202,6 +341,7 @@
 const GOOGLE_REDIRECT_URI = 'postmessage';
 const AppState = { data: {}, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
 
+// --- CAPA API ---
 const API = {
     async call(endpoint, options = {}, isRetry = false) {
         const controller = new AbortController();
@@ -229,6 +369,7 @@ const API = {
     }
 };
 
+// --- CAPA AUTH ---
 const Auth = {
     async init() { if (AppState.token) { if (Date.now() >= AppState.token.expires_at) await this.refresh(); UI.showApp(); } else UI.showLogin(); },
     async login() { try { const c = await fetch('/.netlify/functions/get-auth-config').then(r=>r.json()); google.accounts.oauth2.initCodeClient({ client_id: c.clientId, scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive', callback: (r) => r.code && this.exchangeCode(r.code) }).requestCode(); } catch(e){alert(e.message);} },
@@ -238,6 +379,7 @@ const Auth = {
     logout() { localStorage.removeItem('gAuthToken'); location.reload(); }
 };
 
+// --- CAPA UI ---
 const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; },
     showApp: async () => { document.getElementById('login-screen').style.display='none'; await App.loadData('dashboard'); document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='flex'; UI.renderView(AppState.view); },
@@ -247,12 +389,15 @@ const UI = {
     showToast: (msg, type='success') => { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.classList.add('visible'),10); setTimeout(()=>t.remove(),3000); },
     showConfirm: (msg, cb) => { const o=document.getElementById('confirm-modal-overlay'); document.getElementById('confirm-message').textContent=msg; const ok=document.getElementById('confirm-ok-btn'), ca=document.getElementById('confirm-cancel-btn'); const nok=ok.cloneNode(true), nca=ca.cloneNode(true); ok.parentNode.replaceChild(nok,ok); ca.parentNode.replaceChild(nca,ca); nok.addEventListener('click', ()=>{o.classList.remove('visible'); cb();}); nca.addEventListener('click', ()=>o.classList.remove('visible')); o.classList.add('visible'); },
     switchTab(id) { const v=document.querySelector('.view.active'); if(!v)return; v.querySelectorAll('.tab-btn,.tab-content').forEach(e=>e.classList.remove('active')); v.querySelectorAll(`.tab-btn[onclick*="${id}"]`).forEach(b=>b.classList.add('active')); document.getElementById(`tab-${id}`).classList.add('active'); },
+    
+    // Helpers HTML
     inputHTML: (p,k,l,v='',t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
     textareaHTML: (p,k,l,v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
     selectHTML: (p,k,l,opts,v='') => `<div class="mb-4"><label class="form-label">${l}</label><select id="${p}-${k}" data-key="${k}" class="form-select">${opts.map(o=>`<option value="${o.id}" ${o.id==v?'selected':''}>${o.name}</option>`).join('')}</select></div>`,
     showModal: (t,b,f) => { document.getElementById('modal-container').innerHTML=`<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between items-center bg-gray-50"><h2 class="text-xl font-display font-bold">${t}</h2><button onclick="UI.closeModal()" class="text-2xl">&times;</button></div><div class="p-6">${b}</div><div class="p-6 bg-gray-50 text-right border-t">${f}</div></div></div>`; },
     closeModal: () => document.getElementById('modal-container').innerHTML='',
     
+    // Renderizado de Vistas
     renderView: (view) => {
         AppState.view = view;
         document.querySelectorAll('.view, .sidebar-link').forEach(e => e.classList.remove('active'));
@@ -267,16 +412,40 @@ const UI = {
         } else if (view === 'settings') {
              const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
              const a = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
+             
              if(s.logo_black) document.getElementById('preview-logo_black').src = s.logo_black;
              if(s.logo_white) document.getElementById('preview-logo_white').src = s.logo_white;
              if(s.favicon) document.getElementById('preview-favicon').src = s.favicon;
-             document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)} ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram URL', s.social_instagram)} ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)} ${UI.inputHTML('settings', 'social_youtube', 'YouTube URL', s.social_youtube)} ${UI.inputHTML('settings', 'social_facebook', 'Facebook URL', s.social_facebook)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
-             document.getElementById('about-form-container').innerHTML = `${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}`;
+             
+             document.getElementById('settings-form-container').innerHTML = `
+                ${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)} 
+                ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} 
+                ${UI.inputHTML('settings', 'social_instagram', 'Instagram URL', s.social_instagram)} 
+                ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)} 
+                ${UI.inputHTML('settings', 'social_youtube', 'YouTube URL', s.social_youtube)} 
+                ${UI.inputHTML('settings', 'social_facebook', 'Facebook URL', s.social_facebook)}
+                <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>
+             `;
+
+             document.getElementById('about-form-container').innerHTML = `
+                ${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} 
+                ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}
+             `;
              if(a.profile_image) document.getElementById('about-profile-preview').src = a.profile_image;
-             document.getElementById('clientlogos-grid').innerHTML = (data.ClientLogos || []).sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `<div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square"><img src="${i.logoUrl}" class="max-w-full max-h-full object-contain"><button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', this.parentNode)"><i class="fas fa-trash"></i></button><input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.quickUpdate('ClientLogos', '${i.id}', 'order', this.value)"></div>`).join('');
-        } else if (view === 'projects') {
+
+             document.getElementById('clientlogos-grid').innerHTML = (data.ClientLogos || []).sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `
+                <div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square">
+                    <img src="${i.logoUrl}" class="max-w-full max-h-full object-contain">
+                    <button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', this.parentNode)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.quickUpdate('ClientLogos', '${i.id}', 'order', this.value)">
+                </div>
+             `).join('');
+        } 
+        else if (view === 'projects') {
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
-                const cover = (data.ProjectImages||[]).find(i=>i.projectId===p.id && i.isCover==='Si');
+                const cover = (data.ProjectImages||[]).find(i=>(i.projectId===p.id || i.projectID===p.id) && i.isCover==='Si');
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         } else if (view === 'videos') {
@@ -287,10 +456,29 @@ const UI = {
              document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${s.order||99}</td><td class="p-4 font-bold text-sm">${s.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button><button class="text-indigo-600" onclick="App.handleServiceContent('${s.id}', '${s.title}')" title="Contenido"><i class="fas fa-align-left"></i></button><button class="text-green-600" onclick="App.handleServiceImages('${s.id}', '${s.title}')" title="Galería"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
-        } else if (view === 'rental-items') { /* ... lógica rental ... */ }
+        } else if (view === 'rentals') {
+            document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
+                const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
+                const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
+                return `<tr class="border-b hover:bg-gray-50"><td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${i.name}</td><td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td><td class="p-4 font-mono text-sm">$${i.pricePerDay}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+            document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || []).map(c => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${c.order}</td><td class="p-4 font-bold text-sm">${c.name}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        } else if (view === 'bookings') {
+            // Lógica de renderizado de reservas (sin cambios)
+            document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
+            `).join('');
+            document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
+                 const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
+                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+        }
     }
 };
 
+// --- CAPA LÓGICA ---
 const App = {
     async ensureDataForView(view) {
         let sheets = []; const d = AppState.data;
@@ -305,30 +493,20 @@ const App = {
     
     async loadData(mode = 'all') { const p = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); AppState.data = { ...AppState.data, ...nd }; },
 
-    // --- CARGA DE VIDEOS ---
+    // UPLOAD VIDEO (Nueva función)
     async uploadVideo(input, targetIdField) {
-        const file = input.files[0];
-        if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            alert("⚠️ ADVERTENCIA: El archivo supera los 5MB. Es muy probable que falle la subida por límites de Netlify. Se recomienda usar enlaces de YouTube/Vimeo para videos largos.");
-        }
-        
+        const file = input.files[0]; if (!file) return;
+        if (file.size > 6 * 1024 * 1024) { alert("⚠️ Archivo > 6MB. Netlify podría rechazarlo. Usa YouTube para videos largos."); }
         UI.showLoading('Subiendo video...');
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('targetSubfolder', 'Videos');
-            formData.append('parentFolderName', 'WebVideos');
-            
-            const upRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-            // Llenar el input del formulario
-            document.getElementById('crud-' + targetIdField).value = upRes.imageUrl;
-            UI.showToast('Video subido. Guardando enlace...');
-        } catch (e) {
-            console.error(e); UI.showToast('Error subiendo video: ' + e.message, 'error');
-        } finally { UI.hideLoading(); }
+            const fd = new FormData(); fd.append('file', file); fd.append('targetSubfolder', 'Videos'); fd.append('parentFolderName', 'WebVideos');
+            const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+            document.getElementById('crud-' + targetIdField).value = res.imageUrl;
+            UI.showToast('Video subido');
+        } catch (e) { console.error(e); UI.showToast('Error: ' + e.message, 'error'); } finally { UI.hideLoading(); }
     },
 
+    // UPLOAD IMAGES (Inteligente)
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files); if (!files.length) return;
         let driveFolderId = null, sheetTarget='', subfolder='', idField='';
@@ -360,10 +538,8 @@ const App = {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'About', action: 'update', criteria: {section: 'profile_image'}, data: {content: upRes.imageUrl} } });
                     document.getElementById('about-profile-preview').src = upRes.imageUrl;
                 } else {
-                    const newData = { id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, imageUrl: type === 'ClientLogos' ? upRes.imageUrl : upRes.imageUrl, fileId: upRes.fileId, order: 99 };
-                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; 
-                    else newData.imageUrl = upRes.imageUrl;
-
+                    const newData = { id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, imageUrl: upRes.imageUrl, fileId: upRes.fileId, order: 99 };
+                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; else newData.imageUrl = upRes.imageUrl;
                     if (type !== 'ClientLogos') { newData.isCover = 'No'; newData.showInPortfolio = 'No'; }
                     if(idField) newData[idField] = parentId;
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: sheetTarget, action: 'add', data: newData } });
@@ -371,6 +547,7 @@ const App = {
                 successCount++;
             } catch (e) { console.error(e); UI.showToast('Error: '+e.message, 'error'); }
         }
+        
         UI.hideLoading();
         if(successCount) UI.showToast('Subida completa');
         
@@ -378,7 +555,6 @@ const App = {
              const sheet = type === 'Projects' ? 'ProjectImages' : type === 'RentalItems' ? 'RentalItemImages' : type === 'Services' ? 'ServiceImages' : 'ClientLogos';
              const fresh = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
              AppState.data[sheet] = fresh[sheet];
-             
              if(type==='Projects') this.handleProjectImages(parentId, parentTitle);
              else if(type==='RentalItems') this.handleRentalImages(parentId, parentTitle);
              else if(type==='Services') this.handleServiceImages(parentId, parentTitle);
@@ -386,6 +562,7 @@ const App = {
         }
     },
 
+    // HANDLERS CRUD (Proyectos, Videos, Servicios, Alquiler, Categorías, Bloqueos)
     async handleEditCrudItem(sheet, id) {
         const isNew = !id; let html = '';
         if(sheet==='Projects'){
@@ -393,7 +570,7 @@ const App = {
              html=`${UI.inputHTML('c','order','Orden',p?.order||99,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
         } else if(sheet==='Videos'){
              const v=isNew?{}:AppState.data.Videos.find(x=>x.id===id);
-             html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL (YouTube/Vimeo) o Archivo',v?.embedUrl)} <div class="text-right mb-4"><label class="btn btn-secondary btn-sm cursor-pointer"><i class="fas fa-file-video"></i> Subir Video <input type="file" accept="video/*" class="hidden" onchange="App.uploadVideo(this, 'embedUrl')"></label></div>`;
+             html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL (YouTube/Vimeo)',v?.embedUrl)} <div class="text-right mb-4"><label class="btn btn-secondary btn-sm cursor-pointer"><i class="fas fa-file-video"></i> Subir Video <input type="file" accept="video/*" class="hidden" onchange="App.uploadVideo(this, 'embedUrl')"></label></div>`;
         } else if(sheet==='Services'){
              const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
              html=`${UI.inputHTML('c','order','Orden',s?.order||99,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${UI.inputHTML('c','iconClass','Icono (FontAwesome)',s?.iconClass)} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
@@ -411,20 +588,46 @@ const App = {
         UI.showModal(isNew?'Nuevo':'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>`);
     },
 
+    // HANDLERS GALERÍAS (Reutilizable)
+    async handleProjectImages(id, t) { this.renderImageModal((AppState.data.ProjectImages||[]).filter(i => i.projectId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Projects'); },
+    async handleServiceImages(id, t) { this.renderImageModal((AppState.data.ServiceImages||[]).filter(i => i.serviceId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Services'); },
+    async handleRentalImages(id, t) { this.renderImageModal((AppState.data.RentalItemImages||[]).filter(i => i.itemId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'RentalItems'); },
+    async handleClientLogos() { 
+        UI.showModal('Gestión de Logos de Clientes', `<div class="text-center p-8"><p class="mb-4">Sube los logos de tus clientes.</p><button class="btn btn-primary" onclick="document.getElementById('up-cl-logos').click()">Seleccionar Archivos</button><input type="file" id="up-cl-logos" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, 'general', 'Logos Clientes', 'ClientLogos')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'); 
+    },
+
+    renderImageModal(images, parentId, title, type) {
+        const sheet = type === 'Projects' ? 'ProjectImages' : type === 'Services' ? 'ServiceImages' : 'RentalItemImages';
+        const html = images.map(i => `
+            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" id="img-row-${i.id}">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
+                <div class="flex-1 grid grid-cols-2 gap-2">
+                    <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'order', this.value)"></label>
+                    ${type==='Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'caption', this.value)"></label>` : ''}
+                </div>
+                <div class="flex flex-col gap-1">
+                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${i.isCover==='Si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>` : ''}
+                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${i.showInPortfolio==='Si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>` : ''}
+                </div>
+                <button class="text-red-500 p-2 hover:bg-red-50 rounded" onclick="App.handleDeleteImage('${sheet}', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
+            </div>
+        `).join('');
+        
+        UI.showModal(title, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p class="text-center text-gray-400 py-4">Sin imágenes.</p>'}</div><div class="border-t pt-4 text-center"><button class="btn btn-primary" onclick="document.getElementById('up-imgs-${parentId}').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button><input type="file" id="up-imgs-${parentId}" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+    },
+
+    // CONTENIDO DE SERVICIOS (TEXTO)
     async handleServiceContent(id, title) {
         const blocks = (AppState.data.ServiceContentBlocks||[]).filter(b=>b.serviceId===id).sort((a,b)=>(a.order||99)-(b.order||99));
         const html = blocks.map(b => `
             <div class="p-3 border rounded mb-2 bg-white relative group">
                 <button class="absolute top-2 right-2 text-red-400 hover:text-red-600" onclick="App.handleDelete('ServiceContentBlocks', '${b.id}')">&times;</button>
                 <input type="text" class="font-bold w-full border-b mb-2 p-1" value="${b.blockTitle}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockTitle', this.value)" placeholder="Título Sección">
-                <textarea class="w-full border p-1 text-sm" rows="3" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockContentHtml', this.value)" placeholder="Contenido...">${b.blockContentHtml}</textarea>
+                <textarea class="w-full border p-1 text-sm" rows="3" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockContentHtml', this.value)" placeholder="Contenido HTML...">${b.blockContentHtml}</textarea>
                 <input type="number" class="w-16 text-xs border p-1" value="${b.order||99}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'order', this.value)" placeholder="Orden">
             </div>
         `).join('');
-        UI.showModal(`Contenido: ${title}`, 
-            `<div class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><button class="btn btn-primary w-full" onclick="App.addServiceBlock('${id}')">+ Añadir Bloque</button>`, 
-            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
-        );
+        UI.showModal(`Contenido: ${title}`, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><button class="btn btn-primary w-full" onclick="App.addServiceBlock('${id}')">+ Añadir Bloque</button>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
     },
     
     async addServiceBlock(sid) {
@@ -436,7 +639,7 @@ const App = {
             const isNew = !id || id === 'null';
             const data = {};
             document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.dataset.key] = el.value);
-            const idField = sheet === 'BlockedDates' ? 'blockId' : 'id'; 
+            const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
             UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
@@ -446,11 +649,16 @@ const App = {
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
 
+    // UTILIDADES
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
     async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
     async quickUpdate(sheet, id, key, val) { try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'update',criteria:{id},data:{[key]:val===true?'Si':val===false?'No':val}}}); UI.showToast('Guardado'); }catch(e){console.error(e);} },
     async handleSaveSettings() { const data={}; document.querySelectorAll('#settings-form-container input').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'Settings',action:'update',criteria:{key:k},data:{value:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
-    async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} }
+    async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
+    
+    async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
+    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => i.showInPortfolio === 'Si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
+    async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); AppState.data.ProjectImages = AppState.data.ProjectImages.map(i => i.id === id ? {...i, showInPortfolio: 'No'} : i); UI.renderView('portfolio-manager'); }
 };
 
 document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
@@ -458,6 +666,9 @@ document.getElementById('logout-btn').addEventListener('click', () => Auth.logou
 document.getElementById('main-nav').addEventListener('click', e => { const link = e.target.closest('.sidebar-link'); if(link) { e.preventDefault(); UI.renderView(link.dataset.view); } });
 Auth.init();
 </script>
+</body>
+</html>
+
 
 
 
