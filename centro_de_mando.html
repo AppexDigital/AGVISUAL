@@ -28,7 +28,6 @@
         .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); background: transparent; }
         .btn-secondary:hover { background: #f3f4f6; }
         .btn-danger { background-color: #ef4444; color: white; }
-        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
         
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; background: white; }
         .form-input:focus { border-color: var(--text-dark); outline: none; }
@@ -69,6 +68,12 @@
         }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
         .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .status-badge { padding: 2px 8px; border-radius: 10px; color: white; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
+        .status-Pendiente { background: var(--status-pending); }
+        .status-Confirmado { background: var(--status-confirmed); }
+        .status-Pagado { background: var(--status-paid); }
+        .status-Cancelado { background: var(--status-canceled); }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -76,7 +81,6 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
-        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -383,7 +387,7 @@ const Auth = {
 // --- CAPA UI ---
 const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; },
-    showApp: async () => { document.getElementById('login-screen').style.display='none'; await App.loadData('dashboard'); document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='flex'; UI.renderView(AppState.view); },
+    showApp: async () => { document.getElementById('login-screen').style.display='none'; await App.loadData('dashboard'); document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='flex'; App.switchView('dashboard'); },
     forceReload: () => location.reload(),
     showLoading: (msg) => { document.getElementById('loading-text').innerText=msg; document.getElementById('loading-screen').style.display='flex'; document.getElementById('reload-btn').classList.add('hidden'); },
     hideLoading: () => document.getElementById('loading-screen').style.display='none',
@@ -391,14 +395,12 @@ const UI = {
     showConfirm: (msg, cb) => { const o=document.getElementById('confirm-modal-overlay'); document.getElementById('confirm-message').textContent=msg; const ok=document.getElementById('confirm-ok-btn'), ca=document.getElementById('confirm-cancel-btn'); const nok=ok.cloneNode(true), nca=ca.cloneNode(true); ok.parentNode.replaceChild(nok,ok); ca.parentNode.replaceChild(nca,ca); nok.addEventListener('click', ()=>{o.classList.remove('visible'); cb();}); nca.addEventListener('click', ()=>o.classList.remove('visible')); o.classList.add('visible'); },
     switchTab(id) { const v=document.querySelector('.view.active'); if(!v)return; v.querySelectorAll('.tab-btn,.tab-content').forEach(e=>e.classList.remove('active')); v.querySelectorAll(`.tab-btn[onclick*="${id}"]`).forEach(b=>b.classList.add('active')); document.getElementById(`tab-${id}`).classList.add('active'); },
     
-    // Helpers HTML
     inputHTML: (p,k,l,v='',t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
     textareaHTML: (p,k,l,v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
     selectHTML: (p,k,l,opts,v='') => `<div class="mb-4"><label class="form-label">${l}</label><select id="${p}-${k}" data-key="${k}" class="form-select">${opts.map(o=>`<option value="${o.id}" ${o.id==v?'selected':''}>${o.name}</option>`).join('')}</select></div>`,
     showModal: (t,b,f) => { document.getElementById('modal-container').innerHTML=`<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between items-center bg-gray-50"><h2 class="text-xl font-display font-bold">${t}</h2><button onclick="UI.closeModal()" class="text-2xl">&times;</button></div><div class="p-6">${b}</div><div class="p-6 bg-gray-50 text-right border-t">${f}</div></div></div>`; },
     closeModal: () => document.getElementById('modal-container').innerHTML='',
     
-    // Renderizado de Vistas
     renderView: (view) => {
         AppState.view = view;
         document.querySelectorAll('.view, .sidebar-link').forEach(e => e.classList.remove('active'));
@@ -406,9 +408,21 @@ const UI = {
         document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
         const data = AppState.data;
 
+        // Helper seguro para obtener valor insensible a mayúsculas/minúsculas
+        const getVal = (item, key) => {
+            const foundKey = Object.keys(item).find(k => k.toLowerCase().trim() === key.toLowerCase().trim());
+            return foundKey ? item[foundKey] : undefined;
+        };
+
+        // Helper para contar "Si" en Portafolio
+        const countPortfolio = (data.ProjectImages||[]).filter(i => {
+            const val = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
+            return val === 'si' || val === 'yes' || val === 'true' || val === '1';
+        }).length;
+
         if (view === 'dashboard') {
             document.getElementById('dash-projects').innerText = (data.Projects||[]).length;
-            document.getElementById('dash-portfolio').innerText = (data.ProjectImages||[]).filter(i=>i.showInPortfolio==='Si').length;
+            document.getElementById('dash-portfolio').innerText = countPortfolio;
             document.getElementById('dash-bookings').innerText = (data.Bookings||[]).filter(b=>b.status==='Pendiente').length;
         } else if (view === 'settings') {
              const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
@@ -446,9 +460,35 @@ const UI = {
         } 
         else if (view === 'projects') {
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
-                const cover = (data.ProjectImages||[]).find(i=>(i.projectId===p.id || i.projectID===p.id) && i.isCover==='Si');
+                // Buscar portada usando helper seguro
+                const cover = (data.ProjectImages||[]).find(i => {
+                    const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
+                    const isCover = String(getVal(i, 'isCover')).toLowerCase().trim();
+                    return pid === p.id && (isCover === 'si' || isCover === 'yes');
+                });
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
+        } else if (view === 'portfolio-manager') {
+            // FILTRO INTELIGENTE DE PORTAFOLIO
+            const images = (data.ProjectImages || [])
+                .filter(i => {
+                    const val = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
+                    return val === 'si' || val === 'yes' || val === 'true' || val === '1';
+                })
+                .sort((a,b) => (parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
+
+            document.getElementById('portfolio-manager-grid').innerHTML = images.length ? images.map(i => `
+                <div class="portfolio-grid-item group">
+                    <img src="${i.imageUrl}" class="img-preview w-full h-full object-cover">
+                    <div class="portfolio-grid-overlay">
+                        <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
+                        <button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')">
+                            <i class="fas fa-times"></i> Quitar
+                        </button>
+                    </div>
+                    <span class="portfolio-badge">#${i.portfolioOrder||99}</span>
+                </div>
+            `).join('') : '<p class="col-span-full text-center text-gray-500 py-10">No hay imágenes marcadas para el portafolio.<br>Ve a "Proyectos", abre la galería y marca "Portafolio" en las fotos.</p>';
         } else if (view === 'videos') {
             document.getElementById('videos-table-body').innerHTML = (data.Videos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(v => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${v.order||99}</td><td class="p-4 font-bold text-sm">${v.title}</td><td class="p-4 text-xs text-blue-500 truncate max-w-xs"><a href="${v.embedUrl}" target="_blank">${v.embedUrl}</a></td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
@@ -457,8 +497,8 @@ const UI = {
              document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${s.order||99}</td><td class="p-4 font-bold text-sm">${s.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button><button class="text-indigo-600" onclick="App.handleServiceContent('${s.id}', '${s.title}')" title="Contenido"><i class="fas fa-align-left"></i></button><button class="text-green-600" onclick="App.handleServiceImages('${s.id}', '${s.title}')" title="Galería"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
-        } else if (view === 'rentals') {
-            document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
+        } else if (view === 'rentals') { 
+             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
                 const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
                 const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${i.name}</td><td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td><td class="p-4 font-mono text-sm">$${i.pricePerDay}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
@@ -467,7 +507,6 @@ const UI = {
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${c.order}</td><td class="p-4 font-bold text-sm">${c.name}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
         } else if (view === 'bookings') {
-            // Lógica de renderizado de reservas (sin cambios)
             document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
             `).join('');
@@ -481,31 +520,62 @@ const UI = {
 
 // --- CAPA LÓGICA ---
 const App = {
+    // NUEVA LÓGICA DE CAMBIO DE VISTA (LAZY LOADING RESTAURADO)
+    async switchView(viewId) {
+        UI.showLoading('Cargando sección...');
+        try {
+            // Primero aseguramos datos, luego renderizamos
+            await this.ensureDataForView(viewId);
+            UI.renderView(viewId);
+        } catch(e) {
+            console.error(e);
+            UI.showToast("Error cargando datos", "error");
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
     async ensureDataForView(view) {
         let sheets = []; const d = AppState.data;
-        // Aseguramos carga de datos para el portafolio
+        
+        // Lógica de carga por demanda
         if (view === 'projects' || view === 'portfolio-manager') { 
             if(!d.Projects) sheets.push('Projects');
-            if(!d.ProjectImages) sheets.push('ProjectImages');
+            // Siempre recargamos imágenes para asegurar que los cambios de estado se vean
+            sheets.push('ProjectImages'); 
         }
-        else if (view === 'rentals') { if(!d.RentalItems) sheets.push('RentalItems','RentalCategories','RentalItemImages'); }
-        else if (view === 'services') { if(!d.Services) sheets.push('Services','ServiceContentBlocks','ServiceImages'); }
-        else if (view === 'videos') { if(!d.Videos) sheets.push('Videos'); }
-        else if (view === 'bookings') { if(!d.Bookings) sheets.push('Bookings','BlockedDates','RentalItems'); }
-        else if (view === 'settings') { if(!d.Settings) sheets.push('Settings','About','ClientLogos'); }
+        else if (view === 'rentals') { 
+            if(!d.RentalItems) sheets.push('RentalItems','RentalCategories','RentalItemImages'); 
+        }
+        else if (view === 'services') { 
+            // Recargar servicios y sus detalles siempre para asegurar consistencia
+            sheets.push('Services','ServiceContentBlocks','ServiceImages'); 
+        }
+        else if (view === 'videos') { 
+            if(!d.Videos) sheets.push('Videos'); 
+        }
+        else if (view === 'bookings') { 
+            if(!d.Bookings) sheets.push('Bookings','BlockedDates','RentalItems'); 
+        }
+        else if (view === 'settings') { 
+            if(!d.Settings) sheets.push('Settings','About','ClientLogos'); 
+        }
         
         if (sheets.length > 0) { 
-            UI.showLoading('Cargando...'); 
-            try { 
-                const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets.join(',')}`); 
-                AppState.data = { ...AppState.data, ...nd }; 
-            } catch(e) { console.error(e); } finally { UI.hideLoading(); } 
+            // Eliminamos duplicados si los hay
+            sheets = [...new Set(sheets)];
+            const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets.join(',')}`); 
+            AppState.data = { ...AppState.data, ...nd }; 
         }
     },
     
-    async loadData(mode = 'all') { const p = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); AppState.data = { ...AppState.data, ...nd }; },
+    async loadData(mode = 'all') { 
+        // Carga inicial ligera
+        const p = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
+        const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); 
+        AppState.data = { ...AppState.data, ...nd }; 
+    },
 
-    // UPLOAD VIDEO (Nueva función)
     async uploadVideo(input, targetIdField) {
         const file = input.files[0]; if (!file) return;
         if (file.size > 6 * 1024 * 1024) { alert("⚠️ Archivo > 6MB. Netlify podría rechazarlo. Usa YouTube para videos largos."); }
@@ -518,11 +588,11 @@ const App = {
         } catch (e) { console.error(e); UI.showToast('Error: ' + e.message, 'error'); } finally { UI.hideLoading(); }
     },
 
-    // UPLOAD IMAGES (Inteligente)
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files); if (!files.length) return;
         let driveFolderId = null, sheetTarget='', subfolder='', idField='';
         
+        // Mapeo
         if (type === 'Projects') { const row = AppState.data.Projects.find(p => p.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='ProjectImages'; subfolder='Proyectos'; idField='projectId'; }
         else if (type === 'RentalItems') { const row = AppState.data.RentalItems.find(r => r.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='RentalItemImages'; subfolder='Alquiler'; idField='itemId'; }
         else if (type === 'Services') { sheetTarget='ServiceImages'; subfolder='Servicios'; idField='serviceId'; parentTitle = parentTitle || 'General'; }
@@ -538,6 +608,7 @@ const App = {
                 const fd = new FormData(); fd.append('file', compressed, file.name); fd.append('targetSubfolder', subfolder); fd.append('targetFolderId', driveFolderId || ''); fd.append('parentFolderName', parentTitle); 
                 const upRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
                 
+                // Guardar ID carpeta padre
                 if ((type === 'Projects' || type === 'RentalItems') && upRes.driveFolderId && upRes.driveFolderId !== driveFolderId) {
                     driveFolderId = upRes.driveFolderId;
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: type, action: 'update', criteria: {id: parentId}, data: {driveFolderId} } });
@@ -563,19 +634,15 @@ const App = {
         UI.hideLoading();
         if(successCount) UI.showToast('Subida completa');
         
-        if(['Projects','RentalItems','Services','ClientLogos'].includes(type)) {
-             const sheet = type === 'Projects' ? 'ProjectImages' : type === 'RentalItems' ? 'RentalItemImages' : type === 'Services' ? 'ServiceImages' : 'ClientLogos';
-             const fresh = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
-             AppState.data[sheet] = fresh[sheet];
-             
-             if(type==='Projects') this.handleProjectImages(parentId, parentTitle);
-             else if(type==='RentalItems') this.handleRentalImages(parentId, parentTitle);
-             else if(type==='Services') this.handleServiceImages(parentId, parentTitle);
-             else if(type==='ClientLogos') UI.renderView('settings');
-        }
+        // Forzar recarga de datos
+        await this.ensureDataForView(AppState.view);
+        
+        if(type==='Projects') this.handleProjectImages(parentId, parentTitle);
+        else if(type==='RentalItems') this.handleRentalImages(parentId, parentTitle);
+        else if(type==='Services') this.handleServiceImages(parentId, parentTitle);
+        else if(type==='ClientLogos') UI.renderView('settings');
     },
 
-    // HANDLERS CRUD (Proyectos, Videos, Servicios, Alquiler, Categorías, Bloqueos)
     async handleEditCrudItem(sheet, id) {
         const isNew = !id; let html = '';
         if(sheet==='Projects'){
@@ -601,34 +668,6 @@ const App = {
         UI.showModal(isNew?'Nuevo':'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>`);
     },
 
-    // HANDLERS GALERÍAS (Reutilizable)
-    async handleProjectImages(id, t) { this.renderImageModal((AppState.data.ProjectImages||[]).filter(i => i.projectId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Projects'); },
-    async handleServiceImages(id, t) { this.renderImageModal((AppState.data.ServiceImages||[]).filter(i => i.serviceId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Services'); },
-    async handleRentalImages(id, t) { this.renderImageModal((AppState.data.RentalItemImages||[]).filter(i => i.itemId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'RentalItems'); },
-    async handleClientLogos() { 
-        UI.showModal('Gestión de Logos de Clientes', `<div class="text-center p-8"><p class="mb-4">Sube los logos de tus clientes.</p><button class="btn btn-primary" onclick="document.getElementById('up-cl-logos').click()">Seleccionar Archivos</button><input type="file" id="up-cl-logos" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, 'general', 'Logos Clientes', 'ClientLogos')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'); 
-    },
-
-    renderImageModal(images, parentId, title, type) {
-        const sheet = type === 'Projects' ? 'ProjectImages' : type === 'Services' ? 'ServiceImages' : 'RentalItemImages';
-        const html = images.map(i => `
-            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" id="img-row-${i.id}">
-                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
-                <div class="flex-1 grid grid-cols-2 gap-2">
-                    <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'order', this.value)"></label>
-                    ${type==='Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'caption', this.value)"></label>` : ''}
-                </div>
-                <div class="flex flex-col gap-1">
-                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${String(i.isCover).toLowerCase()==='si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>` : ''}
-                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${String(i.showInPortfolio).toLowerCase()==='si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>` : ''}
-                </div>
-                <button class="text-red-500 p-2 hover:bg-red-50 rounded" onclick="App.handleDeleteImage('${sheet}', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
-            </div>
-        `).join('');
-        UI.showModal(title, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p class="text-center text-gray-400 py-4">Sin imágenes.</p>'}</div><div class="border-t pt-4 text-center"><button class="btn btn-primary" onclick="document.getElementById('up-imgs-${parentId}').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button><input type="file" id="up-imgs-${parentId}" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
-    },
-
-    // CONTENIDO DE SERVICIOS (TEXTO)
     async handleServiceContent(id, title) {
         const blocks = (AppState.data.ServiceContentBlocks||[]).filter(b=>b.serviceId===id).sort((a,b)=>(a.order||99)-(b.order||99));
         const html = blocks.map(b => `
@@ -650,29 +689,28 @@ const App = {
         try {
             const isNew = !id || id === 'null';
             const data = {};
-            document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.dataset.key] = el.value);
+            document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('c-', '')] = el.value);
             const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
             UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
-            const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
-            AppState.data[sheet] = nd[sheet];
+            // Recargar la vista actual para mostrar cambios
+            await this.ensureDataForView(AppState.view);
             UI.closeModal(); UI.renderView(AppState.view); UI.showToast('Guardado');
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
-    async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
     
-    // *** FUNCIÓN CORREGIDA AQUÍ ***
+    async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await this.ensureDataForView(AppState.view); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
+    
     async quickUpdate(sheet, id, key, val) { 
         try {
             const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[key]: valStr} } }); 
-            // Actualizar estado local CORRECTAMENTE
-            if (AppState.data[sheet]) {
-                const item = AppState.data[sheet].find(i => i.id === id);
-                if (item) item[key] = valStr;
+            if(AppState.data[sheet]) {
+                 const item = AppState.data[sheet].find(i => i.id === id);
+                 if(item) item[key] = valStr;
             }
             UI.showToast('Guardado');
         } catch(e) { console.error(e); UI.showToast('Error', 'error'); } 
@@ -682,17 +720,10 @@ const App = {
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     
     async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
-    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase() === 'si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
+    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => { const v = String(i.showInPortfolio).toLowerCase().trim(); return v === 'si' || v === 'yes' || v === 'true'; }).map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
+    async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
     
-    async removeFromPortfolio(id) { 
-        await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); 
-        // Actualizar localmente y refrescar vista
-        const item = AppState.data.ProjectImages.find(i => i.id === id);
-        if (item) item.showInPortfolio = 'No';
-        UI.renderView('portfolio-manager'); 
-    },
-    
-    // Handlers para los modales de galería
+    // Handlers Galería
     async handleProjectImages(id, t) { this.renderImageModal((AppState.data.ProjectImages||[]).filter(i => i.projectId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Projects'); },
     async handleServiceImages(id, t) { this.renderImageModal((AppState.data.ServiceImages||[]).filter(i => i.serviceId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Services'); },
     async handleRentalImages(id, t) { this.renderImageModal((AppState.data.RentalItemImages||[]).filter(i => i.itemId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'RentalItems'); },
@@ -700,6 +731,12 @@ const App = {
         UI.showModal('Gestión de Logos de Clientes', `<div class="text-center p-8"><p class="mb-4">Sube los logos de tus clientes.</p><button class="btn btn-primary" onclick="document.getElementById('up-cl-logos').click()">Seleccionar Archivos</button><input type="file" id="up-cl-logos" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, 'general', 'Logos Clientes', 'ClientLogos')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'); 
     },
     renderImageModal(images, parentId, title, type) {
+        // Helper para checkbox cover/portfolio
+        const getChecked = (val) => {
+            const v = String(val).toLowerCase().trim();
+            return (v === 'si' || v === 'yes' || v === 'true') ? 'checked' : '';
+        };
+
         const sheet = type === 'Projects' ? 'ProjectImages' : type === 'Services' ? 'ServiceImages' : 'RentalItemImages';
         const html = images.map(i => `
             <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" id="img-row-${i.id}">
@@ -709,8 +746,8 @@ const App = {
                     ${type==='Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'caption', this.value)"></label>` : ''}
                 </div>
                 <div class="flex flex-col gap-1">
-                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${String(i.isCover).toLowerCase()==='si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>` : ''}
-                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${String(i.showInPortfolio).toLowerCase()==='si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>` : ''}
+                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.isCover)} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>` : ''}
+                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.showInPortfolio)} onchange="App.quickUpdate('${sheet}', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>` : ''}
                 </div>
                 <button class="text-red-500 p-2 hover:bg-red-50 rounded" onclick="App.handleDeleteImage('${sheet}', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
             </div>
@@ -721,7 +758,14 @@ const App = {
 
 document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
 document.getElementById('logout-btn').addEventListener('click', () => Auth.logout());
-document.getElementById('main-nav').addEventListener('click', e => { const link = e.target.closest('.sidebar-link'); if(link) { e.preventDefault(); UI.renderView(link.dataset.view); } });
+// AQUÍ ESTÁ EL CAMBIO CRÍTICO PARA LA NAVEGACIÓN
+document.getElementById('main-nav').addEventListener('click', e => { 
+    const link = e.target.closest('.sidebar-link'); 
+    if(link) { 
+        e.preventDefault(); 
+        App.switchView(link.dataset.view); // Usar switchView en lugar de UI.renderView
+    } 
+});
 Auth.init();
 </script>
 </body>
