@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v22.0 - BORRADO CONSCIENTE DEL CONTEXTO
+// v23.0 - SOFT DELETE (MOVER A PAPELERA) - SOLUCIÓN DEFINITIVA PERMISOS
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -54,13 +54,24 @@ async function findRows(sheet, criteria) {
     return rows.filter(row => String(row.get(realKeyHeader)) === String(criteria[criteriaKey]));
 }
 
-async function deleteFileFromDrive(drive, fileId) {
+// CAMBIO CLAVE: Usar 'trash' en lugar de 'delete'
+async function trashFileInDrive(drive, fileId, resourceName = 'Archivo') {
     if (!fileId) return;
     try {
-        await executeWithRetry(() => drive.files.delete({ fileId: fileId, supportsAllDrives: true }));
-        console.log(`Drive: Eliminado ${fileId}`);
+        // Intentamos mover a la papelera (trashed: true)
+        await executeWithRetry(() => drive.files.update({
+            fileId: fileId,
+            requestBody: { trashed: true },
+            supportsAllDrives: true
+        }));
+        console.log(`[Drive] Movido a papelera (${resourceName}): ${fileId}`);
     } catch (e) {
-        if (e.code !== 404) console.warn(`Drive Error (${fileId}): ${e.message}`);
+        // Si ya no existe (404), es un éxito técnico.
+        if (e.code === 404) {
+            console.log(`[Drive] ${resourceName} ${fileId} ya no existía.`);
+        } else {
+            console.warn(`[Drive] Error moviendo a papelera ${resourceName} (${fileId}): ${e.message}`);
+        }
     }
 }
 
@@ -119,24 +130,23 @@ exports.handler = async (event, context) => {
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    // --- DELETE (LÓGICA CONTEXTUAL) ---
+    // --- DELETE (SOFT DELETE IMPLEMENTADO) ---
     if (action === 'delete') {
         const rows = await findRows(sheet, criteria);
         const row = rows[0];
         if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado en Sheet' }) };
 
-        // A. Si estamos en una hoja de IMÁGENES, buscamos 'fileId'
+        // A. Si estamos en una hoja de IMÁGENES
         if (['ProjectImages', 'RentalItemImages', 'ClientLogos'].includes(sheetTitle)) {
             const fileId = getSafeValue(row, sheet, 'fileId');
             if (fileId) {
-                console.log(`Borrando imagen individual: ${fileId}`);
-                await deleteFileFromDrive(drive, fileId);
+                await trashFileInDrive(drive, fileId, 'Imagen Individual');
             }
         }
 
-        // B. Si estamos en una hoja de PADRES (Proyectos/Items), buscamos 'driveFolderId' y borramos hijos
+        // B. Si estamos en una hoja de PADRES (Proyectos/Items)
         if (['Projects', 'RentalItems'].includes(sheetTitle)) {
-            // 1. Borrar Carpeta
+            // 1. Recuperar ID de carpeta
             const folderId = getSafeValue(row, sheet, 'driveFolderId');
             
             // 2. Borrar Hijos en Cascada
@@ -156,19 +166,19 @@ exports.handler = async (event, context) => {
 
                     for (const childRow of childrenToDelete) {
                          const childFileId = getSafeValue(childRow, childSheet, 'fileId');
-                         if (childFileId) await deleteFileFromDrive(drive, childFileId);
+                         if (childFileId) await trashFileInDrive(drive, childFileId, 'Imagen Hija');
                          await executeWithRetry(() => childRow.delete());
                     }
                 }
             }
             
-            // Borrar carpeta AL FINAL (después de vaciarla, aunque Drive permite borrar carpetas llenas)
+            // 3. Mover Carpeta a Papelera
             if (folderId) {
-                console.log(`Borrando carpeta de proyecto: ${folderId}`);
-                await deleteFileFromDrive(drive, folderId);
+                await trashFileInDrive(drive, folderId, 'Carpeta Proyecto');
             }
         }
 
+        // Borrar fila en Sheet
         await executeWithRetry(() => row.delete());
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
