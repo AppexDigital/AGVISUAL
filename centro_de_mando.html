@@ -784,20 +784,36 @@ const App = {
     }
 };
 
-document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
-document.getElementById('logout-btn').addEventListener('click', () => Auth.logout());
-// AQUÍ ESTÁ EL CAMBIO CRÍTICO PARA LA NAVEGACIÓN
-document.getElementById('main-nav').addEventListener('click', e => { 
-    const link = e.target.closest('.sidebar-link'); 
-    if(link) { 
-        e.preventDefault(); 
-        App.switchView(link.dataset.view); // Usar switchView en lugar de UI.renderView
-    } 
+document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('google-login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const mainNav = document.getElementById('main-nav');
+
+    if (loginBtn) loginBtn.addEventListener('click', () => Auth.login());
+    if (logoutBtn) logoutBtn.addEventListener('click', () => Auth.logout());
+    
+    if (mainNav) {
+        mainNav.addEventListener('click', e => { 
+            const link = e.target.closest('.sidebar-link'); 
+            if(link) { 
+                e.preventDefault(); 
+                // Usar switchView si existe, fallback a renderView
+                if (typeof App.switchView === 'function') {
+                    App.switchView(link.dataset.view); 
+                } else {
+                    UI.renderView(link.dataset.view);
+                }
+            } 
+        });
+    }
+
+    // Iniciar la aplicación
+    Auth.init();
 });
-Auth.init();
 </script>
 </body>
 </html>
+
 
 
 
