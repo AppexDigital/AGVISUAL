@@ -1,12 +1,11 @@
 // functions/upload-image.js
-// v9.0 - ESCRITURA EN DISCO GARANTIZADA (Anti-Race Condition)
+// v10.0 - VERIFICACIÓN DE CARPETA REAL & ERROR TOLERANCE
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const Busboy = require('busboy');
 
-// Helper: Parsea el formulario y GARANTIZA que el archivo se escriba completamente en disco
 function parseMultipartForm(event) {
   return new Promise((resolve, reject) => {
     try {
@@ -14,7 +13,7 @@ function parseMultipartForm(event) {
       const fields = {};
       const files = {};
       const tmpdir = os.tmpdir();
-      const writePromises = []; // Array para controlar las escrituras
+      const writePromises = [];
 
       busboy.on('field', (n, v) => fields[n] = v);
       
@@ -22,20 +21,18 @@ function parseMultipartForm(event) {
         const filepath = path.join(tmpdir, `up_${Date.now()}_${Math.random().toString(36).substring(7)}_${info.filename}`);
         const writeStream = fs.createWriteStream(filepath);
         
-        // Creamos una promesa que solo se resuelve cuando el stream TERMINA de escribir
         const promise = new Promise((resStream, rejStream) => {
             file.pipe(writeStream)
                 .on('error', rejStream)
                 .on('finish', () => {
                     files[n] = { ...info, filepath };
-                    resStream(); // ¡Ahora sí es seguro!
+                    resStream();
                 });
         });
         writePromises.push(promise);
       });
 
       busboy.on('close', async () => {
-          // Esperamos a que TODAS las escrituras en disco terminen
           await Promise.all(writePromises);
           resolve({ fields, files });
       });
@@ -46,22 +43,18 @@ function parseMultipartForm(event) {
   });
 }
 
-// Helper: Obtiene carpeta por NOMBRE (o la crea)
 async function getFolderByName(drive, parentId, folderName) {
     const safeName = folderName.replace(/'/g, "\\'");
     const q = `mimeType='application/vnd.google-apps.folder' and name='${safeName}' and '${parentId}' in parents and trashed = false`;
-    
     const res = await drive.files.list({ q, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
     
-    if (res.data.files.length > 0) {
-        return res.data.files[0].id;
-    } else {
-        const newFolder = await drive.files.create({
-            resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
-            fields: 'id', supportsAllDrives: true
-        });
-        return newFolder.data.id;
-    }
+    if (res.data.files.length > 0) return res.data.files[0].id;
+    
+    const newFolder = await drive.files.create({
+        resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
+        fields: 'id', supportsAllDrives: true
+    });
+    return newFolder.data.id;
 }
 
 exports.handler = async (event) => {
@@ -72,16 +65,14 @@ exports.handler = async (event) => {
   let tempFilePath = null;
 
   try {
-    // 1. Parsear y esperar escritura en disco
     const { fields, files } = await parseMultipartForm(event);
     const file = files.file;
     
-    // Datos del Frontend
     const targetFolderId = fields.targetFolderId; 
     const folderName = fields.parentFolderName || 'General';
     const subFolderType = fields.targetSubfolder || 'Varios';
 
-    if (!file || !file.filepath) throw new Error('Error crítico: El archivo no se pudo guardar en el servidor temporal.');
+    if (!file) throw new Error('No se recibió ningún archivo.');
     tempFilePath = file.filepath;
 
     const auth = new google.auth.OAuth2();
@@ -89,26 +80,26 @@ exports.handler = async (event) => {
     const drive = google.drive({ version: 'v3', auth });
 
     const rootId = process.env.GOOGLE_DRIVE_ASSET_FOLDER_ID;
-    if (!rootId) throw new Error('Configuración faltante: GOOGLE_DRIVE_ASSET_FOLDER_ID no está definido.');
-
-    // 2. Gestionar Carpetas
     const categoryFolderId = await getFolderByName(drive, rootId, subFolderType);
+    
     let finalFolderId;
 
-    if (targetFolderId && targetFolderId !== 'null' && targetFolderId !== 'undefined') {
+    // LÓGICA DE RECUPERACIÓN DE CARPETA (Anti-Error 404)
+    if (targetFolderId && targetFolderId !== 'null' && targetFolderId !== 'undefined' && targetFolderId.trim() !== '') {
         try {
-            // Validar que el ID exista realmente
-            await drive.files.get({ fileId: targetFolderId, fields: 'id', supportsAllDrives: true });
+            // Verificamos si la carpeta REALMENTE existe
+            await drive.files.get({ fileId: targetFolderId, fields: 'id' });
             finalFolderId = targetFolderId;
         } catch (e) {
-            console.warn("ID de carpeta inválido o inaccesible, usando nombre...");
+            console.warn(`Carpeta ID ${targetFolderId} no encontrada (posiblemente borrada). Creando nueva...`);
+            // Si falla, ignoramos el ID y buscamos/creamos por nombre
             finalFolderId = await getFolderByName(drive, categoryFolderId, folderName);
         }
     } else {
         finalFolderId = await getFolderByName(drive, categoryFolderId, folderName);
     }
 
-    // 3. Subir a Google Drive (Ahora es seguro leer el archivo)
+    // Subir Archivo
     const res = await drive.files.create({
       resource: { name: file.filename, parents: [finalFolderId] },
       media: { mimeType: file.mimeType, body: fs.createReadStream(tempFilePath) },
@@ -116,8 +107,14 @@ exports.handler = async (event) => {
       supportsAllDrives: true
     });
 
-    // 4. Permisos y Respuesta
-    await drive.permissions.create({ fileId: res.data.id, requestBody: { role: 'reader', type: 'anyone' } });
+    // Intentar hacer público (No fatal si falla)
+    try {
+        await drive.permissions.create({ fileId: res.data.id, requestBody: { role: 'reader', type: 'anyone' } });
+    } catch (permError) {
+        console.warn("Advertencia: No se pudo hacer público el archivo automáticamente.", permError.message);
+    }
+
+    // URL robusta
     let imgUrl = res.data.thumbnailLink ? res.data.thumbnailLink.replace('=s220', '=s3000') : res.data.webViewLink;
 
     return {
@@ -126,17 +123,16 @@ exports.handler = async (event) => {
           message: 'OK', 
           fileId: res.data.id, 
           imageUrl: imgUrl, 
-          driveFolderId: finalFolderId
+          driveFolderId: finalFolderId 
       })
     };
 
   } catch (e) {
-    console.error("Upload Error Stack:", e.stack);
-    return { statusCode: 500, body: JSON.stringify({ error: `Error en subida: ${e.message}` }) };
+    console.error("Upload Error:", e);
+    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   } finally {
-    // Limpieza siempre
     if (tempFilePath && fs.existsSync(tempFilePath)) {
-        try { fs.unlinkSync(tempFilePath); } catch(e) { console.error("Error limpiando temp:", e); }
+        try { fs.unlinkSync(tempFilePath); } catch(e) {}
     }
   }
 };
