@@ -1,5 +1,5 @@
 // functions/upload-image.js
-// v5.0 - ESTRUCTURA DE CARPETAS DINÁMICA
+// v5.1 - Retorno robusto de Folder ID
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
@@ -30,16 +30,15 @@ function parseMultipartForm(event) {
   });
 }
 
+// Helper: Devuelve { folderId: string }
 async function getOrCreateFolder(drive, parentId, folderName) {
     if (!folderName) return parentId;
-    // Buscar carpeta existente
     const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentId}' in parents and trashed = false`;
     const res = await drive.files.list({ q, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
     
     if (res.data.files.length > 0) {
         return res.data.files[0].id;
     } else {
-        // Crear si no existe
         const newFolder = await drive.files.create({
             resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
             fields: 'id', supportsAllDrives: true
@@ -59,9 +58,6 @@ exports.handler = async (event, context) => {
   try {
     const { fields, files } = await parseMultipartForm(event);
     const file = files.file;
-    
-    // targetSubfolder = 'Projects' o 'Rentals'
-    // parentFolderName = 'Boda Ana y Carlos' (Nombre del proyecto específico)
     const targetSubfolder = fields.targetSubfolder || 'General'; 
     const parentFolderName = fields.parentFolderName || null;
 
@@ -72,13 +68,10 @@ exports.handler = async (event, context) => {
     oAuth2Client.setCredentials({ access_token: userAccessToken });
     const drive = google.drive({ version: 'v3', auth: oAuth2Client });
 
-    // 1. Entrar a la carpeta principal (ej: Projects)
+    // Navegación Jerárquica
     const categoryFolderId = await getOrCreateFolder(drive, rootFolderId, targetSubfolder);
-    
-    // 2. Entrar a la carpeta del proyecto específico (ej: Boda Ana)
     const finalFolderId = await getOrCreateFolder(drive, categoryFolderId, parentFolderName);
 
-    // Subir Archivo
     const driveResponse = await drive.files.create({
       resource: { name: file.filename, parents: [finalFolderId] },
       media: { mimeType: file.mimeType, body: fs.createReadStream(tempFilePath) },
@@ -104,7 +97,7 @@ exports.handler = async (event, context) => {
           message: 'OK',
           fileId: fileId,
           imageUrl: robustUrl,
-          driveFolderId: finalFolderId // Devolvemos el ID de la carpeta por si acaso
+          driveFolderId: finalFolderId // IMPORTANTE: Retornamos el ID de la carpeta donde se guardó
       }),
     };
 
