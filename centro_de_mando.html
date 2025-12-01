@@ -27,7 +27,6 @@
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; }
         .form-input:focus { border-color: var(--text-dark); outline: none; }
         .form-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem; display: block; }
-        .form-checkbox { width: 1rem; height: 1rem; accent-color: var(--text-dark); }
 
         .sidebar-link { display: flex; align-items: center; padding: 0.75rem 1.5rem; color: var(--text-muted); border-left: 4px solid transparent; transition: all 0.2s; font-size: 0.9rem; }
         .sidebar-link:hover { background-color: #f3f4f6; color: var(--text-dark); }
@@ -288,7 +287,7 @@ const UI = {
         document.getElementById('login-screen').style.display = 'none';
         UI.showLoading('Cargando datos...');
         try { await App.loadData(); document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'flex'; UI.renderView(AppState.view); } 
-        catch (e) { alert(e.message); }
+        catch (e) { alert(e.message); UI.showLogin(); }
     },
     showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; },
     hideLoading: () => document.getElementById('loading-screen').style.display = 'none',
@@ -472,34 +471,35 @@ const App = {
         UI.showModal(isNew ? 'Nuevo' : 'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}', '${id}')">Guardar</button>`);
     },
     async saveCrud(sheet, id) {
-        const isNew = !id || id === 'null';
-        const data = {};
-        document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('crud-', '')] = el.value);
-        const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
-        if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
-        UI.showLoading('Guardando...');
-        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
-        await this.loadData(); UI.closeModal(); UI.renderView(AppState.view); UI.hideLoading();
+        try {
+            const isNew = !id || id === 'null';
+            const data = {};
+            document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('crud-', '')] = el.value);
+            const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
+            if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
+            
+            UI.showLoading('Guardando...');
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
+            await this.loadData(); UI.closeModal(); UI.renderView(AppState.view);
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     async handleDelete(sheet, id, idField='id') {
         if (!confirm('¿Eliminar?')) return;
-        UI.showLoading('Eliminando...');
-        
-        if(sheet === 'Projects') {
-            const imgs = (AppState.data.ProjectImages || []).filter(i => i.projectId === id);
-            for(const img of imgs) {
-                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'delete', criteria: {id: img.id} } });
+        try {
+            UI.showLoading('Eliminando...');
+            // Cascada Frontend
+            if(sheet === 'Projects') {
+                const imgs = (AppState.data.ProjectImages || []).filter(i => i.projectId === id);
+                for(const img of imgs) await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'delete', criteria: {id: img.id} } });
             }
-        }
-        if(sheet === 'RentalItems') {
-             const imgs = (AppState.data.RentalItemImages || []).filter(i => i.itemId === id);
-             for(const img of imgs) {
-                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'RentalItemImages', action: 'delete', criteria: {id: img.id} } });
-             }
-        }
+            if(sheet === 'RentalItems') {
+                const imgs = (AppState.data.RentalItemImages || []).filter(i => i.itemId === id);
+                for(const img of imgs) await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'RentalItemImages', action: 'delete', criteria: {id: img.id} } });
+            }
 
-        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
-        await this.loadData(); UI.renderView(AppState.view); UI.hideLoading();
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
+            await this.loadData(); UI.renderView(AppState.view);
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     async handleProjectImages(projectId, title) {
         const images = (AppState.data.ProjectImages || []).filter(i => i.projectId === projectId).sort((a,b) => (a.order||99)-(b.order||99));
@@ -526,66 +526,107 @@ const App = {
     },
     async uploadProjectImages(input, projectId, projectTitle) {
         const files = Array.from(input.files); if(!files.length) return;
-        for (let i = 0; i < files.length; i++) {
-            UI.showLoading(`Subiendo ${i + 1} de ${files.length}...`);
-            const formData = new FormData(); formData.append('file', files[i]); 
-            formData.append('targetSubfolder', 'Projects');
-            formData.append('parentFolderName', projectTitle);
-            try {
-                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                // GUARDAR ID DE CARPETA SI ES NUEVO
-                const project = AppState.data.Projects.find(p => p.id === projectId);
-                if (project && !project.driveFolderId && res.driveFolderId) {
-                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Projects', action: 'update', criteria: {id: projectId}, data: {driveFolderId: res.driveFolderId} } });
-                }
-                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'add', data: { id: `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, projectId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99, isCover: 'No', showInPortfolio: 'No', portfolioOrder: 99 } } });
-            } catch (e) { console.error(e); }
-        }
-        await this.loadData(); UI.hideLoading(); const p = AppState.data.Projects.find(pr => pr.id === projectId); this.handleProjectImages(projectId, p?.title || '');
+        try {
+             // PRIMERO: Verificar/Crear Carpeta (Con la primera imagen)
+             UI.showLoading(`Iniciando carga...`);
+             const firstFormData = new FormData(); 
+             firstFormData.append('file', files[0]); 
+             firstFormData.append('targetSubfolder', 'Projects');
+             firstFormData.append('parentFolderName', projectTitle);
+             
+             const res1 = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: firstFormData });
+             
+             // Guardar ID de carpeta en Proyecto si es nuevo
+             const project = AppState.data.Projects.find(p => p.id === projectId);
+             if (project && !project.driveFolderId && res1.driveFolderId) {
+                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Projects', action: 'update', criteria: {id: projectId}, data: {driveFolderId: res1.driveFolderId} } });
+             }
+             // Guardar primera imagen
+             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'add', data: { id: `img_${Date.now()}_0`, projectId, imageUrl: res1.imageUrl, fileId: res1.fileId, order: 99, isCover: 'No', showInPortfolio: 'No', portfolioOrder: 99 } } });
+
+             // RESTO DE IMÁGENES (En paralelo)
+             if (files.length > 1) {
+                 const promises = files.slice(1).map((file, idx) => {
+                     return (async () => {
+                         const fd = new FormData(); fd.append('file', file);
+                         fd.append('targetSubfolder', 'Projects');
+                         fd.append('parentFolderName', projectTitle);
+                         const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+                         await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'add', data: { id: `img_${Date.now()}_${idx+1}`, projectId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99, isCover: 'No', showInPortfolio: 'No', portfolioOrder: 99 } } });
+                     })();
+                 });
+                 // Esperar a que todas terminen, actualizando UI
+                 let completed = 1;
+                 for (const p of promises) {
+                     await p;
+                     completed++;
+                     UI.showLoading(`Subiendo ${completed} de ${files.length}...`);
+                 }
+             }
+             
+             await this.loadData(); 
+             const p = AppState.data.Projects.find(pr => pr.id === projectId); 
+             this.handleProjectImages(projectId, p?.title || '');
+
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     async uploadGenericImages(input, sheet, keyField, parentId, parentName, categoryFolder) {
         const files = Array.from(input.files); if(!files.length) return;
-        for (let i = 0; i < files.length; i++) {
-            UI.showLoading(`Subiendo ${i + 1} de ${files.length}...`);
-            const formData = new FormData(); formData.append('file', files[i]); 
-            formData.append('targetSubfolder', categoryFolder);
-            formData.append('parentFolderName', parentName);
-            try {
-                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                // GUARDAR ID DE CARPETA SI ES NUEVO
-                const item = AppState.data[sheet.replace('Images','')].find(i => i.id === parentId); 
-                if (item && !item.driveFolderId && res.driveFolderId) {
-                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'RentalItems', action: 'update', criteria: {id: parentId}, data: {driveFolderId: res.driveFolderId} } });
-                }
-                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}`, [keyField]: parentId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99 } } });
-            } catch (e) { console.error(e); }
-        }
-        await this.loadData(); UI.hideLoading(); this.handleRentalImages(parentId, parentName);
+        try {
+            UI.showLoading(`Iniciando carga...`);
+            const firstFormData = new FormData(); firstFormData.append('file', files[0]); firstFormData.append('targetSubfolder', categoryFolder); firstFormData.append('parentFolderName', parentName);
+            const res1 = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: firstFormData });
+            
+            const item = AppState.data[sheet.replace('Images','')].find(i => i.id === parentId);
+            if (item && !item.driveFolderId && res1.driveFolderId) {
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'RentalItems', action: 'update', criteria: {id: parentId}, data: {driveFolderId: res1.driveFolderId} } });
+            }
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}_0`, [keyField]: parentId, imageUrl: res1.imageUrl, fileId: res1.fileId, order: 99 } } });
+
+            if (files.length > 1) {
+                let completed = 1;
+                const promises = files.slice(1).map((file, idx) => {
+                     return (async () => {
+                         const fd = new FormData(); fd.append('file', file); fd.append('targetSubfolder', categoryFolder); fd.append('parentFolderName', parentName);
+                         const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+                         await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}_${idx+1}`, [keyField]: parentId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99 } } });
+                     })();
+                 });
+                 for (const p of promises) { await p; completed++; UI.showLoading(`Subiendo ${completed} de ${files.length}...`); }
+            }
+            await this.loadData(); this.handleRentalImages(parentId, parentName);
+        } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     async quickUpdate(sheet, id, field, val) { 
         const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
-        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
-        
-        // Si es portada o portafolio, refrescar todo para ver cambios (como desmarcado automático)
-        if (field === 'isCover' || field === 'showInPortfolio') {
-             await this.loadData();
-             // Re-abrir modal si estamos en imágenes de proyecto
-             const item = AppState.data[sheet].find(i => i.id === id);
-             if (sheet === 'ProjectImages') {
+        try {
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
+            await this.loadData(); // REFRESCO CRITICO
+            
+            if (sheet === 'ProjectImages') {
+                 const item = AppState.data[sheet].find(i => i.id === id);
                  const p = AppState.data.Projects.find(pr => pr.id === item.projectId);
                  this.handleProjectImages(item.projectId, p?.title || '');
-                 if(AppState.view === 'portfolio-manager') UI.renderView('portfolio-manager');
-             }
-        }
+            }
+        } catch(e) { console.error(e); }
     },
     updateLocalPortfolioOrder(id, val) { const img = AppState.data.ProjectImages.find(i => i.id === id); if(img) img.portfolioOrder = val; },
     async savePortfolioOrder() {
-        UI.showLoading('Guardando...');
-        const images = AppState.data.ProjectImages.filter(i => i.showInPortfolio === 'Si');
-        const promises = images.map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } }));
-        await Promise.all(promises); await this.loadData(); UI.hideLoading(); UI.showToast('Orden actualizado');
+        try {
+            UI.showLoading('Guardando...');
+            const images = AppState.data.ProjectImages.filter(i => i.showInPortfolio === 'Si');
+            const promises = images.map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } }));
+            await Promise.all(promises); await this.loadData(); UI.showToast('Orden actualizado');
+        } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
     },
-    async removeFromPortfolio(id) { if(confirm('¿Quitar?')) { UI.showLoading('Quitando...'); await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id}, data: {showInPortfolio: 'No'} } }); await this.loadData(); UI.renderView('portfolio-manager'); UI.hideLoading(); } },
+    async removeFromPortfolio(id) { 
+        if(confirm('¿Quitar?')) { 
+            try {
+                UI.showLoading('Quitando...'); await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id}, data: {showInPortfolio: 'No'} } }); 
+                await this.loadData(); UI.renderView('portfolio-manager'); 
+            } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
+        } 
+    },
     async uploadImage(inputId) {
         const input = document.createElement('input'); input.type = 'file';
         input.onchange = async e => {
@@ -597,12 +638,11 @@ const App = {
                 document.getElementById(inputId).value = res.imageUrl;
                 const preview = document.getElementById(inputId).parentElement.querySelector('img');
                 if(preview) preview.src = res.imageUrl;
-                UI.hideLoading();
-            } catch(err) { alert(err.message); UI.hideLoading(); }
+            } catch(err) { alert(err.message); } finally { UI.hideLoading(); }
         };
         input.click();
     },
-    async updateStatus(id, status) { if(status) { UI.showLoading('Actualizando...'); await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Bookings', action: 'update', criteria: {id}, data: {status} } }); await this.loadData(); UI.renderView('bookings'); UI.hideLoading(); } }
+    async updateStatus(id, status) { if(status) { try { UI.showLoading('Actualizando...'); await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Bookings', action: 'update', criteria: {id}, data: {status} } }); await this.loadData(); UI.renderView('bookings'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } } }
 };
 
 document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
@@ -612,4 +652,5 @@ Auth.init();
 </script>
 </body>
 </html>
+
 
