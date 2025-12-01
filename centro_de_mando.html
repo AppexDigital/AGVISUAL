@@ -395,23 +395,14 @@ const UI = {
     showApp: async () => {
         document.getElementById('login-screen').style.display = 'none';
         const loader = document.getElementById('loading-screen');
-        if(loader) loader.style.display = 'flex'; // Asegurar que se vea
+        if(loader) loader.style.display = 'flex';
         
         try {
-            // Intentamos cargar
             await App.loadData('dashboard');
-            
-            // Si tenemos éxito, mostramos la app
             document.getElementById('app-screen').style.display = 'flex';
-            if(loader) loader.style.display = 'none'; // Quitamos el loader
-            
-            // Renderizamos la vista inicial
-            if (typeof App.switchView === 'function') {
-                App.switchView('dashboard');
-            } else {
-                UI.renderView('dashboard');
-            }
-            
+            if(loader) loader.style.display = 'none';
+            if (typeof App.switchView === 'function') App.switchView('dashboard');
+            else UI.renderView('dashboard');
         } catch (e) {
             console.error("Error crítico al iniciar:", e);
             if(loader) loader.style.display = 'none';
@@ -450,13 +441,11 @@ const UI = {
         document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
         const data = AppState.data;
 
-        // Helper seguro para obtener valor insensible a mayúsculas/minúsculas
         const getVal = (item, key) => {
             const foundKey = Object.keys(item).find(k => k.toLowerCase().trim() === key.toLowerCase().trim());
             return foundKey ? item[foundKey] : undefined;
         };
 
-        // Helper para contar "Si" en Portafolio
         const countPortfolio = (data.ProjectImages||[]).filter(i => {
             const val = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
             return val === 'si' || val === 'yes' || val === 'true' || val === '1';
@@ -478,7 +467,6 @@ const UI = {
              document.getElementById('clientlogos-grid').innerHTML = (data.ClientLogos || []).sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `<div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square"><img src="${i.logoUrl}" class="max-w-full max-h-full object-contain"><button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', this.parentNode)"><i class="fas fa-trash"></i></button><input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.quickUpdate('ClientLogos', '${i.id}', 'order', this.value)"></div>`).join('');
         } else if (view === 'projects') {
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
-                // Buscar portada usando helper seguro
                 const cover = (data.ProjectImages||[]).find(i => {
                     const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
                     const isCover = String(getVal(i, 'isCover')).toLowerCase().trim();
@@ -487,7 +475,6 @@ const UI = {
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         } else if (view === 'portfolio-manager') {
-            // FILTRO INTELIGENTE DE PORTAFOLIO
             const images = (data.ProjectImages || [])
                 .filter(i => {
                     const val = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
@@ -538,11 +525,9 @@ const UI = {
 
 // --- CAPA LÓGICA ---
 const App = {
-    // NUEVA LÓGICA DE CAMBIO DE VISTA (LAZY LOADING RESTAURADO)
     async switchView(viewId) {
         UI.showLoading('Cargando sección...');
         try {
-            // Primero aseguramos datos, luego renderizamos
             await this.ensureDataForView(viewId);
             UI.renderView(viewId);
         } catch(e) {
@@ -556,17 +541,14 @@ const App = {
     async ensureDataForView(view) {
         let sheets = []; const d = AppState.data;
         
-        // Lógica de carga por demanda
         if (view === 'projects' || view === 'portfolio-manager') { 
             if(!d.Projects) sheets.push('Projects');
-            // Siempre recargamos imágenes para asegurar que los cambios de estado se vean
             sheets.push('ProjectImages'); 
         }
         else if (view === 'rentals') { 
             if(!d.RentalItems) sheets.push('RentalItems','RentalCategories','RentalItemImages'); 
         }
         else if (view === 'services') { 
-            // Recargar servicios y sus detalles siempre para asegurar consistencia
             sheets.push('Services','ServiceContentBlocks','ServiceImages'); 
         }
         else if (view === 'videos') { 
@@ -580,7 +562,6 @@ const App = {
         }
         
         if (sheets.length > 0) { 
-            // Eliminamos duplicados si los hay
             sheets = [...new Set(sheets)];
             const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets.join(',')}`); 
             AppState.data = { ...AppState.data, ...nd }; 
@@ -588,7 +569,6 @@ const App = {
     },
     
     async loadData(mode = 'all') { 
-        // Carga inicial ligera
         const p = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
         const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); 
         AppState.data = { ...AppState.data, ...nd }; 
@@ -610,7 +590,6 @@ const App = {
         const files = Array.from(input.files); if (!files.length) return;
         let driveFolderId = null, sheetTarget='', subfolder='', idField='';
         
-        // Mapeo
         if (type === 'Projects') { const row = AppState.data.Projects.find(p => p.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='ProjectImages'; subfolder='Proyectos'; idField='projectId'; }
         else if (type === 'RentalItems') { const row = AppState.data.RentalItems.find(r => r.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='RentalItemImages'; subfolder='Alquiler'; idField='itemId'; }
         else if (type === 'Services') { sheetTarget='ServiceImages'; subfolder='Servicios'; idField='serviceId'; parentTitle = parentTitle || 'General'; }
@@ -626,7 +605,6 @@ const App = {
                 const fd = new FormData(); fd.append('file', compressed, file.name); fd.append('targetSubfolder', subfolder); fd.append('targetFolderId', driveFolderId || ''); fd.append('parentFolderName', parentTitle); 
                 const upRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
                 
-                // Guardar ID carpeta padre
                 if ((type === 'Projects' || type === 'RentalItems') && upRes.driveFolderId && upRes.driveFolderId !== driveFolderId) {
                     driveFolderId = upRes.driveFolderId;
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: type, action: 'update', criteria: {id: parentId}, data: {driveFolderId} } });
@@ -652,7 +630,6 @@ const App = {
         UI.hideLoading();
         if(successCount) UI.showToast('Subida completa');
         
-        // Forzar recarga de datos
         await this.ensureDataForView(AppState.view);
         
         if(type==='Projects') this.handleProjectImages(parentId, parentTitle);
@@ -718,7 +695,6 @@ const App = {
     },
     
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
-    
     async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await this.ensureDataForView(AppState.view); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
     
     async quickUpdate(sheet, id, key, val) { 
@@ -738,7 +714,13 @@ const App = {
     
     async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
     async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
-    async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
+    
+    async removeFromPortfolio(id) { 
+        await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); 
+        const item = AppState.data.ProjectImages.find(i => i.id === id);
+        if(item) item.showInPortfolio = 'No';
+        UI.renderView('portfolio-manager'); 
+    },
     
     // Handlers Galería
     async handleProjectImages(id, t) { this.renderImageModal((AppState.data.ProjectImages||[]).filter(i => i.projectId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Projects'); },
@@ -748,7 +730,6 @@ const App = {
         UI.showModal('Gestión de Logos de Clientes', `<div class="text-center p-8"><p class="mb-4">Sube los logos de tus clientes.</p><button class="btn btn-primary" onclick="document.getElementById('up-cl-logos').click()">Seleccionar Archivos</button><input type="file" id="up-cl-logos" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, 'general', 'Logos Clientes', 'ClientLogos')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'); 
     },
     renderImageModal(images, parentId, title, type) {
-        // Helper para checkbox cover/portfolio
         const getChecked = (val) => {
             const v = String(val).toLowerCase().trim();
             return (v === 'si' || v === 'yes' || v === 'true') ? 'checked' : '';
@@ -774,7 +755,6 @@ const App = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Asegurar que los elementos existan antes de añadir listeners
     const loginBtn = document.getElementById('google-login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const mainNav = document.getElementById('main-nav');
@@ -787,7 +767,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const link = e.target.closest('.sidebar-link'); 
             if(link) { 
                 e.preventDefault(); 
-                // Usar switchView para carga lazy
                 if (typeof App.switchView === 'function') {
                     App.switchView(link.dataset.view); 
                 } else {
@@ -797,14 +776,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Iniciar la aplicación con un pequeño retardo para asegurar que todo esté listo
     setTimeout(() => Auth.init(), 100);
 });
 </script>
 </body>
 </html>
-
-
 
 
 
