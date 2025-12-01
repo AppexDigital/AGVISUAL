@@ -1,12 +1,11 @@
 // functions/upload-image.js
-// v3.0 - OPTIMIZADO PARA GOOGLE WORKSPACE (SHARED DRIVES)
+// v3.1 - FIX IMAGENES VISIBLES Y SHARED DRIVES
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const Busboy = require('busboy');
 
-// Helper para parsear el form data
 function parseMultipartForm(event) {
   return new Promise((resolve, reject) => {
     try {
@@ -17,47 +16,26 @@ function parseMultipartForm(event) {
       const files = {};
       const tmpdir = os.tmpdir();
 
-      busboy.on('field', (fieldname, val) => {
-        fields[fieldname] = val;
-      });
-
+      busboy.on('field', (fieldname, val) => fields[fieldname] = val);
       busboy.on('file', (fieldname, file, { filename, mimeType }) => {
-        const filepath = path.join(tmpdir, `busboy-upload-${Date.now()}-${filename}`);
+        const filepath = path.join(tmpdir, `upload-${Date.now()}-${filename}`);
         const writeStream = fs.createWriteStream(filepath);
         file.pipe(writeStream);
-
-        file.on('end', () => {
-          files[fieldname] = { filepath, filename, mimeType };
-        });
+        file.on('end', () => files[fieldname] = { filepath, filename, mimeType });
       });
-
       busboy.on('close', () => resolve({ fields, files }));
       busboy.on('error', err => reject(err));
-
-      const bodyBuffer = Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'binary');
-      busboy.end(bodyBuffer);
-    } catch (error) {
-      reject(error);
-    }
+      busboy.end(Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'binary'));
+    } catch (error) { reject(error); }
   });
 }
 
 exports.handler = async (event, context) => {
-  // 1. Verificar Autorización (Token de usuario de Google)
-  if (!event.headers.authorization || !event.headers.authorization.startsWith('Bearer ')) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado. Falta token.' }) };
-  }
+  if (!event.headers.authorization?.startsWith('Bearer ')) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
   const userAccessToken = event.headers.authorization.split(' ')[1];
-
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
-  }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   const parentFolderId = process.env.GOOGLE_DRIVE_ASSET_FOLDER_ID;
-  if (!parentFolderId) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Error de configuración del servidor (Folder ID).' }) };
-  }
-
   let tempFilePath = null;
 
   try {
@@ -65,93 +43,64 @@ exports.handler = async (event, context) => {
     const file = files.file;
     const targetSubfolder = fields.targetSubfolder || 'general';
 
-    if (!file) return { statusCode: 400, body: JSON.stringify({ error: 'No se recibió archivo.' }) };
-    
+    if (!file) return { statusCode: 400, body: JSON.stringify({ error: 'No file.' }) };
     tempFilePath = file.filepath;
 
-    // 2. Autenticación OAuth2 con el token del USUARIO
     const oAuth2Client = new google.auth.OAuth2();
     oAuth2Client.setCredentials({ access_token: userAccessToken });
     const drive = google.drive({ version: 'v3', auth: oAuth2Client });
 
-    // 3. Buscar o crear subcarpeta (CON SOPORTE PARA SHARED DRIVES)
+    // Buscar/Crear Subcarpeta
     let targetFolderId = parentFolderId;
-    
     if (targetSubfolder !== 'general') {
-        // La clave: supportsAllDrives y includeItemsFromAllDrives
-        const folderQuery = `mimeType='application/vnd.google-apps.folder' and name='${targetSubfolder}' and '${parentFolderId}' in parents and trashed = false`;
-        
-        const folderRes = await drive.files.list({ 
-            q: folderQuery, 
-            fields: 'files(id)', 
-            supportsAllDrives: true,        // <--- VITAL
-            includeItemsFromAllDrives: true // <--- VITAL
-        });
-
-        if (folderRes.data.files && folderRes.data.files.length > 0) {
-            targetFolderId = folderRes.data.files[0].id;
+        const q = `mimeType='application/vnd.google-apps.folder' and name='${targetSubfolder}' and '${parentFolderId}' in parents and trashed = false`;
+        const res = await drive.files.list({ q, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
+        if (res.data.files.length > 0) {
+            targetFolderId = res.data.files[0].id;
         } else {
-            const folderMetadata = {
-                name: targetSubfolder,
-                mimeType: 'application/vnd.google-apps.folder',
-                parents: [parentFolderId]
-            };
-            const createdFolder = await drive.files.create({
-                resource: folderMetadata,
-                fields: 'id',
-                supportsAllDrives: true // <--- VITAL
+            const newFolder = await drive.files.create({
+                resource: { name: targetSubfolder, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId] },
+                fields: 'id', supportsAllDrives: true
             });
-            targetFolderId = createdFolder.data.id;
+            targetFolderId = newFolder.data.id;
         }
     }
 
-    // 4. Subir Archivo
-    const fileMetadata = {
-      name: file.filename,
-      parents: [targetFolderId]
-    };
-    const media = {
-      mimeType: file.mimeType,
-      body: fs.createReadStream(tempFilePath),
-    };
-
+    // Subir Archivo
     const driveResponse = await drive.files.create({
-      resource: fileMetadata,
-      media: media,
-      fields: 'id, webViewLink, name',
-      supportsAllDrives: true // <--- VITAL
+      resource: { name: file.filename, parents: [targetFolderId] },
+      media: { mimeType: file.mimeType, body: fs.createReadStream(tempFilePath) },
+      fields: 'id, name, webViewLink, thumbnailLink', // Pedimos thumbnailLink también
+      supportsAllDrives: true
     });
     
     const fileId = driveResponse.data.id;
 
-    // 5. Hacer público (Permisos)
+    // Hacer Público
     await drive.permissions.create({
       fileId: fileId,
       requestBody: { role: 'reader', type: 'anyone' },
-      supportsAllDrives: true // <--- VITAL
+      supportsAllDrives: true
     });
 
-    // 6. Obtener Link final
-     const updatedFile = await drive.files.get({
-       fileId: fileId,
-       fields: 'webViewLink',
-       supportsAllDrives: true // <--- VITAL
-     });
+    // Construir URL Directa para <img>
+    // Usamos el formato uc?export=view que es el estándar para hotlinking
+    const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-          message: 'Subido con éxito.',
-          imageUrl: updatedFile.data.webViewLink.replace('/view', '/preview') // Link para embed
+          message: 'OK',
+          fileId: fileId,
+          // Devolvemos la URL directa para que se vea en el HTML
+          imageUrl: directUrl 
       }),
     };
 
   } catch (error) {
-    console.error('Error Drive:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: 'Error al subir.', details: error.message }) };
+    console.error('Upload Error:', error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   } finally {
-      if (tempFilePath) try { fs.unlinkSync(tempFilePath); } catch (e) {}
+      if (tempFilePath) fs.unlinkSync(tempFilePath);
   }
 };
-
