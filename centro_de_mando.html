@@ -40,23 +40,23 @@
         .toast.visible { transform: translateY(0); }
         .toast.error { background: #ef4444; }
         .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
-        /* Tabs */
-        .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
-        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; }
-        .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
         
-        /* --- CORRECCIÓN UI PORTAFOLIO --- */
+        /* UI Portafolio Corregida */
         .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; }
         .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
         .portfolio-grid-overlay { 
-            position: absolute; inset: 0; background: rgba(0,0,0,0.6); 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.7); 
             opacity: 0; transition: opacity 0.2s; 
             display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; 
         }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
         .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
+        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -64,7 +64,6 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
-        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -100,14 +99,14 @@
             <div id="view-dashboard" class="view active">
                 <h1 class="text-4xl font-display font-bold mb-6">Resumen</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">0</p></div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Portafolio</h3><p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">0</p></div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Reservas</h3><p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">0</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos Activos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Fotos en Portafolio</h3><p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Reservas Pendientes</h3><p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p></div>
                 </div>
             </div>
 
             <div id="view-projects" class="view">
-                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Proyectos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo Proyecto</button></div>
+                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Proyectos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
                 <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr></thead><tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody></table></div>
             </div>
 
@@ -147,9 +146,8 @@
             </div>
             
             <div id="view-settings" class="view">
-                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Configuración</h1></div>
+                <h1 class="text-3xl font-display font-bold mb-6">Configuración</h1>
                 <div id="settings-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
-                
                 <h2 class="text-2xl font-display font-bold mt-10 mb-4">Logos Clientes</h2>
                 <button class="btn btn-secondary mb-4" onclick="App.handleClientLogos()">+ Gestionar Logos</button>
             </div>
@@ -173,12 +171,13 @@
 
 <script>
 const GOOGLE_REDIRECT_URI = 'postmessage';
-const AppState = { data: null, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
+// Estado Local: data = { Projects: [], Services: [] ... }
+const AppState = { data: { Projects: [], Services: [], ProjectImages: [], Bookings: [] }, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
 
 const API = {
     async call(endpoint, options = {}, isRetry = false) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s para procesos largos
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s para subidas pesadas
         
         const headers = new Headers(options.headers || {});
         if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
@@ -187,7 +186,9 @@ const API = {
             options.body = JSON.stringify(options.body);
         }
         try {
-            const res = await fetch(endpoint, { ...options, headers, signal: controller.signal });
+            // Añadir timestamp para evitar cache
+            const sep = endpoint.includes('?') ? '&' : '?';
+            const res = await fetch(`${endpoint}${sep}t=${Date.now()}`, { ...options, headers, signal: controller.signal });
             clearTimeout(timeoutId);
             
             if (res.status === 401 && !isRetry) {
@@ -198,7 +199,7 @@ const API = {
             return await res.json();
         } catch (e) { 
             clearTimeout(timeoutId);
-            if (e.name === 'AbortError') throw new Error('La operación tardó demasiado. Verifica tu conexión.');
+            if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado. Verifica tu conexión.');
             throw e; 
         }
     }
@@ -251,13 +252,13 @@ const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; },
     showApp: async () => {
         document.getElementById('login-screen').style.display = 'none';
-        UI.showLoading('Cargando datos...');
-        setTimeout(() => document.getElementById('reload-btn').classList.remove('hidden'), 5000);
-        try { await App.loadData(); document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'flex'; UI.renderView(AppState.view); } 
-        catch (e) { alert(e.message); UI.hideLoading(); }
+        await App.loadData('dashboard'); // Carga inicial ligera
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('app-screen').style.display = 'flex';
+        UI.renderView(AppState.view);
     },
     forceReload: () => location.reload(),
-    showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; document.getElementById('reload-btn').classList.add('hidden'); },
+    showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; },
     hideLoading: () => document.getElementById('loading-screen').style.display = 'none',
     showToast: (msg, type='success') => {
         const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
@@ -287,14 +288,15 @@ const UI = {
         btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
         document.getElementById(`tab-${tabId}`).classList.add('active');
     },
-    renderView: (view) => {
+    renderView: async (view) => {
+        await App.ensureDataForView(view); // Carga diferida inteligente
         AppState.view = view;
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`view-${view}`).classList.add('active');
         document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
         document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+        
         const data = AppState.data;
-        if (!data) return;
 
         if (view === 'dashboard') {
             document.getElementById('dash-projects').innerText = (data.Projects || []).length;
@@ -307,7 +309,6 @@ const UI = {
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleProjectImages('${p.id}', '${p.title.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         } else if (view === 'portfolio-manager') {
-            // Corregido: Input y botón centrados, solo hover
             const images = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').sort((a,b) => (a.portfolioOrder||99)-(b.portfolioOrder||99));
             document.getElementById('portfolio-manager-grid').innerHTML = images.map(i => `
                 <div class="portfolio-grid-item group">
@@ -357,8 +358,46 @@ const UI = {
 };
 
 const App = {
-    async loadData() { AppState.data = await API.call('/.netlify/functions/get-admin-data'); },
+    // CARGA DIFERIDA INTELIGENTE
+    async ensureDataForView(view) {
+        let sheetsNeeded = [];
+        // Lógica de qué cargar según la vista
+        if (view === 'projects' || view === 'portfolio-manager') {
+            if(!AppState.data.Projects) sheetsNeeded.push('Projects');
+            if(!AppState.data.ProjectImages) sheetsNeeded.push('ProjectImages');
+        } else if (view === 'rentals') {
+             if(!AppState.data.RentalItems) sheetsNeeded.push('RentalItems', 'RentalCategories', 'RentalItemImages');
+        } else if (view === 'services') {
+             if(!AppState.data.Services) sheetsNeeded.push('Services');
+        } else if (view === 'bookings') {
+             if(!AppState.data.Bookings) sheetsNeeded.push('Bookings', 'BlockedDates', 'RentalItems');
+        } else if (view === 'settings') {
+            if(!AppState.data.ClientLogos) sheetsNeeded.push('ClientLogos');
+        }
+
+        if (sheetsNeeded.length > 0) {
+            UI.showLoading('Cargando detalles...');
+            try {
+                const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheetsNeeded.join(',')}`);
+                // Merge
+                AppState.data = { ...AppState.data, ...newData };
+                UI.hideLoading();
+            } catch(e) {
+                console.error(e);
+                UI.showToast('Error cargando datos', 'error');
+                UI.hideLoading();
+            }
+        }
+    },
     
+    async loadData(mode = 'all') { 
+        // Modo 'dashboard' solo carga lo básico. Modo 'all' fuerza recarga.
+        const params = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
+        const newData = await API.call(`/.netlify/functions/get-admin-data${params}`);
+        AppState.data = { ...AppState.data, ...newData };
+    },
+
+    // --- GESTIÓN DE IMÁGENES OPTIMIZADA ---
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files);
         if (!files.length) return;
@@ -369,9 +408,12 @@ const App = {
         
         let driveFolderId = parentRow?.driveFolderId || null;
         
-        const sheetTarget = type === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
-        const subfolder = type === 'Projects' ? 'Proyectos' : 'Alquiler';
-        const idField = type === 'Projects' ? 'projectId' : 'itemId';
+        const sheetTarget = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
+        const subfolder = type === 'Projects' ? 'Proyectos' : type === 'ClientLogos' ? 'Logos' : 'Alquiler';
+        const idField = type === 'Projects' ? 'projectId' : type === 'RentalItems' ? 'itemId' : 'refId';
+        
+        // Si es logo, el parentId es genérico
+        if (type === 'ClientLogos') parentId = 'general';
 
         let successCount = 0;
 
@@ -380,12 +422,9 @@ const App = {
             UI.showLoading(`Subiendo ${i+1}/${files.length}: ${file.name}`);
             
             try {
-                // Compresión en cliente
                 const compressedFile = await new Promise((resolve, reject) => {
                     new Compressor(file, {
-                        quality: 0.8,
-                        maxWidth: 1600,
-                        maxHeight: 1600,
+                        quality: 0.8, maxWidth: 1600, maxHeight: 1600,
                         success(result) { resolve(result); },
                         error(err) { reject(err); }
                     });
@@ -394,14 +433,17 @@ const App = {
                 const formData = new FormData();
                 formData.append('file', compressedFile, file.name);
                 formData.append('targetSubfolder', subfolder);
-                // PRIORIDAD AL NOMBRE: El backend lo resolverá
-                formData.append('parentFolderName', parentTitle); 
+                // Envía Nombre si no hay ID, o ID si existe. El backend maneja la lógica.
+                formData.append('parentFolderName', driveFolderId || parentTitle); 
 
                 const uploadRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
                 
-                if (uploadRes.driveFolderId && !driveFolderId) {
+                // Guardar ID de carpeta si es nuevo
+                if (uploadRes.driveFolderId && !driveFolderId && type !== 'ClientLogos') {
                     driveFolderId = uploadRes.driveFolderId;
-                    // Silently save folder ID
+                    // Actualizar padre localmente para siguientes fotos del loop
+                    if(parentRow) parentRow.driveFolderId = driveFolderId;
+                    
                     await API.call('/.netlify/functions/update-sheet-data', { 
                         method: 'POST', 
                         body: { sheet: type, action: 'update', criteria: { id: parentId }, data: { driveFolderId: driveFolderId } } 
@@ -417,14 +459,13 @@ const App = {
                             id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`,
                             [idField]: parentId,
                             imageUrl: uploadRes.imageUrl,
-                            fileId: uploadRes.fileId, // CRUCIAL para borrar después
+                            fileId: uploadRes.fileId,
                             isCover: 'No',
                             showInPortfolio: 'No'
                         }
                     }
                 });
                 successCount++;
-
             } catch (error) {
                 console.error(`Error subiendo ${file.name}:`, error);
                 UI.showToast(`Error en ${file.name}`, 'error');
@@ -433,8 +474,17 @@ const App = {
         
         UI.hideLoading();
         UI.showToast(`${successCount} imágenes subidas`);
-        await this.loadData();
+        
+        // Recargar SOLO las imágenes para refrescar el modal
+        await App.ensureDataForView(AppState.view); // Refresca datos necesarios
+        
+        // Forzar recarga específica de la hoja de imágenes
+        const refreshSheet = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
+        const freshImages = await API.call(`/.netlify/functions/get-admin-data?sheets=${refreshSheet}`);
+        AppState.data[refreshSheet] = freshImages[refreshSheet];
+
         if (type === 'Projects') this.handleProjectImages(parentId, parentTitle);
+        else if (type === 'ClientLogos') this.handleClientLogos();
         else this.handleRentalImages(parentId, parentTitle);
     },
 
@@ -450,7 +500,6 @@ const App = {
     
     async handleClientLogos() {
         const images = (AppState.data.ClientLogos || []).sort((a,b) => (a.order||99)-(b.order||99));
-        // Reutilizamos modal de imágenes con lógica especial
          const html = images.map(i => `
             <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white image-row" id="img-row-${i.id}">
                 <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
@@ -466,7 +515,7 @@ const App = {
              <div class="border-t pt-4">
                 <label class="btn btn-primary w-full text-center cursor-pointer justify-center py-3">
                     <i class="fas fa-cloud-upload-alt mr-2"></i> Subir Logo
-                    <input type="file" accept="image/*" class="hidden" onchange="App.uploadImages(this, 'client_logos_container', 'Logos Clientes', 'ClientLogos')">
+                    <input type="file" accept="image/*" class="hidden" onchange="App.uploadImages(this, 'client_logos_id', 'Logos Clientes', 'ClientLogos')">
                 </label>
              </div>`, 
             '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
@@ -535,9 +584,15 @@ const App = {
             const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
             
-            UI.showLoading('Guardando (puede tardar unos segundos)...');
+            UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
-            await this.loadData(); UI.closeModal(); UI.renderView(AppState.view);
+            
+            // Recargar solo la hoja necesaria
+            const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
+            AppState.data[sheet] = newData[sheet];
+            
+            UI.closeModal(); 
+            UI.renderView(AppState.view);
             UI.showToast('Guardado correctamente');
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
@@ -549,7 +604,8 @@ const App = {
                 const criteria = { id };
                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria } });
                 rowEl.remove();
-                await this.loadData(); // Sync
+                // Actualizar datos locales para que no reaparezca
+                AppState.data[sheet] = AppState.data[sheet].filter(i => i.id !== id);
                 UI.showToast('Imagen eliminada');
             } catch(e) {
                 alert("Error: " + e.message); rowEl.style.opacity = '1';
@@ -559,10 +615,12 @@ const App = {
     
     async handleDelete(sheet, id, idField='id') {
         UI.showConfirm("¿Eliminar este registro y sus datos asociados?", async () => {
-             UI.showLoading('Eliminando (esto puede tardar)...');
+             UI.showLoading('Eliminando...');
              try {
                  await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
-                 await this.loadData(); UI.renderView(AppState.view);
+                 // Actualizar local
+                 AppState.data[sheet] = AppState.data[sheet].filter(i => i[idField] !== id);
+                 UI.renderView(AppState.view);
                  UI.showToast('Registro eliminado');
              } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
         });
@@ -571,12 +629,11 @@ const App = {
     async quickUpdate(sheet, id, field, val) { 
         const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
         try {
-            // Update optimistc
+            // Update optimista
             const item = AppState.data[sheet].find(i => i.id === id);
             if(item) item[field] = valStr;
 
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
-            await this.loadData(); // Sync full state
             UI.showToast('Actualizado');
         } catch(e) { console.error(e); UI.showToast('Error (reintentando en background)', 'error'); }
     },
@@ -599,7 +656,8 @@ const App = {
 
     async removeFromPortfolio(id) {
         await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No');
-        await this.loadData();
+        // Refrescar vista localmente
+        AppState.data.ProjectImages = AppState.data.ProjectImages.map(i => i.id === id ? {...i, showInPortfolio: 'No'} : i);
         UI.renderView('portfolio-manager');
     },
     
@@ -611,7 +669,7 @@ const App = {
             for (const [key, value] of Object.entries(data)) {
                  await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: {key}, data: {value} } });
             }
-            await this.loadData();
+            await App.loadData('settings');
             UI.showToast('Configuración guardada');
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     }
@@ -624,4 +682,5 @@ Auth.init();
 </script>
 </body>
 </html>
+
 
