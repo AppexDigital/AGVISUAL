@@ -56,7 +56,7 @@
         .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
         
         /* Portfolio Grid */
-        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; }
+        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; group: group; background: #f3f4f6; }
         .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
         .portfolio-grid-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.2s; display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
@@ -486,6 +486,20 @@ const App = {
     async handleDelete(sheet, id, idField='id') {
         if (!confirm('¿Eliminar?')) return;
         UI.showLoading('Eliminando...');
+        
+        if(sheet === 'Projects') {
+            const imgs = (AppState.data.ProjectImages || []).filter(i => i.projectId === id);
+            for(const img of imgs) {
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'delete', criteria: {id: img.id} } });
+            }
+        }
+        if(sheet === 'RentalItems') {
+             const imgs = (AppState.data.RentalItemImages || []).filter(i => i.itemId === id);
+             for(const img of imgs) {
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'RentalItemImages', action: 'delete', criteria: {id: img.id} } });
+             }
+        }
+
         await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
         await this.loadData(); UI.renderView(AppState.view); UI.hideLoading();
     },
@@ -521,7 +535,7 @@ const App = {
             formData.append('parentFolderName', projectTitle);
             try {
                 const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'add', data: { id: `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, projectId, imageUrl: res.imageUrl, order: 99, isCover: 'No', showInPortfolio: 'No', portfolioOrder: 99 } } });
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'add', data: { id: `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, projectId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99, isCover: 'No', showInPortfolio: 'No', portfolioOrder: 99 } } });
             } catch (e) { console.error(e); }
         }
         await this.loadData(); UI.hideLoading(); const p = AppState.data.Projects.find(pr => pr.id === projectId); this.handleProjectImages(projectId, p?.title || '');
@@ -535,7 +549,7 @@ const App = {
             formData.append('parentFolderName', parentName);
             try {
                 const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}`, [keyField]: parentId, imageUrl: res.imageUrl, order: 99 } } });
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}`, [keyField]: parentId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99 } } });
             } catch (e) { console.error(e); }
         }
         await this.loadData(); UI.hideLoading(); this.handleRentalImages(parentId, parentName);
@@ -575,5 +589,4 @@ Auth.init();
 </script>
 </body>
 </html>
-
 
