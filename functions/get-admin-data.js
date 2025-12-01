@@ -1,87 +1,82 @@
 // functions/get-admin-data.js
-// v4.0 - CARGA SELECTIVA (SCALABLE ARCHITECTURE)
+// v6.0 - ROBUSTEZ TOTAL (Tolerancia a fallos parciales)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { validateGoogleToken } = require('./google-auth-helper');
 
-const wait = (ms) => new Promise(r => setTimeout(r, ms));
-
-async function executeWithRetry(operation, retries = 3, delay = 1000) {
-    try {
-        return await operation();
-    } catch (error) {
-        if (retries > 0 && (error.response?.status === 429 || error.code === 429 || error.code === 500)) {
-            console.warn(`API Limit. Waiting ${delay}ms...`);
-            await wait(delay);
-            return executeWithRetry(operation, retries - 1, delay * 2);
-        }
-        throw error;
-    }
-}
-
 async function getDoc() {
-    const serviceAccountAuth = new JWT({
-        email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
-    await executeWithRetry(() => doc.loadInfo());
-    return doc;
+  const serviceAccountAuth = new JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+  const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, serviceAccountAuth);
+  await doc.loadInfo();
+  return doc;
 }
 
 function rowsToObjects(sheet, rows) {
-    if (!rows || rows.length === 0) return [];
-    const headers = sheet.headerValues || [];
-    return rows.map(row => {
-        const obj = {};
-        headers.forEach(header => {
-            obj[header] = row.get(header) !== undefined && row.get(header) !== null ? row.get(header) : '';
-        });
-        return obj;
+  if (!rows || rows.length === 0) return [];
+  const headers = sheet.headerValues || [];
+  return rows.map(row => {
+    const obj = {};
+    headers.forEach(header => {
+      let val = row.get(header);
+      if (val === undefined || val === null) val = '';
+      obj[header] = val;
+      // Copia normalizada para búsquedas fáciles (ej: obj['projectid'])
+      obj[header.toLowerCase().trim()] = val;
     });
+    obj._rawId = row.rowIndex;
+    return obj;
+  });
 }
 
 exports.handler = async (event, context) => {
-    if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
-    
-    try {
-        const doc = await getDoc();
-        
-        // ESTRATEGIA ESCALABLE: Leer parámetros de consulta
-        // Si ?sheets=Projects,ProjectImages viene en la URL, solo cargamos eso.
-        // Si no viene nada, cargamos solo la configuración básica (Dashboard).
-        const requestedSheets = event.queryStringParameters?.sheets 
-            ? event.queryStringParameters.sheets.split(',') 
-            : ['Settings', 'Projects', 'ProjectImages', 'Bookings']; // Default Dashboard Data
+  if (!(await validateGoogleToken(event))) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+  }
 
-        const adminData = {};
-        
-        // Procesamiento paralelo limitado (Batch de 4 para no saturar)
-        const chunkSize = 4;
-        for (let i = 0; i < requestedSheets.length; i += chunkSize) {
-            const chunk = requestedSheets.slice(i, i + chunkSize);
-            const promises = chunk.map(async (title) => {
-                const sheet = doc.sheetsByTitle[title];
-                if (!sheet) return { title, data: [] };
-                return executeWithRetry(async () => {
-                    await sheet.loadHeaderRow();
-                    const rows = await sheet.getRows();
-                    return { title, data: rowsToObjects(sheet, rows) };
-                });
-            });
-            const results = await Promise.all(promises);
-            results.forEach(r => adminData[r.title] = r.data);
+  try {
+    const doc = await getDoc();
+    const sheetTitles = [
+      'Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages',
+      'Services', 'ServiceContentBlocks', 'ServiceImages',
+      'RentalCategories', 'RentalItems', 'RentalItemImages',
+      'Bookings', 'BlockedDates'
+    ];
+
+    // Usamos map para procesar en paralelo, pero con captura de errores individual
+    const results = await Promise.all(sheetTitles.map(async (title) => {
+        try {
+            const sheet = doc.sheetsByTitle[title];
+            if (!sheet) {
+                console.warn(`Hoja no encontrada: ${title}`);
+                return { title, data: [] };
+            }
+            await sheet.loadHeaderRow();
+            const rows = await sheet.getRows();
+            return { title, data: rowsToObjects(sheet, rows) };
+        } catch (innerError) {
+            console.error(`Error leyendo hoja ${title}:`, innerError.message);
+            // Si una hoja falla, devolvemos array vacío en lugar de romper todo el sistema
+            return { title, data: [] };
         }
+    }));
 
-        return {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(adminData),
-        };
+    const adminData = results.reduce((acc, item) => {
+      acc[item.title] = item.data;
+      return acc;
+    }, {});
 
-    } catch (error) {
-        console.error('Data Error:', error);
-        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
-    }
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(adminData),
+    };
+
+  } catch (error) {
+    console.error('Error fatal en get-admin-data:', error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+  }
 };
