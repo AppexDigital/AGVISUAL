@@ -1,9 +1,24 @@
 // functions/update-sheet-data.js
-// v15.0 - VERSIÓN DEFINITIVA Y ROBUSTA
+// v16.0 - ROBUST DELETE & RETRY SYSTEM
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
 const { validateGoogleToken } = require('./google-auth-helper');
+
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function executeWithRetry(operation, retries = 3, delay = 1000) {
+    try {
+        return await operation();
+    } catch (error) {
+        if (retries > 0 && (error.response?.status === 429 || error.code === 429)) {
+            console.log(`Quota hit in Update. Retrying in ${delay}ms...`);
+            await wait(delay);
+            return executeWithRetry(operation, retries - 1, delay * 2);
+        }
+        throw error;
+    }
+}
 
 async function getServices() {
   const auth = new JWT({
@@ -12,120 +27,120 @@ async function getServices() {
     scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
   });
   const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
-  await doc.loadInfo();
+  await executeWithRetry(() => doc.loadInfo());
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-async function findRow(sheet, criteria) {
-    if (!criteria) return null;
-    await sheet.loadHeaderRow();
-    const rows = await sheet.getRows();
+async function findRows(sheet, criteria) {
+    if (!criteria) return [];
+    await executeWithRetry(() => sheet.loadHeaderRow());
+    const rows = await executeWithRetry(() => sheet.getRows());
     const key = Object.keys(criteria)[0];
-    // Comparación laxa (String) para evitar errores de tipo
-    return rows.find(row => String(row.get(key)) === String(criteria[key]));
+    return rows.filter(row => String(row.get(key)) === String(criteria[key]));
+}
+
+async function deleteFileFromDrive(drive, fileId) {
+    if (!fileId) return;
+    try {
+        await executeWithRetry(() => drive.files.delete({ fileId: fileId, supportsAllDrives: true }));
+        console.log(`Drive Deleted: ${fileId}`);
+    } catch (e) {
+        console.warn(`Drive Delete Warn (${fileId}): ${e.message}`);
+    }
 }
 
 exports.handler = async (event, context) => {
-  // 1. Seguridad: Validar Token
-  if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+  if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
     const body = JSON.parse(event.body);
     const { sheet: sheetTitle, action, data, criteria } = body;
-
     const { doc, drive } = await getServices();
     const sheet = doc.sheetsByTitle[sheetTitle];
-    if (!sheet) return { statusCode: 404, body: JSON.stringify({ error: `Hoja ${sheetTitle} no encontrada` }) };
     
-    await sheet.loadHeaderRow();
+    if (!sheet) return { statusCode: 404, body: JSON.stringify({ error: `Hoja ${sheetTitle} no existe` }) };
+    await executeWithRetry(() => sheet.loadHeaderRow());
 
-    // --- ADD (Crear) ---
+    // --- ADD ---
     if (action === 'add') {
-        if (!data.id && sheetTitle !== 'BlockedDates') {
-            data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}`;
-        }
-
-        // Lógica de "Portada Única": Si esta es portada, desmarcar las otras del mismo grupo
+        if (!data.id && sheetTitle !== 'BlockedDates') data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}`;
+        
+        // Lógica Portada Única
         if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && data.isCover === 'Si') {
-           const rows = await sheet.getRows();
-           const parentKey = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
-           const updates = [];
-           for (const r of rows) { 
-               if (r.get(parentKey) === data[parentKey] && r.get('isCover') === 'Si') { 
-                   r.set('isCover', 'No'); 
-                   updates.push(r.save());
-               } 
-           }
-           await Promise.all(updates);
+             const rows = await sheet.getRows();
+             const parentKey = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
+             for (const r of rows) {
+                 if (r.get(parentKey) === data[parentKey] && r.get('isCover') === 'Si') {
+                     r.set('isCover', 'No'); await executeWithRetry(() => r.save());
+                 }
+             }
         }
-
-        await sheet.addRow(data);
+        await executeWithRetry(() => sheet.addRow(data));
         return { statusCode: 200, body: JSON.stringify({ message: 'OK', newId: data.id }) };
     }
 
-    // --- BÚSQUEDA PARA UPDATE/DELETE ---
-    const row = await findRow(sheet, criteria);
-    if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado.' }) };
-
-    // --- UPDATE (Actualizar) ---
+    // --- UPDATE ---
     if (action === 'update') {
-        // Lógica de "Portada Única" al editar
+        const rows = await findRows(sheet, criteria);
+        const row = rows[0];
+        if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado' }) };
+
         if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && data.isCover === 'Si') {
              const parentKey = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
-             const parentId = row.get(parentKey);
-             const allRows = await sheet.getRows(); 
-             const updates = [];
+             const allRows = await sheet.getRows();
              for (const r of allRows) {
-                 // Desmarcar otros que sean del mismo padre y sean portada
-                 if (r.get(parentKey) === parentId && String(r.get('id')) !== String(row.get('id')) && r.get('isCover') === 'Si') {
-                     r.set('isCover', 'No'); 
-                     updates.push(r.save());
+                 if (r.get(parentKey) === row.get(parentKey) && r.get('id') !== row.get('id') && r.get('isCover') === 'Si') {
+                     r.set('isCover', 'No'); await executeWithRetry(() => r.save());
                  }
              }
-             await Promise.all(updates);
         }
-        
-        // Actualizar campos
-        Object.keys(data).forEach(key => { row.set(key, data[key]); });
-        await row.save();
+        Object.keys(data).forEach(key => row.set(key, data[key]));
+        await executeWithRetry(() => row.save());
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    // --- DELETE (Eliminar) ---
+    // --- DELETE (CASCADA MAESTRA) ---
     if (action === 'delete') {
-        const fileId = row.get('fileId');
-        const folderId = row.get('driveFolderId');
-        
-        // A. Borrar archivo individual (Si es una imagen)
-        if (fileId) {
-            try {
-                await drive.files.delete({ fileId: fileId, supportsAllDrives: true });
-                console.log(`Archivo eliminado de Drive: ${fileId}`);
-            } catch (e) {
-                console.warn(`Drive File Delete Warning: ${e.message}`);
-            }
+        const rows = await findRows(sheet, criteria);
+        const row = rows[0];
+        if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado' }) };
+
+        // 1. Si es una IMAGEN INDIVIDUAL
+        if (sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages' || sheetTitle === 'ClientLogos') {
+            await deleteFileFromDrive(drive, row.get('fileId'));
         }
 
-        // B. Borrar carpeta completa (Si es Proyecto o Item con carpeta)
-        if ((sheetTitle === 'Projects' || sheetTitle === 'RentalItems') && folderId) {
-             try {
-                await drive.files.delete({ fileId: folderId, supportsAllDrives: true });
-                console.log(`Carpeta eliminada de Drive: ${folderId}`);
-            } catch (e) {
-                console.warn(`Drive Folder Delete Warning: ${e.message}`);
+        // 2. Si es un PROYECTO o RENTAL ITEM (Borrar hijos + Carpeta)
+        if (sheetTitle === 'Projects' || sheetTitle === 'RentalItems') {
+            const parentId = row.get('id');
+            const driveFolderId = row.get('driveFolderId');
+            const childSheetName = sheetTitle === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
+            const childFk = sheetTitle === 'Projects' ? 'projectId' : 'itemId';
+
+            // A. Borrar Imágenes Hijas (Drive + Rows)
+            const childSheet = doc.sheetsByTitle[childSheetName];
+            if (childSheet) {
+                const childRows = await findRows(childSheet, { [childFk]: parentId });
+                for (const childRow of childRows) {
+                    await deleteFileFromDrive(drive, childRow.get('fileId'));
+                    await executeWithRetry(() => childRow.delete());
+                }
             }
+
+            // B. Borrar Carpeta Principal de Drive
+            await deleteFileFromDrive(drive, driveFolderId);
         }
 
-        // C. Borrar registro en Sheet (Siempre)
-        await row.delete();
+        // 3. Borrar la fila principal
+        await executeWithRetry(() => row.delete());
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    return { statusCode: 400, body: JSON.stringify({ error: 'Acción desconocida' }) };
+    return { statusCode: 400, body: JSON.stringify({ error: 'Acción no válida' }) };
 
   } catch (error) {
-    console.error('Backend Error:', error);
+    console.error('Update Error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
