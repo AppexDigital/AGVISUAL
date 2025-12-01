@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
-        :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-muted: #52525b; --accent: #3a3a3a; --border-color: #e5e7eb; }
+        :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-muted: #52525b; --accent: #3a3a3a; --border-color: #e5e7eb; --status-pending: #f59e0b; --status-confirmed: #10b981; --status-paid: #3b82f6; --status-canceled: #ef4444; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-dark); }
         h1, h2, h3, .font-display { font-family: 'Cormorant Garamond', serif; }
         
@@ -46,15 +46,21 @@
         .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-dark); color: white; padding: 1rem 1.5rem; z-index: 100; transform: translateY(100px); transition: transform 0.3s; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 600; border-radius: 4px; }
         .toast.visible { transform: translateY(0); }
         .toast.error { background: #ef4444; }
+        
+        .status-badge { padding: 2px 8px; border-radius: 10px; color: white; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
+        .status-Pendiente { background: var(--status-pending); }
+        .status-Confirmado { background: var(--status-confirmed); }
+        .status-Pagado { background: var(--status-paid); }
+        .status-Cancelado { background: var(--status-canceled); }
 
         .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
         
-        /* Portfolio Grid Styles */
-        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; group: group; }
+        /* Portfolio Grid */
+        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; group: group; background: #f3f4f6; }
         .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
         .portfolio-grid-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.2s; display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
-        .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; }
+        .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -135,8 +141,7 @@
                 </div>
                 <p class="text-text-muted mb-6 text-sm">Aquí aparecen todas las imágenes marcadas como "Mostrar en Portafolio" dentro de los proyectos. Arrastra o cambia el número para reordenar.</p>
                 
-                <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    </div>
+                <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
 
             <div id="view-services" class="view">
@@ -168,6 +173,14 @@
                     <button class="btn btn-primary" onclick="App.handleSaveSettings()"><i class="fas fa-save"></i> Guardar</button>
                 </div>
                 <div id="settings-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
+                
+                <h2 class="text-2xl font-display font-bold mt-10 mb-4">Contenido "Quién Soy"</h2>
+                <div id="about-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
+                <div class="mt-4 text-right"><button class="btn btn-primary" onclick="App.handleSaveAbout()"><i class="fas fa-save"></i> Guardar Bio</button></div>
+                
+                <h2 class="text-2xl font-display font-bold mt-10 mb-4">Logos Clientes</h2>
+                <button class="btn btn-secondary mb-4" onclick="App.handleEditCrudItem('ClientLogos', null)">+ Logo</button>
+                <div id="clientlogos-table-body" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
             </div>
             
             <div id="view-bookings" class="view">
@@ -184,11 +197,9 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
-// --- CONFIGURACIÓN ---
 const GOOGLE_REDIRECT_URI = 'postmessage';
 const AppState = { data: null, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
 
-// --- API CLIENT ---
 const API = {
     async call(endpoint, options = {}, isRetry = false) {
         const headers = new Headers(options.headers || {});
@@ -209,7 +220,6 @@ const API = {
     }
 };
 
-// --- AUTH ---
 const Auth = {
     async init() {
         if (AppState.token) {
@@ -253,7 +263,6 @@ const Auth = {
     logout() { localStorage.removeItem('gAuthToken'); location.reload(); }
 };
 
-// --- UI MANAGER ---
 const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; },
     showApp: async () => {
@@ -282,7 +291,6 @@ const UI = {
 
         if (view === 'dashboard') {
             document.getElementById('dash-projects').innerText = (data.Projects || []).length;
-            // Contar fotos en portafolio (ProjectImages con showInPortfolio = 'Si')
             const portfolioCount = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').length;
             document.getElementById('dash-portfolio').innerText = portfolioCount;
             document.getElementById('dash-bookings').innerText = (data.Bookings || []).filter(b => b.status === 'Pendiente').length;
@@ -292,7 +300,7 @@ const UI = {
                 const cover = (data.ProjectImages || []).find(i => i.projectId === p.id && i.isCover === 'Si');
                 return `<tr class="border-b hover:bg-gray-50">
                     <td class="p-4">${p.order||99}</td>
-                    <td class="p-4"><img src="${cover?.imageUrl || 'https://placehold.co/50'}" class="img-preview"></td>
+                    <td class="p-4"><img src="${cover?.imageUrl || 'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/50?text=Error'"></td>
                     <td class="p-4 font-bold">${p.title}</td>
                     <td class="p-4 flex gap-2">
                         <button class="text-blue-600" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button>
@@ -306,7 +314,7 @@ const UI = {
             const images = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').sort((a,b) => (a.portfolioOrder||99)-(b.portfolioOrder||99));
             document.getElementById('portfolio-manager-grid').innerHTML = images.map(i => `
                 <div class="portfolio-grid-item group">
-                    <img src="${i.imageUrl}" loading="lazy">
+                    <img src="${i.imageUrl}" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/300?text=Error'">
                     <div class="portfolio-grid-overlay">
                         <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
                         <button class="text-white hover:text-red-400 text-sm" onclick="App.removeFromPortfolio('${i.id}')"><i class="fas fa-times"></i> Quitar</button>
@@ -319,7 +327,7 @@ const UI = {
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
                 const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
                 return `<tr class="border-b hover:bg-gray-50">
-                    <td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td>
+                    <td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/50?text=Error'"></td>
                     <td class="p-4 font-bold">${i.name}</td>
                     <td class="p-4 text-sm text-gray-500">${(data.RentalCategories||[]).find(c => c.id === i.categoryId)?.name || '-'}</td>
                     <td class="p-4 font-mono">$${i.pricePerDay}</td>
@@ -340,6 +348,21 @@ const UI = {
                 ${UI.imageHTML('settings', 'logo_dark_url', 'Logo Oscuro', s.logo_dark_url)}
                 ${UI.imageHTML('settings', 'logo_light_url', 'Logo Claro', s.logo_light_url)}
             `;
+            const abt = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
+            document.getElementById('about-form-container').innerHTML = `
+                 ${UI.textareaHTML('about', 'philosophy_p1', 'Filosofía (Párrafo)', abt.philosophy_p1)}
+                 ${UI.imageHTML('about', 'profile_image_url', 'Foto de Perfil', abt.profile_image_url)}
+            `;
+            document.getElementById('clientlogos-table-body').innerHTML = (data.ClientLogos || []).map(c => `
+                <div class="bg-white border p-4 flex flex-col items-center relative group">
+                    <img src="${c.logoUrl}" class="h-12 object-contain mb-2" referrerpolicy="no-referrer">
+                    <span class="font-bold text-sm">${c.clientName}</span>
+                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center gap-2">
+                        <button class="text-white" onclick="App.handleEditCrudItem('ClientLogos', '${c.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-red-400" onclick="App.handleDelete('ClientLogos', '${c.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
         }
         else if (view === 'services') {
             document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b)=>(a.order||99)-(b.order||99)).map(s => `
@@ -361,200 +384,118 @@ const UI = {
         }
     },
 
-    // Helpers HTML
     inputHTML: (p, k, l, v='', t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
-    imageHTML: (p, k, l, v='') => `<div class="mb-4"><label class="form-label">${l}</label><div class="flex gap-2"><img src="${v||'https://placehold.co/50'}" class="w-12 h-12 object-cover border"><input type="text" id="${p}-${k}" data-key="${k}" class="form-input flex-1" value="${v||''}" readonly><button class="btn btn-secondary" onclick="App.uploadImage('${p}-${k}')">Subir</button></div></div>`,
+    textareaHTML: (p, k, l, v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
+    imageHTML: (p, k, l, v='') => `<div class="mb-4"><label class="form-label">${l}</label><div class="flex gap-2 items-center"><img src="${v||'https://placehold.co/50'}" class="w-12 h-12 object-cover border bg-white" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/50?text=Err'"><input type="text" id="${p}-${k}" data-key="${k}" class="form-input flex-1" value="${v||''}" readonly><button class="btn btn-secondary" onclick="App.uploadImage('${p}-${k}')">Subir</button></div></div>`,
     showModal: (title, body, footer) => {
         document.getElementById('modal-container').innerHTML = `<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-2xl font-display font-bold">${title}</h2><button onclick="UI.closeModal()" class="text-2xl">&times;</button></div><div class="p-6">${body}</div><div class="p-6 bg-gray-50 text-right">${footer}</div></div></div>`;
     },
     closeModal: () => document.getElementById('modal-container').innerHTML = ''
 };
 
-// --- LOGIC ---
 const App = {
     async loadData() { AppState.data = await API.call('/.netlify/functions/get-admin-data'); },
-
-    async handleSaveSettings() {
+    async handleSaveSettings() { this._saveKeyValueSheet('Settings', 'settings-form-container'); },
+    async handleSaveAbout() { this._saveKeyValueSheet('About', 'about-form-container', 'section', 'content'); },
+    async _saveKeyValueSheet(sheetName, containerId, keyField='key', valField='value') {
         UI.showLoading('Guardando...');
-        const inputs = document.querySelectorAll('#settings-form-container [data-key]');
+        const inputs = document.querySelectorAll(`#${containerId} [data-key]`);
         const promises = [];
         inputs.forEach(inp => {
             const k = inp.dataset.key, v = inp.value;
-            promises.push(API.call('/.netlify/functions/update-sheet-data', {
-                method: 'POST', body: { sheet: 'Settings', action: 'add', data: { key: k, value: v } }
-            }));
+            const existing = (AppState.data[sheetName]||[]).find(i => i[keyField] === key);
+            if (!existing || existing[valField] !== val) {
+                promises.push(API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: sheetName, action: existing?'update':'add', criteria: {[keyField]: k}, data: {[keyField]: k, [valField]: v} } }));
+            }
         });
         await Promise.all(promises); await this.loadData(); UI.hideLoading(); UI.showToast('Guardado');
     },
-
-    // --- CRUD GENERICO ---
     async handleEditCrudItem(sheet, id) {
         const isNew = !id;
-        const item = isNew ? {} : AppState.data[sheet].find(i => i.id === id);
+        const item = isNew ? {} : AppState.data[sheet].find(i => (i.id === id || i.blockId === id));
         let html = '';
-
-        if (sheet === 'Projects') {
-            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} <div class="mb-4"><label class="form-label">Descripción</label><textarea id="crud-description" class="form-textarea" rows="4">${item.description||''}</textarea></div>`;
-        } else if (sheet === 'Services') {
-            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} ${UI.inputHTML('crud', 'iconClass', 'Icono FA', item.iconClass)} <div class="mb-4"><label class="form-label">Intro</label><textarea id="crud-introText" class="form-textarea">${item.introText||''}</textarea></div>`;
-        } else if (sheet === 'RentalItems') {
+        if (sheet === 'Projects') html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} ${UI.textareaHTML('crud', 'description', 'Descripción', item.description)}`;
+        else if (sheet === 'Services') html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} ${UI.inputHTML('crud', 'iconClass', 'Icono FA', item.iconClass)} ${UI.textareaHTML('crud', 'introText', 'Intro', item.introText)}`;
+        else if (sheet === 'RentalItems') {
             const cats = AppState.data.RentalCategories || [];
             const opts = cats.map(c => `<option value="${c.id}" ${item.categoryId===c.id?'selected':''}>${c.name}</option>`).join('');
-            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', item.name)} <div class="mb-4"><label class="form-label">Categoría</label><select id="crud-categoryId" class="form-select">${opts}</select></div> ${UI.inputHTML('crud', 'pricePerDay', 'Precio Diario', item.pricePerDay, 'number')} <div class="mb-4"><label class="form-label">Descripción</label><textarea id="crud-description" class="form-textarea">${item.description||''}</textarea></div>`;
-        } else if (sheet === 'RentalCategories') {
-            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', item.name)}`;
-        }
-
+            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', item.name)} <div class="mb-4"><label class="form-label">Categoría</label><select id="crud-categoryId" class="form-select">${opts}</select></div> ${UI.inputHTML('crud', 'pricePerDay', 'Precio', item.pricePerDay, 'number')} ${UI.textareaHTML('crud', 'description', 'Desc.', item.description)}`;
+        } else if (sheet === 'RentalCategories') html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', item.name)}`;
+        else if (sheet === 'ClientLogos') html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'clientName', 'Cliente', item.clientName)} ${UI.imageHTML('crud', 'logoUrl', 'Logo', item.logoUrl)}`;
         UI.showModal(isNew ? 'Nuevo' : 'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}', '${id}')">Guardar</button>`);
     },
-
     async saveCrud(sheet, id) {
         const isNew = !id || id === 'null';
         const data = {};
         document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('crud-', '')] = el.value);
-        if(isNew) data.id = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
-        
+        const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
+        if(isNew) data[idField] = `${sheet.toLowerCase().substr(0,4)}_${Date.now()}`;
         UI.showLoading('Guardando...');
-        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {id}, data } });
+        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
         await this.loadData(); UI.closeModal(); UI.renderView(AppState.view); UI.hideLoading();
     },
-
-    async handleDelete(sheet, id) {
+    async handleDelete(sheet, id, idField='id') {
         if (!confirm('¿Eliminar?')) return;
         UI.showLoading('Eliminando...');
-        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: {id} } });
+        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
         await this.loadData(); UI.renderView(AppState.view); UI.hideLoading();
     },
-
-    // --- GESTIÓN DE IMÁGENES (PROYECTOS) ---
     async handleProjectImages(projectId, title) {
         const images = (AppState.data.ProjectImages || []).filter(i => i.projectId === projectId).sort((a,b) => (a.order||99)-(b.order||99));
         const html = images.map(i => `
             <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" data-id="${i.id}">
-                <img src="${i.imageUrl}" class="w-16 h-16 object-cover rounded">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-cover rounded" referrerpolicy="no-referrer" onerror="this.src='https://placehold.co/50?text=Err'">
                 <div class="flex-1 grid grid-cols-2 gap-2">
-                    <label class="text-xs uppercase font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full" value="${i.order||99}" onchange="App.quickUpdate('ProjectImages', '${i.id}', 'order', this.value)"></label>
-                    <label class="text-xs uppercase font-bold text-gray-500">Pie de foto <input type="text" class="border p-1 w-full" value="${i.caption||''}" onchange="App.quickUpdate('ProjectImages', '${i.id}', 'caption', this.value)"></label>
+                    <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full" value="${i.order||99}" onchange="App.quickUpdate('ProjectImages', '${i.id}', 'order', this.value)"></label>
+                    <label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full" value="${i.caption||''}" onchange="App.quickUpdate('ProjectImages', '${i.id}', 'caption', this.value)"></label>
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="flex items-center gap-2 text-xs font-bold cursor-pointer"><input type="checkbox" ${i.isCover==='Si'?'checked':''} onchange="App.quickUpdate('ProjectImages', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>
                     <label class="flex items-center gap-2 text-xs font-bold cursor-pointer"><input type="checkbox" ${i.showInPortfolio==='Si'?'checked':''} onchange="App.quickUpdate('ProjectImages', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>
                 </div>
-                <button class="text-red-500 hover:text-red-700" onclick="App.handleDelete('ProjectImages', '${i.id}')"><i class="fas fa-trash"></i></button>
+                <button class="text-red-500" onclick="App.handleDelete('ProjectImages', '${i.id}')"><i class="fas fa-trash"></i></button>
             </div>
         `).join('');
-
-        UI.showModal(`Imágenes: ${title}`, 
-            `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p class="text-center text-gray-400">Sin imágenes</p>'}</div>
-             <div class="border-t pt-4"><label class="btn btn-primary w-full text-center cursor-pointer"><i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes (Selección Múltiple)<input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadProjectImages(this, '${projectId}')"></label></div>`, 
-            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+        UI.showModal(`Imágenes: ${title}`, `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><div class="border-t pt-4"><label class="btn btn-primary w-full text-center cursor-pointer"><i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes<input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadProjectImages(this, '${projectId}')"></label></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
     },
-
-    // --- GESTIÓN DE IMÁGENES (ALQUILER) ---
     async handleRentalImages(itemId) {
         const images = (AppState.data.RentalItemImages || []).filter(i => i.itemId === itemId).sort((a,b) => (a.order||99)-(b.order||99));
-        const html = images.map(i => `
-            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white">
-                <img src="${i.imageUrl}" class="w-16 h-16 object-cover rounded">
-                <div class="flex-1"><input type="number" class="border p-1 w-20" value="${i.order||99}" onchange="App.quickUpdate('RentalItemImages', '${i.id}', 'order', this.value)"></div>
-                <button class="text-red-500" onclick="App.handleDelete('RentalItemImages', '${i.id}')"><i class="fas fa-trash"></i></button>
-            </div>`).join('');
-            
-        UI.showModal('Imágenes del Equipo', 
-            `<div class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p>Sin imágenes</p>'}</div>
-             <label class="btn btn-primary w-full text-center cursor-pointer"><i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes<input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadGenericImages(this, 'RentalItemImages', 'itemId', '${itemId}')"></label>`, 
-            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+        const html = images.map(i => `<div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white"><img src="${i.imageUrl}" class="w-16 h-16 object-cover rounded" referrerpolicy="no-referrer"><div class="flex-1"><input type="number" class="border p-1 w-20" value="${i.order||99}" onchange="App.quickUpdate('RentalItemImages', '${i.id}', 'order', this.value)"></div><button class="text-red-500" onclick="App.handleDelete('RentalItemImages', '${i.id}')"><i class="fas fa-trash"></i></button></div>`).join('');
+        UI.showModal('Imágenes', `<div class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><label class="btn btn-primary w-full text-center cursor-pointer"><i class="fas fa-cloud-upload-alt mr-2"></i> Subir<input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadGenericImages(this, 'RentalItemImages', 'itemId', '${itemId}')"></label>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
     },
-
-    // --- LOGICA DE SUBIDA MASIVA ---
     async uploadProjectImages(input, projectId) {
-        const files = Array.from(input.files);
-        if(!files.length) return;
-        UI.showLoading(`Subiendo ${files.length} imágenes...`);
-        
-        // Procesar en serie para evitar rate limits
-        for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('targetSubfolder', 'Projects');
-            
-            try {
-                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                // Crear registro en Sheet
-                await API.call('/.netlify/functions/update-sheet-data', {
-                    method: 'POST', body: {
-                        sheet: 'ProjectImages', action: 'add',
-                        data: {
-                            id: `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
-                            projectId: projectId,
-                            imageUrl: res.imageUrl,
-                            order: 99,
-                            isCover: 'No',
-                            showInPortfolio: 'No',
-                            portfolioOrder: 99
-                        }
-                    }
-                });
-            } catch (e) { console.error(e); }
-        }
-        await this.loadData();
-        UI.hideLoading();
-        // Refrescar modal buscando de nuevo el proyecto para el titulo
-        const p = AppState.data.Projects.find(pr => pr.id === projectId);
-        this.handleProjectImages(projectId, p?.title || '');
-    },
-
-    async uploadGenericImages(input, sheet, keyField, parentId) {
-        const files = Array.from(input.files);
-        if(!files.length) return;
+        const files = Array.from(input.files); if(!files.length) return;
         UI.showLoading(`Subiendo ${files.length}...`);
         for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('targetSubfolder', 'Rentals');
+            const formData = new FormData(); formData.append('file', file); formData.append('targetSubfolder', 'Projects');
             try {
                 const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                await API.call('/.netlify/functions/update-sheet-data', {
-                    method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}`, [keyField]: parentId, imageUrl: res.imageUrl, order: 99 } }
-                });
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'add', data: { id: `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, projectId, imageUrl: res.imageUrl, order: 99, isCover: 'No', showInPortfolio: 'No', portfolioOrder: 99 } } });
             } catch (e) { console.error(e); }
         }
-        await this.loadData(); UI.hideLoading();
-        this.handleRentalImages(parentId);
+        await this.loadData(); UI.hideLoading(); const p = AppState.data.Projects.find(pr => pr.id === projectId); this.handleProjectImages(projectId, p?.title || '');
     },
-
-    async quickUpdate(sheet, id, field, val) {
-        await API.call('/.netlify/functions/update-sheet-data', {
-            method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: val} }
-        });
-        // Actualizar localmente para reactividad inmediata si es posible, o recargar
-        const item = AppState.data[sheet].find(i => i.id === id);
-        if(item) item[field] = val;
+    async uploadGenericImages(input, sheet, keyField, parentId) {
+        const files = Array.from(input.files); if(!files.length) return;
+        UI.showLoading(`Subiendo ${files.length}...`);
+        for (const file of files) {
+            const formData = new FormData(); formData.append('file', file); formData.append('targetSubfolder', 'Rentals');
+            try {
+                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}`, [keyField]: parentId, imageUrl: res.imageUrl, order: 99 } } });
+            } catch (e) { console.error(e); }
+        }
+        await this.loadData(); UI.hideLoading(); this.handleRentalImages(parentId);
     },
-
-    // --- GESTOR DE PORTAFOLIO ---
-    updateLocalPortfolioOrder(id, val) {
-        const img = AppState.data.ProjectImages.find(i => i.id === id);
-        if(img) img.portfolioOrder = val;
-    },
+    async quickUpdate(sheet, id, field, val) { await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: val} } }); },
+    updateLocalPortfolioOrder(id, val) { const img = AppState.data.ProjectImages.find(i => i.id === id); if(img) img.portfolioOrder = val; },
     async savePortfolioOrder() {
-        UI.showLoading('Guardando orden...');
+        UI.showLoading('Guardando...');
         const images = AppState.data.ProjectImages.filter(i => i.showInPortfolio === 'Si');
-        const promises = images.map(i => API.call('/.netlify/functions/update-sheet-data', {
-            method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} }
-        }));
-        await Promise.all(promises);
-        await this.loadData(); UI.hideLoading(); UI.showToast('Orden actualizado');
+        const promises = images.map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } }));
+        await Promise.all(promises); await this.loadData(); UI.hideLoading(); UI.showToast('Orden actualizado');
     },
-    async removeFromPortfolio(id) {
-        if(!confirm('¿Quitar del portafolio principal?')) return;
-        UI.showLoading('Quitando...');
-        await API.call('/.netlify/functions/update-sheet-data', {
-            method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id}, data: {showInPortfolio: 'No'} }
-        });
-        await this.loadData(); UI.renderView('portfolio-manager'); UI.hideLoading();
-    },
-
+    async removeFromPortfolio(id) { if(confirm('¿Quitar?')) { UI.showLoading('Quitando...'); await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id}, data: {showInPortfolio: 'No'} } }); await this.loadData(); UI.renderView('portfolio-manager'); UI.hideLoading(); } },
     async uploadImage(inputId) {
         const input = document.createElement('input'); input.type = 'file';
         input.onchange = async e => {
@@ -570,21 +511,15 @@ const App = {
             } catch(err) { alert(err.message); UI.hideLoading(); }
         };
         input.click();
-    }
+    },
+    async updateStatus(id, status) { if(status) { UI.showLoading('Actualizando...'); await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Bookings', action: 'update', criteria: {id}, data: {status} } }); await this.loadData(); UI.renderView('bookings'); UI.hideLoading(); } }
 };
 
-// Init
 document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
 document.getElementById('logout-btn').addEventListener('click', () => Auth.logout());
-document.getElementById('main-nav').addEventListener('click', e => {
-    const link = e.target.closest('.sidebar-link');
-    if(link) { e.preventDefault(); UI.renderView(link.dataset.view); }
-});
+document.getElementById('main-nav').addEventListener('click', e => { const link = e.target.closest('.sidebar-link'); if(link) { e.preventDefault(); UI.renderView(link.dataset.view); } });
 Auth.init();
 </script>
 </body>
 </html>
-
-
-
 
