@@ -28,6 +28,7 @@
         .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); background: transparent; }
         .btn-secondary:hover { background: #f3f4f6; }
         .btn-danger { background-color: #ef4444; color: white; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
         
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; background: white; }
         .form-input:focus { border-color: var(--text-dark); outline: none; }
@@ -81,6 +82,7 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
+        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -377,7 +379,10 @@ const API = {
 // --- CAPA AUTH ---
 const Auth = {
     async init() { if (AppState.token) { if (Date.now() >= AppState.token.expires_at) await this.refresh(); UI.showApp(); } else UI.showLogin(); },
-    async login() { try { const c = await fetch('/.netlify/functions/get-auth-config').then(r=>r.json()); google.accounts.oauth2.initCodeClient({ client_id: c.clientId, scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive', callback: (r) => r.code && this.exchangeCode(r.code) }).requestCode(); } catch(e){alert(e.message);} },
+    async login() { 
+        if (typeof google === 'undefined') { alert("Error: La librería de Google no ha cargado. Refresca la página."); return; }
+        try { const c = await fetch('/.netlify/functions/get-auth-config').then(r=>r.json()); google.accounts.oauth2.initCodeClient({ client_id: c.clientId, scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive', callback: (r) => r.code && this.exchangeCode(r.code) }).requestCode(); } catch(e){alert(e.message);} 
+    },
     async exchangeCode(code) { UI.showLoading('Autenticando...'); try { const t = await fetch('/.netlify/functions/auth-google', { method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI }) }).then(r=>r.json()); if(t.error) throw new Error(t.error); this.setToken(t); UI.showApp(); } catch(e){alert(e.message); UI.showLogin();} },
     async refresh() { if(!AppState.token?.refresh_token) return false; try{ const t = await fetch('/.netlify/functions/auth-refresh', { method: 'POST', body: JSON.stringify({ refresh_token: AppState.token.refresh_token }) }).then(r=>r.json()); if(t.error) throw new Error; this.setToken({...AppState.token, ...t}); return true; }catch{return false;} },
     setToken(t) { if(t.expires_in) t.expires_at = Date.now()+(t.expires_in*1000); AppState.token=t; localStorage.setItem('gAuthToken', JSON.stringify(t)); },
@@ -389,7 +394,8 @@ const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; },
     showApp: async () => {
         document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('loading-screen').style.display = 'flex'; // Asegurar que se vea
+        const loader = document.getElementById('loading-screen');
+        if(loader) loader.style.display = 'flex'; // Asegurar que se vea
         
         try {
             // Intentamos cargar
@@ -397,10 +403,9 @@ const UI = {
             
             // Si tenemos éxito, mostramos la app
             document.getElementById('app-screen').style.display = 'flex';
-            document.getElementById('loading-screen').style.display = 'none'; // Quitamos el loader
+            if(loader) loader.style.display = 'none'; // Quitamos el loader
             
             // Renderizamos la vista inicial
-            // Usamos App.switchView si existe, o UI.renderView como fallback
             if (typeof App.switchView === 'function') {
                 App.switchView('dashboard');
             } else {
@@ -409,20 +414,29 @@ const UI = {
             
         } catch (e) {
             console.error("Error crítico al iniciar:", e);
-            // SI FALLA: Quitamos el loader para que no se quede infinito
-            document.getElementById('loading-screen').style.display = 'none';
-            // Mostramos el error y devolvemos al login
+            if(loader) loader.style.display = 'none';
             alert("No se pudo conectar con el sistema:\n" + e.message);
             document.getElementById('login-screen').style.display = 'flex';
         }
     },
     forceReload: () => location.reload(),
-    showLoading: (msg) => { document.getElementById('loading-text').innerText=msg; document.getElementById('loading-screen').style.display='flex'; document.getElementById('reload-btn').classList.add('hidden'); },
-    hideLoading: () => document.getElementById('loading-screen').style.display='none',
+    showLoading: (msg) => { 
+        const txt = document.getElementById('loading-text');
+        const scr = document.getElementById('loading-screen');
+        const btn = document.getElementById('reload-btn');
+        if(txt) txt.innerText=msg; 
+        if(scr) scr.style.display='flex'; 
+        if(btn) btn.classList.add('hidden'); 
+    },
+    hideLoading: () => { 
+        const scr = document.getElementById('loading-screen');
+        if(scr) scr.style.display='none'; 
+    },
     showToast: (msg, type='success') => { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.classList.add('visible'),10); setTimeout(()=>t.remove(),3000); },
     showConfirm: (msg, cb) => { const o=document.getElementById('confirm-modal-overlay'); document.getElementById('confirm-message').textContent=msg; const ok=document.getElementById('confirm-ok-btn'), ca=document.getElementById('confirm-cancel-btn'); const nok=ok.cloneNode(true), nca=ca.cloneNode(true); ok.parentNode.replaceChild(nok,ok); ca.parentNode.replaceChild(nca,ca); nok.addEventListener('click', ()=>{o.classList.remove('visible'); cb();}); nca.addEventListener('click', ()=>o.classList.remove('visible')); o.classList.add('visible'); },
     switchTab(id) { const v=document.querySelector('.view.active'); if(!v)return; v.querySelectorAll('.tab-btn,.tab-content').forEach(e=>e.classList.remove('active')); v.querySelectorAll(`.tab-btn[onclick*="${id}"]`).forEach(b=>b.classList.add('active')); document.getElementById(`tab-${id}`).classList.add('active'); },
     
+    // Helpers HTML
     inputHTML: (p,k,l,v='',t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
     textareaHTML: (p,k,l,v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
     selectHTML: (p,k,l,opts,v='') => `<div class="mb-4"><label class="form-label">${l}</label><select id="${p}-${k}" data-key="${k}" class="form-select">${opts.map(o=>`<option value="${o.id}" ${o.id==v?'selected':''}>${o.name}</option>`).join('')}</select></div>`,
@@ -455,38 +469,14 @@ const UI = {
         } else if (view === 'settings') {
              const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
              const a = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
-             
              if(s.logo_black) document.getElementById('preview-logo_black').src = s.logo_black;
              if(s.logo_white) document.getElementById('preview-logo_white').src = s.logo_white;
              if(s.favicon) document.getElementById('preview-favicon').src = s.favicon;
-             
-             document.getElementById('settings-form-container').innerHTML = `
-                ${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)} 
-                ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} 
-                ${UI.inputHTML('settings', 'social_instagram', 'Instagram URL', s.social_instagram)} 
-                ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)} 
-                ${UI.inputHTML('settings', 'social_youtube', 'YouTube URL', s.social_youtube)} 
-                ${UI.inputHTML('settings', 'social_facebook', 'Facebook URL', s.social_facebook)}
-                <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>
-             `;
-
-             document.getElementById('about-form-container').innerHTML = `
-                ${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} 
-                ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}
-             `;
+             document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)} ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram URL', s.social_instagram)} ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)} ${UI.inputHTML('settings', 'social_youtube', 'YouTube URL', s.social_youtube)} ${UI.inputHTML('settings', 'social_facebook', 'Facebook URL', s.social_facebook)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
+             document.getElementById('about-form-container').innerHTML = `${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}`;
              if(a.profile_image) document.getElementById('about-profile-preview').src = a.profile_image;
-
-             document.getElementById('clientlogos-grid').innerHTML = (data.ClientLogos || []).sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `
-                <div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square">
-                    <img src="${i.logoUrl}" class="max-w-full max-h-full object-contain">
-                    <button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', this.parentNode)">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                    <input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.quickUpdate('ClientLogos', '${i.id}', 'order', this.value)">
-                </div>
-             `).join('');
-        } 
-        else if (view === 'projects') {
+             document.getElementById('clientlogos-grid').innerHTML = (data.ClientLogos || []).sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `<div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square"><img src="${i.logoUrl}" class="max-w-full max-h-full object-contain"><button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', this.parentNode)"><i class="fas fa-trash"></i></button><input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.quickUpdate('ClientLogos', '${i.id}', 'order', this.value)"></div>`).join('');
+        } else if (view === 'projects') {
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
                 // Buscar portada usando helper seguro
                 const cover = (data.ProjectImages||[]).find(i => {
@@ -722,7 +712,6 @@ const App = {
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
             UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
-            // Recargar la vista actual para mostrar cambios
             await this.ensureDataForView(AppState.view);
             UI.closeModal(); UI.renderView(AppState.view); UI.showToast('Guardado');
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
@@ -748,7 +737,7 @@ const App = {
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     
     async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
-    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => { const v = String(i.showInPortfolio).toLowerCase().trim(); return v === 'si' || v === 'yes' || v === 'true'; }).map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
+    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
     async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
     
     // Handlers Galería
@@ -785,6 +774,7 @@ const App = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Asegurar que los elementos existan antes de añadir listeners
     const loginBtn = document.getElementById('google-login-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const mainNav = document.getElementById('main-nav');
@@ -797,7 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const link = e.target.closest('.sidebar-link'); 
             if(link) { 
                 e.preventDefault(); 
-                // Usar switchView si existe, fallback a renderView
+                // Usar switchView para carga lazy
                 if (typeof App.switchView === 'function') {
                     App.switchView(link.dataset.view); 
                 } else {
@@ -807,14 +797,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Iniciar la aplicación
-    Auth.init();
+    // Iniciar la aplicación con un pequeño retardo para asegurar que todo esté listo
+    setTimeout(() => Auth.init(), 100);
 });
 </script>
 </body>
 </html>
-
-
 
 
 
