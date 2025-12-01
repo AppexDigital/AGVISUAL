@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Centro de Mando | AG Visual Info</title>
     <link rel="icon" type="image/png" href="https://placehold.co/32x32/1a1a1a/FDFDFD?text=AG">
@@ -47,7 +46,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        /* UI Portafolio Corregida: Hover Effects */
+        /* UI Portafolio */
         .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; }
         .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
         .portfolio-grid-overlay { 
@@ -60,6 +59,8 @@
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
@@ -87,7 +88,8 @@
                 <a href="#" class="sidebar-link" data-view="projects"><i class="fas fa-camera"></i>Proyectos</a>
                 <a href="#" class="sidebar-link" data-view="portfolio-manager"><i class="fas fa-images"></i>Portafolio</a>
                 <a href="#" class="sidebar-link" data-view="services"><i class="fas fa-concierge-bell"></i>Servicios</a>
-                <a href="#" class="sidebar-link" data-view="rentals"><i class="fas fa-video"></i>Alquiler</a>
+                <a href="#" class="sidebar-link" data-view="videos"><i class="fas fa-video"></i>Videos</a>
+                <a href="#" class="sidebar-link" data-view="rentals"><i class="fas fa-box"></i>Alquiler</a>
                 <a href="#" class="sidebar-link" data-view="bookings"><i class="fas fa-calendar-check"></i>Reservas</a>
                 <a href="#" class="sidebar-link" data-view="settings"><i class="fas fa-cog"></i>Configuración</a>
             </nav>
@@ -100,9 +102,9 @@
             <div id="view-dashboard" class="view active">
                 <h1 class="text-4xl font-display font-bold mb-6">Resumen</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos Activos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p></div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Fotos en Portafolio</h3><p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p></div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Reservas Pendientes</h3><p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Portafolio</h3><p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Reservas</h3><p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p></div>
                 </div>
             </div>
 
@@ -114,6 +116,11 @@
             <div id="view-portfolio-manager" class="view">
                 <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Portafolio</h1><button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button></div>
                 <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+            </div>
+
+            <div id="view-videos" class="view">
+                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Videos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Nuevo</button></div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden"><table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL</th><th class="p-4">Acciones</th></tr></thead><tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody></table></div>
             </div>
 
             <div id="view-services" class="view">
@@ -148,10 +155,30 @@
             
             <div id="view-settings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Configuración</h1>
-                <div id="settings-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
+                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('settings-gen')">General</button><button class="tab-btn" onclick="UI.switchTab('settings-about')">Sobre Mí</button><button class="tab-btn" onclick="UI.switchTab('settings-logos')">Logos</button></div>
                 
-                <h2 class="text-2xl font-display font-bold mt-10 mb-4">Logos Clientes</h2>
-                <button class="btn btn-secondary mb-4" onclick="App.handleClientLogos()">+ Gestionar Logos</button>
+                <div id="tab-settings-gen" class="tab-content active">
+                     <div id="settings-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
+                </div>
+
+                <div id="tab-settings-about" class="tab-content">
+                    <div class="bg-white p-6 rounded border border-gray-200 max-w-3xl">
+                        <div class="mb-6 flex items-center gap-4">
+                            <img id="about-profile-preview" src="https://placehold.co/100" class="w-24 h-24 rounded-full object-cover border">
+                            <label class="btn btn-secondary cursor-pointer">
+                                <i class="fas fa-camera mr-2"></i> Cambiar Foto
+                                <input type="file" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'profile_image', 'Perfil', 'AboutProfile')">
+                            </label>
+                        </div>
+                        <div id="about-form-container" class="space-y-4"></div>
+                        <button class="btn btn-primary mt-4" onclick="App.handleSaveAbout()">Guardar Bio</button>
+                    </div>
+                </div>
+                
+                <div id="tab-settings-logos" class="tab-content">
+                     <button class="btn btn-primary mb-4" onclick="App.handleClientLogos()">+ Subir Logos</button>
+                     <div id="clientlogos-grid" class="grid grid-cols-2 md:grid-cols-6 gap-4"></div>
+                </div>
             </div>
         </main>
     </div>
@@ -169,514 +196,561 @@
         </div>
     </div>
 
-    
+<script>
+const GOOGLE_REDIRECT_URI = 'postmessage';
+const AppState = { data: { Projects: [], Services: [], ProjectImages: [], Bookings: [], Videos: [], ServiceContentBlocks: [], ServiceImages: [], About: [], ClientLogos: [] }, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
 
-    <script>
-        const GOOGLE_REDIRECT_URI = 'postmessage';
-        const AppState = { data: { Projects: [], Services: [], ProjectImages: [], Bookings: [] }, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
-
-        const API = {
-            async call(endpoint, options = {}, isRetry = false) {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000);
-                
-                const headers = new Headers(options.headers || {});
-                if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
-                if (options.body && !(options.body instanceof FormData)) {
-                    headers.set('Content-Type', 'application/json');
-                    options.body = JSON.stringify(options.body);
-                }
-                try {
-                    const sep = endpoint.includes('?') ? '&' : '?';
-                    const res = await fetch(`${endpoint}${sep}t=${Date.now()}`, { ...options, headers, signal: controller.signal });
-                    clearTimeout(timeoutId);
-                    
-                    if (res.status === 401 && !isRetry) {
-                        if (await Auth.refresh()) return API.call(endpoint, options, true);
-                        else { Auth.logout(); throw new Error('Sesión expirada'); }
-                    }
-        
-                    // MANEJO DE ERRORES MEJORADO (Para ver el mensaje real y no [object Object])
-                    const text = await res.text();
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        throw new Error(`Error del servidor (No JSON): ${text.substring(0, 100)}`);
-                    }
-        
-                    if (!res.ok) throw new Error(data.error || data.message || 'Error desconocido en servidor');
-                    return data;
-        
-                } catch (e) { 
-                    clearTimeout(timeoutId);
-                    if (e.name === 'AbortError') throw new Error('Tiempo de espera agotado.');
-                    throw e; 
-                }
+const API = {
+    async call(endpoint, options = {}, isRetry = false) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); 
+        const headers = new Headers(options.headers || {});
+        if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
+        if (options.body && !(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
+            options.body = JSON.stringify(options.body);
+        }
+        try {
+            const sep = endpoint.includes('?') ? '&' : '?';
+            const res = await fetch(`${endpoint}${sep}t=${Date.now()}`, { ...options, headers, signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.status === 401 && !isRetry) {
+                if (await Auth.refresh()) return API.call(endpoint, options, true);
+                else { Auth.logout(); throw new Error('Sesión expirada'); }
             }
-        };
-        
-        const Auth = {
-            async init() {
-                if (AppState.token) {
-                    if (Date.now() >= AppState.token.expires_at) await this.refresh();
-                    UI.showApp();
-                } else UI.showLogin();
-            },
-            async login() {
-                try {
-                    const config = await fetch('/.netlify/functions/get-auth-config').then(r => r.json());
-                    google.accounts.oauth2.initCodeClient({
-                        client_id: config.clientId,
-                        scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive',
-                        callback: (r) => r.code && this.exchangeCode(r.code)
-                    }).requestCode();
-                } catch (e) { alert('Error config: ' + e.message); }
-            },
-            async exchangeCode(code) {
-                UI.showLoading('Autenticando...');
-                try {
-                    const tokens = await fetch('/.netlify/functions/auth-google', { method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI }) }).then(r => r.json());
-                    if (tokens.error) throw new Error(tokens.error);
-                    this.setToken(tokens);
-                    UI.showApp();
-                } catch (e) { alert(e.message); UI.showLogin(); }
-            },
-            async refresh() {
-                if (!AppState.token?.refresh_token) return false;
-                try {
-                    const t = await fetch('/.netlify/functions/auth-refresh', { method: 'POST', body: JSON.stringify({ refresh_token: AppState.token.refresh_token }) }).then(r => r.json());
-                    if (t.error) throw new Error(t.error);
-                    this.setToken({ ...AppState.token, ...t });
-                    return true;
-                } catch { return false; }
-            },
-            setToken(t) {
-                if (t.expires_in) t.expires_at = Date.now() + (t.expires_in * 1000);
-                AppState.token = t;
-                localStorage.setItem('gAuthToken', JSON.stringify(t));
-            },
-            logout() { localStorage.removeItem('gAuthToken'); location.reload(); }
-        };
-        
-        const UI = {
-            showLogin: () => { document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; },
-            showApp: async () => {
-                document.getElementById('login-screen').style.display = 'none';
-                await App.loadData('dashboard');
-                document.getElementById('loading-screen').style.display = 'none';
-                document.getElementById('app-screen').style.display = 'flex';
-                UI.renderView(AppState.view);
-            },
-            forceReload: () => location.reload(),
-            showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; document.getElementById('reload-btn').classList.add('hidden'); },
-            hideLoading: () => document.getElementById('loading-screen').style.display = 'none',
-            showToast: (msg, type='success') => {
-                const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
-                document.getElementById('toast-container').appendChild(t);
-                setTimeout(() => t.classList.add('visible'), 10);
-                setTimeout(() => t.remove(), 3000);
-            },
-            showConfirm: (message, onConfirm) => {
-                const overlay = document.getElementById('confirm-modal-overlay');
-                document.getElementById('confirm-message').textContent = message;
-                const okBtn = document.getElementById('confirm-ok-btn');
-                const cancelBtn = document.getElementById('confirm-cancel-btn');
-                const newOk = okBtn.cloneNode(true);
-                const newCancel = cancelBtn.cloneNode(true);
-                okBtn.parentNode.replaceChild(newOk, okBtn);
-                cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-                newOk.addEventListener('click', () => { overlay.classList.remove('visible'); onConfirm(); });
-                newCancel.addEventListener('click', () => overlay.classList.remove('visible'));
-                overlay.classList.add('visible');
-            },
-            renderView: async (view) => {
-                await App.ensureDataForView(view);
-                AppState.view = view;
-                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                document.getElementById(`view-${view}`).classList.add('active');
-                document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-                document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
-                const data = AppState.data;
-        
-                if (view === 'dashboard') {
-                    document.getElementById('dash-projects').innerText = (data.Projects || []).length;
-                    const portfolioCount = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').length;
-                    document.getElementById('dash-portfolio').innerText = portfolioCount;
-                    document.getElementById('dash-bookings').innerText = (data.Bookings || []).filter(b => b.status === 'Pendiente').length;
-                } else if (view === 'projects') {
-                    document.getElementById('projects-table-body').innerHTML = (data.Projects || []).sort((a,b) => (a.order||99)-(b.order||99)).map(p => {
-                        // Usar projectID O projectId, lo que venga en la data
-                        const cover = (data.ProjectImages || []).find(i => (i.projectId === p.id || i.projectID === p.id) && i.isCover === 'Si');
-                        const coverUrl = cover?.imageUrl || 'https://placehold.co/50';
-                        return `<tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${p.order||99}</td><td class="p-4"><img src="${coverUrl}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleProjectImages('${p.id}', '${p.title.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
-                    }).join('');
-                } else if (view === 'portfolio-manager') {
-                    const images = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').sort((a,b) => (a.portfolioOrder||99)-(b.portfolioOrder||99));
-                    document.getElementById('portfolio-manager-grid').innerHTML = images.map(i => `
-                        <div class="portfolio-grid-item group">
-                            <img src="${i.imageUrl}" class="img-preview w-full h-full">
-                            <div class="portfolio-grid-overlay">
-                                <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
-                                <button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')">
-                                    <i class="fas fa-times"></i> Quitar
-                                </button>
-                            </div>
-                            <span class="portfolio-badge">#${i.portfolioOrder||99}</span>
-                        </div>
-                    `).join('');
-                } else if (view === 'rentals') {
-                     document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
-                        const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
-                        const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
-                        return `<tr class="border-b hover:bg-gray-50"><td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${i.name}</td><td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td><td class="p-4 font-mono text-sm">$${i.pricePerDay}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
-                     }).join('');
-                     document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || []).map(c => `
-                        <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${c.order}</td><td class="p-4 font-bold text-sm">${c.name}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
-                     `).join('');
-                } else if (view === 'services') {
-                    document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => `
-                        <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${s.order||99}</td><td class="p-4 font-bold text-sm">${s.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button></td></tr>
-                    `).join('');
-                } else if (view === 'bookings') {
-                     document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
-                        <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
-                     `).join('');
-                     document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
-                         const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
-                         return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
-                     }).join('');
-                } else if (view === 'settings') {
-                     const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
-                     document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email', s.contact_email)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram', s.social_instagram)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
-                }
-            },
-            inputHTML: (p, k, l, v='', t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
-            textareaHTML: (p, k, l, v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
-            selectHTML: (p, k, l, opts, v='') => `<div class="mb-4"><label class="form-label">${l}</label><select id="${p}-${k}" data-key="${k}" class="form-select">${opts.map(o => `<option value="${o.id}" ${o.id==v?'selected':''}>${o.name}</option>`).join('')}</select></div>`,
-            showModal: (title, body, footer) => {
-                document.getElementById('modal-container').innerHTML = `<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between items-center bg-gray-50"><h2 class="text-xl font-display font-bold text-text-dark">${title}</h2><button onclick="UI.closeModal()" class="text-2xl text-gray-400 hover:text-gray-800">&times;</button></div><div class="p-6">${body}</div><div class="p-6 bg-gray-50 text-right border-t">${footer}</div></div></div>`;
-            },
-            closeModal: () => document.getElementById('modal-container').innerHTML = ''
-        };
-        
-        const App = {
-            async ensureDataForView(view) {
-                let sheetsNeeded = [];
-                if (view === 'projects' || view === 'portfolio-manager') {
-                    if(!AppState.data.Projects) sheetsNeeded.push('Projects');
-                    if(!AppState.data.ProjectImages) sheetsNeeded.push('ProjectImages');
-                } else if (view === 'rentals') {
-                     if(!AppState.data.RentalItems) sheetsNeeded.push('RentalItems', 'RentalCategories', 'RentalItemImages');
-                } else if (view === 'services') {
-                     if(!AppState.data.Services) sheetsNeeded.push('Services');
-                } else if (view === 'bookings') {
-                     if(!AppState.data.Bookings) sheetsNeeded.push('Bookings', 'BlockedDates', 'RentalItems');
-                } else if (view === 'settings') {
-                    if(!AppState.data.ClientLogos) sheetsNeeded.push('ClientLogos');
-                }
-        
-                if (sheetsNeeded.length > 0) {
-                    UI.showLoading('Cargando detalles...');
-                    try {
-                        const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheetsNeeded.join(',')}`);
-                        AppState.data = { ...AppState.data, ...newData };
-                        UI.hideLoading();
-                    } catch(e) {
-                        console.error(e);
-                        UI.showToast('Error cargando datos: ' + e.message, 'error');
-                        UI.hideLoading();
-                    }
-                }
-            },
-            
-            async loadData(mode = 'all') { 
-                const params = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
-                const newData = await API.call(`/.netlify/functions/get-admin-data${params}`);
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch (e) { throw new Error(`Error Server (No JSON): ${text.substring(0,100)}`); }
+            if (!res.ok) throw new Error(data.error || data.message || 'Error desconocido');
+            return data;
+        } catch (e) { 
+            clearTimeout(timeoutId);
+            if (e.name === 'AbortError') throw new Error('Tiempo agotado.');
+            throw e; 
+        }
+    }
+};
+
+const Auth = {
+    async init() {
+        if (AppState.token) {
+            if (Date.now() >= AppState.token.expires_at) await this.refresh();
+            UI.showApp();
+        } else UI.showLogin();
+    },
+    async login() {
+        try {
+            const config = await fetch('/.netlify/functions/get-auth-config').then(r => r.json());
+            google.accounts.oauth2.initCodeClient({
+                client_id: config.clientId,
+                scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive',
+                callback: (r) => r.code && this.exchangeCode(r.code)
+            }).requestCode();
+        } catch (e) { alert('Error config: ' + e.message); }
+    },
+    async exchangeCode(code) {
+        UI.showLoading('Autenticando...');
+        try {
+            const tokens = await fetch('/.netlify/functions/auth-google', { method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI }) }).then(r => r.json());
+            if (tokens.error) throw new Error(tokens.error);
+            this.setToken(tokens);
+            UI.showApp();
+        } catch (e) { alert(e.message); UI.showLogin(); }
+    },
+    async refresh() {
+        if (!AppState.token?.refresh_token) return false;
+        try {
+            const t = await fetch('/.netlify/functions/auth-refresh', { method: 'POST', body: JSON.stringify({ refresh_token: AppState.token.refresh_token }) }).then(r => r.json());
+            if (t.error) throw new Error(t.error);
+            this.setToken({ ...AppState.token, ...t });
+            return true;
+        } catch { return false; }
+    },
+    setToken(t) {
+        if (t.expires_in) t.expires_at = Date.now() + (t.expires_in * 1000);
+        AppState.token = t;
+        localStorage.setItem('gAuthToken', JSON.stringify(t));
+    },
+    logout() { localStorage.removeItem('gAuthToken'); location.reload(); }
+};
+
+const UI = {
+    showLogin: () => { document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; },
+    showApp: async () => {
+        document.getElementById('login-screen').style.display = 'none';
+        await App.loadData('dashboard');
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('app-screen').style.display = 'flex';
+        UI.renderView(AppState.view);
+    },
+    forceReload: () => location.reload(),
+    showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; document.getElementById('reload-btn').classList.add('hidden'); },
+    hideLoading: () => document.getElementById('loading-screen').style.display = 'none',
+    showToast: (msg, type='success') => {
+        const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
+        document.getElementById('toast-container').appendChild(t);
+        setTimeout(() => t.classList.add('visible'), 10);
+        setTimeout(() => t.remove(), 3000);
+    },
+    showConfirm: (message, onConfirm) => {
+        const overlay = document.getElementById('confirm-modal-overlay');
+        document.getElementById('confirm-message').textContent = message;
+        const okBtn = document.getElementById('confirm-ok-btn');
+        const cancelBtn = document.getElementById('confirm-cancel-btn');
+        const newOk = okBtn.cloneNode(true);
+        const newCancel = cancelBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOk, okBtn);
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+        newOk.addEventListener('click', () => { overlay.classList.remove('visible'); onConfirm(); });
+        newCancel.addEventListener('click', () => overlay.classList.remove('visible'));
+        overlay.classList.add('visible');
+    },
+    switchTab(tabId) {
+        const activeView = document.querySelector('.view.active');
+        if(!activeView) return;
+        activeView.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        activeView.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const btns = activeView.querySelectorAll('.tab-btn');
+        btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+    },
+    renderView: async (view) => {
+        await App.ensureDataForView(view);
+        AppState.view = view;
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+        const data = AppState.data;
+
+        if (view === 'dashboard') {
+            document.getElementById('dash-projects').innerText = (data.Projects || []).length;
+            const portfolioCount = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').length;
+            document.getElementById('dash-portfolio').innerText = portfolioCount;
+            document.getElementById('dash-bookings').innerText = (data.Bookings || []).filter(b => b.status === 'Pendiente').length;
+        } else if (view === 'projects') {
+            document.getElementById('projects-table-body').innerHTML = (data.Projects || []).sort((a,b) => (a.order||99)-(b.order||99)).map(p => {
+                const cover = (data.ProjectImages || []).find(i => i.projectId === p.id && i.isCover === 'Si');
+                const coverUrl = cover?.imageUrl || 'https://placehold.co/50';
+                return `<tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${p.order||99}</td><td class="p-4"><img src="${coverUrl}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleProjectImages('${p.id}', '${p.title.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+        } else if (view === 'portfolio-manager') {
+            const images = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').sort((a,b) => (a.portfolioOrder||99)-(b.portfolioOrder||99));
+            document.getElementById('portfolio-manager-grid').innerHTML = images.map(i => `
+                <div class="portfolio-grid-item group">
+                    <img src="${i.imageUrl}" class="img-preview w-full h-full">
+                    <div class="portfolio-grid-overlay">
+                        <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
+                        <button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')">
+                            <i class="fas fa-times"></i> Quitar
+                        </button>
+                    </div>
+                    <span class="portfolio-badge">#${i.portfolioOrder||99}</span>
+                </div>
+            `).join('');
+        } else if (view === 'rentals') {
+             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
+                const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
+                const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
+                return `<tr class="border-b hover:bg-gray-50"><td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${i.name}</td><td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td><td class="p-4 font-mono text-sm">$${i.pricePerDay}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+             }).join('');
+             document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || []).map(c => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${c.order}</td><td class="p-4 font-bold text-sm">${c.name}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
+             `).join('');
+        } else if (view === 'services') {
+            document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${s.order||99}</td><td class="p-4 font-bold text-sm">${s.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button><button class="text-blue-600 hover:text-blue-800" onclick="App.handleServiceContent('${s.id}', '${s.title}')"><i class="fas fa-align-left"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleServiceImages('${s.id}', '${s.title}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        } else if (view === 'videos') {
+            document.getElementById('videos-table-body').innerHTML = (data.Videos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(v => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${v.order||99}</td><td class="p-4 font-bold text-sm">${v.title}</td><td class="p-4 text-xs text-blue-500 truncate max-w-xs"><a href="${v.url}" target="_blank">${v.url}</a></td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        } else if (view === 'bookings') {
+             document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
+             `).join('');
+             document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
+                 const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
+                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
+             }).join('');
+        } else if (view === 'settings') {
+             const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+             const a = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
+             
+             // General
+             document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email', s.contact_email)} ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram', s.social_instagram)} ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp (Link)', s.social_whatsapp)} ${UI.inputHTML('settings', 'social_youtube', 'YouTube', s.social_youtube)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
+             
+             // About
+             document.getElementById('about-form-container').innerHTML = `${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}`;
+             if(a.profile_image) document.getElementById('about-profile-preview').src = a.profile_image;
+
+             // Client Logos
+             document.getElementById('clientlogos-grid').innerHTML = (data.ClientLogos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(i => `
+                <div class="relative group border rounded p-2 bg-white"><img src="${i.imageUrl}" class="w-full h-20 object-contain"><button class="absolute top-1 right-1 text-red-500 bg-white rounded-full shadow p-1 hover:bg-red-50" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', this.parentNode)"><i class="fas fa-trash"></i></button></div>
+             `).join('');
+        }
+    },
+    inputHTML: (p, k, l, v='', t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
+    textareaHTML: (p, k, l, v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
+    selectHTML: (p, k, l, opts, v='') => `<div class="mb-4"><label class="form-label">${l}</label><select id="${p}-${k}" data-key="${k}" class="form-select">${opts.map(o => `<option value="${o.id}" ${o.id==v?'selected':''}>${o.name}</option>`).join('')}</select></div>`,
+    showModal: (title, body, footer) => {
+        document.getElementById('modal-container').innerHTML = `<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between items-center bg-gray-50"><h2 class="text-xl font-display font-bold text-text-dark">${title}</h2><button onclick="UI.closeModal()" class="text-2xl text-gray-400 hover:text-gray-800">&times;</button></div><div class="p-6">${body}</div><div class="p-6 bg-gray-50 text-right border-t">${footer}</div></div></div>`;
+    },
+    closeModal: () => document.getElementById('modal-container').innerHTML = ''
+};
+
+const App = {
+    async ensureDataForView(view) {
+        let sheetsNeeded = [];
+        const current = AppState.data;
+        if (view === 'projects' || view === 'portfolio-manager') {
+            if(!current.Projects) sheetsNeeded.push('Projects');
+            if(!current.ProjectImages) sheetsNeeded.push('ProjectImages');
+        } else if (view === 'rentals') {
+             if(!current.RentalItems) sheetsNeeded.push('RentalItems', 'RentalCategories', 'RentalItemImages');
+        } else if (view === 'services') {
+             if(!current.Services) sheetsNeeded.push('Services');
+             // Cargar detalles para los modales nuevos
+             if(!current.ServiceContentBlocks) sheetsNeeded.push('ServiceContentBlocks');
+             if(!current.ServiceImages) sheetsNeeded.push('ServiceImages');
+        } else if (view === 'bookings') {
+             if(!current.Bookings) sheetsNeeded.push('Bookings', 'BlockedDates', 'RentalItems');
+        } else if (view === 'settings') {
+            if(!current.ClientLogos) sheetsNeeded.push('ClientLogos');
+            if(!current.About) sheetsNeeded.push('About');
+            if(!current.Settings) sheetsNeeded.push('Settings');
+        } else if (view === 'videos') {
+            if(!current.Videos) sheetsNeeded.push('Videos');
+        }
+
+        if (sheetsNeeded.length > 0) {
+            UI.showLoading('Cargando detalles...');
+            try {
+                const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheetsNeeded.join(',')}`);
                 AppState.data = { ...AppState.data, ...newData };
-            },
-        
-            async uploadImages(input, parentId, parentTitle, type) {
-                const files = Array.from(input.files);
-                if (!files.length) return;
-        
-                const parentRow = type === 'Projects' 
-                    ? AppState.data.Projects.find(p => p.id === parentId)
-                    : AppState.data.RentalItems.find(r => r.id === parentId);
-                
-                let driveFolderId = parentRow?.driveFolderId || null;
-                
-                const sheetTarget = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
-                const subfolder = type === 'Projects' ? 'Proyectos' : type === 'ClientLogos' ? 'Logos' : 'Alquiler';
-                
-                // *** CORRECCIÓN CRÍTICA: NOMBRE DE COLUMNA ***
-                // Tu sheet usa 'projectId' (camelCase), no 'projectID'.
-                const idField = type === 'Projects' ? 'projectId' : type === 'RentalItems' ? 'itemId' : 'refId';
-                
-                if (type === 'ClientLogos') parentId = 'general';
-        
-                let successCount = 0;
-        
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    UI.showLoading(`Subiendo ${i+1}/${files.length}: ${file.name}`);
-                    
-                    try {
-                        const compressedFile = await new Promise((resolve, reject) => {
-                            new Compressor(file, {
-                                quality: 0.8, maxWidth: 1600, maxHeight: 1600,
-                                success(result) { resolve(result); },
-                                error(err) { reject(err); }
-                            });
-                        });
-        
-                        const formData = new FormData();
-                        formData.append('file', compressedFile, file.name);
-                        formData.append('targetSubfolder', subfolder);
-                        formData.append('targetFolderId', driveFolderId || ''); 
-                        formData.append('parentFolderName', parentTitle); 
-        
-                        const uploadRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                        
-                        if (uploadRes.driveFolderId && uploadRes.driveFolderId !== driveFolderId && type !== 'ClientLogos') {
-                            driveFolderId = uploadRes.driveFolderId;
-                            if(parentRow) parentRow.driveFolderId = driveFolderId;
-                            
-                            // Guardar ID de carpeta en el PROYECTO
-                            await API.call('/.netlify/functions/update-sheet-data', { 
-                                method: 'POST', 
-                                body: { sheet: type, action: 'update', criteria: { id: parentId }, data: { driveFolderId: driveFolderId } } 
-                            });
-                        }
-        
-                        // Guardar en PROJECT IMAGES (Con la columna corregida)
-                        await API.call('/.netlify/functions/update-sheet-data', {
-                            method: 'POST',
-                            body: {
-                                sheet: sheetTarget,
-                                action: 'add',
-                                data: {
-                                    id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`,
-                                    [idField]: parentId, // projectId
-                                    imageUrl: uploadRes.imageUrl,
-                                    fileId: uploadRes.fileId,
-                                    isCover: 'No',
-                                    showInPortfolio: 'No'
-                                }
-                            }
-                        });
-                        successCount++;
-        
-                    } catch (error) {
-                        console.error(`Error subiendo ${file.name}:`, error);
-                        UI.showToast(`Error: ${error.message}`, 'error');
-                    }
-                }
-                
                 UI.hideLoading();
-                UI.showToast(`${successCount} imágenes subidas`);
-                await App.ensureDataForView(AppState.view);
-                
-                const refreshSheet = type === 'Projects' ? 'ProjectImages' : type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages';
-                const freshData = await API.call(`/.netlify/functions/get-admin-data?sheets=${refreshSheet}`);
-                AppState.data[refreshSheet] = freshData[refreshSheet];
-        
-                if (type === 'Projects') this.handleProjectImages(parentId, parentTitle);
-                else if (type === 'ClientLogos') this.handleClientLogos();
-                else this.handleRentalImages(parentId, parentTitle);
-            },
-        
-            async handleProjectImages(projectId, title) {
-                // Soporte para ambas nomenclaturas para visualización por si acaso
-                const images = (AppState.data.ProjectImages || []).filter(i => i.projectId === projectId || i.projectID === projectId).sort((a,b) => (a.order||99)-(b.order||99));
-                this.renderImageModal(images, projectId, title, 'Projects');
-            },
-            
-            async handleRentalImages(itemId, name) {
-                const images = (AppState.data.RentalItemImages || []).filter(i => i.itemId === itemId).sort((a,b) => (a.order||99)-(b.order||99));
-                this.renderImageModal(images, itemId, name, 'RentalItems');
-            },
-            
-            async handleClientLogos() {
-                const images = (AppState.data.ClientLogos || []).sort((a,b) => (a.order||99)-(b.order||99));
-                 const html = images.map(i => `
-                    <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white image-row" id="img-row-${i.id}">
-                        <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
-                        <div class="flex-1 grid grid-cols-1 gap-2">
-                            <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.quickUpdate('ClientLogos', '${i.id}', 'order', this.value)"></label>
-                        </div>
-                        <button class="text-red-500 hover:bg-red-50 p-2 rounded transition-colors" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
-                    </div>
-                `).join('');
-                
-                UI.showModal(`Logos de Clientes`, 
-                    `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4 pr-2">${html.length ? html : '<p class="text-center text-gray-400 py-8">No hay logos.</p>'}</div>
-                     <div class="border-t pt-4">
-                        <label class="btn btn-primary w-full text-center cursor-pointer justify-center py-3">
-                            <i class="fas fa-cloud-upload-alt mr-2"></i> Subir Logo
-                            <input type="file" accept="image/*" class="hidden" onchange="App.uploadImages(this, 'client_logos_id', 'Logos Clientes', 'ClientLogos')">
-                        </label>
-                     </div>`, 
-                    '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
-                );
-            },
-        
-            renderImageModal(images, parentId, title, type) {
-                const sheet = type === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
-                const html = images.map(i => `
-                    <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white image-row" id="img-row-${i.id}">
-                        <img src="${i.imageUrl}" class="w-16 h-16 object-cover rounded bg-gray-100">
-                        <div class="flex-1 grid grid-cols-2 gap-2">
-                            <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'order', this.value)"></label>
-                            ${type === 'Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'caption', this.value)"></label>` : ''}
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="flex items-center gap-2 text-xs font-bold cursor-pointer select-none"><input type="checkbox" ${i.isCover==='Si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>
-                            ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs font-bold cursor-pointer select-none"><input type="checkbox" ${i.showInPortfolio==='Si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>` : ''}
-                        </div>
-                        <button class="text-red-500 hover:bg-red-50 p-2 rounded transition-colors" onclick="App.handleDeleteImage('${sheet}', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
-                    </div>
-                `).join('');
-                
-                UI.showModal(`Imágenes: ${title}`, 
-                    `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4 pr-2">${html.length ? html : '<p class="text-center text-gray-400 py-8">No hay imágenes aún.</p>'}</div>
-                     <div class="border-t pt-4">
-                        <label class="btn btn-primary w-full text-center cursor-pointer justify-center py-3">
-                            <i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes
-                            <input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g, "")}', '${type}')">
-                        </label>
-                     </div>`, 
-                    '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
-                );
-            },
-        
-            async handleEditCrudItem(sheet, id) { 
-                const isNew = !id;
-                let html = '';
-                
-                if(sheet === 'Projects') {
-                    const p = isNew ? {} : AppState.data.Projects.find(x => x.id === id);
-                    html = `${UI.inputHTML('crud', 'order', 'Orden', p?.order||99, 'number')} ${UI.inputHTML('crud', 'title', 'Título', p?.title)} ${UI.textareaHTML('crud', 'description', 'Descripción', p?.description)}`;
-                } else if (sheet === 'Services') {
-                     const s = isNew ? {} : AppState.data.Services.find(x => x.id === id);
-                     html = `${UI.inputHTML('crud', 'order', 'Orden', s?.order||99, 'number')} ${UI.inputHTML('crud', 'title', 'Título', s?.title)} ${UI.inputHTML('crud', 'icon', 'Icono (FontAwesome)', s?.icon||'fas fa-star')} ${UI.textareaHTML('crud', 'intro', 'Intro', s?.intro)}`;
-                } else if (sheet === 'RentalItems') {
-                     const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
-                     const cats = AppState.data.RentalCategories || [];
-                     html = `${UI.inputHTML('crud', 'name', 'Nombre', i?.name)} ${UI.selectHTML('crud', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('crud', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('crud', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('crud', 'long_desc', 'Descripción Larga', i?.long_desc)}`;
-                } else if (sheet === 'RentalCategories') {
-                     const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
-                     html = `${UI.inputHTML('crud', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', c?.name)}`;
-                } else if (sheet === 'BlockedDates') {
-                     const items = AppState.data.RentalItems || [];
-                     html = `${UI.selectHTML('crud', 'itemId', 'Equipo', items)} ${UI.inputHTML('crud', 'reason', 'Motivo')} ${UI.inputHTML('crud', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('crud', 'endDate', 'Hasta', '', 'date')}`;
-                }
-                
-                UI.showModal(isNew ? 'Nuevo' : 'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}', '${id}')">Guardar</button>`);
-            },
-        
-            async saveCrud(sheet, id) {
-                try {
-                    const isNew = !id || id === 'null';
-                    const data = {};
-                    document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.dataset.key] = el.value);
-                    const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
-                    if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
-                    
-                    UI.showLoading('Guardando...');
-                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
-                    
-                    const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
-                    AppState.data[sheet] = newData[sheet];
-                    
-                    UI.closeModal(); 
-                    UI.renderView(AppState.view);
-                    UI.showToast('Guardado correctamente');
-                } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
-            },
-            
-            async handleDeleteImage(sheet, id, rowEl) {
-                UI.showConfirm("¿Eliminar esta imagen permanentemente?", async () => {
-                    rowEl.style.opacity = '0.3'; rowEl.style.pointerEvents = 'none';
-                    try {
-                        const criteria = { id };
-                        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria } });
-                        rowEl.remove();
-                        AppState.data[sheet] = AppState.data[sheet].filter(i => i.id !== id);
-                        UI.showToast('Imagen eliminada');
-                    } catch(e) {
-                        alert("Error: " + e.message); rowEl.style.opacity = '1';
-                    }
-                });
-            },
-            
-            async handleDelete(sheet, id, idField='id') {
-                UI.showConfirm("¿Eliminar este registro y sus datos asociados?", async () => {
-                     UI.showLoading('Eliminando...');
-                     try {
-                         await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
-                         AppState.data[sheet] = AppState.data[sheet].filter(i => i[idField] !== id);
-                         UI.renderView(AppState.view);
-                         UI.showToast('Registro eliminado');
-                     } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
-                });
-            },
-            
-            async quickUpdate(sheet, id, field, val) { 
-                const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
-                try {
-                    const item = AppState.data[sheet].find(i => i.id === id);
-                    if(item) item[field] = valStr;
-        
-                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
-                    UI.showToast('Actualizado');
-                } catch(e) { console.error(e); UI.showToast('Error (reintentando en background)', 'error'); }
-            },
-        
-            async updateLocalPortfolioOrder(id, val) {
-                const item = AppState.data.ProjectImages.find(i => i.id === id);
-                if(item) item.portfolioOrder = val;
-            },
-            
-            async savePortfolioOrder() {
-                 UI.showLoading('Guardando orden...');
-                 try {
-                     const updates = AppState.data.ProjectImages.filter(i => i.showInPortfolio === 'Si').map(i => 
-                        API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })
-                     );
-                     await Promise.all(updates);
-                     UI.showToast('Orden guardado');
-                 } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
-            },
-        
-            async removeFromPortfolio(id) {
-                await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No');
-                AppState.data.ProjectImages = AppState.data.ProjectImages.map(i => i.id === id ? {...i, showInPortfolio: 'No'} : i);
-                UI.renderView('portfolio-manager');
-            },
-            
-            async handleSaveSettings() {
-                const data = {};
-                document.querySelectorAll('#settings-form-container input').forEach(el => data[el.dataset.key] = el.value);
-                UI.showLoading('Guardando...');
-                try {
-                    for (const [key, value] of Object.entries(data)) {
-                         await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: {key}, data: {value} } });
-                    }
-                    await App.loadData('settings');
-                    UI.showToast('Configuración guardada');
-                } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
+            } catch(e) {
+                console.error(e); UI.showToast('Error cargando datos: ' + e.message, 'error'); UI.hideLoading();
             }
-        };
+        }
+    },
+    
+    async loadData(mode = 'all') { 
+        const params = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
+        const newData = await API.call(`/.netlify/functions/get-admin-data${params}`);
+        AppState.data = { ...AppState.data, ...newData };
+    },
+
+    async uploadImages(input, parentId, parentTitle, type) {
+        const files = Array.from(input.files);
+        if (!files.length) return;
+
+        let driveFolderId = null;
+        let sheetTarget = '', subfolder = '', idField = '';
         
-        document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
-        document.getElementById('logout-btn').addEventListener('click', () => Auth.logout());
-        document.getElementById('main-nav').addEventListener('click', e => { const link = e.target.closest('.sidebar-link'); if(link) { e.preventDefault(); UI.renderView(link.dataset.view); } });
-        Auth.init();
-    </script>
+        // Configuración de destino según tipo
+        if (type === 'Projects') {
+            const row = AppState.data.Projects.find(p => p.id === parentId);
+            driveFolderId = row?.driveFolderId;
+            sheetTarget = 'ProjectImages'; subfolder = 'Proyectos'; idField = 'projectId';
+        } else if (type === 'RentalItems') {
+            const row = AppState.data.RentalItems.find(r => r.id === parentId);
+            driveFolderId = row?.driveFolderId;
+            sheetTarget = 'RentalItemImages'; subfolder = 'Alquiler'; idField = 'itemId';
+        } else if (type === 'Services') {
+            // Servicios no tienen carpeta propia por ahora, usan una común 'Servicios'
+            sheetTarget = 'ServiceImages'; subfolder = 'Servicios'; idField = 'serviceId';
+            parentTitle = parentTitle || 'General'; // Agrupación en Drive
+        } else if (type === 'ClientLogos') {
+            sheetTarget = 'ClientLogos'; subfolder = 'Logos'; parentId = 'general';
+        } else if (type === 'AboutProfile') {
+            sheetTarget = 'About'; subfolder = 'Perfil'; parentId = 'profile_image';
+        }
+
+        let successCount = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            UI.showLoading(`Subiendo ${i+1}/${files.length}: ${file.name}`);
+            
+            try {
+                const compressedFile = await new Promise((resolve, reject) => {
+                    new Compressor(file, {
+                        quality: 0.8, maxWidth: 1600, maxHeight: 1600,
+                        success(result) { resolve(result); }, error(err) { reject(err); }
+                    });
+                });
+
+                const formData = new FormData();
+                formData.append('file', compressedFile, file.name);
+                formData.append('targetSubfolder', subfolder);
+                formData.append('targetFolderId', driveFolderId || ''); 
+                formData.append('parentFolderName', parentTitle); 
+
+                const uploadRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
+                
+                // Guardar ID de carpeta si es nuevo (Solo para Proyectos y Alquiler)
+                if ((type === 'Projects' || type === 'RentalItems') && uploadRes.driveFolderId && uploadRes.driveFolderId !== driveFolderId) {
+                    driveFolderId = uploadRes.driveFolderId;
+                    await API.call('/.netlify/functions/update-sheet-data', { 
+                        method: 'POST', body: { sheet: type, action: 'update', criteria: { id: parentId }, data: { driveFolderId: driveFolderId } } 
+                    });
+                }
+
+                // CASO ESPECIAL: About Profile (Update en lugar de Add)
+                if (type === 'AboutProfile') {
+                    await API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST', body: { sheet: 'About', action: 'update', criteria: { section: 'profile_image' }, data: { content: uploadRes.imageUrl } }
+                    });
+                    document.getElementById('about-profile-preview').src = uploadRes.imageUrl;
+                } else {
+                    // ADD normal para galerías
+                    const newData = {
+                        id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                        imageUrl: uploadRes.imageUrl,
+                        fileId: uploadRes.fileId,
+                        isCover: 'No',
+                        showInPortfolio: 'No',
+                        order: 99
+                    };
+                    if (idField) newData[idField] = parentId;
+
+                    await API.call('/.netlify/functions/update-sheet-data', {
+                        method: 'POST', body: { sheet: sheetTarget, action: 'add', data: newData }
+                    });
+                }
+                successCount++;
+            } catch (error) {
+                console.error(error); UI.showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        UI.hideLoading();
+        if(successCount > 0) UI.showToast(`${successCount} subidas exitosas`);
+        
+        // Refrescar datos
+        await App.ensureDataForView(AppState.view);
+        if (type === 'Projects') this.handleProjectImages(parentId, parentTitle);
+        else if (type === 'RentalItems') this.handleRentalImages(parentId, parentTitle);
+        else if (type === 'Services') this.handleServiceImages(parentId, parentTitle);
+        else if (type === 'ClientLogos') this.handleClientLogos();
+    },
+
+    // --- HANDLERS DE MODALES ESPECÍFICOS ---
+    async handleProjectImages(projectId, title) {
+        const images = (AppState.data.ProjectImages || []).filter(i => i.projectId === projectId).sort((a,b) => (a.order||99)-(b.order||99));
+        this.renderImageModal(images, projectId, title, 'Projects');
+    },
+    async handleRentalImages(itemId, name) {
+        const images = (AppState.data.RentalItemImages || []).filter(i => i.itemId === itemId).sort((a,b) => (a.order||99)-(b.order||99));
+        this.renderImageModal(images, itemId, name, 'RentalItems');
+    },
+    async handleServiceImages(serviceId, title) {
+        const images = (AppState.data.ServiceImages || []).filter(i => i.serviceId === serviceId).sort((a,b) => (a.order||99)-(b.order||99));
+        this.renderImageModal(images, serviceId, title, 'Services');
+    },
+    async handleClientLogos() {
+        const images = (AppState.data.ClientLogos || []).sort((a,b) => (a.order||99)-(b.order||99));
+        this.renderImageModal(images, 'logos', 'Logos Clientes', 'ClientLogos');
+    },
+    
+    // Render Genérico de Modal de Imágenes
+    renderImageModal(images, parentId, title, type) {
+        const sheet = type === 'Projects' ? 'ProjectImages' : type === 'RentalItems' ? 'RentalItemImages' : type === 'Services' ? 'ServiceImages' : 'ClientLogos';
+        const html = images.map(i => `
+            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white image-row" id="img-row-${i.id}">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
+                <div class="flex-1 grid grid-cols-2 gap-2">
+                    <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'order', this.value)"></label>
+                    ${type === 'Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.quickUpdate('${sheet}', '${i.id}', 'caption', this.value)"></label>` : ''}
+                </div>
+                <div class="flex flex-col gap-2">
+                    ${type !== 'ClientLogos' ? `<label class="flex items-center gap-2 text-xs font-bold cursor-pointer select-none"><input type="checkbox" ${i.isCover==='Si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>` : ''}
+                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs font-bold cursor-pointer select-none"><input type="checkbox" ${i.showInPortfolio==='Si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>` : ''}
+                </div>
+                <button class="text-red-500 hover:bg-red-50 p-2 rounded transition-colors" onclick="App.handleDeleteImage('${sheet}', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
+            </div>
+        `).join('');
+        
+        UI.showModal(`Imágenes: ${title}`, 
+            `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4 pr-2">${html.length ? html : '<p class="text-center text-gray-400 py-8">No hay imágenes.</p>'}</div>
+             <div class="border-t pt-4">
+                <label class="btn btn-primary w-full text-center cursor-pointer justify-center py-3">
+                    <i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes
+                    <input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g, "")}', '${type}')">
+                </label>
+             </div>`, 
+            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
+        );
+    },
+
+    // Gestión de Contenido de Servicios (Texto)
+    async handleServiceContent(serviceId, title) {
+        const blocks = (AppState.data.ServiceContentBlocks || []).filter(b => b.serviceId === serviceId).sort((a,b) => (a.order||99)-(b.order||99));
+        const html = blocks.map(b => `
+            <div class="p-3 border rounded mb-2 bg-white group relative">
+                <button class="absolute top-2 right-2 text-red-400 hover:text-red-600" onclick="App.handleDelete('ServiceContentBlocks', '${b.id}')">&times;</button>
+                <input type="text" class="font-bold w-full border-b mb-2 p-1" value="${b.title}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'title', this.value)" placeholder="Título Sección">
+                <textarea class="w-full border p-1 text-sm text-gray-600" rows="3" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'content', this.value)" placeholder="Contenido...">${b.content}</textarea>
+                <input type="number" class="w-16 text-xs border p-1 mt-1" value="${b.order||99}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'order', this.value)" placeholder="Orden">
+            </div>
+        `).join('');
+        
+        UI.showModal(`Contenido: ${title}`, 
+            `<div class="max-h-[60vh] overflow-y-auto mb-4">${html.length ? html : '<p class="text-center text-gray-400">Sin bloques de contenido.</p>'}</div>
+             <button class="btn btn-primary w-full" onclick="App.addServiceBlock('${serviceId}')">+ Añadir Bloque</button>`,
+            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
+        );
+    },
+    
+    async addServiceBlock(serviceId) {
+        try {
+            await API.call('/.netlify/functions/update-sheet-data', { 
+                method: 'POST', 
+                body: { 
+                    sheet: 'ServiceContentBlocks', 
+                    action: 'add', 
+                    data: { id: `blk_${Date.now()}`, serviceId: serviceId, title: 'Nuevo Título', content: 'Texto aquí...', order: 99 } 
+                } 
+            });
+            await App.ensureDataForView('services');
+            // Recargar modal (necesitamos encontrar el título del servicio)
+            const s = AppState.data.Services.find(x => x.id === serviceId);
+            this.handleServiceContent(serviceId, s?.title || '');
+        } catch(e) { alert(e.message); }
+    },
+
+    // CRUD General (Proyectos, Servicios, Videos, etc.)
+    async handleEditCrudItem(sheet, id) { 
+        const isNew = !id;
+        let html = '';
+        
+        if(sheet === 'Projects') {
+            const p = isNew ? {} : AppState.data.Projects.find(x => x.id === id);
+            html = `${UI.inputHTML('crud', 'order', 'Orden', p?.order||99, 'number')} ${UI.inputHTML('crud', 'title', 'Título', p?.title)} ${UI.textareaHTML('crud', 'description', 'Descripción', p?.description)}`;
+        } else if (sheet === 'Services') {
+             const s = isNew ? {} : AppState.data.Services.find(x => x.id === id);
+             html = `${UI.inputHTML('crud', 'order', 'Orden', s?.order||99, 'number')} ${UI.inputHTML('crud', 'title', 'Título', s?.title)} ${UI.inputHTML('crud', 'icon', 'Icono (FontAwesome)', s?.icon||'fas fa-star')} ${UI.textareaHTML('crud', 'intro', 'Intro', s?.intro)}`;
+        } else if (sheet === 'Videos') {
+             const v = isNew ? {} : AppState.data.Videos.find(x => x.id === id);
+             html = `${UI.inputHTML('crud', 'order', 'Orden', v?.order||99, 'number')} ${UI.inputHTML('crud', 'title', 'Título', v?.title)} ${UI.inputHTML('crud', 'url', 'URL Video/Imagen', v?.url)}`;
+        } else if (sheet === 'RentalItems') {
+             const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
+             const cats = AppState.data.RentalCategories || [];
+             html = `${UI.inputHTML('crud', 'name', 'Nombre', i?.name)} ${UI.selectHTML('crud', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('crud', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('crud', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('crud', 'long_desc', 'Descripción Larga', i?.long_desc)}`;
+        } else if (sheet === 'RentalCategories') {
+             const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
+             html = `${UI.inputHTML('crud', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', c?.name)}`;
+        } else if (sheet === 'BlockedDates') {
+             const items = AppState.data.RentalItems || [];
+             html = `${UI.selectHTML('crud', 'itemId', 'Equipo', items)} ${UI.inputHTML('crud', 'reason', 'Motivo')} ${UI.inputHTML('crud', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('crud', 'endDate', 'Hasta', '', 'date')}`;
+        }
+        
+        UI.showModal(isNew ? 'Nuevo' : 'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}', '${id}')">Guardar</button>`);
+    },
+
+    async saveCrud(sheet, id) {
+        try {
+            const isNew = !id || id === 'null';
+            const data = {};
+            document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.dataset.key] = el.value);
+            const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
+            if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
+            
+            UI.showLoading('Guardando...');
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
+            
+            // Recargar solo lo necesario
+            await App.ensureDataForView(AppState.view);
+            const newData = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheet}`);
+            AppState.data[sheet] = newData[sheet];
+            
+            UI.closeModal(); UI.renderView(AppState.view);
+            UI.showToast('Guardado');
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
+    },
+    
+    async handleDeleteImage(sheet, id, rowEl) {
+        UI.showConfirm("¿Eliminar permanentemente?", async () => {
+            rowEl.style.opacity = '0.3'; rowEl.style.pointerEvents = 'none';
+            try {
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { id } } });
+                rowEl.remove();
+                AppState.data[sheet] = AppState.data[sheet].filter(i => i.id !== id);
+                UI.showToast('Eliminado');
+            } catch(e) { alert(e.message); rowEl.style.opacity = '1'; }
+        });
+    },
+    
+    async handleDelete(sheet, id, idField='id') {
+        UI.showConfirm("¿Eliminar registro?", async () => {
+             UI.showLoading('Eliminando...');
+             try {
+                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
+                 AppState.data[sheet] = AppState.data[sheet].filter(i => i[idField] !== id);
+                 UI.renderView(AppState.view);
+                 UI.showToast('Eliminado');
+             } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
+        });
+    },
+    
+    async quickUpdate(sheet, id, field, val) { 
+        try {
+            const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
+            const item = AppState.data[sheet].find(i => i.id === id); if(item) item[field] = valStr;
+            UI.showToast('Actualizado');
+        } catch(e) { console.error(e); UI.showToast('Error', 'error'); }
+    },
+    
+    async updateLocalPortfolioOrder(id, val) { 
+        const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; 
+    },
+    async savePortfolioOrder() {
+         UI.showLoading('Guardando...');
+         try {
+             const updates = AppState.data.ProjectImages.filter(i => i.showInPortfolio === 'Si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } }));
+             await Promise.all(updates); UI.showToast('Orden guardado');
+         } catch(e) { alert(e.message); } finally { UI.hideLoading(); }
+    },
+    async removeFromPortfolio(id) {
+        await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No');
+        AppState.data.ProjectImages = AppState.data.ProjectImages.map(i => i.id === id ? {...i, showInPortfolio: 'No'} : i);
+        UI.renderView('portfolio-manager');
+    },
+    
+    async handleSaveAbout() {
+        const data = {};
+        document.querySelectorAll('#about-form-container textarea').forEach(el => data[el.dataset.key] = el.value);
+        UI.showLoading('Guardando...');
+        try {
+            for (const [key, value] of Object.entries(data)) {
+                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'About', action: 'update', criteria: {section: key}, data: {content: value} } });
+            }
+            await App.ensureDataForView('settings'); UI.showToast('Bio guardada');
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
+    },
+    
+    async handleSaveSettings() {
+        const data = {};
+        document.querySelectorAll('#settings-form-container input').forEach(el => data[el.dataset.key] = el.value);
+        UI.showLoading('Guardando...');
+        try {
+            for (const [key, value] of Object.entries(data)) {
+                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: {key}, data: {value} } });
+            }
+            await App.ensureDataForView('settings'); UI.showToast('Ajustes guardados');
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
+    }
+};
+
+document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
+document.getElementById('logout-btn').addEventListener('click', () => Auth.logout());
+document.getElementById('main-nav').addEventListener('click', e => { const link = e.target.closest('.sidebar-link'); if(link) { e.preventDefault(); UI.renderView(link.dataset.view); } });
+Auth.init();
+</script>
 </body>
 </html>
-
 
 
 
