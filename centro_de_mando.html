@@ -46,6 +46,17 @@
         .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
+        /* --- CORRECCIÓN UI PORTAFOLIO --- */
+        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; }
+        .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+        .portfolio-grid-overlay { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.6); 
+            opacity: 0; transition: opacity 0.2s; 
+            display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; 
+        }
+        .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
+        .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -101,7 +112,7 @@
             </div>
 
             <div id="view-portfolio-manager" class="view">
-                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Portafolio</h1><button class="btn btn-primary" onclick="window.location.reload()"><i class="fas fa-sync"></i> Actualizar</button></div>
+                <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Portafolio</h1><button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button></div>
                 <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
 
@@ -137,8 +148,10 @@
             
             <div id="view-settings" class="view">
                 <div class="flex justify-between items-center mb-6"><h1 class="text-3xl font-display font-bold">Configuración</h1></div>
-                <p class="text-sm text-gray-500 mb-4">Ajustes generales del sitio.</p>
                 <div id="settings-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
+                
+                <h2 class="text-2xl font-display font-bold mt-10 mb-4">Logos Clientes</h2>
+                <button class="btn btn-secondary mb-4" onclick="App.handleClientLogos()">+ Gestionar Logos</button>
             </div>
         </main>
     </div>
@@ -165,7 +178,7 @@ const AppState = { data: null, token: JSON.parse(localStorage.getItem('gAuthToke
 const API = {
     async call(endpoint, options = {}, isRetry = false) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout para subidas
+        const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s para procesos largos
         
         const headers = new Headers(options.headers || {});
         if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
@@ -294,9 +307,19 @@ const UI = {
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleProjectImages('${p.id}', '${p.title.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         } else if (view === 'portfolio-manager') {
+            // Corregido: Input y botón centrados, solo hover
             const images = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').sort((a,b) => (a.portfolioOrder||99)-(b.portfolioOrder||99));
             document.getElementById('portfolio-manager-grid').innerHTML = images.map(i => `
-                <div class="portfolio-grid-item group"><img src="${i.imageUrl}" class="img-preview w-full h-full"><div class="portfolio-grid-overlay"><input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)"><button class="text-white hover:text-red-400 text-sm font-bold" onclick="App.quickUpdate('ProjectImages', '${i.id}', 'showInPortfolio', 'No')"><i class="fas fa-times"></i> Quitar</button></div><span class="portfolio-badge">#${i.portfolioOrder||99}</span></div>
+                <div class="portfolio-grid-item group">
+                    <img src="${i.imageUrl}" class="img-preview w-full h-full">
+                    <div class="portfolio-grid-overlay">
+                        <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
+                        <button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')">
+                            <i class="fas fa-times"></i> Quitar
+                        </button>
+                    </div>
+                    <span class="portfolio-badge">#${i.portfolioOrder||99}</span>
+                </div>
             `).join('');
         } else if (view === 'rentals') {
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
@@ -319,6 +342,9 @@ const UI = {
                  const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
                  return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
              }).join('');
+        } else if (view === 'settings') {
+             const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+             document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email', s.contact_email)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram', s.social_instagram)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
         }
     },
     inputHTML: (p, k, l, v='', t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
@@ -333,7 +359,6 @@ const UI = {
 const App = {
     async loadData() { AppState.data = await API.call('/.netlify/functions/get-admin-data'); },
     
-    // --- GESTIÓN DE IMÁGENES (NUEVO) ---
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files);
         if (!files.length) return;
@@ -342,7 +367,6 @@ const App = {
             ? AppState.data.Projects.find(p => p.id === parentId)
             : AppState.data.RentalItems.find(r => r.id === parentId);
         
-        // Recuperar folder ID existente o usar nulo para crear uno nuevo
         let driveFolderId = parentRow?.driveFolderId || null;
         
         const sheetTarget = type === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
@@ -356,7 +380,7 @@ const App = {
             UI.showLoading(`Subiendo ${i+1}/${files.length}: ${file.name}`);
             
             try {
-                // 1. Compresión
+                // Compresión en cliente
                 const compressedFile = await new Promise((resolve, reject) => {
                     new Compressor(file, {
                         quality: 0.8,
@@ -367,31 +391,23 @@ const App = {
                     });
                 });
 
-                // 2. Subida a Drive
                 const formData = new FormData();
                 formData.append('file', compressedFile, file.name);
                 formData.append('targetSubfolder', subfolder);
-                if (driveFolderId) formData.append('parentFolderName', driveFolderId); // Usar ID si existe
-                else formData.append('parentFolderName', parentTitle); // Usar Nombre si es nuevo
+                // PRIORIDAD AL NOMBRE: El backend lo resolverá
+                formData.append('parentFolderName', parentTitle); 
 
                 const uploadRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
                 
-                // 3. Actualizar Folder ID en Padre (si es la primera vez)
                 if (uploadRes.driveFolderId && !driveFolderId) {
                     driveFolderId = uploadRes.driveFolderId;
-                    // Actualización silenciosa del padre para guardar el ID
+                    // Silently save folder ID
                     await API.call('/.netlify/functions/update-sheet-data', { 
                         method: 'POST', 
-                        body: { 
-                            sheet: type, 
-                            action: 'update', 
-                            criteria: { id: parentId }, 
-                            data: { driveFolderId: driveFolderId } 
-                        } 
+                        body: { sheet: type, action: 'update', criteria: { id: parentId }, data: { driveFolderId: driveFolderId } } 
                     });
                 }
 
-                // 4. Guardar registro de imagen
                 await API.call('/.netlify/functions/update-sheet-data', {
                     method: 'POST',
                     body: {
@@ -401,7 +417,7 @@ const App = {
                             id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`,
                             [idField]: parentId,
                             imageUrl: uploadRes.imageUrl,
-                            fileId: uploadRes.fileId,
+                            fileId: uploadRes.fileId, // CRUCIAL para borrar después
                             isCover: 'No',
                             showInPortfolio: 'No'
                         }
@@ -431,6 +447,31 @@ const App = {
         const images = (AppState.data.RentalItemImages || []).filter(i => i.itemId === itemId).sort((a,b) => (a.order||99)-(b.order||99));
         this.renderImageModal(images, itemId, name, 'RentalItems');
     },
+    
+    async handleClientLogos() {
+        const images = (AppState.data.ClientLogos || []).sort((a,b) => (a.order||99)-(b.order||99));
+        // Reutilizamos modal de imágenes con lógica especial
+         const html = images.map(i => `
+            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white image-row" id="img-row-${i.id}">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
+                <div class="flex-1 grid grid-cols-1 gap-2">
+                    <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.quickUpdate('ClientLogos', '${i.id}', 'order', this.value)"></label>
+                </div>
+                <button class="text-red-500 hover:bg-red-50 p-2 rounded transition-colors" onclick="App.handleDeleteImage('ClientLogos', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
+            </div>
+        `).join('');
+        
+        UI.showModal(`Logos de Clientes`, 
+            `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4 pr-2">${html.length ? html : '<p class="text-center text-gray-400 py-8">No hay logos.</p>'}</div>
+             <div class="border-t pt-4">
+                <label class="btn btn-primary w-full text-center cursor-pointer justify-center py-3">
+                    <i class="fas fa-cloud-upload-alt mr-2"></i> Subir Logo
+                    <input type="file" accept="image/*" class="hidden" onchange="App.uploadImages(this, 'client_logos_container', 'Logos Clientes', 'ClientLogos')">
+                </label>
+             </div>`, 
+            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
+        );
+    },
 
     renderImageModal(images, parentId, title, type) {
         const sheet = type === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
@@ -449,13 +490,12 @@ const App = {
             </div>
         `).join('');
         
-        const uploadType = type; // Closure capture
         UI.showModal(`Imágenes: ${title}`, 
             `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4 pr-2">${html.length ? html : '<p class="text-center text-gray-400 py-8">No hay imágenes aún.</p>'}</div>
              <div class="border-t pt-4">
                 <label class="btn btn-primary w-full text-center cursor-pointer justify-center py-3">
                     <i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes
-                    <input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g, "")}', '${uploadType}')">
+                    <input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g, "")}', '${type}')">
                 </label>
              </div>`, 
             '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'
@@ -495,7 +535,7 @@ const App = {
             const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
             
-            UI.showLoading('Guardando...');
+            UI.showLoading('Guardando (puede tardar unos segundos)...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
             await this.loadData(); UI.closeModal(); UI.renderView(AppState.view);
             UI.showToast('Guardado correctamente');
@@ -506,18 +546,10 @@ const App = {
         UI.showConfirm("¿Eliminar esta imagen permanentemente?", async () => {
             rowEl.style.opacity = '0.3'; rowEl.style.pointerEvents = 'none';
             try {
-                // Necesitamos buscar la imagen para obtener su fileId y borrarla de Drive
-                const imgData = AppState.data[sheet].find(i => i.id === id);
                 const criteria = { id };
-                
-                // Añadir info extra para que el backend pueda borrar de Drive si es necesario
-                if (imgData && imgData.fileId) {
-                     // El backend buscará la fila por ID y leerá el fileId de la columna
-                }
-
                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria } });
                 rowEl.remove();
-                await this.loadData(); // Recargar para sincronizar estado
+                await this.loadData(); // Sync
                 UI.showToast('Imagen eliminada');
             } catch(e) {
                 alert("Error: " + e.message); rowEl.style.opacity = '1';
@@ -527,7 +559,7 @@ const App = {
     
     async handleDelete(sheet, id, idField='id') {
         UI.showConfirm("¿Eliminar este registro y sus datos asociados?", async () => {
-             UI.showLoading('Eliminando...');
+             UI.showLoading('Eliminando (esto puede tardar)...');
              try {
                  await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
                  await this.loadData(); UI.renderView(AppState.view);
@@ -539,12 +571,14 @@ const App = {
     async quickUpdate(sheet, id, field, val) { 
         const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
         try {
-            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
-            // Actualización optimista local
+            // Update optimistc
             const item = AppState.data[sheet].find(i => i.id === id);
             if(item) item[field] = valStr;
+
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
+            await this.loadData(); // Sync full state
             UI.showToast('Actualizado');
-        } catch(e) { console.error(e); UI.showToast('Error al actualizar', 'error'); }
+        } catch(e) { console.error(e); UI.showToast('Error (reintentando en background)', 'error'); }
     },
 
     async updateLocalPortfolioOrder(id, val) {
@@ -567,6 +601,19 @@ const App = {
         await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No');
         await this.loadData();
         UI.renderView('portfolio-manager');
+    },
+    
+    async handleSaveSettings() {
+        const data = {};
+        document.querySelectorAll('#settings-form-container input').forEach(el => data[el.dataset.key] = el.value);
+        UI.showLoading('Guardando...');
+        try {
+            for (const [key, value] of Object.entries(data)) {
+                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: {key}, data: {value} } });
+            }
+            await this.loadData();
+            UI.showToast('Configuración guardada');
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     }
 };
 
@@ -577,3 +624,4 @@ Auth.init();
 </script>
 </body>
 </html>
+
