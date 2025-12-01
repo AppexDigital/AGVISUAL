@@ -1,5 +1,5 @@
 // functions/upload-image.js
-// v3.1 - FIX IMAGENES VISIBLES Y SHARED DRIVES
+// v4.0 - FIX VISUALIZACIÓN DEFINITIVA (Thumbnail Link)
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
@@ -50,7 +50,6 @@ exports.handler = async (event, context) => {
     oAuth2Client.setCredentials({ access_token: userAccessToken });
     const drive = google.drive({ version: 'v3', auth: oAuth2Client });
 
-    // Buscar/Crear Subcarpeta
     let targetFolderId = parentFolderId;
     if (targetSubfolder !== 'general') {
         const q = `mimeType='application/vnd.google-apps.folder' and name='${targetSubfolder}' and '${parentFolderId}' in parents and trashed = false`;
@@ -66,34 +65,39 @@ exports.handler = async (event, context) => {
         }
     }
 
-    // Subir Archivo
     const driveResponse = await drive.files.create({
       resource: { name: file.filename, parents: [targetFolderId] },
       media: { mimeType: file.mimeType, body: fs.createReadStream(tempFilePath) },
-      fields: 'id, name, webViewLink, thumbnailLink', // Pedimos thumbnailLink también
+      fields: 'id, name, thumbnailLink', // PEDIMOS EL LINK DE MINIATURA
       supportsAllDrives: true
     });
     
     const fileId = driveResponse.data.id;
 
-    // Hacer Público
     await drive.permissions.create({
       fileId: fileId,
       requestBody: { role: 'reader', type: 'anyone' },
       supportsAllDrives: true
     });
 
-    // Construir URL Directa para <img>
-    // Usamos el formato uc?export=view que es el estándar para hotlinking
-    const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    // TRUCO DEL ARQUITECTO:
+    // El thumbnailLink viene por defecto pequeño (=s220).
+    // Lo reemplazamos por =s3000 para obtener la resolución original completa.
+    // Este link es PÚBLICO y no requiere cookies de sesión.
+    let robustUrl = driveResponse.data.thumbnailLink;
+    if (robustUrl) {
+        robustUrl = robustUrl.replace('=s220', '=s3000'); 
+    } else {
+        // Fallback por si acaso
+        robustUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    }
 
     return {
       statusCode: 200,
       body: JSON.stringify({
           message: 'OK',
           fileId: fileId,
-          // Devolvemos la URL directa para que se vea en el HTML
-          imageUrl: directUrl 
+          imageUrl: robustUrl // URL BLINDADA
       }),
     };
 
