@@ -485,18 +485,18 @@ const App = {
         if (!confirm('¿Eliminar?')) return;
         UI.showLoading('Eliminando...');
         
-        // Cascading Delete Logic
-        const cascadeDelete = async (childSheet, foreignKey) => {
-            const children = (AppState.data[childSheet] || []).filter(c => c[foreignKey] === id);
-            for (const child of children) {
-                await API.call('/.netlify/functions/update-sheet-data', {
-                    method: 'POST', body: { sheet: childSheet, action: 'delete', criteria: { id: child.id } }
-                });
+        if(sheet === 'Projects') {
+            const imgs = (AppState.data.ProjectImages || []).filter(i => i.projectId === id);
+            for(const img of imgs) {
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'delete', criteria: {id: img.id} } });
             }
-        };
-
-        if(sheet === 'Projects') await cascadeDelete('ProjectImages', 'projectId');
-        if(sheet === 'RentalItems') await cascadeDelete('RentalItemImages', 'itemId');
+        }
+        if(sheet === 'RentalItems') {
+             const imgs = (AppState.data.RentalItemImages || []).filter(i => i.itemId === id);
+             for(const img of imgs) {
+                await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'RentalItemImages', action: 'delete', criteria: {id: img.id} } });
+             }
+        }
 
         await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } } });
         await this.loadData(); UI.renderView(AppState.view); UI.hideLoading();
@@ -526,19 +526,18 @@ const App = {
     },
     async uploadProjectImages(input, projectId, projectTitle) {
         const files = Array.from(input.files); if(!files.length) return;
-        UI.showLoading(`Subiendo ${files.length}...`);
-        for (const file of files) {
-            const formData = new FormData(); formData.append('file', file); 
+        for (let i = 0; i < files.length; i++) {
+            UI.showLoading(`Subiendo ${i + 1} de ${files.length}...`);
+            const formData = new FormData(); formData.append('file', files[i]); 
             formData.append('targetSubfolder', 'Projects');
             formData.append('parentFolderName', projectTitle);
             try {
                 const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                // --- UPDATE: GUARDAMOS EL ID DE CARPETA EN EL PROYECTO SI ES NUEVO ---
+                // GUARDAR ID DE CARPETA SI ES NUEVO
                 const project = AppState.data.Projects.find(p => p.id === projectId);
                 if (project && !project.driveFolderId && res.driveFolderId) {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Projects', action: 'update', criteria: {id: projectId}, data: {driveFolderId: res.driveFolderId} } });
                 }
-                // ---------------------------------------------------------------------
                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'add', data: { id: `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, projectId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99, isCover: 'No', showInPortfolio: 'No', portfolioOrder: 99 } } });
             } catch (e) { console.error(e); }
         }
@@ -546,25 +545,39 @@ const App = {
     },
     async uploadGenericImages(input, sheet, keyField, parentId, parentName, categoryFolder) {
         const files = Array.from(input.files); if(!files.length) return;
-        UI.showLoading(`Subiendo ${files.length}...`);
-        for (const file of files) {
-            const formData = new FormData(); formData.append('file', file); 
+        for (let i = 0; i < files.length; i++) {
+            UI.showLoading(`Subiendo ${i + 1} de ${files.length}...`);
+            const formData = new FormData(); formData.append('file', files[i]); 
             formData.append('targetSubfolder', categoryFolder);
             formData.append('parentFolderName', parentName);
             try {
                 const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                 // --- UPDATE: GUARDAMOS EL ID DE CARPETA EN EL ITEM SI ES NUEVO ---
-                const item = AppState.data[sheet.replace('Images','')].find(i => i.id === parentId); // RentalItemImages -> RentalItems
+                // GUARDAR ID DE CARPETA SI ES NUEVO
+                const item = AppState.data[sheet.replace('Images','')].find(i => i.id === parentId); 
                 if (item && !item.driveFolderId && res.driveFolderId) {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'RentalItems', action: 'update', criteria: {id: parentId}, data: {driveFolderId: res.driveFolderId} } });
                 }
-                // ---------------------------------------------------------------------
                 await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}`, [keyField]: parentId, imageUrl: res.imageUrl, fileId: res.fileId, order: 99 } } });
             } catch (e) { console.error(e); }
         }
         await this.loadData(); UI.hideLoading(); this.handleRentalImages(parentId, parentName);
     },
-    async quickUpdate(sheet, id, field, val) { await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: val} } }); },
+    async quickUpdate(sheet, id, field, val) { 
+        const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
+        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: valStr} } }); 
+        
+        // Si es portada o portafolio, refrescar todo para ver cambios (como desmarcado automático)
+        if (field === 'isCover' || field === 'showInPortfolio') {
+             await this.loadData();
+             // Re-abrir modal si estamos en imágenes de proyecto
+             const item = AppState.data[sheet].find(i => i.id === id);
+             if (sheet === 'ProjectImages') {
+                 const p = AppState.data.Projects.find(pr => pr.id === item.projectId);
+                 this.handleProjectImages(item.projectId, p?.title || '');
+                 if(AppState.view === 'portfolio-manager') UI.renderView('portfolio-manager');
+             }
+        }
+    },
     updateLocalPortfolioOrder(id, val) { const img = AppState.data.ProjectImages.find(i => i.id === id); if(img) img.portfolioOrder = val; },
     async savePortfolioOrder() {
         UI.showLoading('Guardando...');
@@ -599,5 +612,4 @@ Auth.init();
 </script>
 </body>
 </html>
-
 
