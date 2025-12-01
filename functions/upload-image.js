@@ -1,5 +1,5 @@
 // functions/upload-image.js
-// v5.1 - Retorno robusto de Folder ID
+// v6.0 - ORGANIZACIÓN POR NOMBRE & SUBIDA SEGURA
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
@@ -9,102 +9,80 @@ const Busboy = require('busboy');
 function parseMultipartForm(event) {
   return new Promise((resolve, reject) => {
     try {
-      const busboy = Busboy({
-        headers: { 'content-type': event.headers['content-type'] || event.headers['Content-Type'] }
-      });
-      const fields = {};
-      const files = {};
-      const tmpdir = os.tmpdir();
-
-      busboy.on('field', (fieldname, val) => fields[fieldname] = val);
-      busboy.on('file', (fieldname, file, { filename, mimeType }) => {
-        const filepath = path.join(tmpdir, `upload-${Date.now()}-${filename}`);
-        const writeStream = fs.createWriteStream(filepath);
-        file.pipe(writeStream);
-        file.on('end', () => files[fieldname] = { filepath, filename, mimeType });
+      const busboy = Busboy({ headers: { 'content-type': event.headers['content-type'] || event.headers['Content-Type'] } });
+      const fields = {}; const files = {}; const tmpdir = os.tmpdir();
+      busboy.on('field', (n, v) => fields[n] = v);
+      busboy.on('file', (n, file, info) => {
+        const filepath = path.join(tmpdir, `up_${Date.now()}_${info.filename}`);
+        file.pipe(fs.createWriteStream(filepath)).on('finish', () => files[n] = { ...info, filepath });
       });
       busboy.on('close', () => resolve({ fields, files }));
-      busboy.on('error', err => reject(err));
+      busboy.on('error', reject);
       busboy.end(Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'binary'));
-    } catch (error) { reject(error); }
+    } catch (e) { reject(e); }
   });
 }
 
-// Helper: Devuelve { folderId: string }
 async function getOrCreateFolder(drive, parentId, folderName) {
-    if (!folderName) return parentId;
+    // Buscar por NOMBRE exacto dentro del padre
     const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentId}' in parents and trashed = false`;
     const res = await drive.files.list({ q, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
     
-    if (res.data.files.length > 0) {
-        return res.data.files[0].id;
-    } else {
-        const newFolder = await drive.files.create({
-            resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
-            fields: 'id', supportsAllDrives: true
-        });
-        return newFolder.data.id;
-    }
+    if (res.data.files.length > 0) return res.data.files[0].id;
+    
+    // Si no existe, crearla
+    const newFolder = await drive.files.create({
+        resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
+        fields: 'id', supportsAllDrives: true
+    });
+    return newFolder.data.id;
 }
 
-exports.handler = async (event, context) => {
-  if (!event.headers.authorization?.startsWith('Bearer ')) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
-  const userAccessToken = event.headers.authorization.split(' ')[1];
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+exports.handler = async (event) => {
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+  const userToken = event.headers.authorization?.split(' ')[1];
+  if (!userToken) return { statusCode: 401, body: 'Unauthorized' };
 
-  const rootFolderId = process.env.GOOGLE_DRIVE_ASSET_FOLDER_ID;
   let tempFilePath = null;
-
   try {
     const { fields, files } = await parseMultipartForm(event);
     const file = files.file;
-    const targetSubfolder = fields.targetSubfolder || 'General'; 
-    const parentFolderName = fields.parentFolderName || null;
+    // AQUÍ LA CLAVE: Usamos el nombre legible (parentFolderName)
+    const folderName = fields.parentFolderName || 'General'; 
+    const subFolderType = fields.targetSubfolder || 'Varios';
 
-    if (!file) return { statusCode: 400, body: JSON.stringify({ error: 'No file.' }) };
+    if (!file) throw new Error('No file uploaded');
     tempFilePath = file.filepath;
 
-    const oAuth2Client = new google.auth.OAuth2();
-    oAuth2Client.setCredentials({ access_token: userAccessToken });
-    const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({ access_token: userToken });
+    const drive = google.drive({ version: 'v3', auth });
 
-    // Navegación Jerárquica
-    const categoryFolderId = await getOrCreateFolder(drive, rootFolderId, targetSubfolder);
-    const finalFolderId = await getOrCreateFolder(drive, categoryFolderId, parentFolderName);
+    const rootId = process.env.GOOGLE_DRIVE_ASSET_FOLDER_ID;
+    // 1. Carpeta Tipo (Proyectos / Alquiler)
+    const typeFolderId = await getOrCreateFolder(drive, rootId, subFolderType);
+    // 2. Carpeta Específica (Nombre del Proyecto)
+    const targetFolderId = await getOrCreateFolder(drive, typeFolderId, folderName);
 
-    const driveResponse = await drive.files.create({
-      resource: { name: file.filename, parents: [finalFolderId] },
+    const res = await drive.files.create({
+      resource: { name: file.filename, parents: [targetFolderId] },
       media: { mimeType: file.mimeType, body: fs.createReadStream(tempFilePath) },
-      fields: 'id, name, thumbnailLink, webViewLink',
-      supportsAllDrives: true
-    });
-    
-    const fileId = driveResponse.data.id;
-
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: { role: 'reader', type: 'anyone' },
+      fields: 'id, thumbnailLink, webViewLink',
       supportsAllDrives: true
     });
 
-    let robustUrl = driveResponse.data.thumbnailLink;
-    if (robustUrl) robustUrl = robustUrl.replace('=s220', '=s3000'); 
-    else robustUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    await drive.permissions.create({ fileId: res.data.id, requestBody: { role: 'reader', type: 'anyone' } });
+
+    let imgUrl = res.data.thumbnailLink ? res.data.thumbnailLink.replace('=s220', '=s3000') : res.data.webViewLink;
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
-          message: 'OK',
-          fileId: fileId,
-          imageUrl: robustUrl,
-          driveFolderId: finalFolderId // IMPORTANTE: Retornamos el ID de la carpeta donde se guardó
-      }),
+      body: JSON.stringify({ message: 'OK', fileId: res.data.id, imageUrl: imgUrl, driveFolderId: targetFolderId })
     };
-
-  } catch (error) {
-    console.error('Upload Error:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+  } catch (e) {
+    console.error(e);
+    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   } finally {
-      if (tempFilePath) fs.unlinkSync(tempFilePath);
+    if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
   }
 };
