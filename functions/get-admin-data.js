@@ -1,5 +1,5 @@
 // functions/get-admin-data.js
-// v6.0 - ROBUSTEZ TOTAL (Tolerancia a fallos parciales)
+// v9.0 - ARQUITECTURA ESCALABLE (Carga Selectiva Real)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { validateGoogleToken } = require('./google-auth-helper');
@@ -18,56 +18,63 @@ async function getDoc() {
 function rowsToObjects(sheet, rows) {
   if (!rows || rows.length === 0) return [];
   const headers = sheet.headerValues || [];
+  
   return rows.map(row => {
     const obj = {};
     headers.forEach(header => {
       let val = row.get(header);
       if (val === undefined || val === null) val = '';
       obj[header] = val;
-      // Copia normalizada para búsquedas fáciles (ej: obj['projectid'])
+      // Copia normalizada para búsquedas fáciles
       obj[header.toLowerCase().trim()] = val;
     });
-    obj._rawId = row.rowIndex;
+    obj._rawId = row.rowIndex; 
     return obj;
   });
 }
 
 exports.handler = async (event, context) => {
+  // 1. Seguridad
   if (!(await validateGoogleToken(event))) {
     return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
   }
 
   try {
     const doc = await getDoc();
-    const sheetTitles = [
-      'Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages',
-      'Services', 'ServiceContentBlocks', 'ServiceImages',
-      'RentalCategories', 'RentalItems', 'RentalItemImages',
-      'Bookings', 'BlockedDates'
-    ];
+    
+    // 2. IDENTIFICAR QUÉ HOJAS SE NECESITAN
+    // Si el frontend no especifica sheets, cargamos solo Dashboard (ligero)
+    let requestedSheets = [];
+    if (event.queryStringParameters && event.queryStringParameters.sheets) {
+        requestedSheets = event.queryStringParameters.sheets.split(',');
+    } else {
+        // Carga por defecto (Dashboard)
+        requestedSheets = ['Projects', 'ProjectImages', 'Bookings']; 
+    }
 
-    // Usamos map para procesar en paralelo, pero con captura de errores individual
-    const results = await Promise.all(sheetTitles.map(async (title) => {
+    const adminData = {};
+
+    // 3. CARGA PARALELA CONTROLADA (Solo de lo solicitado)
+    // Al ser pocas hojas (2 o 3), podemos usar Promise.all sin saturar la cuota
+    const promises = requestedSheets.map(async (title) => {
         try {
             const sheet = doc.sheetsByTitle[title];
-            if (!sheet) {
-                console.warn(`Hoja no encontrada: ${title}`);
-                return { title, data: [] };
-            }
+            if (!sheet) return { title, data: [] };
+            
             await sheet.loadHeaderRow();
             const rows = await sheet.getRows();
             return { title, data: rowsToObjects(sheet, rows) };
-        } catch (innerError) {
-            console.error(`Error leyendo hoja ${title}:`, innerError.message);
-            // Si una hoja falla, devolvemos array vacío en lugar de romper todo el sistema
+        } catch (e) {
+            console.warn(`Error cargando hoja ${title}: ${e.message}`);
             return { title, data: [] };
         }
-    }));
+    });
 
-    const adminData = results.reduce((acc, item) => {
-      acc[item.title] = item.data;
-      return acc;
-    }, {});
+    const results = await Promise.all(promises);
+
+    results.forEach(res => {
+        adminData[res.title] = res.data;
+    });
 
     return {
       statusCode: 200,
@@ -76,7 +83,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Error fatal en get-admin-data:', error);
+    console.error('Data Error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
