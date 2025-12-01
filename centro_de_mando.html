@@ -387,7 +387,35 @@ const Auth = {
 // --- CAPA UI ---
 const UI = {
     showLogin: () => { document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; },
-    showApp: async () => { document.getElementById('login-screen').style.display='none'; await App.loadData('dashboard'); document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='flex'; App.switchView('dashboard'); },
+    showApp: async () => {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('loading-screen').style.display = 'flex'; // Asegurar que se vea
+        
+        try {
+            // Intentamos cargar
+            await App.loadData('dashboard');
+            
+            // Si tenemos éxito, mostramos la app
+            document.getElementById('app-screen').style.display = 'flex';
+            document.getElementById('loading-screen').style.display = 'none'; // Quitamos el loader
+            
+            // Renderizamos la vista inicial
+            // Usamos App.switchView si existe, o UI.renderView como fallback
+            if (typeof App.switchView === 'function') {
+                App.switchView('dashboard');
+            } else {
+                UI.renderView('dashboard');
+            }
+            
+        } catch (e) {
+            console.error("Error crítico al iniciar:", e);
+            // SI FALLA: Quitamos el loader para que no se quede infinito
+            document.getElementById('loading-screen').style.display = 'none';
+            // Mostramos el error y devolvemos al login
+            alert("No se pudo conectar con el sistema:\n" + e.message);
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+    },
     forceReload: () => location.reload(),
     showLoading: (msg) => { document.getElementById('loading-text').innerText=msg; document.getElementById('loading-screen').style.display='flex'; document.getElementById('reload-btn').classList.add('hidden'); },
     hideLoading: () => document.getElementById('loading-screen').style.display='none',
@@ -770,6 +798,7 @@ Auth.init();
 </script>
 </body>
 </html>
+
 
 
 
