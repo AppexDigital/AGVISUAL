@@ -3,46 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Centro de Mando Empresarial | Appex System</title>
+    <title>Centro de Mando | AG Visual Info</title>
     <link rel="icon" type="image/png" href="https://placehold.co/32x32/1a1a1a/FDFDFD?text=AG">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
-        :root {
-            --bg-main: #FDFDFD;
-            --text-dark: #1a1a1a;
-            --text-muted: #52525b;
-            --accent: #3a3a3a;
-            --border-color: #e5e7eb;
-            --google-blue: #4285F4;
-            --status-pending: #f59e0b;
-            --status-confirmed: #10b981;
-            --status-paid: #3b82f6;
-            --status-canceled: #ef4444;
-        }
+        :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-muted: #52525b; --accent: #3a3a3a; --border-color: #e5e7eb; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-dark); }
         h1, h2, h3, .font-display { font-family: 'Cormorant Garamond', serif; }
         
-        /* UI Components */
         .loader-circle { width: 50px; height: 50px; border: 4px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .btn { padding: 0.75rem 1.5rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        .btn { padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; border-radius: 4px; }
         .btn-primary { background-color: var(--text-dark); color: white; }
         .btn-primary:hover { background-color: var(--accent); }
-        .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); }
+        .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); background: transparent; }
+        .btn-secondary:hover { background: #f3f4f6; }
         .btn-danger { background-color: #ef4444; color: white; }
         
-        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; transition: border-color 0.2s; }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; }
         .form-input:focus { border-color: var(--text-dark); outline: none; }
-        .form-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; display: block; }
+        .form-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem; display: block; }
+        .form-checkbox { width: 1rem; height: 1rem; accent-color: var(--text-dark); }
 
-        /* Layout */
-        .sidebar-link { display: flex; align-items: center; padding: 1rem 1.5rem; color: var(--text-muted); border-left: 4px solid transparent; transition: all 0.2s; }
+        .sidebar-link { display: flex; align-items: center; padding: 0.75rem 1.5rem; color: var(--text-muted); border-left: 4px solid transparent; transition: all 0.2s; font-size: 0.9rem; }
         .sidebar-link:hover { background-color: #f3f4f6; color: var(--text-dark); }
         .sidebar-link.active { background-color: #f3f4f6; color: var(--text-dark); border-left-color: var(--text-dark); font-weight: 700; }
         .sidebar-link i { width: 1.5rem; text-align: center; margin-right: 0.75rem; }
@@ -51,814 +38,552 @@
         .view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Modal & Toast */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; justify-content: center; items-items: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .modal-content { background: white; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); transform: scale(0.95); transition: transform 0.2s; margin-top: 5vh; }
+        .modal-content { background: white; width: 95%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; border-radius: 8px; }
         .modal-overlay.visible .modal-content { transform: scale(1); }
 
-        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-dark); color: white; padding: 1rem 2rem; z-index: 100; transform: translateY(100px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 600; }
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-dark); color: white; padding: 1rem 1.5rem; z-index: 100; transform: translateY(100px); transition: transform 0.3s; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 600; border-radius: 4px; }
         .toast.visible { transform: translateY(0); }
         .toast.error { background: #ef4444; }
 
-        /* Tabs */
-        .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
-        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; }
-        .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* Status Badges */
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: white; }
-        .status-Pendiente { background-color: var(--status-pending); }
-        .status-Confirmado { background-color: var(--status-confirmed); }
-        .status-Pagado { background-color: var(--status-paid); }
-        .status-Cancelado { background-color: var(--status-canceled); }
+        .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
+        
+        /* Portfolio Grid Styles */
+        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; group: group; }
+        .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+        .portfolio-grid-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.2s; display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; }
+        .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
+        .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; }
     </style>
 </head>
-<body class="bg-gray-50 h-screen flex flex-col overflow-hidden">
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
-        <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Iniciando Sistema...</p>
+        <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
         <div class="bg-white p-10 shadow-2xl max-w-md w-full text-center border-t-4 border-text-dark">
             <h1 class="font-display text-4xl font-bold mb-2">AG Visual Info</h1>
-            <p class="text-text-muted mb-8 uppercase tracking-widest text-xs">Acceso Corporativo</p>
-            <button id="google-login-btn" class="w-full bg-[#4285F4] text-white font-bold py-3 px-4 flex items-center justify-center gap-3 hover:bg-[#3367D6] transition-colors shadow-md">
-                <i class="fab fa-google bg-white text-[#4285F4] p-1 rounded-full w-6 h-6 flex items-center justify-center"></i>
-                <span>Iniciar con Google Workspace</span>
+            <p class="text-text-muted mb-8 uppercase tracking-widest text-xs">Panel de Control</p>
+            <button id="google-login-btn" class="w-full bg-[#4285F4] text-white font-bold py-3 px-4 flex items-center justify-center gap-3 hover:bg-[#3367D6] transition-colors shadow-md rounded">
+                <i class="fab fa-google"></i> Iniciar con Google Workspace
             </button>
-            <p id="login-error" class="mt-4 text-red-500 text-sm hidden"></p>
         </div>
     </div>
 
     <div id="app-screen" class="hidden flex-1 flex h-full overflow-hidden">
         <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-sm z-20">
             <div class="p-6 border-b border-gray-100">
-                <h2 class="font-display text-2xl font-bold">Centro de Mando</h2>
+                <h2 class="font-display text-2xl font-bold">AG Admin</h2>
                 <p class="text-xs text-text-muted mt-1 truncate" id="user-email">Usuario</p>
             </div>
-            <nav class="flex-1 overflow-y-auto py-4" id="main-nav">
-                <a href="#" class="sidebar-link active" data-view="dashboard"><i class="fas fa-chart-line"></i>Dashboard</a>
-                <a href="#" class="sidebar-link" data-view="settings"><i class="fas fa-sliders-h"></i>Configuración</a>
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
+                <a href="#" class="sidebar-link active" data-view="dashboard"><i class="fas fa-home"></i>Inicio</a>
                 <a href="#" class="sidebar-link" data-view="projects"><i class="fas fa-camera"></i>Proyectos</a>
+                <a href="#" class="sidebar-link" data-view="portfolio-manager"><i class="fas fa-images"></i>Gestor Portafolio</a>
                 <a href="#" class="sidebar-link" data-view="services"><i class="fas fa-concierge-bell"></i>Servicios</a>
-                <a href="#" class="sidebar-link" data-view="rentals"><i class="fas fa-video"></i>Alquiler (Inventario)</a>
-                <a href="#" class="sidebar-link" data-view="bookings"><i class="fas fa-calendar-check"></i>Reservas (Capa Servicios)</a>
-                <a href="#" class="sidebar-link" data-view="clientlogos"><i class="fas fa-star"></i>Clientes</a>
-                <a href="#" class="sidebar-link" data-view="about"><i class="fas fa-user"></i>Bio</a>
-                <a href="#" class="sidebar-link" data-view="videos"><i class="fab fa-youtube"></i>Videos</a>
+                <a href="#" class="sidebar-link" data-view="rentals"><i class="fas fa-video"></i>Inventario Alquiler</a>
+                <a href="#" class="sidebar-link" data-view="bookings"><i class="fas fa-calendar-check"></i>Reservas</a>
+                <a href="#" class="sidebar-link" data-view="settings"><i class="fas fa-cog"></i>Configuración</a>
             </nav>
             <div class="p-4 border-t border-gray-100">
-                <button id="logout-btn" class="w-full text-left px-4 py-2 text-text-muted hover:text-red-600 transition-colors text-sm font-bold uppercase"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button>
+                <button id="logout-btn" class="w-full text-left px-4 py-2 text-text-muted hover:text-red-600 transition-colors text-xs font-bold uppercase"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button>
             </div>
         </aside>
 
         <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative">
             <div id="view-dashboard" class="view active">
-                <header class="mb-8">
-                    <h1 class="text-4xl font-display font-bold">Panel General</h1>
-                    <p class="text-text-muted">Resumen de actividad de AG Visual Info.</p>
-                </header>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div class="bg-white p-6 shadow-sm border border-gray-100">
-                        <h3 class="text-sm text-text-muted uppercase font-bold">Reservas Pendientes</h3>
-                        <p class="text-4xl font-display font-bold mt-2 text-yellow-500" id="dash-pending">0</p>
-                    </div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-100">
-                        <h3 class="text-sm text-text-muted uppercase font-bold">Proyectos Activos</h3>
+                <h1 class="text-4xl font-display font-bold mb-6">Resumen</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Proyectos</h3>
                         <p class="text-4xl font-display font-bold mt-2" id="dash-projects">0</p>
                     </div>
-                    <div class="bg-white p-6 shadow-sm border border-gray-100">
-                        <h3 class="text-sm text-text-muted uppercase font-bold">Equipos en Alquiler</h3>
-                        <p class="text-4xl font-display font-bold mt-2" id="dash-rentals">0</p>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Fotos en Portafolio</h3>
+                        <p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">0</p>
                     </div>
-                </div>
-                <div class="bg-blue-50 border border-blue-100 p-6 rounded-none">
-                    <h3 class="text-blue-800 font-bold mb-2"><i class="fas fa-info-circle mr-2"></i>Infraestructura Business Activa</h3>
-                    <p class="text-blue-700 text-sm">Conectado a <strong>agvisualinfo.com</strong> (Google Workspace Shared Drive). Todas las imágenes y datos se almacenan de forma segura en la bóveda empresarial.</p>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Reservas Pendientes</h3>
+                        <p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">0</p>
+                    </div>
                 </div>
             </div>
 
             <div id="view-projects" class="view">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-display font-bold">Portafolio de Proyectos</h1>
+                    <h1 class="text-3xl font-display font-bold">Proyectos</h1>
                     <button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo Proyecto</button>
                 </div>
-                <div class="bg-white shadow-sm border border-gray-200 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold">
-                            <tr><th class="p-4 border-b">Orden</th><th class="p-4 border-b">Imagen</th><th class="p-4 border-b">Título</th><th class="p-4 border-b">Acciones</th></tr>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr>
                         </thead>
                         <tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
             </div>
 
+            <div id="view-portfolio-manager" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Gestor del Portafolio</h1>
+                    <button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button>
+                </div>
+                <p class="text-text-muted mb-6 text-sm">Aquí aparecen todas las imágenes marcadas como "Mostrar en Portafolio" dentro de los proyectos. Arrastra o cambia el número para reordenar.</p>
+                
+                <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    </div>
+            </div>
+
             <div id="view-services" class="view">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-display font-bold">Servicios</h1>
-                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Services', null)"><i class="fas fa-plus"></i> Nuevo Servicio</button>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Services', null)"><i class="fas fa-plus"></i> Nuevo</button>
                 </div>
-                <div class="bg-white shadow-sm border border-gray-200 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold">
-                            <tr><th class="p-4 border-b">Orden</th><th class="p-4 border-b">Icono</th><th class="p-4 border-b">Título</th><th class="p-4 border-b">Acciones</th></tr>
-                        </thead>
-                        <tbody id="services-table-body" class="divide-y divide-gray-100"></tbody>
-                    </table>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr></thead><tbody id="services-table-body" class="divide-y divide-gray-100"></tbody></table>
                 </div>
             </div>
 
             <div id="view-rentals" class="view">
-                <h1 class="text-3xl font-display font-bold mb-6">Catálogo de Alquiler</h1>
-                <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button>
-                    <button class="tab-btn" onclick="UI.switchTab('rental-cats')">Categorías</button>
-                </div>
-                
-                <div id="tab-rental-items" class="tab-content active">
-                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button></div>
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold">
-                                <tr><th class="p-4 border-b">Orden</th><th class="p-4 border-b">Img</th><th class="p-4 border-b">Nombre</th><th class="p-4 border-b">Categoría</th><th class="p-4 border-b">Precio</th><th class="p-4 border-b">Acciones</th></tr>
-                            </thead>
-                            <tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Inventario Alquiler</h1>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary" onclick="App.handleEditCrudItem('RentalCategories', null)">+ Categoría</button>
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)">+ Equipo</button>
                     </div>
                 </div>
-                
-                <div id="tab-rental-cats" class="tab-content">
-                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalCategories', null)"><i class="fas fa-plus"></i> Nueva Categoría</button></div>
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold">
-                                <tr><th class="p-4 border-b">Orden</th><th class="p-4 border-b">Nombre</th><th class="p-4 border-b">Acciones</th></tr>
-                            </thead>
-                            <tbody id="rental-categories-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div id="view-bookings" class="view">
-                <h1 class="text-3xl font-display font-bold mb-6">Gestión de Reservas</h1>
-                <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('booking-list')">Solicitudes de Clientes</button>
-                    <button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos Administrativos</button>
-                </div>
-
-                <div id="tab-booking-list" class="tab-content active">
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold">
-                                <tr>
-                                    <th class="p-4 border-b">Fecha Solicitud</th>
-                                    <th class="p-4 border-b">Cliente</th>
-                                    <th class="p-4 border-b">Equipo</th>
-                                    <th class="p-4 border-b">Fechas</th>
-                                    <th class="p-4 border-b">Total</th>
-                                    <th class="p-4 border-b">Estado</th>
-                                    <th class="p-4 border-b">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div id="tab-blocked-dates" class="tab-content">
-                    <div class="flex justify-end mb-4"><button class="btn btn-primary" onclick="App.handleEditCrudItem('BlockedDates', null)"><i class="fas fa-ban"></i> Bloquear Fechas</button></div>
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden">
-                        <table class="w-full text-left border-collapse">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold">
-                                <tr><th class="p-4 border-b">Equipo</th><th class="p-4 border-b">Motivo</th><th class="p-4 border-b">Desde</th><th class="p-4 border-b">Hasta</th><th class="p-4 border-b">Acciones</th></tr>
-                            </thead>
-                            <tbody id="blocked-dates-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr></thead><tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody></table>
                 </div>
             </div>
 
             <div id="view-settings" class="view">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-display font-bold">Configuración Global</h1>
-                    <button class="btn btn-primary" onclick="App.handleSaveSettings()"><i class="fas fa-save"></i> Guardar Todo</button>
+                    <h1 class="text-3xl font-display font-bold">Configuración</h1>
+                    <button class="btn btn-primary" onclick="App.handleSaveSettings()"><i class="fas fa-save"></i> Guardar</button>
                 </div>
-                <div id="settings-form-container" class="space-y-6 max-w-3xl"></div>
+                <div id="settings-form-container" class="max-w-3xl space-y-6 bg-white p-6 rounded border border-gray-200"></div>
             </div>
-
-            <div id="view-about" class="view"><div class="flex justify-between mb-6"><h1 class="text-3xl font-display font-bold">Quién Soy</h1><button class="btn btn-primary" onclick="App.handleSaveAbout()"><i class="fas fa-save"></i> Guardar</button></div><div id="about-form-container" class="max-w-3xl"></div></div>
-            <div id="view-clientlogos" class="view"><div class="flex justify-between mb-6"><h1 class="text-3xl font-display font-bold">Logos Clientes</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('ClientLogos', null)"><i class="fas fa-plus"></i> Añadir</button></div><div id="clientlogos-table-body" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div></div>
-            <div id="view-videos" class="view"><div class="flex justify-between mb-6"><h1 class="text-3xl font-display font-bold">Videos</h1><button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Añadir</button></div><div class="bg-white shadow-sm border border-gray-200"><table class="w-full"><thead class="bg-gray-50 text-xs uppercase font-bold"><tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr></thead><tbody id="videos-table-body" class="divide-y"></tbody></table></div></div>
-
+            
+            <div id="view-bookings" class="view">
+                <h1 class="text-3xl font-display font-bold mb-6">Reservas</h1>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm"><thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b"><tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr></thead><tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody></table>
+                </div>
+            </div>
         </main>
     </div>
 
     <div id="modal-container"></div>
     <div id="toast-container"></div>
-    
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    <script>
-        // --- CONFIGURACIÓN & ESTADO ---
-        // NOTA: El scope 'https://www.googleapis.com/auth/drive' es CRÍTICO para Shared Drives
-        // si el usuario (tú) crea carpetas manualmente y el script las busca.
-        const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive';
-        const GOOGLE_REDIRECT_URI = 'postmessage';
+<script>
+// --- CONFIGURACIÓN ---
+const GOOGLE_REDIRECT_URI = 'postmessage';
+const AppState = { data: null, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
+
+// --- API CLIENT ---
+const API = {
+    async call(endpoint, options = {}, isRetry = false) {
+        const headers = new Headers(options.headers || {});
+        if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
+        if (options.body && !(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
+            options.body = JSON.stringify(options.body);
+        }
+        try {
+            const res = await fetch(endpoint, { ...options, headers });
+            if (res.status === 401 && !isRetry) {
+                if (await Auth.refresh()) return API.call(endpoint, options, true);
+                else { Auth.logout(); throw new Error('Sesión expirada'); }
+            }
+            if (!res.ok) throw new Error((await res.json()).error || 'Error servidor');
+            return await res.json();
+        } catch (e) { throw e; }
+    }
+};
+
+// --- AUTH ---
+const Auth = {
+    async init() {
+        if (AppState.token) {
+            if (Date.now() >= AppState.token.expires_at) await this.refresh();
+            UI.showApp();
+        } else UI.showLogin();
+    },
+    async login() {
+        try {
+            const config = await fetch('/.netlify/functions/get-auth-config').then(r => r.json());
+            google.accounts.oauth2.initCodeClient({
+                client_id: config.clientId,
+                scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive',
+                callback: (r) => r.code && this.exchangeCode(r.code)
+            }).requestCode();
+        } catch (e) { alert('Error config: ' + e.message); }
+    },
+    async exchangeCode(code) {
+        UI.showLoading('Autenticando...');
+        try {
+            const tokens = await fetch('/.netlify/functions/auth-google', { method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI }) }).then(r => r.json());
+            if (tokens.error) throw new Error(tokens.error);
+            this.setToken(tokens);
+            UI.showApp();
+        } catch (e) { alert(e.message); UI.showLogin(); }
+    },
+    async refresh() {
+        if (!AppState.token?.refresh_token) return false;
+        try {
+            const t = await fetch('/.netlify/functions/auth-refresh', { method: 'POST', body: JSON.stringify({ refresh_token: AppState.token.refresh_token }) }).then(r => r.json());
+            if (t.error) throw new Error(t.error);
+            this.setToken({ ...AppState.token, ...t });
+            return true;
+        } catch { return false; }
+    },
+    setToken(t) {
+        if (t.expires_in) t.expires_at = Date.now() + (t.expires_in * 1000);
+        AppState.token = t;
+        localStorage.setItem('gAuthToken', JSON.stringify(t));
+    },
+    logout() { localStorage.removeItem('gAuthToken'); location.reload(); }
+};
+
+// --- UI MANAGER ---
+const UI = {
+    showLogin: () => { document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'none'; document.getElementById('login-screen').style.display = 'flex'; },
+    showApp: async () => {
+        document.getElementById('login-screen').style.display = 'none';
+        UI.showLoading('Cargando datos...');
+        try { await App.loadData(); document.getElementById('loading-screen').style.display = 'none'; document.getElementById('app-screen').style.display = 'flex'; UI.renderView(AppState.view); } 
+        catch (e) { alert(e.message); }
+    },
+    showLoading: (msg) => { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-screen').style.display = 'flex'; },
+    hideLoading: () => document.getElementById('loading-screen').style.display = 'none',
+    showToast: (msg) => {
+        const t = document.createElement('div'); t.className = 'toast'; t.innerText = msg;
+        document.getElementById('toast-container').appendChild(t);
+        setTimeout(() => t.classList.add('visible'), 10);
+        setTimeout(() => t.remove(), 3000);
+    },
+    renderView: (view) => {
+        AppState.view = view;
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
         
-        const AppState = {
-            data: null,
-            token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'),
-            view: 'dashboard'
-        };
+        const data = AppState.data;
+        if (!data) return;
 
-        // --- API CLIENT ---
-        const API = {
-            async call(endpoint, options = {}, isRetry = false) {
-                const headers = new Headers(options.headers || {});
-                if (AppState.token?.access_token) {
-                    headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
-                }
-                
-                if (options.body && !(options.body instanceof FormData)) {
-                    headers.set('Content-Type', 'application/json');
-                    options.body = JSON.stringify(options.body);
-                }
-
-                try {
-                    const res = await fetch(endpoint, { ...options, headers });
-                    
-                    // Manejo de Token Expirado (401)
-                    if (res.status === 401 && !isRetry) {
-                        console.warn('Token expirado. Refrescando...');
-                        if (await Auth.refresh()) {
-                            return API.call(endpoint, options, true); // Reintento
-                        } else {
-                            Auth.logout();
-                            throw new Error('Sesión expirada.');
-                        }
-                    }
-                    
-                    if (!res.ok) {
-                        const err = await res.json().catch(() => ({ error: res.statusText }));
-                        throw new Error(err.details || err.error || 'Error en servidor');
-                    }
-                    
-                    return await res.json();
-                } catch (e) {
-                    throw e;
-                }
-            }
-        };
-
-        // --- AUTH MODULE (OAUTH 2.0) ---
-        const Auth = {
-            async init() {
-                const params = new URLSearchParams(window.location.search);
-                if (params.get('code')) window.history.replaceState({}, document.title, window.location.pathname); // Limpiar URL
-
-                if (AppState.token) {
-                    // Validar token expirado localmente antes de llamar API
-                    if (Date.now() >= AppState.token.expires_at) {
-                        if (!(await this.refresh())) return UI.showLogin();
-                    }
-                    UI.showApp();
-                } else {
-                    UI.showLogin();
-                }
-            },
-            async login() {
-                try {
-                    const config = await fetch('/.netlify/functions/get-auth-config').then(r => r.json());
-                    const client = google.accounts.oauth2.initCodeClient({
-                        client_id: config.clientId,
-                        scope: GOOGLE_SCOPES,
-                        callback: (response) => {
-                            if (response.code) this.exchangeCode(response.code);
-                        }
-                    });
-                    client.requestCode();
-                } catch (e) {
-                    alert('Error de configuración: ' + e.message);
-                }
-            },
-            async exchangeCode(code) {
-                UI.showLoading('Autenticando...');
-                try {
-                    const tokens = await fetch('/.netlify/functions/auth-google', {
-                        method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI })
-                    }).then(r => r.json());
-
-                    if (tokens.error) throw new Error(tokens.error);
-                    
-                    this.setToken(tokens);
-                    UI.showApp();
-                } catch (e) {
-                    alert('Error de inicio de sesión: ' + e.message);
-                    UI.showLogin();
-                }
-            },
-            async refresh() {
-                if (!AppState.token?.refresh_token) return false;
-                try {
-                    const tokens = await fetch('/.netlify/functions/auth-refresh', {
-                        method: 'POST', body: JSON.stringify({ refresh_token: AppState.token.refresh_token })
-                    }).then(r => r.json());
-                    
-                    if (tokens.error) throw new Error(tokens.error);
-                    
-                    // Mantener el refresh token viejo si el nuevo no trae uno
-                    this.setToken({ ...AppState.token, ...tokens }); 
-                    return true;
-                } catch (e) {
-                    console.error(e);
-                    return false;
-                }
-            },
-            setToken(tokens) {
-                // Google devuelve expiry_date en segundos, lo pasamos a ms absolutos si es necesario,
-                // pero auth-google.js suele devolverlo ya listo o crudo. Asumamos crudo de google.
-                if (tokens.expires_in) {
-                    tokens.expires_at = Date.now() + (tokens.expires_in * 1000);
-                }
-                AppState.token = tokens;
-                localStorage.setItem('gAuthToken', JSON.stringify(tokens));
-            },
-            logout() {
-                localStorage.removeItem('gAuthToken');
-                location.reload();
-            }
-        };
-
-        // --- UI MANAGER ---
-        const UI = {
-            showLogin() {
-                document.getElementById('loading-screen').style.display = 'none';
-                document.getElementById('app-screen').style.display = 'none';
-                document.getElementById('login-screen').style.display = 'flex';
-            },
-            async showApp() {
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('loading-screen').style.display = 'flex';
-                
-                // Cargar datos iniciales
-                try {
-                    await App.loadData();
-                    document.getElementById('loading-screen').style.display = 'none';
-                    document.getElementById('app-screen').style.display = 'flex';
-                    this.renderView(AppState.view);
-                } catch (e) {
-                    alert("Error cargando datos: " + e.message);
-                }
-            },
-            showLoading(msg) {
-                document.getElementById('loading-text').innerText = msg;
-                document.getElementById('loading-screen').style.display = 'flex';
-            },
-            hideLoading() {
-                document.getElementById('loading-screen').style.display = 'none';
-            },
-            showToast(msg, isError = false) {
-                const t = document.createElement('div');
-                t.className = `toast ${isError ? 'error' : ''}`;
-                t.innerText = msg;
-                document.getElementById('toast-container').appendChild(t);
-                setTimeout(() => t.classList.add('visible'), 100);
-                setTimeout(() => { t.classList.remove('visible'); setTimeout(() => t.remove(), 300); }, 3000);
-            },
-            switchView(viewId) {
-                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-                document.getElementById(`view-${viewId}`).classList.add('active');
-                document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-                document.querySelector(`.sidebar-link[data-view="${viewId}"]`)?.classList.add('active');
-                AppState.view = viewId;
-                this.renderView(viewId);
-            },
-            switchTab(tabId) {
-                // Busca el contenedor padre (la vista actual)
-                const activeView = document.querySelector('.view.active');
-                if(!activeView) return;
-                
-                activeView.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                activeView.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
-                // Activa el botón clickeado (buscando por onclick text o similar, o mejor, pasando 'this' en HTML)
-                // Simplificación: Asumimos que el botón que llama tiene la clase correcta si se gestiona via evento.
-                // Pero como usamos onclick inline, necesitamos encontrar el botón.
-                // Hack rápido: buscar botón con onclick que contenga el ID.
-                const btns = activeView.querySelectorAll('.tab-btn');
-                btns.forEach(b => { if(b.getAttribute('onclick').includes(tabId)) b.classList.add('active'); });
-                
-                document.getElementById(`tab-${tabId}`).classList.add('active');
-            },
-            
-            // RENDERIZADO DINÁMICO
-            renderView(viewId) {
-                const data = AppState.data;
-                if (!data) return;
-
-                if (viewId === 'dashboard') {
-                    document.getElementById('dash-pending').innerText = (data.Bookings || []).filter(b => b.status === 'Pendiente').length;
-                    document.getElementById('dash-projects').innerText = (data.Projects || []).length;
-                    document.getElementById('dash-rentals').innerText = (data.RentalItems || []).length;
-                }
-                else if (viewId === 'projects') {
-                    const tbody = document.getElementById('projects-table-body');
-                    tbody.innerHTML = (data.Projects || []).sort((a,b)=> (a.order||99)-(b.order||99)).map(p => {
-                        // Buscar imagen de portada
-                        const cover = (data.ProjectImages||[]).find(i => i.projectId === p.id && i.isCover === 'Si');
-                        const imgUrl = cover ? cover.imageUrl : 'https://placehold.co/50?text=...';
-                        return `
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-4 font-mono">${p.order||99}</td>
-                            <td class="p-4"><img src="${imgUrl}" class="w-16 h-10 object-cover border"></td>
-                            <td class="p-4 font-bold">${p.title}</td>
-                            <td class="p-4 flex gap-2">
-                                <button class="text-blue-600 hover:scale-110 transition-transform" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button>
-                                <button class="text-green-600 hover:scale-110 transition-transform" onclick="App.handleImages('ProjectImages', '${p.id}', 'projectId')"><i class="fas fa-images"></i></button>
-                                <button class="text-red-600 hover:scale-110 transition-transform" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>`;
-                    }).join('') || '<tr><td colspan="4" class="p-4 text-center text-gray-400">Sin proyectos</td></tr>';
-                }
-                else if (viewId === 'services') {
-                    const tbody = document.getElementById('services-table-body');
-                    tbody.innerHTML = (data.Services || []).sort((a,b)=> (a.order||99)-(b.order||99)).map(s => `
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-4 font-mono">${s.order||99}</td>
-                            <td class="p-4 text-gray-500"><i class="${s.iconClass||'fas fa-star'}"></i></td>
-                            <td class="p-4 font-bold">${s.title}</td>
-                            <td class="p-4 flex gap-2">
-                                <button class="text-blue-600" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button>
-                                <button class="text-purple-600" onclick="App.handleContentBlocks('${s.id}')"><i class="fas fa-file-alt"></i></button>
-                                <button class="text-green-600" onclick="App.handleImages('ServiceImages', '${s.id}', 'serviceId')"><i class="fas fa-images"></i></button>
-                                <button class="text-red-600" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>`).join('');
-                }
-                else if (viewId === 'rentals') {
-                    // Items
-                    document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
-                        const cat = (data.RentalCategories||[]).find(c => c.id === i.categoryId)?.name || '-';
-                        const img = (data.RentalItemImages||[]).find(im => im.itemId === i.id)?.imageUrl || '';
-                        return `
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-4">${i.order||99}</td>
-                            <td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="w-10 h-10 object-cover"></td>
-                            <td class="p-4 font-bold">${i.name}</td>
-                            <td class="p-4 text-sm text-gray-500">${cat}</td>
-                            <td class="p-4 font-mono">$${i.pricePerDay}</td>
-                            <td class="p-4 flex gap-2">
-                                <button class="text-blue-600" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
-                                <button class="text-green-600" onclick="App.handleImages('RentalItemImages', '${i.id}', 'itemId')"><i class="fas fa-images"></i></button>
-                                <button class="text-red-600" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>`;
-                    }).join('');
-                    // Categorías
-                    document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || []).map(c => `
-                        <tr class="border-b"><td class="p-4">${c.order}</td><td class="p-4 font-bold">${c.name}</td>
-                        <td class="p-4"><button class="text-blue-600 mr-2" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="text-red-600" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
-                    `).join('');
-                }
-                else if (viewId === 'bookings') {
-                    // Reservas
-                    document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b)=> new Date(b.bookingTimestamp)-new Date(a.bookingTimestamp)).map(b => `
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td>
-                            <td class="p-4 font-bold text-sm">${b.customerName}<br><span class="text-xs font-normal text-gray-500">${b.customerEmail}</span></td>
-                            <td class="p-4 text-sm">${b.itemName}</td>
-                            <td class="p-4 text-xs font-mono">${b.startDate} <br> ${b.endDate}</td>
-                            <td class="p-4 font-bold">$${b.totalPrice}</td>
-                            <td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td>
-                            <td class="p-4 flex gap-2">
-                                <select onchange="App.updateStatus('${b.id}', this.value)" class="text-xs border p-1 rounded">
-                                    <option value="">Cambiar...</option>
-                                    <option value="Confirmado">Confirmar</option>
-                                    <option value="Pagado">Pagado</option>
-                                    <option value="Cancelado">Cancelar</option>
-                                </select>
-                                <button class="text-red-600 ml-2" onclick="App.handleDelete('Bookings', '${b.id}', 'blockId')"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>`).join('');
-                        
-                    // Bloqueos
-                    document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(b => {
-                         const item = (data.RentalItems||[]).find(i => i.id === b.itemId)?.name || '???';
-                         return `
-                        <tr class="border-b">
-                            <td class="p-4 font-bold text-sm">${item}</td>
-                            <td class="p-4 text-sm">${b.reason}</td>
-                            <td class="p-4 font-mono text-xs">${b.startDate}</td>
-                            <td class="p-4 font-mono text-xs">${b.endDate}</td>
-                            <td class="p-4 flex gap-2">
-                                <button class="text-blue-600" onclick="App.handleEditCrudItem('BlockedDates', '${b.blockId}')"><i class="fas fa-edit"></i></button>
-                                <button class="text-red-600" onclick="App.handleDelete('BlockedDates', '${b.blockId}', 'blockId')"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>`;
-                    }).join('');
-                }
-                else if (viewId === 'settings') {
-                    const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
-                    document.getElementById('settings-form-container').innerHTML = `
-                        ${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)}
-                        ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)}
-                        ${UI.inputHTML('settings', 'social_instagram', 'Instagram Link', s.social_instagram)}
-                        ${UI.imageHTML('settings', 'logo_dark_url', 'Logo Oscuro', s.logo_dark_url)}
-                        ${UI.imageHTML('settings', 'logo_light_url', 'Logo Claro', s.logo_light_url)}
-                    `;
-                }
-                else if (viewId === 'about') {
-                    const abt = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
-                    document.getElementById('about-form-container').innerHTML = `
-                         ${UI.textareaHTML('about', 'philosophy_p1', 'Filosofía (Párrafo)', abt.philosophy_p1)}
-                         ${UI.imageHTML('about', 'profile_image_url', 'Foto de Perfil', abt.profile_image_url)}
-                    `;
-                }
-                else if (viewId === 'clientlogos') {
-                    const container = document.getElementById('clientlogos-table-body');
-                    container.innerHTML = (data.ClientLogos || []).map(c => `
-                        <div class="bg-white border p-4 flex flex-col items-center relative group">
-                            <img src="${c.logoUrl}" class="h-12 object-contain mb-2">
-                            <span class="font-bold text-sm">${c.clientName}</span>
-                            <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center gap-2">
-                                <button class="text-white" onclick="App.handleEditCrudItem('ClientLogos', '${c.id}')"><i class="fas fa-edit"></i></button>
-                                <button class="text-red-400" onclick="App.handleDelete('ClientLogos', '${c.id}')"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-                else if (viewId === 'videos') {
-                    document.getElementById('videos-table-body').innerHTML = (data.Videos || []).map(v => `
-                         <tr class="border-b"><td class="p-4">${v.order}</td><td class="p-4 font-bold">${v.title}</td><td class="p-4 flex gap-2"><button class="text-blue-600" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
-                    `).join('');
-                }
-            },
-
-            // HTML GENERATORS
-            inputHTML: (prefix, key, label, val='', type='text') => `
-                <div class="mb-4"><label class="form-label">${label}</label><input type="${type}" id="${prefix}-${key}" data-key="${key}" class="form-input" value="${val||''}"></div>`,
-            textareaHTML: (prefix, key, label, val='') => `
-                <div class="mb-4"><label class="form-label">${label}</label><textarea id="${prefix}-${key}" data-key="${key}" class="form-textarea" rows="4">${val||''}</textarea></div>`,
-            imageHTML: (prefix, key, label, val='') => `
-                <div class="mb-4"><label class="form-label">${label}</label>
-                <div class="flex gap-2 items-center">
-                    <img src="${val||'https://placehold.co/50'}" class="w-12 h-12 object-cover border bg-white">
-                    <input type="text" id="${prefix}-${key}" data-key="${key}" class="form-input flex-1" value="${val||''}" readonly>
-                    <button class="btn btn-secondary" onclick="App.uploadImage('${prefix}-${key}')">Subir</button>
-                </div></div>`,
-            
-            showModal(title, body, footer) {
-                document.getElementById('modal-container').innerHTML = `
-                    <div class="modal-overlay visible">
-                        <div class="modal-content">
-                            <div class="p-6 border-b flex justify-between items-center"><h2 class="text-2xl font-display font-bold">${title}</h2><button onclick="UI.closeModal()" class="text-2xl">&times;</button></div>
-                            <div class="p-6">${body}</div>
-                            <div class="p-6 bg-gray-50 text-right">${footer}</div>
-                        </div>
-                    </div>`;
-            },
-            closeModal() { document.getElementById('modal-container').innerHTML = ''; }
-        };
-
-        // --- APP LOGIC ---
-        const App = {
-            async loadData() {
-                AppState.data = await API.call('/.netlify/functions/get-admin-data');
-            },
-            
-            // --- SETTINGS & ABOUT ---
-            async handleSaveSettings() {
-                this._saveKeyValueSheet('Settings', 'settings-form-container');
-            },
-            async handleSaveAbout() {
-                this._saveKeyValueSheet('About', 'about-form-container', 'section', 'content');
-            },
-            async _saveKeyValueSheet(sheetName, containerId, keyField='key', valField='value') {
-                UI.showLoading('Guardando...');
-                const inputs = document.querySelectorAll(`#${containerId} [data-key]`);
-                const promises = [];
-                inputs.forEach(input => {
-                    const key = input.dataset.key;
-                    const val = input.value;
-                    // Simple logic: always send update/add. Backend handles if exists.
-                    // But optimization: check if changed.
-                    const existing = (AppState.data[sheetName]||[]).find(i => i[keyField] === key);
-                    if (!existing || existing[valField] !== val) {
-                        const action = existing ? 'update' : 'add';
-                        const data = { [keyField]: key, [valField]: val };
-                        promises.push(API.call('/.netlify/functions/update-sheet-data', {
-                            method: 'POST', body: { sheet: sheetName, action, criteria: {[keyField]: key}, data }
-                        }));
-                    }
-                });
-                await Promise.all(promises);
-                await this.loadData();
-                UI.hideLoading();
-                UI.showToast('Guardado exitosamente.');
-            },
-
-            // --- GENERIC CRUD ---
-            async handleEditCrudItem(sheet, id) {
-                const isNew = !id;
-                const item = isNew ? {} : AppState.data[sheet].find(i => (i.id === id || i.blockId === id));
-                let form = '';
-                
-                // FORM BUILDER
-                if (sheet === 'Projects') {
-                    form = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} ${UI.textareaHTML('crud', 'description', 'Descripción', item.description)}`;
-                } else if (sheet === 'Services') {
-                    form = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} ${UI.inputHTML('crud', 'iconClass', 'Icono FA', item.iconClass)} ${UI.textareaHTML('crud', 'introText', 'Intro', item.introText)}`;
-                } else if (sheet === 'RentalItems') {
-                    const cats = AppState.data.RentalCategories || [];
-                    const opts = cats.map(c => `<option value="${c.id}" ${item.categoryId===c.id?'selected':''}>${c.name}</option>`).join('');
-                    form = `
-                        ${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')}
-                        ${UI.inputHTML('crud', 'name', 'Nombre', item.name)}
-                        <div class="mb-4"><label class="form-label">Categoría</label><select id="crud-categoryId" class="form-select">${opts}</select></div>
-                        ${UI.inputHTML('crud', 'pricePerDay', 'Precio Diario ($)', item.pricePerDay, 'number')}
-                        ${UI.textareaHTML('crud', 'description', 'Desc. Corta', item.description)}
-                        ${UI.textareaHTML('crud', 'longDescription', 'Desc. Larga', item.longDescription)}
-                    `;
-                } else if (sheet === 'RentalCategories') {
-                    form = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', item.name)}`;
-                } else if (sheet === 'Videos') {
-                    form = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} ${UI.inputHTML('crud', 'embedUrl', 'URL Embed', item.embedUrl)}`;
-                } else if (sheet === 'ClientLogos') {
-                    form = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'clientName', 'Cliente', item.clientName)} ${UI.imageHTML('crud', 'logoUrl', 'Logo', item.logoUrl)}`;
-                } else if (sheet === 'BlockedDates') {
-                     const items = AppState.data.RentalItems || [];
-                     const opts = items.map(i => `<option value="${i.id}" ${item.itemId===i.id?'selected':''}>${i.name}</option>`).join('');
-                     form = `
-                        <div class="mb-4"><label class="form-label">Equipo</label><select id="crud-itemId" class="form-select">${opts}</select></div>
-                        ${UI.inputHTML('crud', 'reason', 'Motivo', item.reason)}
-                        ${UI.inputHTML('crud', 'startDate', 'Desde', item.startDate, 'date')}
-                        ${UI.inputHTML('crud', 'endDate', 'Hasta', item.endDate, 'date')}
-                     `;
-                }
-
-                UI.showModal(isNew ? 'Nuevo' : 'Editar', `<form id="crud-form">${form}</form>`, 
-                    `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button>
-                     <button class="btn btn-primary" onclick="App.saveCrud('${sheet}', '${id}')">Guardar</button>`);
-            },
-
-            async saveCrud(sheet, id) {
-                const isNew = !id || id === 'null';
-                const data = {};
-                document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => {
-                    const key = el.id.replace('crud-', '');
-                    data[key] = el.value;
-                });
-
-                const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
-                if (isNew) data[idField] = `${sheet.toLowerCase().substr(0,4)}_${Date.now()}`;
-
-                UI.showLoading('Guardando...');
-                try {
-                    await API.call('/.netlify/functions/update-sheet-data', {
-                        method: 'POST',
-                        body: {
-                            sheet, 
-                            action: isNew ? 'add' : 'update',
-                            criteria: isNew ? null : { [idField]: id },
-                            data
-                        }
-                    });
-                    await this.loadData();
-                    UI.closeModal();
-                    UI.renderView(AppState.view);
-                    UI.hideLoading();
-                } catch (e) {
-                    alert('Error: ' + e.message);
-                    UI.hideLoading();
-                }
-            },
-
-            async handleDelete(sheet, id, idField='id') {
-                if (!confirm('¿Seguro de eliminar?')) return;
-                UI.showLoading('Eliminando...');
-                try {
-                    await API.call('/.netlify/functions/update-sheet-data', {
-                        method: 'POST', body: { sheet, action: 'delete', criteria: { [idField]: id } }
-                    });
-                    await this.loadData();
-                    UI.renderView(AppState.view);
-                    UI.hideLoading();
-                } catch (e) { alert(e.message); UI.hideLoading(); }
-            },
-
-            // --- IMAGES & CONTENT BLOCKS ---
-            async handleImages(sheet, parentId, parentKey) {
-                const imgs = (AppState.data[sheet]||[]).filter(i => i[parentKey] === parentId).sort((a,b) => (a.order||99)-(b.order||99));
-                const list = imgs.map(i => `
-                    <div class="flex items-center gap-2 mb-2 p-2 border bg-gray-50">
-                        <img src="${i.imageUrl}" class="w-12 h-12 object-cover">
-                        <input value="${i.order||99}" class="w-16 border p-1 text-center" onchange="App.quickUpdate('${sheet}', '${i.id}', 'order', this.value)">
-                        ${sheet === 'ProjectImages' ? `<input type="checkbox" ${i.isCover==='Si'?'checked':''} onchange="App.quickUpdate('${sheet}', '${i.id}', 'isCover', this.checked ? 'Si' : 'No')"> Cover` : ''}
-                        <button class="text-red-600 ml-auto" onclick="App.handleDelete('${sheet}', '${i.id}')"><i class="fas fa-trash"></i></button>
+        if (view === 'dashboard') {
+            document.getElementById('dash-projects').innerText = (data.Projects || []).length;
+            // Contar fotos en portafolio (ProjectImages con showInPortfolio = 'Si')
+            const portfolioCount = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').length;
+            document.getElementById('dash-portfolio').innerText = portfolioCount;
+            document.getElementById('dash-bookings').innerText = (data.Bookings || []).filter(b => b.status === 'Pendiente').length;
+        }
+        else if (view === 'projects') {
+            document.getElementById('projects-table-body').innerHTML = (data.Projects || []).sort((a,b) => (a.order||99)-(b.order||99)).map(p => {
+                const cover = (data.ProjectImages || []).find(i => i.projectId === p.id && i.isCover === 'Si');
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">${p.order||99}</td>
+                    <td class="p-4"><img src="${cover?.imageUrl || 'https://placehold.co/50'}" class="img-preview"></td>
+                    <td class="p-4 font-bold">${p.title}</td>
+                    <td class="p-4 flex gap-2">
+                        <button class="text-blue-600" onclick="App.handleEditCrudItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-green-600" onclick="App.handleProjectImages('${p.id}', '${p.title.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
+                        <button class="text-red-600" onclick="App.handleDelete('Projects', '${p.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        else if (view === 'portfolio-manager') {
+            const images = (data.ProjectImages || []).filter(i => i.showInPortfolio === 'Si').sort((a,b) => (a.portfolioOrder||99)-(b.portfolioOrder||99));
+            document.getElementById('portfolio-manager-grid').innerHTML = images.map(i => `
+                <div class="portfolio-grid-item group">
+                    <img src="${i.imageUrl}" loading="lazy">
+                    <div class="portfolio-grid-overlay">
+                        <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
+                        <button class="text-white hover:text-red-400 text-sm" onclick="App.removeFromPortfolio('${i.id}')"><i class="fas fa-times"></i> Quitar</button>
                     </div>
-                `).join('');
-                
-                UI.showModal('Imágenes', 
-                    `<div id="img-list">${list}</div><div class="mt-4 border-t pt-4"><label class="form-label">Subir Nueva</label><input type="file" onchange="App.uploadChildImage(this, '${sheet}', '${parentKey}', '${parentId}')"></div>`, 
-                    '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
-            },
+                    <span class="portfolio-badge">${i.portfolioOrder||99}</span>
+                </div>
+            `).join('');
+        }
+        else if (view === 'rentals') {
+             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
+                const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td>
+                    <td class="p-4 font-bold">${i.name}</td>
+                    <td class="p-4 text-sm text-gray-500">${(data.RentalCategories||[]).find(c => c.id === i.categoryId)?.name || '-'}</td>
+                    <td class="p-4 font-mono">$${i.pricePerDay}</td>
+                    <td class="p-4 flex gap-2">
+                        <button class="text-blue-600" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-green-600" onclick="App.handleRentalImages('${i.id}')"><i class="fas fa-images"></i></button>
+                        <button class="text-red-600" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+             }).join('');
+        }
+        else if (view === 'settings') {
+            const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+            document.getElementById('settings-form-container').innerHTML = `
+                ${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)}
+                ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)}
+                ${UI.inputHTML('settings', 'social_instagram', 'Instagram Link', s.social_instagram)}
+                ${UI.imageHTML('settings', 'logo_dark_url', 'Logo Oscuro', s.logo_dark_url)}
+                ${UI.imageHTML('settings', 'logo_light_url', 'Logo Claro', s.logo_light_url)}
+            `;
+        }
+        else if (view === 'services') {
+            document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b)=>(a.order||99)-(b.order||99)).map(s => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4">${s.order||99}</td><td class="p-4 font-bold">${s.title}</td><td class="p-4 flex gap-2">
+                <button class="text-blue-600" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button>
+                <button class="text-red-600" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button>
+                </td></tr>`).join('');
+        }
+        else if (view === 'bookings') {
+            document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b)=>new Date(b.bookingTimestamp)-new Date(a.bookingTimestamp)).map(b => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs">${b.bookingTimestamp.split('T')[0]}</td>
+                <td class="p-4 text-sm font-bold">${b.customerName}</td>
+                <td class="p-4 text-sm">${b.itemName}</td>
+                <td class="p-4 font-mono">$${b.totalPrice}</td>
+                <td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td>
+                <td class="p-4 flex gap-2"><select onchange="App.updateStatus('${b.id}', this.value)" class="border text-xs p-1 rounded"><option value="">Estado...</option><option value="Confirmado">Confirmado</option><option value="Pagado">Pagado</option><option value="Cancelado">Cancelado</option></select>
+                <button class="text-red-600 ml-2" onclick="App.handleDelete('Bookings', '${b.id}')"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        }
+    },
 
-            async quickUpdate(sheet, id, field, val) {
-                await API.call('/.netlify/functions/update-sheet-data', {
-                    method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: val} }
-                });
-            },
-            
-            async uploadChildImage(input, sheet, parentKey, parentId) {
-                const file = input.files[0];
-                if(!file) return;
-                UI.showLoading('Subiendo...');
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('targetSubfolder', 'uploads'); // Usar 'uploads' o el nombre que sea
-                
-                try {
-                    const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                    // Crear registro en Sheet
-                    await API.call('/.netlify/functions/update-sheet-data', {
-                        method: 'POST', body: {
-                            sheet, action: 'add',
-                            data: {
-                                id: `img_${Date.now()}`,
-                                [parentKey]: parentId,
-                                imageUrl: res.imageUrl,
-                                order: 99
-                            }
-                        }
-                    });
-                    await this.loadData();
-                    UI.hideLoading();
-                    this.handleImages(sheet, parentId, parentKey); // Recargar modal
-                } catch (e) { alert(e.message); UI.hideLoading(); }
-            },
+    // Helpers HTML
+    inputHTML: (p, k, l, v='', t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
+    imageHTML: (p, k, l, v='') => `<div class="mb-4"><label class="form-label">${l}</label><div class="flex gap-2"><img src="${v||'https://placehold.co/50'}" class="w-12 h-12 object-cover border"><input type="text" id="${p}-${k}" data-key="${k}" class="form-input flex-1" value="${v||''}" readonly><button class="btn btn-secondary" onclick="App.uploadImage('${p}-${k}')">Subir</button></div></div>`,
+    showModal: (title, body, footer) => {
+        document.getElementById('modal-container').innerHTML = `<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between items-center"><h2 class="text-2xl font-display font-bold">${title}</h2><button onclick="UI.closeModal()" class="text-2xl">&times;</button></div><div class="p-6">${body}</div><div class="p-6 bg-gray-50 text-right">${footer}</div></div></div>`;
+    },
+    closeModal: () => document.getElementById('modal-container').innerHTML = ''
+};
 
-            async uploadImage(inputId) {
-                 const input = document.createElement('input');
-                 input.type = 'file';
-                 input.onchange = async e => {
-                     const file = e.target.files[0];
-                     if(!file) return;
-                     UI.showLoading('Subiendo...');
-                     const formData = new FormData();
-                     formData.append('file', file);
-                     formData.append('targetSubfolder', 'assets');
-                     try {
-                        const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
-                        document.getElementById(inputId).value = res.imageUrl;
-                        UI.hideLoading();
-                     } catch(err) { alert(err.message); UI.hideLoading(); }
-                 };
-                 input.click();
-            },
+// --- LOGIC ---
+const App = {
+    async loadData() { AppState.data = await API.call('/.netlify/functions/get-admin-data'); },
 
-            async handleContentBlocks(serviceId) {
-                 const blocks = (AppState.data.ServiceContentBlocks || []).filter(b => b.serviceId === serviceId);
-                 // Simplificación: Mostrar lista y botón añadir. Similar a imágenes pero con texto.
-                 // Por brevedad, no implemento el detalle aquí, pero sigue la misma lógica de handleEditCrudItem.
-                 alert("Funcionalidad de bloques de texto disponible en versión completa. (Implementar similar a imágenes)");
-            },
-            
-            async updateStatus(id, status) {
-                if(!status) return;
-                UI.showLoading('Actualizando...');
-                await API.call('/.netlify/functions/update-sheet-data', {
-                    method: 'POST', body: { sheet: 'Bookings', action: 'update', criteria: {id}, data: {status} }
-                });
-                await this.loadData();
-                UI.renderView('bookings');
-                UI.hideLoading();
-            }
-        };
-
-        // --- INIT ---
-        document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
-        document.getElementById('logout-btn').addEventListener('click', () => Auth.logout());
-        document.getElementById('main-nav').addEventListener('click', (e) => {
-            const link = e.target.closest('.sidebar-link');
-            if (link) {
-                e.preventDefault();
-                UI.switchView(link.dataset.view);
-            }
+    async handleSaveSettings() {
+        UI.showLoading('Guardando...');
+        const inputs = document.querySelectorAll('#settings-form-container [data-key]');
+        const promises = [];
+        inputs.forEach(inp => {
+            const k = inp.dataset.key, v = inp.value;
+            promises.push(API.call('/.netlify/functions/update-sheet-data', {
+                method: 'POST', body: { sheet: 'Settings', action: 'add', data: { key: k, value: v } }
+            }));
         });
+        await Promise.all(promises); await this.loadData(); UI.hideLoading(); UI.showToast('Guardado');
+    },
 
-        Auth.init();
+    // --- CRUD GENERICO ---
+    async handleEditCrudItem(sheet, id) {
+        const isNew = !id;
+        const item = isNew ? {} : AppState.data[sheet].find(i => i.id === id);
+        let html = '';
 
-    </script>
+        if (sheet === 'Projects') {
+            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} <div class="mb-4"><label class="form-label">Descripción</label><textarea id="crud-description" class="form-textarea" rows="4">${item.description||''}</textarea></div>`;
+        } else if (sheet === 'Services') {
+            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'title', 'Título', item.title)} ${UI.inputHTML('crud', 'iconClass', 'Icono FA', item.iconClass)} <div class="mb-4"><label class="form-label">Intro</label><textarea id="crud-introText" class="form-textarea">${item.introText||''}</textarea></div>`;
+        } else if (sheet === 'RentalItems') {
+            const cats = AppState.data.RentalCategories || [];
+            const opts = cats.map(c => `<option value="${c.id}" ${item.categoryId===c.id?'selected':''}>${c.name}</option>`).join('');
+            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', item.name)} <div class="mb-4"><label class="form-label">Categoría</label><select id="crud-categoryId" class="form-select">${opts}</select></div> ${UI.inputHTML('crud', 'pricePerDay', 'Precio Diario', item.pricePerDay, 'number')} <div class="mb-4"><label class="form-label">Descripción</label><textarea id="crud-description" class="form-textarea">${item.description||''}</textarea></div>`;
+        } else if (sheet === 'RentalCategories') {
+            html = `${UI.inputHTML('crud', 'order', 'Orden', item.order, 'number')} ${UI.inputHTML('crud', 'name', 'Nombre', item.name)}`;
+        }
+
+        UI.showModal(isNew ? 'Nuevo' : 'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}', '${id}')">Guardar</button>`);
+    },
+
+    async saveCrud(sheet, id) {
+        const isNew = !id || id === 'null';
+        const data = {};
+        document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('crud-', '')] = el.value);
+        if(isNew) data.id = `${sheet.toLowerCase().slice(0,4)}_${Date.now()}`;
+        
+        UI.showLoading('Guardando...');
+        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {id}, data } });
+        await this.loadData(); UI.closeModal(); UI.renderView(AppState.view); UI.hideLoading();
+    },
+
+    async handleDelete(sheet, id) {
+        if (!confirm('¿Eliminar?')) return;
+        UI.showLoading('Eliminando...');
+        await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'delete', criteria: {id} } });
+        await this.loadData(); UI.renderView(AppState.view); UI.hideLoading();
+    },
+
+    // --- GESTIÓN DE IMÁGENES (PROYECTOS) ---
+    async handleProjectImages(projectId, title) {
+        const images = (AppState.data.ProjectImages || []).filter(i => i.projectId === projectId).sort((a,b) => (a.order||99)-(b.order||99));
+        const html = images.map(i => `
+            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" data-id="${i.id}">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-cover rounded">
+                <div class="flex-1 grid grid-cols-2 gap-2">
+                    <label class="text-xs uppercase font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full" value="${i.order||99}" onchange="App.quickUpdate('ProjectImages', '${i.id}', 'order', this.value)"></label>
+                    <label class="text-xs uppercase font-bold text-gray-500">Pie de foto <input type="text" class="border p-1 w-full" value="${i.caption||''}" onchange="App.quickUpdate('ProjectImages', '${i.id}', 'caption', this.value)"></label>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="flex items-center gap-2 text-xs font-bold cursor-pointer"><input type="checkbox" ${i.isCover==='Si'?'checked':''} onchange="App.quickUpdate('ProjectImages', '${i.id}', 'isCover', this.checked?'Si':'No')"> Portada</label>
+                    <label class="flex items-center gap-2 text-xs font-bold cursor-pointer"><input type="checkbox" ${i.showInPortfolio==='Si'?'checked':''} onchange="App.quickUpdate('ProjectImages', '${i.id}', 'showInPortfolio', this.checked?'Si':'No')"> Portafolio</label>
+                </div>
+                <button class="text-red-500 hover:text-red-700" onclick="App.handleDelete('ProjectImages', '${i.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+        `).join('');
+
+        UI.showModal(`Imágenes: ${title}`, 
+            `<div id="img-list" class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p class="text-center text-gray-400">Sin imágenes</p>'}</div>
+             <div class="border-t pt-4"><label class="btn btn-primary w-full text-center cursor-pointer"><i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes (Selección Múltiple)<input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadProjectImages(this, '${projectId}')"></label></div>`, 
+            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+    },
+
+    // --- GESTIÓN DE IMÁGENES (ALQUILER) ---
+    async handleRentalImages(itemId) {
+        const images = (AppState.data.RentalItemImages || []).filter(i => i.itemId === itemId).sort((a,b) => (a.order||99)-(b.order||99));
+        const html = images.map(i => `
+            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-cover rounded">
+                <div class="flex-1"><input type="number" class="border p-1 w-20" value="${i.order||99}" onchange="App.quickUpdate('RentalItemImages', '${i.id}', 'order', this.value)"></div>
+                <button class="text-red-500" onclick="App.handleDelete('RentalItemImages', '${i.id}')"><i class="fas fa-trash"></i></button>
+            </div>`).join('');
+            
+        UI.showModal('Imágenes del Equipo', 
+            `<div class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p>Sin imágenes</p>'}</div>
+             <label class="btn btn-primary w-full text-center cursor-pointer"><i class="fas fa-cloud-upload-alt mr-2"></i> Subir Imágenes<input type="file" multiple accept="image/*" class="hidden" onchange="App.uploadGenericImages(this, 'RentalItemImages', 'itemId', '${itemId}')"></label>`, 
+            '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+    },
+
+    // --- LOGICA DE SUBIDA MASIVA ---
+    async uploadProjectImages(input, projectId) {
+        const files = Array.from(input.files);
+        if(!files.length) return;
+        UI.showLoading(`Subiendo ${files.length} imágenes...`);
+        
+        // Procesar en serie para evitar rate limits
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('targetSubfolder', 'Projects');
+            
+            try {
+                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
+                // Crear registro en Sheet
+                await API.call('/.netlify/functions/update-sheet-data', {
+                    method: 'POST', body: {
+                        sheet: 'ProjectImages', action: 'add',
+                        data: {
+                            id: `img_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+                            projectId: projectId,
+                            imageUrl: res.imageUrl,
+                            order: 99,
+                            isCover: 'No',
+                            showInPortfolio: 'No',
+                            portfolioOrder: 99
+                        }
+                    }
+                });
+            } catch (e) { console.error(e); }
+        }
+        await this.loadData();
+        UI.hideLoading();
+        // Refrescar modal buscando de nuevo el proyecto para el titulo
+        const p = AppState.data.Projects.find(pr => pr.id === projectId);
+        this.handleProjectImages(projectId, p?.title || '');
+    },
+
+    async uploadGenericImages(input, sheet, keyField, parentId) {
+        const files = Array.from(input.files);
+        if(!files.length) return;
+        UI.showLoading(`Subiendo ${files.length}...`);
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('targetSubfolder', 'Rentals');
+            try {
+                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
+                await API.call('/.netlify/functions/update-sheet-data', {
+                    method: 'POST', body: { sheet, action: 'add', data: { id: `img_${Date.now()}`, [keyField]: parentId, imageUrl: res.imageUrl, order: 99 } }
+                });
+            } catch (e) { console.error(e); }
+        }
+        await this.loadData(); UI.hideLoading();
+        this.handleRentalImages(parentId);
+    },
+
+    async quickUpdate(sheet, id, field, val) {
+        await API.call('/.netlify/functions/update-sheet-data', {
+            method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[field]: val} }
+        });
+        // Actualizar localmente para reactividad inmediata si es posible, o recargar
+        const item = AppState.data[sheet].find(i => i.id === id);
+        if(item) item[field] = val;
+    },
+
+    // --- GESTOR DE PORTAFOLIO ---
+    updateLocalPortfolioOrder(id, val) {
+        const img = AppState.data.ProjectImages.find(i => i.id === id);
+        if(img) img.portfolioOrder = val;
+    },
+    async savePortfolioOrder() {
+        UI.showLoading('Guardando orden...');
+        const images = AppState.data.ProjectImages.filter(i => i.showInPortfolio === 'Si');
+        const promises = images.map(i => API.call('/.netlify/functions/update-sheet-data', {
+            method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} }
+        }));
+        await Promise.all(promises);
+        await this.loadData(); UI.hideLoading(); UI.showToast('Orden actualizado');
+    },
+    async removeFromPortfolio(id) {
+        if(!confirm('¿Quitar del portafolio principal?')) return;
+        UI.showLoading('Quitando...');
+        await API.call('/.netlify/functions/update-sheet-data', {
+            method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id}, data: {showInPortfolio: 'No'} }
+        });
+        await this.loadData(); UI.renderView('portfolio-manager'); UI.hideLoading();
+    },
+
+    async uploadImage(inputId) {
+        const input = document.createElement('input'); input.type = 'file';
+        input.onchange = async e => {
+            const file = e.target.files[0]; if(!file) return;
+            UI.showLoading('Subiendo...');
+            const formData = new FormData(); formData.append('file', file); formData.append('targetSubfolder', 'Assets');
+            try {
+                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: formData });
+                document.getElementById(inputId).value = res.imageUrl;
+                const preview = document.getElementById(inputId).parentElement.querySelector('img');
+                if(preview) preview.src = res.imageUrl;
+                UI.hideLoading();
+            } catch(err) { alert(err.message); UI.hideLoading(); }
+        };
+        input.click();
+    }
+};
+
+// Init
+document.getElementById('google-login-btn').addEventListener('click', () => Auth.login());
+document.getElementById('logout-btn').addEventListener('click', () => Auth.logout());
+document.getElementById('main-nav').addEventListener('click', e => {
+    const link = e.target.closest('.sidebar-link');
+    if(link) { e.preventDefault(); UI.renderView(link.dataset.view); }
+});
+Auth.init();
+</script>
 </body>
 </html>
-
 
 
 
