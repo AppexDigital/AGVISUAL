@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v7.0 - ELIMINACIÓN INFALIBLE (ID EXPLÍCITO)
+// v8.0 - ELIMINACIÓN QUIRÚRGICA (IDs para todo)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -24,44 +24,35 @@ async function findRow(sheet, criteria) {
   return rows.find(row => String(row.get(key)) === String(criteria[key]));
 }
 
-async function findRows(sheet, criteria) {
-    if (!criteria) return [];
-    await sheet.loadHeaderRow();
-    const rows = await sheet.getRows();
-    const key = Object.keys(criteria)[0];
-    return rows.filter(row => String(row.get(key)) === String(criteria[key]));
-}
-
-async function deleteDriveFile(drive, fileId) {
-    if (!fileId) return;
+// Borrar archivo o carpeta por ID exacto (Infalible)
+async function deleteItemById(drive, id) {
+    if (!id) return;
     try {
-        await drive.files.delete({ fileId, supportsAllDrives: true });
-        console.log(`[Drive] Archivo eliminado: ${fileId}`);
+        await drive.files.delete({ fileId: id, supportsAllDrives: true });
+        console.log(`[Drive] Item eliminado por ID: ${id}`);
     } catch (e) {
-        console.warn(`[Drive] Error borrando archivo ${fileId}:`, e.message);
+        console.warn(`[Drive] Error borrando ID ${id}:`, e.message);
     }
 }
 
-async function deleteDriveFolderByName(drive, folderName, categorySubfolder) {
+// Fallback: Borrar carpeta por nombre (Solo si no tenemos ID)
+async function deleteFolderByNameFallback(drive, folderName, categorySubfolder) {
     try {
         const rootId = process.env.GOOGLE_DRIVE_ASSET_FOLDER_ID;
-        // 1. Buscar carpeta de Categoría (Projects/Rentals)
         const qCat = `mimeType='application/vnd.google-apps.folder' and name='${categorySubfolder}' and '${rootId}' in parents and trashed = false`;
         const resCat = await drive.files.list({ q: qCat, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
-        if (resCat.data.files.length === 0) return; 
         
-        // 2. Buscar carpeta del Proyecto dentro de la Categoría
-        const parentId = resCat.data.files[0].id;
-        const qProj = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentId}' in parents and trashed = false`;
+        if (resCat.data.files.length === 0) return;
+        const categoryId = resCat.data.files[0].id;
+
+        const qProj = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${categoryId}' in parents and trashed = false`;
         const resProj = await drive.files.list({ q: qProj, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
 
         if (resProj.data.files.length > 0) {
-            const folderId = resProj.data.files[0].id;
-            await drive.files.delete({ fileId: folderId, supportsAllDrives: true });
-            console.log(`[Drive] Carpeta eliminada: ${folderName} (${folderId})`);
+            await deleteItemById(drive, resProj.data.files[0].id);
         }
     } catch (e) {
-        console.warn(`[Drive] Error borrando carpeta ${folderName}:`, e.message);
+        console.warn(`[Drive] Fallback delete falló para ${folderName}:`, e.message);
     }
 }
 
@@ -74,11 +65,12 @@ exports.handler = async (event, context) => {
     const { doc, drive } = await getServices();
     const sheet = doc.sheetsByTitle[sheetTitle];
     if (!sheet) return { statusCode: 404, body: JSON.stringify({ error: 'Hoja no encontrada.' }) };
+    
     await sheet.loadHeaderRow();
 
-    // --- ADD ---
     if (action === 'add') {
         if (!data.id) data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}`;
+        // Lógica Portada Única
         if (sheetTitle === 'ProjectImages' && data.isCover === 'Si') {
            const rows = await sheet.getRows();
            for (const r of rows) { if (r.get('projectId') === data.projectId && r.get('isCover') === 'Si') { r.set('isCover', 'No'); await r.save(); } }
@@ -87,16 +79,14 @@ exports.handler = async (event, context) => {
         return { statusCode: 200, body: JSON.stringify({ message: 'OK', newId: data.id }) };
     }
 
-    // --- UPDATE ---
     if (action === 'update') {
         const row = await findRow(sheet, criteria);
-        if (!row) return { statusCode: 404, body: 'No encontrado' };
+        if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'No encontrado' }) };
         
-        // Lógica especial para Portada Única en actualización
         if (sheetTitle === 'ProjectImages' && data.isCover === 'Si') {
-            const allRows = await findRows(sheet, { projectId: row.get('projectId') });
+            const allRows = await sheet.getRows();
             for (const r of allRows) {
-                if (r.get('id') !== row.get('id') && r.get('isCover') === 'Si') {
+                if (r.get('projectId') === row.get('projectId') && r.get('id') !== row.get('id') && r.get('isCover') === 'Si') {
                     r.set('isCover', 'No'); await r.save();
                 }
             }
@@ -107,25 +97,35 @@ exports.handler = async (event, context) => {
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    // --- DELETE ---
     if (action === 'delete') {
         const row = await findRow(sheet, criteria);
         if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado' }) };
 
-        // 1. Borrar Archivo de Drive (Si tiene fileId explícito)
-        const fileId = row.get('fileId'); // <--- LA CLAVE DEL ÉXITO
+        // 1. BORRAR FOTO INDIVIDUAL (Prioridad ID)
+        const fileId = row.get('fileId'); 
         if (fileId) {
-            await deleteDriveFile(drive, fileId);
+            await deleteItemById(drive, fileId);
+        } else if (row.get('imageUrl')) {
+             // Intento desesperado de extraer ID de la URL vieja si no hay fileId
+             const match = row.get('imageUrl').match(/id=([a-zA-Z0-9_-]+)/);
+             if (match) await deleteItemById(drive, match[1]);
         }
 
-        // 2. Borrar Carpeta (Si es Proyecto o Equipo)
-        if (sheetTitle === 'Projects') {
-            const title = row.get('title');
-            if (title) await deleteDriveFolderByName(drive, title, 'Projects');
-        }
-        if (sheetTitle === 'RentalItems') {
-            const name = row.get('name');
-            if (name) await deleteDriveFolderByName(drive, name, 'Rentals');
+        // 2. BORRAR CARPETA DE PROYECTO/EQUIPO
+        if (sheetTitle === 'Projects' || sheetTitle === 'RentalItems') {
+            // Plan A: Usar ID de carpeta si existe (Nuevo sistema)
+            const folderId = row.get('driveFolderId');
+            if (folderId) {
+                await deleteItemById(drive, folderId);
+            } else {
+                // Plan B: Buscar por nombre (Sistema viejo)
+                const name = row.get('title') || row.get('name');
+                const cat = sheetTitle === 'Projects' ? 'Projects' : 'Rentals';
+                if (name) await deleteFolderByNameFallback(drive, name, cat);
+            }
+
+            // Nota: No necesitamos borrar las filas de las fotos hijas manualmente aquí.
+            // Lo haremos desde el Frontend (cascada) para asegurar que se limpien bien.
         }
 
         await row.delete();
