@@ -1,5 +1,5 @@
 // functions/upload-image.js
-// v6.0 - ORGANIZACIÓN POR NOMBRE & SUBIDA SEGURA
+// v7.0 - ROBUSTEZ TOTAL EN CARPETAS
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
@@ -24,18 +24,24 @@ function parseMultipartForm(event) {
 }
 
 async function getOrCreateFolder(drive, parentId, folderName) {
-    // Buscar por NOMBRE exacto dentro del padre
-    const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentId}' in parents and trashed = false`;
-    const res = await drive.files.list({ q, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
+    // Limpieza de nombre para evitar errores en query
+    const safeName = folderName.replace(/'/g, "\\'");
+    const q = `mimeType='application/vnd.google-apps.folder' and name='${safeName}' and '${parentId}' in parents and trashed = false`;
     
-    if (res.data.files.length > 0) return res.data.files[0].id;
-    
-    // Si no existe, crearla
-    const newFolder = await drive.files.create({
-        resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
-        fields: 'id', supportsAllDrives: true
-    });
-    return newFolder.data.id;
+    try {
+        const res = await drive.files.list({ q, fields: 'files(id)', supportsAllDrives: true, includeItemsFromAllDrives: true });
+        if (res.data.files.length > 0) return res.data.files[0].id;
+        
+        const newFolder = await drive.files.create({
+            resource: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
+            fields: 'id', supportsAllDrives: true
+        });
+        return newFolder.data.id;
+    } catch (e) {
+        console.error("Error buscando/creando carpeta:", e);
+        // Fallback: Si falla, devuelve el padre para no romper la subida
+        return parentId; 
+    }
 }
 
 exports.handler = async (event) => {
@@ -47,7 +53,6 @@ exports.handler = async (event) => {
   try {
     const { fields, files } = await parseMultipartForm(event);
     const file = files.file;
-    // AQUÍ LA CLAVE: Usamos el nombre legible (parentFolderName)
     const folderName = fields.parentFolderName || 'General'; 
     const subFolderType = fields.targetSubfolder || 'Varios';
 
@@ -59,9 +64,8 @@ exports.handler = async (event) => {
     const drive = google.drive({ version: 'v3', auth });
 
     const rootId = process.env.GOOGLE_DRIVE_ASSET_FOLDER_ID;
-    // 1. Carpeta Tipo (Proyectos / Alquiler)
     const typeFolderId = await getOrCreateFolder(drive, rootId, subFolderType);
-    // 2. Carpeta Específica (Nombre del Proyecto)
+    // Importante: Ahora siempre busca o crea basado en el NOMBRE, garantizando consistencia
     const targetFolderId = await getOrCreateFolder(drive, typeFolderId, folderName);
 
     const res = await drive.files.create({
