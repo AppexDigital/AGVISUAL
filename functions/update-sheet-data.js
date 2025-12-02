@@ -1,8 +1,8 @@
 // functions/update-sheet-data.js
-// v73.0 - MAESTRÍA EN GESTIÓN DE DATOS (Cascada Completa + Integridad)
-// - RentalItems: Limpieza automática de Fotos, Bloqueos y Reservas al borrar el equipo.
-// - RentalCategories: Bloqueo de seguridad si tiene hijos.
-// - Sync total con Drive y Google Sheets.
+// v80.0 - SINCRONIZACIÓN DRIVE FORZADA (Case-Insensitive)
+// - Renombrado de carpetas: Detecta cambios de título flexiblemente.
+// - Borrado de imágenes: Prioriza la búsqueda de fileId.
+// - Borrado de proyectos: Prioriza la búsqueda de driveFolderId.
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -20,10 +20,19 @@ async function getServices() {
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
+// Helper: Encuentra el header real en la hoja (ej: 'driveFolderId') buscando 'drivefolderid'
 function getRealHeader(sheet, name) {
     const headers = sheet.headerValues;
     const target = name.toLowerCase().trim();
     return headers.find(h => h.toLowerCase().trim() === target);
+}
+
+// Helper: Encuentra el valor en el objeto de datos del frontend sin importar mayúsculas/minúsculas
+// Ejemplo: Si buscas 'title' pero el front manda 'Title', esto lo encuentra.
+function getDataVal(dataObj, keyName) {
+    if (!dataObj) return undefined;
+    const key = Object.keys(dataObj).find(k => k.toLowerCase().trim() === keyName.toLowerCase().trim());
+    return key ? dataObj[key] : undefined;
 }
 
 function getColIndex(sheet, name) {
@@ -32,7 +41,6 @@ function getColIndex(sheet, name) {
     return headers.findIndex(h => h.toLowerCase().trim() === target);
 }
 
-// Helper universal para limpieza en cascada
 async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValue) {
     try {
         const childSheet = doc.sheetsByTitle[childSheetName];
@@ -40,19 +48,10 @@ async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValu
         const rows = await childSheet.getRows();
         const header = getRealHeader(childSheet, parentIdHeader);
         if (!header) return;
-
-        // Filtramos las filas que coinciden con el ID del padre eliminado
         const rowsToDelete = rows.filter(r => String(r.get(header)).trim() === String(parentIdValue).trim());
-        
-        // Borrado seguro uno a uno
-        for (const row of rowsToDelete) {
-            await row.delete();
-        }
-        if (rowsToDelete.length > 0) {
-            console.log(`Limpieza cascada: ${rowsToDelete.length} registros borrados en ${childSheetName}`);
-        }
+        for (const row of rowsToDelete) await row.delete();
     } catch (e) {
-        console.warn(`Advertencia en cascada ${childSheetName}:`, e.message);
+        console.warn(`Error cascada ${childSheetName}:`, e.message);
     }
 }
 
@@ -119,22 +118,35 @@ exports.handler = async (event, context) => {
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
-                    // Renombrado de Carpeta Drive
+                    // --- LÓGICA DE RENOMBRADO (DRIVE) ---
+                    // Se ejecuta ANTES de cualquier cambio en celdas
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
-                        const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
-                        const newTitle = op.data[titleKey];
+                        const titleField = sheetName === 'RentalItems' ? 'name' : 'title';
+                        // Usamos el helper getDataVal para ser flexibles (Title vs title)
+                        const newTitle = getDataVal(op.data, titleField);
+                        
                         if (newTitle) {
-                            const currentTitle = targetRow.get(getRealHeader(sheet, titleKey));
+                            const currentTitle = targetRow.get(getRealHeader(sheet, titleField));
                             const folderId = targetRow.get(getRealHeader(sheet, 'driveFolderId'));
+                            
                             if (folderId && currentTitle !== newTitle) {
-                                try { await drive.files.update({ fileId: folderId, requestBody: { name: newTitle } }); } catch(e){}
+                                try {
+                                    await drive.files.update({
+                                        fileId: folderId,
+                                        requestBody: { name: newTitle }
+                                    });
+                                    console.log(`[Drive] Carpeta renombrada de "${currentTitle}" a "${newTitle}"`);
+                                } catch (driveError) {
+                                    console.warn("[Drive Error] Fallo al renombrar carpeta:", driveError.message);
+                                }
                             }
                         }
                     }
+                    // ---------------------------------------
 
-                    // Lógica Batch
                     const rIdx = targetRow.rowIndex - 1;
                     let rowBatchSuccess = true;
+
                     try {
                         // Portada Única
                         if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
@@ -142,6 +154,7 @@ exports.handler = async (event, context) => {
                             const parentCol = getColIndex(sheet, parentKey);
                             const coverCol = getColIndex(sheet, 'isCover');
                             const parentId = sheet.getCell(rIdx, parentCol).value;
+
                             rows.forEach(r => {
                                 const otherIdx = r.rowIndex - 1;
                                 if (otherIdx !== rIdx) {
@@ -173,7 +186,6 @@ exports.handler = async (event, context) => {
             }
             if (hasBatchChanges) await sheet.saveUpdatedCells();
             for (const fallback of fallbackUpdates) {
-                // Fallback seguro (resumido)
                 Object.keys(fallback.data).forEach(k=>{ const h=getRealHeader(sheet,k); if(h) fallback.row.set(h,fallback.data[k]); });
                 await fallback.row.save();
             }
@@ -188,7 +200,7 @@ exports.handler = async (event, context) => {
                 const realKeyHeader = getRealHeader(sheet, criteriaKey);
                 if (!realKeyHeader) continue;
 
-                // 1. PROTECCIÓN DE CATEGORÍAS (Integridad Referencial)
+                // Bloqueo de Categorías
                 if (sheetName === 'RentalCategories') {
                     const itemsSheet = doc.sheetsByTitle['RentalItems'];
                     if (itemsSheet) {
@@ -196,39 +208,49 @@ exports.handler = async (event, context) => {
                         const allItems = await itemsSheet.getRows();
                         const catHeader = getRealHeader(itemsSheet, 'categoryId');
                         const hasDependents = allItems.some(item => String(item.get(catHeader)).trim() === String(criteriaVal));
-                        if (hasDependents) {
-                            throw new Error(`⚠️ No se puede eliminar: Hay equipos asociados a esta categoría.`);
-                        }
+                        if (hasDependents) throw new Error(`⚠️ No se puede eliminar: Hay equipos asociados.`);
                     }
                 }
 
                 const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
                 if (row) {
-                    // 2. Borrar archivo Drive (Imagen individual)
-                    const fileIdHeader = getRealHeader(sheet, 'fileId');
-                    const fileId = (op.data && op.data.fileId) || (fileIdHeader ? row.get(fileIdHeader) : null);
-                    if (fileId) try { await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); } catch(e){}
+                    // --- 1. BORRAR ARCHIVO (IMAGEN) ---
+                    // Buscamos fileId en op.data O en la fila
+                    let fileId = getDataVal(op.data, 'fileId'); 
+                    if (!fileId) {
+                        const hFile = getRealHeader(sheet, 'fileId');
+                        if (hFile) fileId = row.get(hFile);
+                    }
 
-                    // 3. Borrar Carpeta Drive y Hijos (Cascada de Entidades)
+                    if (fileId) {
+                        try { 
+                            await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); 
+                            console.log(`[Drive] Archivo ${fileId} enviado a papelera.`);
+                        } catch(e){ console.warn("[Drive] Error borrando archivo:", e.message); }
+                    }
+
+                    // --- 2. BORRAR CARPETA (PROYECTO) ---
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
-                        const folderIdHeader = getRealHeader(sheet, 'driveFolderId');
-                        const folderId = folderIdHeader ? row.get(folderIdHeader) : null;
-                        if (folderId) try { await drive.files.update({ fileId: folderId, requestBody: { trashed: true } }); } catch(e){}
+                        const folderHeader = getRealHeader(sheet, 'driveFolderId');
+                        const folderId = folderHeader ? row.get(folderHeader) : null;
                         
-                        // Cascada Proyectos
-                        if (sheetName === 'Projects') {
-                            await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal);
+                        if (folderId) {
+                            try { 
+                                await drive.files.update({ fileId: folderId, requestBody: { trashed: true } });
+                                console.log(`[Drive] Carpeta ${folderId} enviada a papelera.`);
+                            } catch(e){ console.warn("[Drive] Error borrando carpeta:", e.message); }
                         }
-                        // Cascada Servicios
+
+                        // Cascada de Hijos
+                        if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal);
+                        if (sheetName === 'RentalItems') {
+                            await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal);
+                            await deleteChildRows(doc, 'BlockedDates', 'itemId', criteriaVal);
+                            await deleteChildRows(doc, 'Bookings', 'itemId', criteriaVal);
+                        }
                         if (sheetName === 'Services') {
                             await deleteChildRows(doc, 'ServiceImages', 'serviceId', criteriaVal);
                             await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal);
-                        }
-                        // Cascada ALQUILER (NUEVO: Limpieza profunda)
-                        if (sheetName === 'RentalItems') {
-                            await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal); // Fotos
-                            await deleteChildRows(doc, 'BlockedDates', 'itemId', criteriaVal);     // Bloqueos
-                            await deleteChildRows(doc, 'Bookings', 'itemId', criteriaVal);         // Reservas
                         }
                     }
                     await row.delete();
@@ -240,7 +262,7 @@ exports.handler = async (event, context) => {
     return { statusCode: 200, body: JSON.stringify({ message: 'Proceso completado con éxito.' }) };
 
   } catch (error) {
-    console.error('Backend Error:', error);
+    console.error('Backend Critical Error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
