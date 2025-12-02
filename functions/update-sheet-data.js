@@ -140,27 +140,34 @@ exports.handler = async (event, context) => {
                         const parentKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
                         const parentColIdx = getHeaderIndex(sheet, parentKey);
                         const coverColIdx = getHeaderIndex(sheet, 'isCover');
-                        
+                      
                         if (parentColIdx > -1 && coverColIdx > -1) {
+                            // CORRECCIÓN APPEX: Usar getCell de forma segura
                             const currentParentId = sheet.getCell(rowIndex, parentColIdx).value;
-                            // Barrer todas las filas para apagar 'Si' en el mismo grupo
-                            for (let i = 1; i < sheet.rowCount; i++) { // Empezamos en 1 (fila 2) si headers son fila 0
-                                // Nota: sheet.rowCount incluye filas vacías, mejor iterar sobre 'rows' cargados
-                                // Usamos 'rows' para iterar índices válidos
-                                rows.forEach(r => {
-                                    const rIdx = r.rowIndex - 1;
-                                    if (rIdx !== rowIndex) { // No tocar la actual
-                                        const pCell = sheet.getCell(rIdx, parentColIdx);
-                                        if (String(pCell.value) === String(currentParentId)) {
-                                            const cCell = sheet.getCell(rIdx, coverColIdx);
-                                            if (String(cCell.value).toLowerCase() === 'si') {
-                                                cCell.value = 'No';
-                                                hasChanges = true;
-                                            }
+                            
+                            // Iteramos SOLO sobre las filas cargadas (rows) para evitar error de celda no cargada
+                            rows.forEach(r => {
+                                const rIdx = r.rowIndex - 1; // Convertir a índice base-0 (fila 2 = índice 1)
+                                
+                                // Saltamos la fila que estamos editando actualmente
+                                if (rIdx === rowIndex) return;
+
+                                // Envolvemos en try-catch por seguridad absoluta
+                                try {
+                                    const pCell = sheet.getCell(rIdx, parentColIdx);
+                                    // Si pertenece al mismo proyecto/item
+                                    if (String(pCell.value) === String(currentParentId)) {
+                                        const cCell = sheet.getCell(rIdx, coverColIdx);
+                                        // Si está marcada como portada, la desmarcamos
+                                        if (String(cCell.value).toLowerCase() === 'si') {
+                                            cCell.value = 'No';
+                                            hasChanges = true;
                                         }
                                     }
-                                });
-                            }
+                                } catch (cellError) {
+                                    // Ignoramos celdas que no estén en memoria
+                                }
+                            });
                         }
                     }
 
