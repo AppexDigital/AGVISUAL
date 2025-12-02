@@ -1,27 +1,12 @@
 // functions/update-sheet-data.js
-// v90.0 - RESILIENCIA TOTAL + BORRADO POR BLOQUES + RATE LIMITER
-// - Borrado masivo optimizado: Agrupa filas contiguas para borrar 79 fotos en 1 segundo.
-// - Freno de emergencia: Si hay muchas operaciones individuales, pausa para evitar error 429.
-// - Buscador de FileId mejorado: Encuentra la columna aunque cambie mayúsculas/minúsculas.
+// v91.0 - BACKEND RÁPIDO (Sin pausas)
+// - Eliminamos el throttle del servidor para evitar Timeout 504.
+// - Mantenemos la lógica de borrado por bloques y búsqueda inteligente.
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
 const { validateGoogleToken } = require('./google-auth-helper');
-
-const RATE_LIMIT_THRESHOLD = 45; // Pausar antes de llegar a 60
-const RATE_LIMIT_PAUSE = 60000; // 60 segundos de enfriamiento
-let requestCounter = 0;
-
-async function throttle() {
-    requestCounter++;
-    if (requestCounter >= RATE_LIMIT_THRESHOLD) {
-        console.log(`⚠️ Límite de velocidad cercano (${requestCounter}). Enfriando motores por 60s...`);
-        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_PAUSE));
-        requestCounter = 0;
-        console.log("✅ Motores listos. Reanudando...");
-    }
-}
 
 async function getServices() {
   const auth = new JWT({
@@ -34,10 +19,9 @@ async function getServices() {
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-// Helper "Sabueso": Encuentra columnas buscando variaciones
 function getRealHeader(sheet, name) {
     const headers = sheet.headerValues;
-    const target = name.toLowerCase().replace(/\s/g, ''); // "File ID" -> "fileid"
+    const target = name.toLowerCase().replace(/\s/g, '');
     return headers.find(h => h.toLowerCase().replace(/\s/g, '') === target);
 }
 
@@ -54,50 +38,40 @@ function getColIndex(sheet, name) {
     return sheet.headerValues.indexOf(header);
 }
 
-// Borrado Inteligente en Cascada
 async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValue, drive) {
     try {
         const sheet = doc.sheetsByTitle[childSheetName];
         if (!sheet) return;
         
-        // Necesitamos filas para encontrar IDs de archivo
         const rows = await sheet.getRows(); 
         const pHeader = getRealHeader(sheet, parentIdHeader);
-        const fHeader = getRealHeader(sheet, 'fileId'); // Columna I
+        const fHeader = getRealHeader(sheet, 'fileId');
 
         if (!pHeader) return;
 
-        // 1. Identificar filas a borrar y recolectar FileIDs para Drive
         const rowsToDelete = rows.filter(r => String(r.get(pHeader)).trim() === String(parentIdValue).trim());
         
         if (rowsToDelete.length === 0) return;
 
-        console.log(`Iniciando borrado en cascada de ${rowsToDelete.length} elementos en ${childSheetName}`);
-
-        // 2. Borrar archivos de Drive (Esto gasta quota, aplicamos throttle)
+        // Borrar archivos de Drive (Intentar lo más rápido posible)
         if (fHeader && drive) {
-            for (const row of rowsToDelete) {
+            // Ejecutamos en paralelo para velocidad (Promise.all)
+            const fileDeletions = rowsToDelete.map(row => {
                 const fileId = row.get(fHeader);
                 if (fileId) {
-                    await throttle(); // Protección
-                    try {
-                        await drive.files.update({ fileId: fileId, requestBody: { trashed: true } });
-                    } catch(e) { console.warn(`Error borrando archivo ${fileId}:`, e.message); }
+                    return drive.files.update({ fileId: fileId, requestBody: { trashed: true } })
+                        .catch(e => console.warn(`Error file ${fileId}:`, e.message));
                 }
-            }
+            });
+            await Promise.all(fileDeletions);
         }
 
-        // 3. BORRADO OPTIMIZADO POR BLOQUES (La clave para velocidad)
-        // Agrupamos filas contiguas para borrarlas en 1 sola petición
-        // rowIndex es 1-based. Ejemplo: filas [10, 11, 12, 15]
-        
-        // Ordenamos descendente para que al borrar las de abajo no cambien los índices de las de arriba
+        // BORRADO POR BLOQUES (Optimizado)
         const ranges = [];
         const sortedRows = [...rowsToDelete].sort((a, b) => b.rowIndex - a.rowIndex);
 
         sortedRows.forEach(row => {
             const lastRange = ranges[ranges.length - 1];
-            // Si es consecutivo al último rango (recordar que vamos hacia atrás)
             if (lastRange && (lastRange.start - 1 === row.rowIndex)) {
                 lastRange.start = row.rowIndex;
                 lastRange.count++;
@@ -106,22 +80,16 @@ async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValu
             }
         });
 
-        // Ejecutar borrado por bloques
         for (const range of ranges) {
-            await throttle(); // Protección por si hay muchos bloques dispersos
-            // sheet.deleteRows(startIndex, count). startIndex es 0-based.
-            // rowIndex es 1-based. Así que startIndex = rowIndex - 1.
             await sheet.deleteRows(range.start - 1, range.count);
-            console.log(`Bloque borrado: fila ${range.start}, cantidad ${range.count}`);
         }
 
     } catch (e) {
-        console.warn(`Error crítico en cascada ${childSheetName}:`, e.message);
+        console.warn(`Error cascada ${childSheetName}:`, e.message);
     }
 }
 
 exports.handler = async (event, context) => {
-  requestCounter = 0; // Reset por ejecución
   if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
@@ -151,9 +119,8 @@ exports.handler = async (event, context) => {
         const updates = sheetOps.filter(op => op.action === 'update');
         const deletes = sheetOps.filter(op => op.action === 'delete');
 
-        // --- A. CREACIÓN (ADDS) ---
+        // A. CREACIÓN
         for (const op of adds) {
-            await throttle();
             if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
                  op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             }
@@ -165,7 +132,7 @@ exports.handler = async (event, context) => {
             await sheet.addRow(rowData); 
         }
 
-        // --- B. ACTUALIZACIÓN (UPDATES) ---
+        // B. ACTUALIZACIÓN (Batching en Memoria)
         if (updates.length > 0) {
             try { await sheet.loadCells(); } catch(e) {}
             const rows = await sheet.getRows(); 
@@ -177,7 +144,7 @@ exports.handler = async (event, context) => {
                 const criteriaVal = String(op.criteria[criteriaKey]).trim();
                 const realHeaderKey = getRealHeader(sheet, criteriaKey);
 
-                if (!realHeaderKey) { // Upsert config
+                if (!realHeaderKey) { 
                     if(['Settings', 'About'].includes(sheetName)) await sheet.addRow({ ...op.criteria, ...op.data });
                     continue;
                 }
@@ -185,7 +152,7 @@ exports.handler = async (event, context) => {
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
-                    // Renombrado Carpeta (Con Throttle)
+                    // Renombrado
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
                         const newTitle = getDataVal(op.data, titleKey);
@@ -193,13 +160,11 @@ exports.handler = async (event, context) => {
                             const currentTitle = targetRow.get(getRealHeader(sheet, titleKey));
                             const folderId = targetRow.get(getRealHeader(sheet, 'driveFolderId'));
                             if (folderId && currentTitle !== newTitle) {
-                                await throttle();
                                 try { await drive.files.update({ fileId: folderId, requestBody: { name: newTitle } }); } catch(e){}
                             }
                         }
                     }
 
-                    // Lógica Batch
                     const rIdx = targetRow.rowIndex - 1;
                     let rowBatchSuccess = true;
                     try {
@@ -210,7 +175,6 @@ exports.handler = async (event, context) => {
                             const cCol = getColIndex(sheet, 'isCover');
                             const pId = sheet.getCell(rIdx, pCol).value;
                             
-                            // Barrido optimizado
                             for(let i=0; i<rows.length; i++) {
                                 const otherIdx = rows[i].rowIndex - 1;
                                 if(otherIdx === rIdx) continue;
@@ -237,20 +201,14 @@ exports.handler = async (event, context) => {
                 }
             }
 
-            if (hasBatchChanges) {
-                await throttle();
-                await sheet.saveUpdatedCells();
-            }
-
-            // Fallback seguro con Throttle
+            if (hasBatchChanges) await sheet.saveUpdatedCells();
             for (const fallback of fallbackUpdates) {
-                await throttle(); // Freno aquí para las 79 fotos si falló el batch
                 Object.keys(fallback.data).forEach(k=>{ const h=getRealHeader(sheet,k); if(h) fallback.row.set(h,fallback.data[k]); });
                 await fallback.row.save();
             }
         }
 
-        // --- C. BORRADOS (DELETES) ---
+        // C. BORRADOS
         if (deletes.length > 0) {
             const currentRows = await sheet.getRows(); 
             for (const op of deletes) {
@@ -259,7 +217,7 @@ exports.handler = async (event, context) => {
                 const realKeyHeader = getRealHeader(sheet, criteriaKey);
                 if (!realKeyHeader) continue;
 
-                // Integridad Categorías
+                // Integridad
                 if (sheetName === 'RentalCategories') {
                     const itemsSheet = doc.sheetsByTitle['RentalItems'];
                     if (itemsSheet) {
@@ -274,30 +232,19 @@ exports.handler = async (event, context) => {
 
                 const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
                 if (row) {
-                    // 1. Borrar archivo Drive (Sabueso de fileId)
+                    // Borrar archivo Drive
                     let fileId = getDataVal(op.data, 'fileId');
                     if (!fileId) {
                         const hFile = getRealHeader(sheet, 'fileId'); 
                         if (hFile) fileId = row.get(hFile);
                     }
+                    if (fileId) try { await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); } catch(e){}
 
-                    if (fileId) {
-                        await throttle();
-                        try { 
-                            await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); 
-                            console.log(`Archivo ${fileId} a papelera.`);
-                        } catch(e){ console.warn("Error drive file:", e.message); }
-                    }
-
-                    // 2. Borrar Carpeta y Cascada
+                    // Borrar Carpeta y Cascada
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const hFolder = getRealHeader(sheet, 'driveFolderId');
                         const folderId = hFolder ? row.get(hFolder) : null;
-                        
-                        if (folderId) {
-                            await throttle();
-                            try { await drive.files.update({ fileId: folderId, requestBody: { trashed: true } }); } catch(e){}
-                        }
+                        if (folderId) try { await drive.files.update({ fileId: folderId, requestBody: { trashed: true } }); } catch(e){}
 
                         if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal, drive);
                         if (sheetName === 'RentalItems') {
@@ -310,8 +257,6 @@ exports.handler = async (event, context) => {
                             await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal, drive);
                         }
                     }
-                    
-                    await throttle();
                     await row.delete();
                 }
             }
