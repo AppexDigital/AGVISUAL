@@ -114,13 +114,21 @@ exports.handler = async (event) => {
         console.warn("Advertencia: No se pudo hacer público el archivo automáticamente.", permError.message);
     }
 
-    // URL robusta
-    // URL robusta: Mantenemos el dominio googleusercontent pero aseguramos alta resolución
-    // Usamos una expresión regular para reemplazar CUALQUIER tamaño (=s...) por =s3000
-    let imgUrl = res.data.thumbnailLink 
-        ? res.data.thumbnailLink.replace(/=s\d+/, '=s3000') 
-        : res.data.webViewLink;
-
+// URL robusta: Priorizamos thumbnailLink (googleusercontent) porque carga más rápido en <img> tags.
+    // Si existe, forzamos tamaño grande (=s3000) reemplazando el parámetro por defecto (=s220).
+    let imgUrl = res.data.webViewLink; // Fallback por defecto
+    
+    if (res.data.thumbnailLink) {
+        // A veces llega como "...=s220", a veces sin parámetro. 
+        // Esta lógica asegura que termine en =s3000 manteniendo el dominio googleusercontent.
+        const link = res.data.thumbnailLink;
+        if (link.includes('=')) {
+            imgUrl = link.substring(0, link.lastIndexOf('=')) + '=s3000';
+        } else {
+            imgUrl = link + '=s3000';
+        }
+    }
+    
     return {
       statusCode: 200,
       body: JSON.stringify({ 
