@@ -82,6 +82,7 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
+        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
@@ -152,7 +153,7 @@
             <div id="view-portfolio-manager" class="view">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-display font-bold">Portafolio Principal</h1>
-                    <button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Cambios</button>
+                    <button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Orden</button>
                 </div>
                 <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
@@ -634,45 +635,56 @@ const App = {
         }
     },
 
-    // 3. Guardar TODO de una vez
+    // 3. Guardar TODO de una vez (FIXED V29: UI Blocking & Feedback)
     async saveGalleryChanges(parentId, type) {
-        // Si es ClientLogos, usamos currentModalImages si existe, o cargamos
-        if (type === 'ClientLogos' && currentModalImages.length === 0 && AppState.data.ClientLogos) {
-             currentModalImages = JSON.parse(JSON.stringify(AppState.data.ClientLogos));
-        }
-
-        const batch = [];
-        const sheetName = type; // 'ProjectImages', 'ClientLogos', etc.
-
-        // Procesar Borrados
-        pendingDeletions.forEach(img => {
-            if (img.id && !img.id.startsWith('temp_')) {
-                 batch.push({ sheet: sheetName, action: 'delete', criteria: { id: img.id }, data: { fileId: img.fileId } });
+        UI.showLoading('Guardando cambios...');
+        try {
+            // Si es ClientLogos, usamos currentModalImages si existe, o cargamos
+            if (type === 'ClientLogos' && currentModalImages.length === 0 && AppState.data.ClientLogos) {
+                 currentModalImages = JSON.parse(JSON.stringify(AppState.data.ClientLogos));
             }
-        });
 
-        // Procesar Modificados y Nuevos
-        currentModalImages.forEach(img => {
-             // Solo enviamos si se modificó o es nuevo.
-             // Para ClientLogos, como es reordenamiento, enviamos todos para asegurar consistencia si se cambió orden
-             if (img._modified || (img.id && img.id.startsWith('temp_')) || type === 'ClientLogos') {
-                 const dataToUpdate = { 
-                    order: img.order, caption: img.caption, 
-                    isCover: img.isCover, showInPortfolio: img.showInPortfolio, 
-                    clientName: img.clientName 
-                 };
-                 batch.push({ sheet: sheetName, action: 'update', criteria: { id: img.id }, data: dataToUpdate });
-             }
-        });
+            const batch = [];
+            const sheetName = type; // 'ProjectImages', 'ClientLogos', etc.
 
-        if (batch.length > 0) {
-            await API.batchUpdate(batch);
-            // Sincronizar estado global
-            await this.ensureDataForView(AppState.view, true);
+            // Procesar Borrados
+            pendingDeletions.forEach(img => {
+                if (img.id && !img.id.startsWith('temp_')) {
+                     batch.push({ sheet: sheetName, action: 'delete', criteria: { id: img.id }, data: { fileId: img.fileId } });
+                }
+            });
+
+            // Procesar Modificados y Nuevos
+            currentModalImages.forEach(img => {
+                 // Solo enviamos si se modificó o es nuevo.
+                 // Para ClientLogos, como es reordenamiento, enviamos todos para asegurar consistencia si se cambió orden
+                 if (img._modified || (img.id && img.id.startsWith('temp_')) || type === 'ClientLogos') {
+                     const dataToUpdate = { 
+                        order: img.order, caption: img.caption, 
+                        isCover: img.isCover, showInPortfolio: img.showInPortfolio, 
+                        clientName: img.clientName 
+                     };
+                     batch.push({ sheet: sheetName, action: 'update', criteria: { id: img.id }, data: dataToUpdate });
+                 }
+            });
+
+            if (batch.length > 0) {
+                await API.batchUpdate(batch);
+                // Sincronizar estado global
+                await this.ensureDataForView(AppState.view, true);
+                UI.showToast("Cambios guardados");
+            } else {
+                UI.showToast("No hubo cambios pendientes");
+            }
+            
+            if(type !== 'ClientLogos') UI.closeModal();
+
+        } catch(e) {
+            console.error(e);
+            alert("Error al guardar: " + e.message);
+        } finally {
+            UI.hideLoading();
         }
-        
-        if(type !== 'ClientLogos') UI.closeModal();
-        else UI.showToast("Cambios guardados");
     },
 
 
@@ -927,6 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
