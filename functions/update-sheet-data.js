@@ -1,6 +1,8 @@
 // functions/update-sheet-data.js
-// v60.0 - SISTEMA HÍBRIDO CON AUTO-REPARACIÓN
-// Combina velocidad de batching con seguridad de guardado individual si falla la memoria.
+// v73.0 - MAESTRÍA EN GESTIÓN DE DATOS (Cascada Completa + Integridad)
+// - RentalItems: Limpieza automática de Fotos, Bloqueos y Reservas al borrar el equipo.
+// - RentalCategories: Bloqueo de seguridad si tiene hijos.
+// - Sync total con Drive y Google Sheets.
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -30,19 +32,40 @@ function getColIndex(sheet, name) {
     return headers.findIndex(h => h.toLowerCase().trim() === target);
 }
 
+// Helper universal para limpieza en cascada
+async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValue) {
+    try {
+        const childSheet = doc.sheetsByTitle[childSheetName];
+        if (!childSheet) return;
+        const rows = await childSheet.getRows();
+        const header = getRealHeader(childSheet, parentIdHeader);
+        if (!header) return;
+
+        // Filtramos las filas que coinciden con el ID del padre eliminado
+        const rowsToDelete = rows.filter(r => String(r.get(header)).trim() === String(parentIdValue).trim());
+        
+        // Borrado seguro uno a uno
+        for (const row of rowsToDelete) {
+            await row.delete();
+        }
+        if (rowsToDelete.length > 0) {
+            console.log(`Limpieza cascada: ${rowsToDelete.length} registros borrados en ${childSheetName}`);
+        }
+    } catch (e) {
+        console.warn(`Advertencia en cascada ${childSheetName}:`, e.message);
+    }
+}
+
 exports.handler = async (event, context) => {
   if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
-    // 1. Parsing Robusto
     let body;
     try {
         body = JSON.parse(event.body);
         if (typeof body === 'string') body = JSON.parse(body);
-    } catch (e) {
-        throw new Error('JSON inválido.');
-    }
+    } catch (e) { throw new Error('JSON inválido.'); }
 
     const operations = Array.isArray(body) ? body : [body];
     const { doc, drive } = await getServices();
@@ -64,7 +87,6 @@ exports.handler = async (event, context) => {
         const deletes = sheetOps.filter(op => op.action === 'delete');
 
         // --- A. CREACIÓN (ADDS) ---
-        // Siempre seguro usar addRow directamente
         for (const op of adds) {
             if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
                  op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
@@ -77,14 +99,12 @@ exports.handler = async (event, context) => {
             await sheet.addRow(rowData); 
         }
 
-        // --- B. ACTUALIZACIÓN (UPDATES) - LÓGICA HÍBRIDA ---
+        // --- B. ACTUALIZACIÓN (UPDATES) ---
         if (updates.length > 0) {
-            // Intentamos cargar la matriz completa para velocidad
-            try { await sheet.loadCells(); } catch(e) { console.warn("LoadCells parcial warning"); }
-            
+            try { await sheet.loadCells(); } catch(e) {}
             const rows = await sheet.getRows(); 
             let hasBatchChanges = false;
-            const fallbackUpdates = []; // Aquí guardaremos los que fallen en batch
+            const fallbackUpdates = [];
 
             for (const op of updates) {
                 const criteriaKey = Object.keys(op.criteria)[0];
@@ -99,21 +119,29 @@ exports.handler = async (event, context) => {
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
-                    const rIdx = targetRow.rowIndex - 1;
-                    let rowBatchSuccess = true; // Asumimos éxito
+                    // Renombrado de Carpeta Drive
+                    if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
+                        const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
+                        const newTitle = op.data[titleKey];
+                        if (newTitle) {
+                            const currentTitle = targetRow.get(getRealHeader(sheet, titleKey));
+                            const folderId = targetRow.get(getRealHeader(sheet, 'driveFolderId'));
+                            if (folderId && currentTitle !== newTitle) {
+                                try { await drive.files.update({ fileId: folderId, requestBody: { name: newTitle } }); } catch(e){}
+                            }
+                        }
+                    }
 
-                    // Intento de escritura en memoria (Batch)
+                    // Lógica Batch
+                    const rIdx = targetRow.rowIndex - 1;
+                    let rowBatchSuccess = true;
                     try {
-                        // 1. Lógica Portada Única
+                        // Portada Única
                         if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
                             const parentKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
                             const parentCol = getColIndex(sheet, parentKey);
                             const coverCol = getColIndex(sheet, 'isCover');
-                            
-                            // Leemos ID padre (esto puede fallar si la celda no cargó)
                             const parentId = sheet.getCell(rIdx, parentCol).value;
-
-                            // Barrido para apagar otros covers
                             rows.forEach(r => {
                                 const otherIdx = r.rowIndex - 1;
                                 if (otherIdx !== rIdx) {
@@ -126,75 +154,28 @@ exports.handler = async (event, context) => {
                                                 hasBatchChanges = true;
                                             }
                                         }
-                                    } catch(e) { /* Ignorar fallos en filas ajenas en este paso */ }
+                                    } catch(e) {}
                                 }
                             });
                         }
-
-                        // 2. Aplicar datos
+                        // Aplicar Datos
                         Object.keys(op.data).forEach(key => {
                             const colIdx = getColIndex(sheet, key);
                             if (colIdx !== -1) {
-                                const cell = sheet.getCell(rIdx, colIdx); // Aquí es donde suele fallar
-                                if (String(cell.value) !== String(op.data[key])) {
-                                    cell.value = op.data[key];
-                                    hasBatchChanges = true;
-                                }
+                                const cell = sheet.getCell(rIdx, colIdx);
+                                if (String(cell.value) !== String(op.data[key])) { cell.value = op.data[key]; hasBatchChanges = true; }
                             }
                         });
+                    } catch (cellError) { rowBatchSuccess = false; }
 
-                    } catch (cellError) {
-                        // ¡AQUÍ ESTÁ LA MAGIA!
-                        // Si falla el acceso a celdas, marcamos para Fallback seguro
-                        console.warn(`Fallo batch en fila ${rIdx}, pasando a modo seguro individual.`);
-                        rowBatchSuccess = false;
-                    }
-
-                    // Si falló el batch, lo mandamos a la cola de guardado individual
-                    if (!rowBatchSuccess) {
-                        fallbackUpdates.push({ row: targetRow, data: op.data, sheetName });
-                    }
+                    if (!rowBatchSuccess) fallbackUpdates.push({ row: targetRow, data: op.data, sheetName });
                 }
             }
-
-            // 1. Guardar lo que sí funcionó en batch (1 petición)
-            if (hasBatchChanges) {
-                await sheet.saveUpdatedCells();
-            }
-
-            // 2. Procesar los fallbacks (1 petición por fila problemática)
-            // Esto asegura que NADA se pierda, aunque sea un poco más lento para esas filas específicas
+            if (hasBatchChanges) await sheet.saveUpdatedCells();
             for (const fallback of fallbackUpdates) {
-                let manualChanges = false;
-                
-                // Lógica Portada Única (Versión Lenta/Segura)
-                if ((fallback.sheetName === 'ProjectImages' || fallback.sheetName === 'RentalItemImages') && String(fallback.data.isCover).toLowerCase() === 'si') {
-                    const parentKey = fallback.sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
-                    const pHeader = getRealHeader(sheet, parentKey);
-                    const cHeader = getRealHeader(sheet, 'isCover');
-                    const currentPId = fallback.row.get(pHeader);
-
-                    for (const r of rows) {
-                        if (r === fallback.row) continue;
-                        if (String(r.get(pHeader)) === String(currentPId) && String(r.get(cHeader)).toLowerCase() === 'si') {
-                            r.set(cHeader, 'No');
-                            await r.save(); // Guardado individual
-                        }
-                    }
-                }
-
-                // Aplicar datos
-                Object.keys(fallback.data).forEach(key => {
-                    const h = getRealHeader(sheet, key);
-                    if (h) {
-                         fallback.row.set(h, fallback.data[key]);
-                         manualChanges = true;
-                    }
-                });
-
-                if (manualChanges) {
-                    await fallback.row.save(); // Guardado individual garantizado
-                }
+                // Fallback seguro (resumido)
+                Object.keys(fallback.data).forEach(k=>{ const h=getRealHeader(sheet,k); if(h) fallback.row.set(h,fallback.data[k]); });
+                await fallback.row.save();
             }
         }
 
@@ -206,10 +187,49 @@ exports.handler = async (event, context) => {
                 const criteriaVal = String(op.criteria[criteriaKey]).trim();
                 const realKeyHeader = getRealHeader(sheet, criteriaKey);
                 if (!realKeyHeader) continue;
+
+                // 1. PROTECCIÓN DE CATEGORÍAS (Integridad Referencial)
+                if (sheetName === 'RentalCategories') {
+                    const itemsSheet = doc.sheetsByTitle['RentalItems'];
+                    if (itemsSheet) {
+                        await itemsSheet.loadHeaderRow();
+                        const allItems = await itemsSheet.getRows();
+                        const catHeader = getRealHeader(itemsSheet, 'categoryId');
+                        const hasDependents = allItems.some(item => String(item.get(catHeader)).trim() === String(criteriaVal));
+                        if (hasDependents) {
+                            throw new Error(`⚠️ No se puede eliminar: Hay equipos asociados a esta categoría.`);
+                        }
+                    }
+                }
+
                 const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
                 if (row) {
-                    if (op.data && op.data.fileId) {
-                        try { await drive.files.update({ fileId: op.data.fileId, requestBody: { trashed: true } }); } catch(e){}
+                    // 2. Borrar archivo Drive (Imagen individual)
+                    const fileIdHeader = getRealHeader(sheet, 'fileId');
+                    const fileId = (op.data && op.data.fileId) || (fileIdHeader ? row.get(fileIdHeader) : null);
+                    if (fileId) try { await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); } catch(e){}
+
+                    // 3. Borrar Carpeta Drive y Hijos (Cascada de Entidades)
+                    if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
+                        const folderIdHeader = getRealHeader(sheet, 'driveFolderId');
+                        const folderId = folderIdHeader ? row.get(folderIdHeader) : null;
+                        if (folderId) try { await drive.files.update({ fileId: folderId, requestBody: { trashed: true } }); } catch(e){}
+                        
+                        // Cascada Proyectos
+                        if (sheetName === 'Projects') {
+                            await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal);
+                        }
+                        // Cascada Servicios
+                        if (sheetName === 'Services') {
+                            await deleteChildRows(doc, 'ServiceImages', 'serviceId', criteriaVal);
+                            await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal);
+                        }
+                        // Cascada ALQUILER (NUEVO: Limpieza profunda)
+                        if (sheetName === 'RentalItems') {
+                            await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal); // Fotos
+                            await deleteChildRows(doc, 'BlockedDates', 'itemId', criteriaVal);     // Bloqueos
+                            await deleteChildRows(doc, 'Bookings', 'itemId', criteriaVal);         // Reservas
+                        }
                     }
                     await row.delete();
                 }
@@ -220,7 +240,7 @@ exports.handler = async (event, context) => {
     return { statusCode: 200, body: JSON.stringify({ message: 'Proceso completado con éxito.' }) };
 
   } catch (error) {
-    console.error('Backend Critical Error:', error);
+    console.error('Backend Error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
