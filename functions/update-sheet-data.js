@@ -39,11 +39,22 @@ exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
-    const body = JSON.parse(event.body);
+    // CORRECCIÓN APPEX: Parsing robusto para evitar el error de doble serialización
+    let body;
+    try {
+        body = JSON.parse(event.body);
+        // Si el body sigue siendo un string después del primer parse (doble stringify del frontend), lo parseamos de nuevo
+        if (typeof body === 'string') {
+            body = JSON.parse(body);
+        }
+    } catch (e) {
+        throw new Error('El cuerpo de la petición no es un JSON válido.');
+    }
+    
     const operations = Array.isArray(body) ? body : [body];
     const { doc, drive } = await getServices();
-
     const opsBySheet = {};
+    
     operations.forEach(op => {
         if (!opsBySheet[op.sheet]) opsBySheet[op.sheet] = [];
         opsBySheet[op.sheet].push(op);
