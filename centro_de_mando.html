@@ -5,561 +5,897 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Centro de Mando | AG Visual Info</title>
     <link rel="icon" type="image/png" href="https://placehold.co/32x32/1a1a1a/FDFDFD?text=AG">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <style>
-        :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --accent: #3a3a3a; --border: #e5e7eb; }
-        body { font-family: 'Montserrat', sans-serif; background: var(--bg-main); color: var(--text-dark); }
+        :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-muted: #52525b; --accent: #3a3a3a; --border-color: #e5e7eb; --status-pending: #f59e0b; --status-confirmed: #10b981; --status-paid: #3b82f6; --status-canceled: #ef4444; }
+        body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-dark); }
         h1, h2, h3, .font-display { font-family: 'Cormorant Garamond', serif; }
-        .loader-circle { width: 50px; height: 50px; border: 4px solid rgba(0,0,0,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        
+        /* UI Components */
+        .loader-circle { width: 50px; height: 50px; border: 4px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .btn { padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase; font-size: 0.75rem; display: inline-flex; items-center; gap: 0.5rem; border-radius: 4px; transition: 0.2s; }
-        .btn-primary { bg: var(--text-dark); color: white; } .btn-primary:hover { bg: var(--accent); }
-        .btn-secondary { border: 1px solid var(--text-dark); } .btn-danger { bg: #ef4444; color: white; }
-        .sidebar-link { display: flex; padding: 0.75rem 1.5rem; color: #52525b; border-left: 4px solid transparent; transition: 0.2s; }
-        .sidebar-link.active { bg: #f3f4f6; color: var(--text-dark); border-left-color: var(--text-dark); font-weight: 700; }
-        .view { display: none; } .view.active { display: block; animation: fadeIn 0.3s; } @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-        .modal-overlay { position: fixed; inset: 0; bg: rgba(0,0,0,0.7); display: flex; justify-content: center; items-center; z-index: 50; opacity: 0; pointer-events: none; transition: 0.2s; }
+        
+        .btn { padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; border-radius: 4px; }
+        .btn-primary { background-color: var(--text-dark); color: white; }
+        .btn-primary:hover { background-color: var(--accent); }
+        .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); background: transparent; }
+        .btn-secondary:hover { background: #f3f4f6; }
+        .btn-danger { background-color: #ef4444; color: white; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
+        
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; background: white; }
+        .form-input:focus { border-color: var(--text-dark); outline: none; }
+        .form-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem; display: block; }
+        
+        .sidebar-link { display: flex; align-items: center; padding: 0.75rem 1.5rem; color: var(--text-muted); border-left: 4px solid transparent; transition: all 0.2s; font-size: 0.9rem; }
+        .sidebar-link:hover { background-color: #f3f4f6; color: var(--text-dark); }
+        .sidebar-link.active { background-color: #f3f4f6; color: var(--text-dark); border-left-color: var(--text-dark); font-weight: 700; }
+        .sidebar-link i { width: 1.5rem; text-align: center; margin-right: 0.75rem; }
+        
+        .view { display: none; animation: fadeIn 0.3s ease-out; }
+        .view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .modal-content { bg: white; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; border-radius: 8px; transform: scale(0.95); transition: 0.2s; }
+        .modal-content { background: white; width: 95%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; border-radius: 8px; }
         .modal-overlay.visible .modal-content { transform: scale(1); }
-        .toast { position: fixed; bottom: 2rem; right: 2rem; bg: var(--text-dark); color: white; padding: 1rem; z-index: 100; transform: translateY(100px); transition: 0.3s; }
+        
+        .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-dark); color: white; padding: 1rem 1.5rem; z-index: 100; transform: translateY(100px); transition: transform 0.3s; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 600; border-radius: 4px; }
         .toast.visible { transform: translateY(0); }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
-        .gallery-item { position: relative; border: 1px solid #eee; padding: 0.5rem; border-radius: 4px; }
-        .gallery-item img { width: 100%; height: 120px; object-fit: cover; border-radius: 2px; }
+        .toast.error { background: #ef4444; }
+        
+        .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
+        
+        .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
+        .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; cursor: pointer; }
+        .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; transition: transform 0.2s; }
+        .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+        .portfolio-grid-overlay { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8); 
+            opacity: 0; transition: opacity 0.2s; 
+            display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; 
+        }
+        .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
+        .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .status-badge { padding: 2px 8px; border-radius: 10px; color: white; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
+        .status-Pendiente { background: var(--status-pending); }
+        .status-Confirmado { background: var(--status-confirmed); }
+        .status-Pagado { background: var(--status-paid); }
+        .status-Cancelado { background: var(--status-canceled); }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
-        <div class="loader-circle"></div><p class="mt-4 font-display text-xl">Cargando...</p>
+        <div class="loader-circle"></div>
+        <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
-        <div class="bg-white p-10 shadow-2xl text-center">
-            <h1 class="font-display text-4xl font-bold mb-4">AG Visual Info</h1>
-            <button id="google-login-btn" class="btn bg-blue-600 text-white py-3 px-6">Iniciar Sesión con Google</button>
+        <div class="bg-white p-10 shadow-2xl max-w-md w-full text-center border-t-4 border-text-dark">
+            <h1 class="font-display text-4xl font-bold mb-2">AG Visual Info</h1>
+            <p class="text-text-muted mb-8 uppercase tracking-widest text-xs">Panel de Control</p>
+            <button id="google-login-btn" class="w-full bg-[#4285F4] text-white font-bold py-3 px-4 flex items-center justify-center gap-3 hover:bg-[#3367D6] transition-colors shadow-md rounded">
+                <i class="fab fa-google"></i> Iniciar con Google Workspace
+            </button>
         </div>
     </div>
 
     <div id="app-screen" class="hidden flex-1 flex h-full overflow-hidden">
-        <aside class="w-64 bg-white border-r flex-shrink-0 overflow-y-auto">
-            <div class="p-6"><h2 class="font-display text-2xl font-bold">AG Admin</h2></div>
-            <nav id="main-nav">
-                <a href="#" class="sidebar-link active" data-view="dashboard"><i class="fas fa-home mr-2"></i>Inicio</a>
-                <a href="#" class="sidebar-link" data-view="projects"><i class="fas fa-camera mr-2"></i>Proyectos</a>
-                <a href="#" class="sidebar-link" data-view="portfolio-manager"><i class="fas fa-images mr-2"></i>Portafolio</a>
-                <a href="#" class="sidebar-link" data-view="services"><i class="fas fa-concierge-bell mr-2"></i>Servicios</a>
-                <a href="#" class="sidebar-link" data-view="videos"><i class="fas fa-video mr-2"></i>Videos</a>
-                <a href="#" class="sidebar-link" data-view="rentals"><i class="fas fa-box mr-2"></i>Alquiler</a>
-                <a href="#" class="sidebar-link" data-view="bookings"><i class="fas fa-calendar-check mr-2"></i>Reservas</a>
-                <a href="#" class="sidebar-link" data-view="settings"><i class="fas fa-cog mr-2"></i>Configuración</a>
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-sm z-20">
+            <div class="p-6 border-b border-gray-100">
+                <h2 class="font-display text-2xl font-bold">AG Admin</h2>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
+                <a href="#" class="sidebar-link active" data-view="dashboard"><i class="fas fa-home"></i>Inicio</a>
+                <a href="#" class="sidebar-link" data-view="projects"><i class="fas fa-camera"></i>Proyectos</a>
+                <a href="#" class="sidebar-link" data-view="portfolio-manager"><i class="fas fa-images"></i>Portafolio</a>
+                <a href="#" class="sidebar-link" data-view="services"><i class="fas fa-concierge-bell"></i>Servicios</a>
+                <a href="#" class="sidebar-link" data-view="videos"><i class="fas fa-video"></i>Videos</a>
+                <a href="#" class="sidebar-link" data-view="rentals"><i class="fas fa-box"></i>Alquiler</a>
+                <a href="#" class="sidebar-link" data-view="bookings"><i class="fas fa-calendar-check"></i>Reservas</a>
+                <a href="#" class="sidebar-link" data-view="settings"><i class="fas fa-cog"></i>Configuración</a>
             </nav>
-            <div class="p-4"><button id="logout-btn" class="text-red-600 text-sm font-bold uppercase">Salir</button></div>
+            <div class="p-4 border-t border-gray-100">
+                <button id="logout-btn" class="w-full text-left px-4 py-2 text-text-muted hover:text-red-600 transition-colors text-xs font-bold uppercase"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button>
+            </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto bg-gray-50 p-8">
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative">
+            
             <div id="view-dashboard" class="view active">
                 <h1 class="text-4xl font-display font-bold mb-6">Resumen</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 shadow rounded"><h3>Proyectos</h3><p class="text-4xl font-bold" id="dash-projects">0</p></div>
-                    <div class="bg-white p-6 shadow rounded"><h3>Fotos Portafolio</h3><p class="text-4xl font-bold" id="dash-portfolio">0</p></div>
-                    <div class="bg-white p-6 shadow rounded"><h3>Reservas</h3><p class="text-4xl font-bold text-yellow-600" id="dash-bookings">0</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Proyectos Activos</h3>
+                        <p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p>
+                    </div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Fotos en Portafolio</h3>
+                        <p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p>
+                    </div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded">
+                        <h3 class="text-xs text-text-muted uppercase font-bold">Reservas Pendientes</h3>
+                        <p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p>
+                    </div>
                 </div>
             </div>
 
             <div id="view-projects" class="view">
-                <div class="flex justify-between mb-6"><h1 class="text-3xl font-display font-bold">Proyectos</h1><button class="btn bg-black text-white" onclick="App.editItem('Projects', null)">+ Nuevo</button></div>
-                <div id="projects-list" class="bg-white shadow rounded divide-y"></div>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Proyectos</h1>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo</button>
+                </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr>
+                        </thead>
+                        <tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="view-portfolio-manager" class="view">
-                <div class="flex justify-between mb-6"><h1 class="text-3xl font-display font-bold">Portafolio Principal</h1></div>
-                <p class="mb-4 text-gray-500 text-sm">Gestiona qué fotos aparecen en la web pública. Las fotos se añaden desde la galería de cada proyecto.</p>
-                <div id="portfolio-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
-            </div>
-
-            <div id="view-services" class="view">
-                <div class="flex justify-between mb-6"><h1 class="text-3xl font-display font-bold">Servicios</h1><button class="btn bg-black text-white" onclick="App.editItem('Services', null)">+ Nuevo</button></div>
-                <div id="services-list" class="bg-white shadow rounded divide-y"></div>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Portafolio Principal</h1>
+                    <button class="btn btn-primary" onclick="App.savePortfolioOrder()"><i class="fas fa-save"></i> Guardar Cambios</button>
+                </div>
+                <div id="portfolio-manager-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
             </div>
 
             <div id="view-videos" class="view">
-                <div class="flex justify-between mb-6"><h1 class="text-3xl font-display font-bold">Videos</h1><button class="btn bg-black text-white" onclick="App.editItem('Videos', null)">+ Nuevo</button></div>
-                <div id="videos-list" class="bg-white shadow rounded divide-y"></div>
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Videos</h1>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Videos', null)"><i class="fas fa-plus"></i> Nuevo</button>
+                </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">URL</th><th class="p-4">Acciones</th></tr>
+                        </thead>
+                        <tbody id="videos-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-services" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Servicios</h1>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Services', null)"><i class="fas fa-plus"></i> Nuevo</button>
+                </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Orden</th><th class="p-4">Título</th><th class="p-4">Acciones</th></tr>
+                        </thead>
+                        <tbody id="services-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
             </div>
 
             <div id="view-rentals" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Alquiler</h1>
-                <div class="flex gap-4 mb-4 border-b">
-                    <button class="py-2 px-4 font-bold border-b-2 border-black" onclick="UI.showTab('rental-items')">Equipos</button>
-                    <button class="py-2 px-4 text-gray-500" onclick="UI.showTab('rental-cats')">Categorías</button>
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button>
+                    <button class="tab-btn" onclick="UI.switchTab('rental-cats')">Categorías</button>
                 </div>
-                <div id="tab-rental-items">
-                    <div class="text-right mb-4"><button class="btn bg-black text-white" onclick="App.editItem('RentalItems', null)">+ Equipo</button></div>
-                    <div id="rental-items-list" class="bg-white shadow rounded divide-y"></div>
+                <div id="tab-rental-items" class="tab-content active">
+                    <div class="flex justify-end mb-4">
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button>
+                    </div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
                 </div>
-                <div id="tab-rental-cats" class="hidden">
-                    <div class="text-right mb-4"><button class="btn bg-black text-white" onclick="App.editItem('RentalCategories', null)">+ Categoría</button></div>
-                    <div id="rental-cats-list" class="bg-white shadow rounded divide-y"></div>
-                </div>
-            </div>
-            
-            <div id="view-bookings" class="view">
-                <h1 class="text-3xl font-display font-bold mb-6">Calendario</h1>
-                 <div class="flex gap-4 mb-4 border-b">
-                    <button class="py-2 px-4 font-bold border-b-2 border-black" onclick="UI.showTab('bookings-list')">Reservas</button>
-                    <button class="py-2 px-4 text-gray-500" onclick="UI.showTab('blocked-dates')">Bloqueos</button>
-                </div>
-                <div id="tab-bookings-list">
-                    <div id="bookings-list" class="bg-white shadow rounded divide-y"></div>
-                </div>
-                <div id="tab-blocked-dates" class="hidden">
-                     <div class="text-right mb-4"><button class="btn bg-black text-white" onclick="App.editItem('BlockedDates', null)">+ Bloquear Fecha</button></div>
-                     <div id="blocked-list" class="bg-white shadow rounded divide-y"></div>
+                <div id="tab-rental-cats" class="tab-content">
+                    <div class="flex justify-end mb-4">
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalCategories', null)"><i class="fas fa-plus"></i> Nueva Categoría</button>
+                    </div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Orden</th><th class="p-4">Nombre</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="rental-categories-table-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
+            <div id="view-bookings" class="view">
+                <h1 class="text-3xl font-display font-bold mb-6">Reservas</h1>
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="UI.switchTab('booking-list')">Solicitudes</button>
+                    <button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos</button>
+                </div>
+                <div id="tab-booking-list" class="tab-content active">
+                     <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="tab-blocked-dates" class="tab-content">
+                    <div class="flex justify-end mb-4">
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('BlockedDates', null)"><i class="fas fa-ban"></i> Nuevo Bloqueo</button>
+                    </div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                                <tr><th class="p-4">Equipo</th><th class="p-4">Motivo</th><th class="p-4">Desde</th><th class="p-4">Hasta</th><th class="p-4">Acciones</th></tr>
+                            </thead>
+                            <tbody id="blocked-dates-table-body" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
             <div id="view-settings" class="view">
-                <h1 class="text-3xl font-display font-bold mb-6">Configuración</h1>
-                <div id="settings-content" class="space-y-8"></div>
+                <h1 class="text-3xl font-display font-bold mb-6">Configuración Global</h1>
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad & Redes</button>
+                    <button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio (Sobre Mí)</button>
+                    <button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button>
+                </div>
+                
+                <div id="tab-settings-gen" class="tab-content active space-y-8">
+                     <div class="bg-white p-6 rounded border border-gray-200">
+                         <h3 class="font-bold text-lg mb-4 border-b pb-2">Identidad de Marca</h3>
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                             <div class="text-center">
+                                <p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p>
+                                <div class="h-24 bg-gray-100 border rounded flex items-center justify-center mb-2 relative group">
+                                    <img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_black').click()">
+                                        <i class="fas fa-camera text-white"></i>
+                                    </div>
+                                </div>
+                                <input type="file" id="upload-logo_black" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_black', 'Marca', 'SettingImage')">
+                            </div>
+                             <div class="text-center">
+                                <p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p>
+                                <div class="h-24 bg-gray-800 border rounded flex items-center justify-center mb-2 relative group">
+                                    <img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_white').click()">
+                                        <i class="fas fa-camera text-white"></i>
+                                    </div>
+                                </div>
+                                <input type="file" id="upload-logo_white" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_white', 'Marca', 'SettingImage')">
+                            </div>
+                             <div class="text-center">
+                                <p class="text-xs font-bold text-gray-500 mb-2">Favicon</p>
+                                <div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group">
+                                    <img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-favicon').click()">
+                                        <i class="fas fa-camera text-white"></i>
+                                    </div>
+                                </div>
+                                <input type="file" id="upload-favicon" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'favicon', 'Marca', 'SettingImage')">
+                            </div>
+                         </div>
+                     </div>
+                     <div id="settings-form-container" class="bg-white p-6 rounded border border-gray-200"></div>
+                </div>
+
+                <div id="tab-settings-about" class="tab-content">
+                    <div class="bg-white p-6 rounded border border-gray-200 max-w-3xl">
+                        <div class="mb-6 flex items-center gap-6">
+                            <div class="relative group w-32 h-32 flex-shrink-0">
+                                <img id="about-profile-preview" src="https://placehold.co/128" class="w-full h-full rounded-full object-cover border shadow-sm">
+                                <div class="absolute inset-0 bg-black/50 rounded-full hidden group-hover:flex items-center justify-center cursor-pointer" onclick="document.getElementById('upload-profile-pic').click()">
+                                    <i class="fas fa-camera text-white text-2xl"></i>
+                                </div>
+                                <input type="file" id="upload-profile-pic" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'profile_image', 'Perfil', 'AboutProfile')">
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-display text-xl font-bold">Foto de Perfil</h3>
+                                <p class="text-sm text-gray-500">Aparece en la sección "Quién Soy".</p>
+                            </div>
+                        </div>
+                        <div id="about-form-container" class="space-y-4"></div>
+                        <button class="btn btn-primary mt-4" onclick="App.handleSaveAbout()">Guardar Bio</button>
+                    </div>
+                </div>
+                
+                <div id="tab-settings-clients" class="tab-content">
+                     <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">Logos de Clientes</h3>
+                        <div class="flex gap-2">
+                             <button class="btn btn-secondary" onclick="App.saveGalleryChanges(null, 'ClientLogos')"><i class="fas fa-save mr-2"></i>Guardar Orden</button>
+                             <button class="btn btn-primary" onclick="App.handleClientLogos()">+ Subir Logos</button>
+                        </div>
+                    </div>
+                     <div id="clientlogos-grid" class="grid grid-cols-2 md:grid-cols-6 gap-4 bg-white p-4 rounded border"></div>
+                </div>
             </div>
         </main>
     </div>
 
     <div id="modal-container"></div>
     <div id="toast-container"></div>
+    <div id="confirm-modal-overlay" class="modal-overlay">
+        <div id="confirm-modal-content" class="modal-content p-6 bg-white rounded-lg max-w-sm text-center">
+            <h3 class="text-xl font-bold mb-2">Confirmar</h3>
+            <p id="confirm-message" class="text-gray-600 mb-6">¿Continuar?</p>
+            <div class="flex justify-center gap-3">
+                <button id="confirm-cancel-btn" class="btn btn-secondary">No</button>
+                <button id="confirm-ok-btn" class="btn btn-danger">Sí</button>
+            </div>
+        </div>
+    </div>
 
 <script>
-// --- ESTADO Y UTILIDADES ---
-const AppState = { data: {}, pendingBatch: [] };
-let currentModalImages = []; // Memoria temporal para edición de galerías
+const GOOGLE_REDIRECT_URI = 'postmessage';
+// Estado Global + Memoria para Edición en Batch
+const AppState = { data: {}, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
+let currentModalImages = []; // Aquí viven las fotos MIENTRAS editas el modal
+let pendingDeletions = [];   // Fotos marcadas para borrar en batch
 
-// --- API ---
+// --- API (Con soporte Batch) ---
 const API = {
     async call(endpoint, options = {}) {
-        const token = JSON.parse(localStorage.getItem('gAuthToken'));
-        const headers = { 'Content-Type': 'application/json' };
-        if(token) headers['Authorization'] = `Bearer ${token.access_token}`;
-        
-        try {
-            const res = await fetch(endpoint, { ...options, headers });
-            if(res.status === 401) { Auth.logout(); return null; } // Token vencido
-            if(!res.ok) throw new Error('Error API: ' + res.status);
-            return await res.json();
-        } catch(e) { 
-            console.error(e); 
-            UI.showToast("Error de conexión", "error"); 
-            return null; 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        const headers = new Headers(options.headers || {});
+        if (AppState.token?.access_token) headers.set('Authorization', `Bearer ${AppState.token.access_token}`);
+        if (options.body && !(options.body instanceof FormData)) {
+            headers.set('Content-Type', 'application/json');
+            options.body = JSON.stringify(options.body);
         }
+        try {
+            const sep = endpoint.includes('?') ? '&' : '?';
+            const res = await fetch(`${endpoint}${sep}t=${Date.now()}`, { ...options, headers, signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.status === 401) {
+                if (await Auth.refresh()) return API.call(endpoint, options);
+                else { Auth.logout(); throw new Error('Sesión expirada'); }
+            }
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch (e) { throw new Error(`Error Servidor: ${text.substring(0,50)}`); }
+            if (!res.ok) throw new Error(data.error || data.message || 'Error desconocido');
+            return data;
+        } catch (e) { clearTimeout(timeoutId); throw e; }
     },
-    // Nueva función para enviar lote
+    // Función especial para guardar múltiples cambios en una sola petición
     async batchUpdate(operations) {
         if(operations.length === 0) return;
-        UI.showLoading('Guardando cambios...');
-        try {
-            await API.call('/.netlify/functions/update-sheet-data', {
-                method: 'POST',
-                body: JSON.stringify(operations)
-            });
-            UI.showToast("Guardado correctamente");
-            // Recargar datos críticos en segundo plano
-            App.loadData(['Projects', 'ProjectImages', 'RentalItems']); 
-        } catch(e) {
-            alert("Error al guardar: " + e.message);
-        } finally {
-            UI.hideLoading();
-        }
+        return API.call('/.netlify/functions/update-sheet-data', {
+            method: 'POST',
+            body: operations // El backend v27.0 ya soporta arrays
+        });
     }
 };
 
 // --- AUTH ---
 const Auth = {
-    async init() {
-        const token = JSON.parse(localStorage.getItem('gAuthToken'));
-        if(token) {
-            UI.showApp();
-        } else {
-            document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('login-screen').style.display = 'flex';
-        }
+    async init() { if (AppState.token) { if (Date.now() >= AppState.token.expires_at) await this.refresh(); UI.showApp(); } else UI.showLogin(); },
+    async login() { 
+        if (typeof google === 'undefined') { alert("Error: Google JS no cargó."); return; }
+        try { const c = await fetch('/.netlify/functions/get-auth-config').then(r=>r.json()); google.accounts.oauth2.initCodeClient({ client_id: c.clientId, scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive', callback: (r) => r.code && this.exchangeCode(r.code) }).requestCode(); } catch(e){alert(e.message);} 
     },
-    async login() {
-        try {
-            const config = await fetch('/.netlify/functions/get-auth-config').then(r => r.json());
-            google.accounts.oauth2.initCodeClient({
-                client_id: config.clientId,
-                scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive',
-                callback: async (r) => {
-                    if(r.code) {
-                        const tokens = await fetch('/.netlify/functions/auth-google', { 
-                            method: 'POST', body: JSON.stringify({ code: r.code, redirectUri: 'postmessage' }) 
-                        }).then(res => res.json());
-                        localStorage.setItem('gAuthToken', JSON.stringify(tokens));
-                        UI.showApp();
-                    }
-                }
-            }).requestCode();
-        } catch(e) { alert("Error auth: " + e.message); }
-    },
+    async exchangeCode(code) { UI.showLoading('Autenticando...'); try { const t = await fetch('/.netlify/functions/auth-google', { method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI }) }).then(r=>r.json()); if(t.error) throw new Error(t.error); this.setToken(t); UI.showApp(); } catch(e){alert(e.message); UI.showLogin();} },
+    async refresh() { if(!AppState.token?.refresh_token) return false; try{ const t = await fetch('/.netlify/functions/auth-refresh', { method: 'POST', body: JSON.stringify({ refresh_token: AppState.token.refresh_token }) }).then(r=>r.json()); if(t.error) throw new Error; this.setToken({...AppState.token, ...t}); return true; }catch{return false;} },
+    setToken(t) { if(t.expires_in) t.expires_at = Date.now()+(t.expires_in*1000); AppState.token=t; localStorage.setItem('gAuthToken', JSON.stringify(t)); },
     logout() { localStorage.removeItem('gAuthToken'); location.reload(); }
 };
 
-// --- LÓGICA APP ---
-const App = {
-    async loadData(sheets = null) {
-        // Carga Inteligente: Si no se especifica sheets, carga Dashboard
-        const query = sheets ? `?sheets=${sheets.join(',')}` : '?sheets=Projects,ProjectImages,Bookings';
-        const data = await API.call(`/.netlify/functions/get-admin-data${query}`);
-        if(data) {
-            AppState.data = { ...AppState.data, ...data };
-            UI.renderCurrentView();
-        }
-    },
-
-    // --- GESTIÓN DE IMÁGENES (Memoria Local Primero) ---
-    openGalleryModal(parentId, type, title) {
-        // Filtrar imágenes de la memoria
-        let images = [];
-        if (type === 'Projects') images = (AppState.data.ProjectImages || []).filter(i => i.projectId === parentId);
-        else if (type === 'RentalItems') images = (AppState.data.RentalItemImages || []).filter(i => i.itemId === parentId);
-        else if (type === 'Services') images = (AppState.data.ServiceImages || []).filter(i => i.serviceId === parentId);
-        else if (type === 'ClientLogos') images = (AppState.data.ClientLogos || []);
-
-        // Clonar para edición segura
-        currentModalImages = JSON.parse(JSON.stringify(images));
-        currentModalImages.sort((a,b) => (a.order||99) - (b.order||99));
-
-        UI.renderGalleryModal(parentId, type, title);
-    },
-
-    updateImageLocal(id, key, value, type) {
-        const img = currentModalImages.find(i => i.id === id);
-        if(!img) return;
-        
-        // Lógica Portada Única
-        if(key === 'isCover' && (value === 'Si' || value === true)) {
-            currentModalImages.forEach(i => i.isCover = 'No');
-        }
-        img[key] = (value === true ? 'Si' : (value === false ? 'No' : value));
-        UI.renderGalleryList(currentModalImages, type); // Re-renderizar solo la lista
-    },
-
-    markImageForDelete(id, type) {
-        const index = currentModalImages.findIndex(i => i.id === id);
-        if(index > -1) {
-            currentModalImages[index]._deleted = true; // Marcar para borrar
-            UI.renderGalleryList(currentModalImages, type);
-        }
-    },
-
-    async saveGalleryChanges(parentId, type) {
-        const batch = [];
-        const sheetName = type === 'Projects' ? 'ProjectImages' : (type === 'RentalItems' ? 'RentalItemImages' : (type === 'Services' ? 'ServiceImages' : 'ClientLogos'));
-
-        currentModalImages.forEach(img => {
-            if (img._deleted) {
-                // Operación de Borrado
-                if (img.id && !img.id.startsWith('temp_')) {
-                    batch.push({ sheet: sheetName, action: 'delete', criteria: { id: img.id }, data: { fileId: img.fileId } });
-                }
-            } else if (img._modified || img.id.startsWith('temp_')) {
-                // Operación de Actualización o Creación (aunque creación se maneja en upload)
-                // Aquí asumimos que upload ya creó la fila, así que es update
-                 batch.push({ 
-                    sheet: sheetName, 
-                    action: 'update', 
-                    criteria: { id: img.id }, 
-                    data: { 
-                        order: img.order, 
-                        caption: img.caption, 
-                        isCover: img.isCover, 
-                        showInPortfolio: img.showInPortfolio,
-                        clientName: img.clientName
-                    } 
-                });
-            }
-        });
-        
-        // Detectar cambios (comparar con original es complejo, mejor enviar todo lo que se tocó)
-        // Simplificación: Enviamos update para todos los no borrados para asegurar orden
-        const updates = currentModalImages.filter(i => !i._deleted).map(img => ({
-             sheet: sheetName, 
-             action: 'update', 
-             criteria: { id: img.id }, 
-             data: { 
-                order: img.order, 
-                caption: img.caption,
-                isCover: img.isCover,
-                showInPortfolio: img.showInPortfolio,
-                clientName: img.clientName
-             }
-        }));
-
-        await API.batchUpdate([...batch, ...updates]);
-        UI.closeModal();
-    },
-
-    async uploadImages(input, parentId, type) {
-        const files = Array.from(input.files);
-        if(!files.length) return;
-        
-        UI.showLoading(`Subiendo ${files.length} archivos...`);
-        let successCount = 0;
-        const sheetTarget = type === 'Projects' ? 'ProjectImages' : (type === 'RentalItems' ? 'RentalItemImages' : (type === 'Services' ? 'ServiceImages' : 'ClientLogos'));
-        const idField = type === 'Projects' ? 'projectId' : (type === 'RentalItems' ? 'itemId' : 'serviceId');
-        
-        for (const file of files) {
-            try {
-                const compressed = await new Promise((resolve) => new Compressor(file, { quality: 0.8, maxWidth: 1600, success: resolve }));
-                const fd = new FormData();
-                fd.append('file', compressed, file.name);
-                fd.append('targetSubfolder', type); 
-                
-                // Subida física
-                const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
-                
-                // Crear registro en Sheet INMEDIATAMENTE (esto sí debe ser atómico para tener ID)
-                const newData = { 
-                    imageUrl: res.imageUrl, 
-                    fileId: res.fileId, 
-                    order: 99,
-                    isCover: 'No',
-                    showInPortfolio: 'No'
-                };
-                if(type !== 'ClientLogos') newData[idField] = parentId;
-                
-                const sheetRes = await API.call('/.netlify/functions/update-sheet-data', {
-                    method: 'POST',
-                    body: JSON.stringify({ sheet: sheetTarget, action: 'add', data: newData })
-                });
-                
-                // Agregar a memoria local para verlo ya
-                if(sheetRes) {
-                    newData.id = sheetRes.newId;
-                    currentModalImages.push(newData);
-                }
-                successCount++;
-            } catch(e) { console.error(e); }
-        }
-        UI.hideLoading();
-        UI.renderGalleryList(currentModalImages, type); // Refrescar visual
-    },
-
-    // --- CRUD GENÉRICO ---
-    editItem(sheet, id) {
-        const isNew = !id;
-        let item = isNew ? {} : AppState.data[sheet].find(i => i.id === id);
-        let html = '';
-        
-        if(sheet === 'Projects') {
-            html = UI.fields([
-                {label: 'Título', id: 'title', val: item.title},
-                {label: 'Orden', id: 'order', val: item.order, type: 'number'},
-                {label: 'Descripción', id: 'description', val: item.description, type: 'textarea'}
-            ]);
-        } else if (sheet === 'Services') {
-            html = UI.fields([
-                {label: 'Título', id: 'title', val: item.title},
-                {label: 'Icono (FontAwesome)', id: 'iconClass', val: item.iconClass},
-                {label: 'Intro', id: 'introText', val: item.introText, type: 'textarea'},
-                {label: 'Orden', id: 'order', val: item.order, type: 'number'}
-            ]);
-        } else if (sheet === 'RentalItems') {
-             const cats = (AppState.data.RentalCategories || []).map(c => ({val: c.id, text: c.name}));
-             html = UI.fields([
-                {label: 'Nombre', id: 'name', val: item.name},
-                {label: 'Categoría', id: 'categoryId', val: item.categoryId, type: 'select', opts: cats},
-                {label: 'Precio', id: 'pricePerDay', val: item.pricePerDay, type: 'number'},
-                {label: 'Desc. Corta', id: 'description', val: item.description},
-                {label: 'Desc. Larga', id: 'longDescription', val: item.longDescription, type: 'textarea'},
-                {label: 'Orden', id: 'order', val: item.order, type: 'number'}
-             ]);
-        }
-        // ... Agrega los demás tipos aquí
-
-        const footer = `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button>
-                        <button class="btn btn-primary" onclick="App.saveItem('${sheet}', '${id || ''}')">Guardar</button>`;
-        
-        UI.showModal(isNew ? 'Nuevo' : 'Editar', `<form id="crud-form">${html}</form>`, footer);
-    },
-
-    async saveItem(sheet, id) {
-        const form = document.getElementById('crud-form');
-        const data = {};
-        form.querySelectorAll('input, select, textarea').forEach(el => data[el.id] = el.value);
-        
-        UI.showLoading('Guardando...');
-        const action = id ? 'update' : 'add';
-        const criteria = id ? { id } : {};
-        
+// --- UI ---
+const UI = {
+    showLogin: () => { document.getElementById('loading-screen').style.display='none'; document.getElementById('app-screen').style.display='none'; document.getElementById('login-screen').style.display='flex'; },
+    showApp: async () => {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('loading-screen').style.display = 'flex';
         try {
-            await API.call('/.netlify/functions/update-sheet-data', {
-                method: 'POST',
-                body: JSON.stringify({ sheet, action, criteria, data })
-            });
-            // Recargar datos específicos
-            await App.loadData([sheet]);
-            UI.closeModal();
-            UI.showToast("Guardado");
+            await App.loadData('dashboard');
+            document.getElementById('app-screen').style.display = 'flex';
+            document.getElementById('loading-screen').style.display = 'none';
+            App.switchView('dashboard'); 
+        } catch (e) {
+            document.getElementById('loading-screen').style.display = 'none';
+            alert("Error inicio: " + e.message);
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+    },
+    forceReload: () => location.reload(),
+    showLoading: (msg) => { 
+        const txt = document.getElementById('loading-text'); if(txt) txt.innerText=msg;
+        const scr = document.getElementById('loading-screen'); if(scr) scr.style.display='flex';
+        const btn = document.getElementById('reload-btn'); if(btn) btn.classList.add('hidden');
+    },
+    hideLoading: () => { const scr = document.getElementById('loading-screen'); if(scr) scr.style.display='none'; },
+    showToast: (msg, type='success') => { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.classList.add('visible'),10); setTimeout(()=>t.remove(),3000); },
+    showConfirm: (msg, cb) => { const o=document.getElementById('confirm-modal-overlay'); document.getElementById('confirm-message').textContent=msg; const ok=document.getElementById('confirm-ok-btn'), ca=document.getElementById('confirm-cancel-btn'); const nok=ok.cloneNode(true), nca=ca.cloneNode(true); ok.parentNode.replaceChild(nok,ok); ca.parentNode.replaceChild(nca,ca); nok.addEventListener('click', ()=>{o.classList.remove('visible'); cb();}); nca.addEventListener('click', ()=>o.classList.remove('visible')); o.classList.add('visible'); },
+    switchTab(id) { const v=document.querySelector('.view.active'); if(!v)return; v.querySelectorAll('.tab-btn,.tab-content').forEach(e=>e.classList.remove('active')); v.querySelectorAll(`.tab-btn[onclick*="${id}"]`).forEach(b=>b.classList.add('active')); document.getElementById(`tab-${id}`).classList.add('active'); },
+    
+    inputHTML: (p,k,l,v='',t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
+    textareaHTML: (p,k,l,v='') => `<div class="mb-4"><label class="form-label">${l}</label><textarea id="${p}-${k}" data-key="${k}" class="form-textarea" rows="4">${v||''}</textarea></div>`,
+    selectHTML: (p,k,l,opts,v='') => `<div class="mb-4"><label class="form-label">${l}</label><select id="${p}-${k}" data-key="${k}" class="form-select">${opts.map(o=>`<option value="${o.id}" ${o.id==v?'selected':''}>${o.name}</option>`).join('')}</select></div>`,
+    showModal: (t,b,f) => { document.getElementById('modal-container').innerHTML=`<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between items-center bg-gray-50"><h2 class="text-xl font-display font-bold">${t}</h2><button onclick="UI.closeModal()" class="text-2xl">&times;</button></div><div class="p-6">${b}</div><div class="p-6 bg-gray-50 text-right border-t">${f}</div></div></div>`; },
+    closeModal: () => document.getElementById('modal-container').innerHTML='',
+    
+    renderView: (view) => {
+        AppState.view = view;
+        document.querySelectorAll('.view, .sidebar-link').forEach(e => e.classList.remove('active'));
+        document.getElementById(`view-${view}`).classList.add('active');
+        document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
+        const data = AppState.data;
+
+        const getVal = (item, key) => {
+            const foundKey = Object.keys(item).find(k => k.toLowerCase().trim() === key.toLowerCase().trim());
+            return foundKey ? item[foundKey] : undefined;
+        };
+
+        const countPortfolio = (data.ProjectImages||[]).filter(i => {
+            const val = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
+            return val === 'si' || val === 'yes' || val === 'true' || val === '1';
+        }).length;
+
+        if (view === 'dashboard') {
+            document.getElementById('dash-projects').innerText = (data.Projects||[]).length;
+            document.getElementById('dash-portfolio').innerText = countPortfolio;
+            document.getElementById('dash-bookings').innerText = (data.Bookings||[]).filter(b=>b.status==='Pendiente').length;
+        } else if (view === 'settings') {
+             const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+             const a = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
+             if(s.logo_black) document.getElementById('preview-logo_black').src = s.logo_black;
+             if(s.logo_white) document.getElementById('preview-logo_white').src = s.logo_white;
+             if(s.favicon) document.getElementById('preview-favicon').src = s.favicon;
+             
+             document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)} ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram URL', s.social_instagram)} ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)} ${UI.inputHTML('settings', 'social_youtube', 'YouTube URL', s.social_youtube)} ${UI.inputHTML('settings', 'social_facebook', 'Facebook URL', s.social_facebook)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
+             document.getElementById('about-form-container').innerHTML = `${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}`;
+             if(a.profile_image) document.getElementById('about-profile-preview').src = a.profile_image;
+             
+             // Client Logos (Usamos memoria local si se edita en batch)
+             const logos = currentModalImages.length > 0 ? currentModalImages : (data.ClientLogos || []);
+             document.getElementById('clientlogos-grid').innerHTML = logos.sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `
+                <div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square">
+                    <img src="${i.logoUrl}" class="max-w-full max-h-full object-contain">
+                    <button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImageLocal('${i.id}', 'ClientLogos')"><i class="fas fa-trash"></i></button>
+                    <input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.updateLocalImage('${i.id}', 'order', this.value, 'ClientLogos')">
+                </div>
+             `).join('');
+        } 
+        else if (view === 'projects') {
+            document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
+                const cover = (data.ProjectImages||[]).find(i => {
+                    const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
+                    const isCov = String(getVal(i, 'isCover')).toLowerCase().trim();
+                    return pid === p.id && (isCov === 'si' || isCov === 'yes');
+                });
+                return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+        } else if (view === 'portfolio-manager') {
+            const images = (data.ProjectImages || [])
+                .filter(i => {
+                    const v = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
+                    return v === 'si' || v === 'yes' || v === 'true' || v === '1';
+                })
+                .sort((a,b) => (parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
+
+            document.getElementById('portfolio-manager-grid').innerHTML = images.length ? images.map(i => `
+                <div class="portfolio-grid-item group">
+                    <img src="${i.imageUrl}" class="img-preview w-full h-full object-cover">
+                    <div class="portfolio-grid-overlay">
+                        <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
+                        <button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')">
+                            <i class="fas fa-times"></i> Quitar
+                        </button>
+                    </div>
+                    <span class="portfolio-badge">#${i.portfolioOrder||99}</span>
+                </div>
+            `).join('') : '<p class="col-span-full text-center text-gray-500 py-10">No hay imágenes marcadas para el portafolio.<br>Ve a "Proyectos", abre la galería y marca "Portafolio" en las fotos.</p>';
+        } else if (view === 'videos') {
+            document.getElementById('videos-table-body').innerHTML = (data.Videos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(v => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${v.order||99}</td><td class="p-4 font-bold text-sm">${v.title}</td><td class="p-4 text-xs text-blue-500 truncate max-w-xs"><a href="${v.embedUrl}" target="_blank">${v.embedUrl}</a></td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        } else if (view === 'services') {
+             document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${s.order||99}</td><td class="p-4 font-bold text-sm">${s.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button><button class="text-indigo-600" onclick="App.handleServiceContent('${s.id}', '${s.title}')" title="Contenido"><i class="fas fa-align-left"></i></button><button class="text-green-600" onclick="App.handleServiceImages('${s.id}', '${s.title}')" title="Galería"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        } else if (view === 'rentals') { 
+             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
+                const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
+                const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
+                return `<tr class="border-b hover:bg-gray-50"><td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${i.name}</td><td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td><td class="p-4 font-mono text-sm">$${i.pricePerDay}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+            document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || []).map(c => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${c.order}</td><td class="p-4 font-bold text-sm">${c.name}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        } else if (view === 'bookings') {
+            document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
+                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
+            `).join('');
+            document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
+                 const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
+                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+        }
+    }
+};
+
+// --- LOGICA PRINCIPAL (App) ---
+const App = {
+    async switchView(viewId) {
+        UI.showLoading('Cargando...');
+        try {
+            await this.ensureDataForView(viewId);
+            // Reset de variables temporales al cambiar de vista
+            currentModalImages = [];
+            pendingDeletions = [];
+            UI.renderView(viewId);
         } catch(e) {
-            alert(e.message);
+            console.error(e);
+            UI.showToast("Error cargando datos: " + e.message, "error");
         } finally {
             UI.hideLoading();
         }
-    }
-};
-
-// --- UI RENDER ---
-const UI = {
-    showApp() {
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-screen').style.display = 'flex';
-        this.switchView('dashboard');
     },
-    switchView(viewId) {
-        AppState.view = viewId;
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(`view-${viewId}`).classList.add('active');
+
+    // Lazy Load
+    async ensureDataForView(view, force = false) {
+        let sheets = []; const d = AppState.data || {};
+        const need = (key) => force || !d[key];
+
+        if (view === 'projects' || view === 'portfolio-manager') { 
+            if(need('Projects')) sheets.push('Projects');
+            if(need('ProjectImages')) sheets.push('ProjectImages'); 
+        }
+        else if (view === 'rentals') { if(need('RentalItems')) sheets.push('RentalItems','RentalCategories','RentalItemImages'); }
+        else if (view === 'services') { if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); }
+        else if (view === 'videos') { if(need('Videos')) sheets.push('Videos'); }
+        else if (view === 'bookings') { if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); }
+        else if (view === 'settings') { if(need('Settings')) sheets.push('Settings','About','ClientLogos'); }
         
-        // Carga diferida según vista
-        let sheets = [];
-        if(viewId === 'projects') sheets = ['Projects', 'ProjectImages'];
-        if(viewId === 'portfolio-manager') sheets = ['ProjectImages'];
-        if(viewId === 'rentals') sheets = ['RentalItems', 'RentalCategories', 'RentalItemImages'];
-        if(viewId === 'services') sheets = ['Services', 'ServiceImages'];
-        if(viewId === 'settings') sheets = ['Settings', 'About', 'ClientLogos'];
-        
-        if(sheets.length) {
-            document.getElementById('loading-screen').style.display = 'flex';
-            App.loadData(sheets).then(() => document.getElementById('loading-screen').style.display = 'none');
-        } else {
-            this.renderCurrentView();
+        if (sheets.length > 0) { 
+            sheets = [...new Set(sheets)];
+            const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets.join(',')}`); 
+            AppState.data = { ...AppState.data, ...nd }; 
         }
     },
-    renderCurrentView() {
-        const d = AppState.data || {};
-        const v = AppState.view;
-        
-        if(v === 'dashboard') {
-            document.getElementById('dash-projects').innerText = (d.Projects||[]).length;
-            document.getElementById('dash-portfolio').innerText = (d.ProjectImages||[]).filter(i => i.showInPortfolio?.toLowerCase() === 'si').length;
-        }
-        
-        if(v === 'projects') {
-            document.getElementById('projects-list').innerHTML = (d.Projects||[]).map(p => {
-                 const cover = (d.ProjectImages||[]).find(i => i.projectId === p.id && i.isCover === 'Si');
-                 const img = cover ? cover.imageUrl : 'https://placehold.co/50';
-                 return `<div class="p-4 flex items-center justify-between">
-                    <div class="flex items-center gap-4"><img src="${img}" class="w-16 h-16 object-cover rounded"> <span class="font-bold">${p.title}</span></div>
-                    <div class="flex gap-2">
-                        <button class="text-blue-600" onclick="App.editItem('Projects', '${p.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="text-green-600" onclick="App.openGalleryModal('${p.id}', 'Projects', '${p.title}')"><i class="fas fa-images"></i></button>
-                        <button class="text-red-600" onclick="App.deleteItem('Projects', '${p.id}')"><i class="fas fa-trash"></i></button>
-                    </div>
-                 </div>`;
-            }).join('');
-        }
+    
+    async loadData(mode = 'all') { 
+        const p = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
+        const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); 
+        AppState.data = { ...AppState.data, ...nd }; 
+    },
 
-        if (v === 'portfolio-manager') {
-             const images = (d.ProjectImages||[]).filter(i => i.showInPortfolio === 'Si').sort((a,b) => a.portfolioOrder - b.portfolioOrder);
-             document.getElementById('portfolio-grid').innerHTML = images.map(i => `
-                <div class="gallery-item">
-                    <img src="${i.imageUrl}">
-                    <div class="mt-2 flex gap-2">
-                        <input type="number" class="border w-12 text-center text-sm" value="${i.portfolioOrder||99}" onchange="App.saveSingleField('ProjectImages', '${i.id}', 'portfolioOrder', this.value)">
-                        <button class="text-red-500 text-xs" onclick="App.saveSingleField('ProjectImages', '${i.id}', 'showInPortfolio', 'No')">Quitar</button>
-                    </div>
-                </div>
-             `).join('');
+    // LÓGICA DE EDICIÓN LOCAL (BATCHING)
+    // 1. Al abrir modal, clonamos datos a memoria
+    prepareGalleryData(sourceArray, filterKey, filterValue) {
+        currentModalImages = JSON.parse(JSON.stringify(sourceArray.filter(i => i[filterKey] === filterValue)));
+        pendingDeletions = [];
+    },
+
+    // 2. Actualizamos en memoria (rápido, sin llamadas API)
+    updateLocalImage(id, key, value, type) {
+        const img = currentModalImages.find(i => i.id === id);
+        if (img) {
+            if (key === 'isCover' && (value === 'Si' || value === true)) {
+                currentModalImages.forEach(i => i.isCover = 'No'); // Un solo cover
+            }
+            img[key] = (value === true ? 'Si' : (value === false ? 'No' : value));
+            img._modified = true; // Marcar para update
         }
-        
-        // ... Renderizado de otras vistas (Servicios, Alquiler, etc.) similar ...
-        if(v === 'rentals') {
-             // Renderizar lista de items
-             const itemsList = document.getElementById('rental-items-list');
-             itemsList.innerHTML = (d.RentalItems||[]).map(i => `
-                <div class="p-4 flex justify-between">
-                    <span>${i.name}</span>
-                    <div>
-                        <button class="text-green-600 mr-2" onclick="App.openGalleryModal('${i.id}', 'RentalItems', '${i.name}')"><i class="fas fa-images"></i></button>
-                        <button class="text-blue-600" onclick="App.editItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
-                    </div>
-                </div>
-             `).join('');
+        // Re-renderizar solo el modal o lista
+        if (type === 'ClientLogos') UI.renderView('settings');
+        else {
+             // Re-render modal list (necesita el contexto del padre)
+             // Simplificación: Re-abrir modal con datos actuales
+             const parentId = img.projectId || img.itemId || img.serviceId;
+             if(type === 'Projects') this.renderGalleryList(currentModalImages, parentId, 'Projects');
+             // ... lógica similar para otros tipos, o un render genérico
         }
     },
 
-    renderGalleryModal(parentId, type, title) {
-        // Renderiza el modal con los datos de currentModalImages
-        const html = `<div id="modal-gallery-list" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
-                      <div class="mt-4 pt-4 border-t text-center">
-                         <input type="file" id="upload-input" multiple class="hidden" onchange="App.uploadImages(this, '${parentId}', '${type}')">
-                         <button class="btn btn-secondary" onclick="document.getElementById('upload-input').click()">+ Subir Fotos</button>
+    handleDeleteImageLocal(id, type) {
+        const index = currentModalImages.findIndex(i => i.id === id);
+        if (index > -1) {
+            pendingDeletions.push(currentModalImages[index]);
+            currentModalImages.splice(index, 1);
+        }
+        if (type === 'ClientLogos') UI.renderView('settings');
+        // Nota: Para modales, se necesita re-renderizar la lista interna
+    },
+
+    // 3. Guardar TODO de una vez
+    async saveGalleryChanges(parentId, type) {
+        const batch = [];
+        const sheetName = type; // 'ProjectImages', 'ClientLogos', etc.
+
+        // Procesar Borrados
+        pendingDeletions.forEach(img => {
+            if (img.id && !img.id.startsWith('temp_')) {
+                 batch.push({ sheet: sheetName, action: 'delete', criteria: { id: img.id }, data: { fileId: img.fileId } });
+            }
+        });
+
+        // Procesar Modificados y Nuevos
+        currentModalImages.forEach(img => {
+             if (img._modified || (img.id && img.id.startsWith('temp_'))) {
+                 // Si es temp, en realidad ya se creó en upload, así que es update de metadatos
+                 const dataToUpdate = { 
+                    order: img.order, caption: img.caption, 
+                    isCover: img.isCover, showInPortfolio: img.showInPortfolio, 
+                    clientName: img.clientName 
+                 };
+                 batch.push({ sheet: sheetName, action: 'update', criteria: { id: img.id }, data: dataToUpdate });
+             }
+        });
+
+        if (batch.length > 0) {
+            await API.batchUpdate(batch);
+            UI.showToast("Cambios guardados");
+            // Sincronizar estado global
+            await this.ensureDataForView(AppState.view, true);
+        }
+        
+        if(type !== 'ClientLogos') UI.closeModal();
+    },
+
+
+    async uploadImages(input, parentId, parentTitle, type) {
+        const files = Array.from(input.files); if (!files.length) return;
+        let driveFolderId = null, sheetTarget='', subfolder='', idField='';
+        
+        // Mapeo
+        if (type === 'Projects') { const row = AppState.data.Projects.find(p => p.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='ProjectImages'; subfolder='Proyectos'; idField='projectId'; }
+        else if (type === 'RentalItems') { const row = AppState.data.RentalItems.find(r => r.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='RentalItemImages'; subfolder='Alquiler'; idField='itemId'; }
+        else if (type === 'Services') { sheetTarget='ServiceImages'; subfolder='Servicios'; idField='serviceId'; parentTitle = parentTitle || 'General'; }
+        else if (type === 'ClientLogos') { sheetTarget='ClientLogos'; subfolder='Logos'; parentId='general'; }
+        else if (type === 'AboutProfile') { sheetTarget='About'; subfolder='Perfil'; parentId='profile_image'; }
+        else if (type === 'SettingImage') { sheetTarget='Settings'; subfolder='Marca'; }
+
+        let successCount = 0;
+        
+        // Si es galería (no settings), usamos carga optimista
+        if(['Projects', 'RentalItems', 'Services', 'ClientLogos'].includes(type)) {
+             // Inicializar memoria si está vacía (caso ClientLogos directo)
+             if (type === 'ClientLogos' && currentModalImages.length === 0 && AppState.data.ClientLogos) {
+                 currentModalImages = JSON.parse(JSON.stringify(AppState.data.ClientLogos));
+             }
+        }
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]; UI.showLoading(`Subiendo ${i+1}/${files.length}...`);
+            try {
+                const compressed = await new Promise((resolve, reject) => { new Compressor(file, { quality: 0.8, maxWidth: 1600, success: resolve, error: reject }); });
+                const fd = new FormData(); fd.append('file', compressed, file.name); fd.append('targetSubfolder', subfolder); fd.append('targetFolderId', driveFolderId || ''); fd.append('parentFolderName', parentTitle); 
+                const upRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+                
+                // Guardar ID carpeta padre si es nuevo
+                if ((type === 'Projects' || type === 'RentalItems') && upRes.driveFolderId && upRes.driveFolderId !== driveFolderId) {
+                    driveFolderId = upRes.driveFolderId;
+                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: type, action: 'update', criteria: {id: parentId}, data: {driveFolderId} } });
+                }
+
+                if (type === 'SettingImage') {
+                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: {key: parentId}, data: {value: upRes.imageUrl} } });
+                    document.getElementById(`preview-${parentId}`).src = upRes.imageUrl;
+                } else if (type === 'AboutProfile') {
+                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'About', action: 'update', criteria: {section: 'profile_image'}, data: {content: upRes.imageUrl} } });
+                    document.getElementById('about-profile-preview').src = upRes.imageUrl;
+                } else {
+                    // Galería: Crear registro inmediatamente en BD para tener ID
+                    const newData = { 
+                        id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, 
+                        imageUrl: upRes.imageUrl, 
+                        fileId: upRes.fileId, 
+                        order: 99,
+                        isCover: 'No', showInPortfolio: 'No'
+                    };
+                    if (type === 'ClientLogos') { newData.logoUrl = upRes.imageUrl; delete newData.imageUrl; }
+                    if(idField) newData[idField] = parentId;
+
+                    await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: sheetTarget, action: 'add', data: newData } });
+                    
+                    // Agregar a memoria local
+                    currentModalImages.push(newData);
+                }
+                successCount++;
+            } catch (e) { console.error(e); UI.showToast('Error: '+e.message, 'error'); }
+        }
+        
+        UI.hideLoading();
+        if(successCount) UI.showToast('Subida completa');
+        
+        // Refrescar visualización
+        if (type === 'ClientLogos') UI.renderView('settings');
+        else if(['Projects', 'RentalItems', 'Services'].includes(type)) {
+             // Re-renderizar modal con los nuevos datos en memoria
+             this.renderGalleryList(currentModalImages, parentId, type);
+        }
+    },
+
+    // ... (Resto de funciones CRUD igual que v22.0) ...
+    // IMPORTANTE: Asegurarse de que handleProjectImages y similares usen prepareGalleryData
+
+    async handleProjectImages(id, t) { 
+        this.prepareGalleryData(AppState.data.ProjectImages || [], 'projectId', id);
+        this.renderGalleryModal(id, t, 'Projects'); 
+    },
+    async handleServiceImages(id, t) { 
+        this.prepareGalleryData(AppState.data.ServiceImages || [], 'serviceId', id);
+        this.renderGalleryModal(id, t, 'Services'); 
+    },
+    async handleRentalImages(id, t) { 
+        this.prepareGalleryData(AppState.data.RentalItemImages || [], 'itemId', id);
+        this.renderGalleryModal(id, t, 'RentalItems'); 
+    },
+    async handleClientLogos() { 
+        this.prepareGalleryData(AppState.data.ClientLogos || [], 'dummy', 'dummy'); // Truco: cargar todo, ClientLogos no tiene parentId
+        // Pero para ClientLogos la UI es diferente (grid en settings), no modal estándar.
+        // La subida ya se maneja arriba.
+    },
+
+    renderGalleryModal(parentId, title, type) {
+        const sheetTarget = type === 'Projects' ? 'ProjectImages' : (type === 'RentalItems' ? 'RentalItemImages' : 'ServiceImages');
+        
+        const html = `<div id="gallery-list-container" class="max-h-[60vh] overflow-y-auto mb-4"></div>
+                      <div class="border-t pt-4 text-center">
+                        <button class="btn btn-primary" onclick="document.getElementById('up-imgs-modal').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button>
+                        <input type="file" id="up-imgs-modal" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')">
                       </div>`;
+
+        const footer = `<button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
+                        <button class="btn btn-primary ml-2" onclick="App.saveGalleryChanges('${parentId}', '${sheetTarget}')">Guardar Cambios</button>`;
+
+        UI.showModal(title, html, footer); // Notar el tercer argumento footer personalizado
         
-        const footer = `<button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button> 
-                        <button class="btn btn-primary ml-2" onclick="App.saveGalleryChanges('${parentId}', '${type}')">Guardar Cambios</button>`;
-        
-        UI.showModal(title, html, footer);
-        UI.renderGalleryList(currentModalImages, type);
+        // Renderizar lista inicial
+        this.renderGalleryList(currentModalImages, parentId, type);
     },
 
-    renderGalleryList(images, type) {
-        const container = document.getElementById('modal-gallery-list');
+    renderGalleryList(images, parentId, type) {
+        const container = document.getElementById('gallery-list-container');
         if(!container) return;
-        
-        container.innerHTML = images.filter(i => !i._deleted).map(i => `
-            <div class="flex gap-4 items-center p-2 border rounded bg-gray-50">
-                <img src="${i.imageUrl}" class="w-16 h-16 object-cover">
+
+        const getChecked = (val) => String(val).toLowerCase().trim() === 'si' || String(val).toLowerCase().trim() === 'yes' ? 'checked' : '';
+
+        container.innerHTML = images.filter(i => !pendingDeletions.includes(i)).map(i => `
+            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" id="img-row-${i.id}">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
                 <div class="flex-1 grid grid-cols-2 gap-2">
-                    <label class="text-xs">Orden <input type="number" class="border w-full p-1" value="${i.order||99}" onchange="App.updateImageLocal('${i.id}', 'order', this.value, '${type}')"></label>
-                    ${type==='Projects' ? `<label class="text-xs">Pie <input type="text" class="border w-full p-1" value="${i.caption||''}" onchange="App.updateImageLocal('${i.id}', 'caption', this.value, '${type}')"></label>` : ''}
-                     ${type==='ClientLogos' ? `<label class="text-xs">Cliente <input type="text" class="border w-full p-1" value="${i.clientName||''}" onchange="App.updateImageLocal('${i.id}', 'clientName', this.value, '${type}')"></label>` : ''}
+                    <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.updateLocalImage('${i.id}', 'order', this.value, '${type}')"></label>
+                    ${type==='Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.updateLocalImage('${i.id}', 'caption', this.value, '${type}')"></label>` : ''}
                 </div>
-                <div class="flex flex-col gap-1 text-xs">
-                    ${type !== 'ClientLogos' ? `<label><input type="checkbox" ${i.isCover === 'Si' ? 'checked' : ''} onchange="App.updateImageLocal('${i.id}', 'isCover', this.checked, '${type}')"> Portada</label>` : ''}
-                    ${type === 'Projects' ? `<label><input type="checkbox" ${i.showInPortfolio === 'Si' ? 'checked' : ''} onchange="App.updateImageLocal('${i.id}', 'showInPortfolio', this.checked, '${type}')"> Portafolio</label>` : ''}
+                <div class="flex flex-col gap-1">
+                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.isCover)} onchange="App.updateLocalImage('${i.id}', 'isCover', this.checked, '${type}')"> Portada</label>` : ''}
+                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.showInPortfolio)} onchange="App.updateLocalImage('${i.id}', 'showInPortfolio', this.checked, '${type}')"> Portafolio</label>` : ''}
                 </div>
-                <button class="text-red-500" onclick="App.markImageForDelete('${i.id}', '${type}')"><i class="fas fa-trash"></i></button>
+                <button class="text-red-500 p-2 hover:bg-red-50 rounded" onclick="App.handleDeleteImageLocal('${i.id}', '${type}')"><i class="fas fa-trash"></i></button>
             </div>
         `).join('');
     },
-
-    // Helpers
-    fields(list) {
-        return list.map(f => {
-            if(f.type === 'select') return `<div class="mb-4"><label class="form-label">${f.label}</label><select id="${f.id}" class="form-select">${f.opts.map(o => `<option value="${o.val}" ${o.val==f.val?'selected':''}>${o.text}</option>`).join('')}</select></div>`;
-            if(f.type === 'textarea') return `<div class="mb-4"><label class="form-label">${f.label}</label><textarea id="${f.id}" class="form-textarea">${f.val||''}</textarea></div>`;
-            return `<div class="mb-4"><label class="form-label">${f.label}</label><input type="${f.type||'text'}" id="${f.id}" value="${f.val||''}" class="form-input"></div>`;
-        }).join('');
+    
+    async handleEditCrudItem(sheet, id) {
+        if (sheet === 'BlockedDates' && !AppState.data.RentalItems) {
+             UI.showLoading('Cargando equipos...');
+             const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems');
+             AppState.data = { ...AppState.data, ...d };
+             UI.hideLoading();
+        }
+        const isNew = !id; let html = '';
+        if(sheet==='Projects'){
+             const p=isNew?{}:AppState.data.Projects.find(x=>x.id===id);
+             html=`${UI.inputHTML('c','order','Orden',p?.order||99,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
+        } else if(sheet==='Videos'){
+             const v=isNew?{}:AppState.data.Videos.find(x=>x.id===id);
+             html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL (YouTube/Vimeo)',v?.embedUrl)} <div class="text-right mb-4"><label class="btn btn-secondary btn-sm cursor-pointer"><i class="fas fa-file-video"></i> Subir Video <input type="file" accept="video/*" class="hidden" onchange="App.uploadVideo(this, 'embedUrl')"></label></div>`;
+        } else if(sheet==='Services'){
+             const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
+             html=`${UI.inputHTML('c','order','Orden',s?.order||99,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${UI.inputHTML('c','iconClass','Icono (FontAwesome)',s?.iconClass)} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
+        } else if(sheet==='RentalItems'){
+             const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
+             const cats = AppState.data.RentalCategories || [];
+             html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
+        } else if(sheet==='RentalCategories'){
+             const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
+             html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
+        } else if(sheet==='BlockedDates'){
+             const items = AppState.data.RentalItems || [];
+             html = `${UI.selectHTML('c', 'itemId', 'Equipo', items)} ${UI.inputHTML('c', 'reason', 'Motivo')} ${UI.inputHTML('c', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('c', 'endDate', 'Hasta', '', 'date')}`;
+        }
+        UI.showModal(isNew?'Nuevo':'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>`);
     },
-    showModal(t, b, f) { document.getElementById('modal-container').innerHTML = `<div class="modal-overlay visible"><div class="modal-content"><div class="p-6 border-b flex justify-between"> <h2 class="text-xl font-bold">${t}</h2> <button onclick="UI.closeModal()">×</button> </div> <div class="p-6">${b}</div> <div class="p-6 border-t text-right bg-gray-50">${f}</div> </div></div>`; },
-    closeModal() { document.getElementById('modal-container').innerHTML = ''; },
-    showLoading(m) { document.getElementById('loading-screen').style.display = 'flex'; document.querySelector('#loading-screen p').innerText = m; },
-    hideLoading() { document.getElementById('loading-screen').style.display = 'none'; },
-    showToast(m, t='success') { const el = document.createElement('div'); el.className = `toast visible ${t}`; el.innerText = m; document.body.appendChild(el); setTimeout(() => el.remove(), 3000); },
-    showTab(id) { 
-        document.getElementById('tab-rental-items').classList.add('hidden');
-        document.getElementById('tab-rental-cats').classList.add('hidden');
-        document.getElementById(id).classList.remove('hidden');
-    }
+
+    async handleServiceContent(id, title) {
+        const blocks = (AppState.data.ServiceContentBlocks||[]).filter(b=>b.serviceId===id).sort((a,b)=>(a.order||99)-(b.order||99));
+        const html = blocks.map(b => `
+            <div class="p-3 border rounded mb-2 bg-white relative group">
+                <button class="absolute top-2 right-2 text-red-400 hover:text-red-600" onclick="App.handleDelete('ServiceContentBlocks', '${b.id}')">&times;</button>
+                <input type="text" class="font-bold w-full border-b mb-2 p-1" value="${b.blockTitle}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockTitle', this.value)" placeholder="Título Sección">
+                <textarea class="w-full border p-1 text-sm" rows="3" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockContentHtml', this.value)" placeholder="Contenido HTML...">${b.blockContentHtml}</textarea>
+                <input type="number" class="w-16 text-xs border p-1" value="${b.order||99}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'order', this.value)" placeholder="Orden">
+            </div>
+        `).join('');
+        UI.showModal(`Contenido: ${title}`, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><button class="btn btn-primary w-full" onclick="App.addServiceBlock('${id}')">+ Añadir Bloque</button>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+    },
+    
+    async addServiceBlock(sid) {
+        try { await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'ServiceContentBlocks',action:'add',data:{id:`blk_${Date.now()}`,serviceId:sid,blockTitle:'Nuevo',blockContentHtml:'',order:99}}}); await App.ensureDataForView('services', true); const s=AppState.data.Services.find(x=>x.id===sid); this.handleServiceContent(sid,s.title); } catch(e){alert(e.message);}
+    },
+
+    async saveCrud(sheet, id) {
+        try {
+            const isNew = !id || id === 'null';
+            const data = {};
+            document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('c-', '')] = el.value);
+            const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
+            if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
+            UI.showLoading('Guardando...');
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
+            await App.ensureDataForView(AppState.view, true);
+            UI.closeModal(); UI.renderView(AppState.view); UI.showToast('Guardado');
+        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
+    },
+    
+    async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
+    async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view, true); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
+    
+    async quickUpdate(sheet, id, key, val) { 
+        try {
+            const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
+            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[key]: valStr} } }); 
+            if(AppState.data[sheet]) { const item = AppState.data[sheet].find(i => i.id === id); if(item) item[key] = valStr; if(sheet==='ClientLogos'&&key==='order') UI.renderView(AppState.view); }
+            UI.showToast('Guardado');
+        } catch(e) { console.error(e); UI.showToast('Error', 'error'); } 
+    },
+    
+    async handleSaveSettings() { const data={}; document.querySelectorAll('#settings-form-container input').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'Settings',action:'update',criteria:{key:k},data:{value:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
+    async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
+    
+    async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
+    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
+    async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
 };
 
-// --- INIT ---
-document.getElementById('google-login-btn').addEventListener('click', Auth.login);
-document.getElementById('logout-btn').addEventListener('click', Auth.logout);
-document.getElementById('main-nav').addEventListener('click', (e) => {
-    const link = e.target.closest('a');
-    if(link) { e.preventDefault(); UI.switchView(link.dataset.view); }
-});
+document.addEventListener('DOMContentLoaded', () => {
+    const loginBtn = document.getElementById('google-login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const mainNav = document.getElementById('main-nav');
 
-Auth.init();
+    if (loginBtn) loginBtn.addEventListener('click', () => Auth.login());
+    if (logoutBtn) logoutBtn.addEventListener('click', () => Auth.logout());
+    
+    if (mainNav) {
+        mainNav.addEventListener('click', e => { 
+            const link = e.target.closest('.sidebar-link'); 
+            if(link) { 
+                e.preventDefault(); 
+                if (typeof App.switchView === 'function') {
+                    App.switchView(link.dataset.view); 
+                } else {
+                    UI.renderView(link.dataset.view);
+                }
+            } 
+        });
+    }
+
+    setTimeout(() => Auth.init(), 100);
+});
 </script>
 </body>
 </html>
