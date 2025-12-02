@@ -381,11 +381,13 @@ const API = {
         } catch (e) { clearTimeout(timeoutId); throw e; }
     },
     // Función especial para guardar múltiples cambios en una sola petición
+// Función especial para guardar múltiples cambios en una sola petición
     async batchUpdate(operations) {
         if(operations.length === 0) return;
+        // CORRECCIÓN APPEX: Pasamos el objeto puro. API.call se encarga del stringify.
         return API.call('/.netlify/functions/update-sheet-data', {
             method: 'POST',
-            body: JSON.stringify(operations) // Corregido: se debe enviar como JSON string
+            body: operations 
         });
     }
 };
@@ -939,6 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
