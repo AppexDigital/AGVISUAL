@@ -381,14 +381,39 @@ const API = {
         } catch (e) { clearTimeout(timeoutId); throw e; }
     },
     
-    // Función especial para guardar múltiples cambios en una sola petición
+    // Función inteligente para guardar en lotes (Chuncking) y evitar Timeout
     async batchUpdate(operations) {
         if(operations.length === 0) return;
-        // CORRECCIÓN APPEX: Pasamos el objeto puro. API.call ya hace el stringify necesario.
-        return API.call('/.netlify/functions/update-sheet-data', {
-            method: 'POST',
-            body: operations 
-        });
+
+        // Tamaño del lote (30 es seguro para evitar los 10s de timeout)
+        const BATCH_SIZE = 30; 
+        const totalBatches = Math.ceil(operations.length / BATCH_SIZE);
+        
+        UI.showLoading(`Procesando ${operations.length} cambios...`);
+
+        for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+            const batch = operations.slice(i, i + BATCH_SIZE);
+            const batchNum = (i / BATCH_SIZE) + 1;
+            
+            if (totalBatches > 1) {
+                UI.showLoading(`Guardando lote ${batchNum} de ${totalBatches}...`);
+            }
+
+            try {
+                await API.call('/.netlify/functions/update-sheet-data', {
+                    method: 'POST',
+                    body: batch // Enviamos el lote
+                });
+                
+                // Pequeña pausa de seguridad entre lotes (2 segundos)
+                if (i + BATCH_SIZE < operations.length) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch (e) {
+                console.error(`Error en lote ${batchNum}:`, e);
+                throw new Error(`Fallo al guardar el lote ${batchNum}. Intenta de nuevo.`);
+            }
+        }
     }
 };
 
@@ -961,6 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
