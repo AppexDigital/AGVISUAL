@@ -1,5 +1,8 @@
 // functions/update-sheet-data.js
-// v31.0 - CORRECCIÓN DE ESCRITURA POR COORDENADAS (CELL-BASED)
+// v50.0 - BATCHING HÍBRIDO DE ALTO RENDIMIENTO
+// Estrategia: 1 Carga Global -> Edición en Memoria -> 1 Guardado Global.
+// Respeta encabezados (fila 1) y evita el rate-limit.
+
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -16,45 +19,40 @@ async function getServices() {
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-function findRealHeader(sheet, targetName) {
+// Helper para encontrar índices de columnas insensible a mayúsculas/espacios
+function getColIndex(sheet, name) {
     const headers = sheet.headerValues;
-    const target = targetName.toLowerCase().trim();
-    return headers.find(h => h.toLowerCase().trim() === target);
-}
-
-function getHeaderIndex(sheet, targetName) {
-    const headers = sheet.headerValues;
-    const target = targetName.toLowerCase().trim();
+    const target = name.toLowerCase().trim();
     return headers.findIndex(h => h.toLowerCase().trim() === target);
 }
 
-function getSafeValue(row, sheet, targetColumnName) {
-    const realHeader = findRealHeader(sheet, targetColumnName);
-    if (!realHeader) return null;
-    return row.get(realHeader);
+// Helper para obtener nombre real del header
+function getRealHeader(sheet, name) {
+    const headers = sheet.headerValues;
+    const target = name.toLowerCase().trim();
+    return headers.find(h => h.toLowerCase().trim() === target);
 }
 
 exports.handler = async (event, context) => {
+  // 1. Seguridad
   if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
-    // CORRECCIÓN APPEX: Parsing robusto para evitar el error de doble serialización
+    // 2. Parsing Robusto
     let body;
     try {
         body = JSON.parse(event.body);
-        // Si el body sigue siendo un string después del primer parse (doble stringify del frontend), lo parseamos de nuevo
-        if (typeof body === 'string') {
-            body = JSON.parse(body);
-        }
+        if (typeof body === 'string') body = JSON.parse(body);
     } catch (e) {
-        throw new Error('El cuerpo de la petición no es un JSON válido.');
+        throw new Error('JSON inválido.');
     }
-    
+
     const operations = Array.isArray(body) ? body : [body];
     const { doc, drive } = await getServices();
+
+    // Agrupar por hoja
     const opsBySheet = {};
-    
     operations.forEach(op => {
         if (!opsBySheet[op.sheet]) opsBySheet[op.sheet] = [];
         opsBySheet[op.sheet].push(op);
@@ -66,148 +64,128 @@ exports.handler = async (event, context) => {
         
         await sheet.loadHeaderRow();
         const sheetOps = opsBySheet[sheetName];
-        
         const adds = sheetOps.filter(op => op.action === 'add');
         const updates = sheetOps.filter(op => op.action === 'update');
         const deletes = sheetOps.filter(op => op.action === 'delete');
 
-        // 1. ADDS (Creación - Fila por Fila es seguro aquí)
+        // --- FASE 1: CREACIÓN (ADDS) ---
+        // Los ADDS son seguros hacerlos uno a uno o en paralelo con addRow, 
+        // pero para garantizar IDs y orden, el bucle es aceptable.
         for (const op of adds) {
             if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
                  op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             }
             
-            // Manejo de "Portada Única" al crear
-            if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
-                // Si estamos subiendo una nueva portada, cargamos celdas para apagar las otras
-                await sheet.loadCells(); 
-                const rows = await sheet.getRows();
-                const parentKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
-                const parentColIndex = getHeaderIndex(sheet, parentKey);
-                const coverColIndex = getHeaderIndex(sheet, 'isCover');
-
-                if (parentColIndex > -1 && coverColIndex > -1) {
-                    rows.forEach(r => {
-                        // Usamos getCell con coordenadas (fila, columna)
-                        // rowIndex es base-1, getCell es base-0. Restamos 1.
-                        const pVal = sheet.getCell(r.rowIndex - 1, parentColIndex).value;
-                        if (String(pVal) === String(op.data[parentKey])) {
-                            const cell = sheet.getCell(r.rowIndex - 1, coverColIndex);
-                            cell.value = 'No';
-                        }
-                    });
-                    await sheet.saveUpdatedCells();
-                }
-            }
-
+            // Preparar datos con headers reales
             const rowData = {};
             Object.keys(op.data).forEach(k => {
-                const h = findRealHeader(sheet, k);
+                const h = getRealHeader(sheet, k);
                 if (h) rowData[h] = op.data[k];
             });
-            await sheet.addRow(rowData);
+            
+            // NOTA: addRow añade al final (después de la última fila con datos).
+            // Esto respeta implícitamente la fila 1 de headers.
+            await sheet.addRow(rowData); 
         }
 
-        // 2. UPDATES (EDICIÓN MASIVA REAL)
+        // --- FASE 2: ACTUALIZACIÓN MASIVA (UPDATES) - LA JOYA DE LA CORONA ---
         if (updates.length > 0) {
-            const rows = await sheet.getRows(); // Para encontrar IDs rápidamente
-            await sheet.loadCells(); // Carga la matriz completa para edición rápida
+            // A. Cargar TODO en una sola petición (Eficiencia)
+            await sheet.loadCells(); 
             
-            let hasChanges = false;
+            // B. Obtener mapa de filas (Seguridad)
+            // getRows() nos da los objetos fila, ignorando headers vacíos o fila 1.
+            const rows = await sheet.getRows(); 
+            
+            let hasBatchChanges = false;
 
             for (const op of updates) {
-                const criteriaKey = Object.keys(op.criteria)[0];
-                const realCriteriaHeader = findRealHeader(sheet, criteriaKey);
-                
-                if (!realCriteriaHeader) {
-                     // Caso especial: Settings/About (Upsert si no existe)
-                     if(['Settings', 'About'].includes(sheetName)) {
-                        const exists = rows.find(r => String(r.get(realCriteriaHeader || 'key')).trim() === String(op.criteria[criteriaKey]).trim());
-                        if(!exists) { await sheet.addRow({ ...op.criteria, ...op.data }); }
-                     }
-                     continue;
+                const criteriaKey = Object.keys(op.criteria)[0]; // ej: 'id'
+                const criteriaVal = String(op.criteria[criteriaKey]).trim();
+                const realHeaderKey = getRealHeader(sheet, criteriaKey);
+
+                if (!realHeaderKey && ['Settings', 'About'].includes(sheetName)) {
+                    // Upsert especial para configuración (raro en batch, pero soportado)
+                    await sheet.addRow({ ...op.criteria, ...op.data });
+                    continue;
                 }
 
-                // Buscar la fila que coincide con el ID
-                const targetRow = rows.find(r => String(r.get(realCriteriaHeader)).trim() === String(op.criteria[criteriaKey]).trim());
-                
-                if (targetRow) {
-                    // COORDENADA Y DE LA FILA
-                    const rowIndex = targetRow.rowIndex - 1; // Convertir a base-0 para getCell
+                // C. Buscar la fila usando la lógica segura de la librería
+                const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
-                    // Lógica Portada Única (Apagar otras en memoria)
+                if (targetRow) {
+                    // D. Traducir a coordenadas de celda (0-based)
+                    // targetRow.rowIndex es 1-based (Fila 2 = 1). getCell usa 0-based.
+                    // Por tanto: rowIndex - 1.
+                    const rIdx = targetRow.rowIndex - 1;
+
+                    // Lógica "Portada Única" (Batch Friendly)
                     if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
                         const parentKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
-                        const parentColIdx = getHeaderIndex(sheet, parentKey);
-                        const coverColIdx = getHeaderIndex(sheet, 'isCover');
-                      
-                        if (parentColIdx > -1 && coverColIdx > -1) {
-                            try {
-                                // Obtenemos el ID del padre de la fila actual (Proyecto o Item)
-                                const currentParentId = sheet.getCell(rowIndex, parentColIdx).value;
-                                
-                                // Iteramos por TODAS las celdas cargadas en memoria (sheet.cellStats.loaded)
-                                // Usamos un bucle for simple para máximo control
-                                for (let rIdx = 0; rIdx < sheet.rowCount; rIdx++) {
-                                    if (rIdx === rowIndex) continue; // Saltamos la fila actual
+                        const parentCol = getColIndex(sheet, parentKey);
+                        const coverCol = getColIndex(sheet, 'isCover');
+                        
+                        // Leer el ID del padre de la fila actual directamente de la celda cargada
+                        const parentId = sheet.getCell(rIdx, parentCol).value;
 
-                                    try {
-                                        // Intento blindado de leer la celda
-                                        const pCell = sheet.getCell(rIdx, parentColIdx);
-                                        
-                                        // Si la celda existe y pertenece al mismo proyecto
-                                        if (pCell && String(pCell.value) === String(currentParentId)) {
-                                            const cCell = sheet.getCell(rIdx, coverColIdx);
-                                            // Si es otra portada, la apagamos
-                                            if (cCell && String(cCell.value).toLowerCase() === 'si') {
-                                                cCell.value = 'No';
-                                                hasChanges = true;
-                                            }
-                                        }
-                                    } catch (innerError) {
-                                        // Si la celda no está cargada (fila vacía), la ignoramos silenciosamente
-                                        continue;
+                        // Barrer TODAS las filas en memoria para apagar covers del mismo grupo
+                        // Usamos 'rows' para iterar solo sobre filas válidas de datos
+                        rows.forEach(r => {
+                            const otherIdx = r.rowIndex - 1;
+                            if (otherIdx !== rIdx) { // No tocar la actual
+                                const pVal = sheet.getCell(otherIdx, parentCol).value;
+                                if (String(pVal) === String(parentId)) {
+                                    const cCell = sheet.getCell(otherIdx, coverCol);
+                                    if (String(cCell.value).toLowerCase() === 'si') {
+                                        cCell.value = 'No';
+                                        hasBatchChanges = true;
                                     }
                                 }
-                            } catch (outerError) {
-                                console.warn("Error en lógica de portada única (no fatal):", outerError.message);
                             }
-                        }
+                        });
                     }
 
-                    // APLICAR CAMBIOS
+                    // E. Aplicar cambios en memoria
                     Object.keys(op.data).forEach(key => {
-                        const colIndex = getHeaderIndex(sheet, key);
-                        if (colIndex !== -1) {
-                            const cell = sheet.getCell(rowIndex, colIndex);
-                            // Normalizar valor a string para comparación flexible, pero guardar el valor real
+                        const colIdx = getColIndex(sheet, key);
+                        if (colIdx !== -1) {
+                            const cell = sheet.getCell(rIdx, colIdx);
+                            // Convertir a string para comparar, pero guardar valor original si es diferente
                             if (String(cell.value) !== String(op.data[key])) {
                                 cell.value = op.data[key];
-                                hasChanges = true;
+                                hasBatchChanges = true;
                             }
                         }
                     });
                 }
             }
 
-            if (hasChanges) {
-                await sheet.saveUpdatedCells(); // ¡ESTO ES LO QUE GUARDA DE VERDAD!
+            // F. Guardar TODO de una sola vez (1 Petición)
+            if (hasBatchChanges) {
+                await sheet.saveUpdatedCells();
             }
         }
 
-        // 3. DELETES (Uno a uno, con limpieza de archivo)
+        // --- FASE 3: BORRADOS (DELETES) ---
         if (deletes.length > 0) {
-            const rows = await sheet.getRows(); 
+            // Recargamos filas para asegurar índices correctos tras posibles adds
+            const currentRows = await sheet.getRows(); 
+            
             for (const op of deletes) {
                 const criteriaKey = Object.keys(op.criteria)[0];
-                const realKey = findRealHeader(sheet, criteriaKey);
-                if (!realKey) continue;
-                
-                const row = rows.find(r => String(r.get(realKey)).trim() === String(op.criteria[criteriaKey]).trim());
+                const criteriaVal = String(op.criteria[criteriaKey]).trim();
+                const realKeyHeader = getRealHeader(sheet, criteriaKey);
+
+                if (!realKeyHeader) continue;
+
+                // Buscar y borrar
+                const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
                 if (row) {
-                    const fileId = getSafeValue(row, sheet, 'fileId');
-                    if (fileId) try { await drive.files.update({ fileId, requestBody: { trashed: true } }); } catch(e){}
-                    await row.delete();
+                    // Borrar archivo de Drive si aplica (No bloqueante)
+                    if (op.data && op.data.fileId) {
+                        try { await drive.files.update({ fileId: op.data.fileId, requestBody: { trashed: true } }); } catch(e){}
+                    }
+                    await row.delete(); // Esto hace 1 petición por delete, pero deletes masivos son raros
                 }
             }
         }
