@@ -1,24 +1,9 @@
 // functions/update-sheet-data.js
-// v23.0 - SOFT DELETE (MOVER A PAPELERA) - SOLUCIÓN DEFINITIVA PERMISOS
+// v26.0 - CASCADA TOTAL, PORTADAS ÚNICAS Y SOPORTE SETTINGS
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
 const { validateGoogleToken } = require('./google-auth-helper');
-
-const wait = (ms) => new Promise(r => setTimeout(r, ms));
-
-async function executeWithRetry(operation, retries = 3, delay = 1000) {
-    try {
-        return await operation();
-    } catch (error) {
-        if (retries > 0 && (error.response?.status === 429 || error.code === 429)) {
-            console.log(`Quota hit. Retrying in ${delay}ms...`);
-            await wait(delay);
-            return executeWithRetry(operation, retries - 1, delay * 2);
-        }
-        throw error;
-    }
-}
 
 async function getServices() {
   const auth = new JWT({
@@ -27,11 +12,11 @@ async function getServices() {
     scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
   });
   const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
-  await executeWithRetry(() => doc.loadInfo());
+  await doc.loadInfo();
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-// Normalización de columnas
+// --- HELPERS DE NORMALIZACIÓN ---
 function findRealHeader(sheet, targetName) {
     const headers = sheet.headerValues;
     const target = targetName.toLowerCase().trim();
@@ -46,32 +31,28 @@ function getSafeValue(row, sheet, targetColumnName) {
 
 async function findRows(sheet, criteria) {
     if (!criteria) return [];
-    await executeWithRetry(() => sheet.loadHeaderRow());
-    const rows = await executeWithRetry(() => sheet.getRows());
+    await sheet.loadHeaderRow();
+    const rows = await sheet.getRows();
     const criteriaKey = Object.keys(criteria)[0];
     const realKeyHeader = findRealHeader(sheet, criteriaKey);
+    
     if (!realKeyHeader) return [];
-    return rows.filter(row => String(row.get(realKeyHeader)) === String(criteria[criteriaKey]));
+    // Comparación flexible (string)
+    return rows.filter(row => String(row.get(realKeyHeader)).trim() === String(criteria[criteriaKey]).trim());
 }
 
-// CAMBIO CLAVE: Usar 'trash' en lugar de 'delete'
-async function trashFileInDrive(drive, fileId, resourceName = 'Archivo') {
+async function trashFileInDrive(drive, fileId) {
     if (!fileId) return;
     try {
-        // Intentamos mover a la papelera (trashed: true)
-        await executeWithRetry(() => drive.files.update({
+        await drive.files.update({
             fileId: fileId,
             requestBody: { trashed: true },
             supportsAllDrives: true
-        }));
-        console.log(`[Drive] Movido a papelera (${resourceName}): ${fileId}`);
+        });
+        console.log(`[Drive] Movido a papelera: ${fileId}`);
     } catch (e) {
-        // Si ya no existe (404), es un éxito técnico.
-        if (e.code === 404) {
-            console.log(`[Drive] ${resourceName} ${fileId} ya no existía.`);
-        } else {
-            console.warn(`[Drive] Error moviendo a papelera ${resourceName} (${fileId}): ${e.message}`);
-        }
+        // Si ya no existe (404), lo consideramos éxito
+        if (e.code !== 404) console.warn(`[Drive Error] No se pudo mover a papelera ${fileId}: ${e.message}`);
     }
 }
 
@@ -86,100 +67,153 @@ exports.handler = async (event, context) => {
     const sheet = doc.sheetsByTitle[sheetTitle];
     
     if (!sheet) return { statusCode: 404, body: JSON.stringify({ error: `Hoja ${sheetTitle} no encontrada` }) };
-    await executeWithRetry(() => sheet.loadHeaderRow());
+    await sheet.loadHeaderRow();
 
-    // --- ADD ---
+    // --- ADD (CREAR) ---
     if (action === 'add') {
-        if (!data.id && sheetTitle !== 'BlockedDates') data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}`;
-        
-        if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && data.isCover === 'Si') {
+        // Generación de ID: Solo para tablas de datos, NO para Settings/About
+        if (!data.id && !['Settings', 'About'].includes(sheetTitle)) {
+             data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        }
+
+        // LOGICA PORTADA ÚNICA (Projects Y RentalItems)
+        if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && String(data.isCover).toLowerCase() === 'si') {
            const rows = await sheet.getRows();
            const parentKeyTarget = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
            const realParentKey = findRealHeader(sheet, parentKeyTarget);
            const realCoverKey = findRealHeader(sheet, 'isCover');
 
            if (realParentKey && realCoverKey) {
+               // Poner en "No" todas las demás imágenes de este padre
                for (const r of rows) { 
-                   if (r.get(realParentKey) === data[parentKeyTarget] && r.get(realCoverKey) === 'Si') { 
-                       r.set(realCoverKey, 'No'); await executeWithRetry(() => r.save()); 
+                   if (r.get(realParentKey) === data[parentKeyTarget] && String(r.get(realCoverKey)).toLowerCase() === 'si') { 
+                       r.set(realCoverKey, 'No'); await r.save(); 
                    } 
                }
            }
         }
         
+        // Mapeo seguro de columnas (Solo escribe si la columna existe en el Sheet)
         const rowData = {};
         Object.keys(data).forEach(k => {
             const realHeader = findRealHeader(sheet, k);
             if (realHeader) rowData[realHeader] = data[k];
         });
-        await executeWithRetry(() => sheet.addRow(rowData));
+
+        await sheet.addRow(rowData);
         return { statusCode: 200, body: JSON.stringify({ message: 'OK', newId: data.id }) };
     }
 
-    // --- UPDATE ---
+    // --- UPDATE (ACTUALIZAR) ---
     if (action === 'update') {
         const rows = await findRows(sheet, criteria);
+        
+        // SI ES SETTINGS/ABOUT Y NO EXISTE LA FILA -> CREARLA (UPSERT)
+        if (rows.length === 0 && ['Settings', 'About'].includes(sheetTitle)) {
+            const newData = { ...criteria, ...data }; // Combinar criterio (ej. key: logo) con datos (value: url)
+            await sheet.addRow(newData);
+            return { statusCode: 200, body: JSON.stringify({ message: 'Created (Upsert)' }) };
+        }
+
         const row = rows[0];
-        if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado' }) };
+        if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado para actualizar' }) };
+
+        // Lógica Portada Única en Update
+        if ((sheetTitle === 'ProjectImages' || sheetTitle === 'RentalItemImages') && String(data.isCover).toLowerCase() === 'si') {
+             const parentKeyTarget = sheetTitle === 'ProjectImages' ? 'projectId' : 'itemId';
+             const realParentKey = findRealHeader(sheet, parentKeyTarget);
+             const realCoverKey = findRealHeader(sheet, 'isCover');
+             const realIdKey = findRealHeader(sheet, 'id');
+             
+             if (realParentKey && realCoverKey && realIdKey) {
+                 const parentId = row.get(realParentKey);
+                 const allRows = await sheet.getRows();
+                 for (const r of allRows) {
+                     // Si es el mismo padre, pero diferente imagen, quitar portada
+                     if (r.get(realParentKey) === parentId && String(r.get(realIdKey)) !== String(row.get(realIdKey)) && String(r.get(realCoverKey)).toLowerCase() === 'si') {
+                         r.set(realCoverKey, 'No'); await r.save();
+                     }
+                 }
+             }
+        }
 
         Object.keys(data).forEach(key => { 
             const realHeader = findRealHeader(sheet, key);
             if (realHeader) row.set(realHeader, data[key]);
         });
-        await executeWithRetry(() => row.save());
+        await row.save();
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
-    // --- DELETE (SOFT DELETE IMPLEMENTADO) ---
+    // --- DELETE (BORRAR Y LIMPIAR DRIVE) ---
     if (action === 'delete') {
         const rows = await findRows(sheet, criteria);
         const row = rows[0];
-        if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado en Sheet' }) };
+        if (!row) return { statusCode: 404, body: JSON.stringify({ error: 'Registro no encontrado para eliminar' }) };
 
-        // A. Si estamos en una hoja de IMÁGENES
-        if (['ProjectImages', 'RentalItemImages', 'ClientLogos'].includes(sheetTitle)) {
-            const fileId = getSafeValue(row, sheet, 'fileId');
-            if (fileId) {
-                await trashFileInDrive(drive, fileId, 'Imagen Individual');
-            }
-        }
+        // 1. Borrar Archivo Asociado (Imágenes, Logos)
+        const fileId = getSafeValue(row, sheet, 'fileId');
+        if (fileId) await trashFileInDrive(drive, fileId);
 
-        // B. Si estamos en una hoja de PADRES (Proyectos/Items)
+        // 2. Borrar Carpetas (Proyectos, Items)
         if (['Projects', 'RentalItems'].includes(sheetTitle)) {
-            // 1. Recuperar ID de carpeta
             const folderId = getSafeValue(row, sheet, 'driveFolderId');
-            
-            // 2. Borrar Hijos en Cascada
+            if (folderId) await trashFileInDrive(drive, folderId);
+
+            // CASCADA: Borrar Imágenes Hijas
             const childSheetName = sheetTitle === 'Projects' ? 'ProjectImages' : 'RentalItemImages';
             const childFkTarget = sheetTitle === 'Projects' ? 'projectId' : 'itemId';
             const childSheet = doc.sheetsByTitle[childSheetName];
             
             if (childSheet) {
-                await executeWithRetry(() => childSheet.loadHeaderRow());
+                await childSheet.loadHeaderRow();
                 const realChildFk = findRealHeader(childSheet, childFkTarget);
-                const realChildId = findRealHeader(sheet, 'id'); 
-                
-                if (realChildFk) {
-                    const allChildRows = await executeWithRetry(() => childSheet.getRows());
+                const realChildId = findRealHeader(sheet, 'id');
+                if (realChildFk && realChildId) {
+                    const allChildRows = await childSheet.getRows();
                     const parentIdStr = String(row.get(realChildId));
-                    const childrenToDelete = allChildRows.filter(r => String(r.get(realChildFk)) === parentIdStr);
-
-                    for (const childRow of childrenToDelete) {
-                         const childFileId = getSafeValue(childRow, childSheet, 'fileId');
-                         if (childFileId) await trashFileInDrive(drive, childFileId, 'Imagen Hija');
-                         await executeWithRetry(() => childRow.delete());
+                    const children = allChildRows.filter(r => String(r.get(realChildFk)) === parentIdStr);
+                    
+                    for (const child of children) {
+                        const childFileId = getSafeValue(child, childSheet, 'fileId');
+                        if (childFileId) await trashFileInDrive(drive, childFileId);
+                        await child.delete();
                     }
                 }
             }
-            
-            // 3. Mover Carpeta a Papelera
-            if (folderId) {
-                await trashFileInDrive(drive, folderId, 'Carpeta Proyecto');
+        }
+
+        // 3. CASCADA ESPECIAL SERVICIOS (Bloques + Imágenes)
+        if (sheetTitle === 'Services') {
+            const realIdKey = findRealHeader(sheet, 'id');
+            const serviceId = String(row.get(realIdKey));
+
+            // Borrar Bloques de Contenido
+            const blocksSheet = doc.sheetsByTitle['ServiceContentBlocks'];
+            if (blocksSheet) {
+                await blocksSheet.loadHeaderRow();
+                const realBlockFk = findRealHeader(blocksSheet, 'serviceId');
+                const allBlocks = await blocksSheet.getRows();
+                const blocksToDelete = allBlocks.filter(r => String(r.get(realBlockFk)) === serviceId);
+                for (const b of blocksToDelete) await b.delete();
+            }
+
+            // Borrar Imágenes de Servicio
+            const imagesSheet = doc.sheetsByTitle['ServiceImages'];
+            if (imagesSheet) {
+                await imagesSheet.loadHeaderRow();
+                const realImgFk = findRealHeader(imagesSheet, 'serviceId');
+                const allImgs = await imagesSheet.getRows();
+                const imgsToDelete = allImgs.filter(r => String(r.get(realImgFk)) === serviceId);
+                for (const img of imgsToDelete) {
+                     const fId = getSafeValue(img, imagesSheet, 'fileId');
+                     if (fId) await trashFileInDrive(drive, fId);
+                     await img.delete();
+                }
             }
         }
 
-        // Borrar fila en Sheet
-        await executeWithRetry(() => row.delete());
+        await row.delete();
         return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
     }
 
