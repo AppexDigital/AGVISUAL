@@ -900,7 +900,21 @@ const App = {
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     
-    async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view, true); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
+    async handleDelete(sheet, id, key='id') { 
+        UI.showConfirm("¿Borrar registro? Esta acción eliminará también las carpetas y archivos asociados.", async ()=>{ 
+            try{ 
+                UI.showLoading('Eliminando y limpiando archivos...'); // <-- Feedback visual
+                await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); 
+                await App.ensureDataForView(AppState.view, true); 
+                UI.renderView(AppState.view); 
+                UI.showToast('Registro eliminado correctamente'); 
+            } catch(e){ 
+                alert("Error al eliminar: " + e.message); 
+            } finally {
+                UI.hideLoading();
+            }
+        }); 
+    },
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
 
     async quickUpdate(sheet, id, key, val) { 
@@ -947,6 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
