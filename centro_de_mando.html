@@ -672,24 +672,30 @@ const App = {
 
             if (batch.length > 0) {
                 await API.batchUpdate(batch);
+                
+                // APPEX: Limpiamos memoria para evitar re-enviar si el usuario guarda de nuevo sin cerrar
+                pendingDeletions = [];
+                currentModalImages.forEach(img => delete img._modified);
+
                 // Sincronizar estado global
                 await this.ensureDataForView(AppState.view, true);
-                UI.showToast("Cambios guardados");
+                UI.showToast("Cambios guardados exitosamente");
+                
+                // APPEX: Cerrar modal SOLO si todo salió bien (excepto en ClientLogos que es vista plana)
+                if(type !== 'ClientLogos') UI.closeModal(); 
             } else {
-                UI.showToast("No hubo cambios pendientes");
+                UI.showToast("No se detectaron cambios para guardar", "info");
             }
-            
-            if(type !== 'ClientLogos') UI.closeModal();
 
         } catch(e) {
             console.error(e);
-            alert("Error al guardar: " + e.message);
+            // APPEX: Feedback visual mejorado en lugar de alert()
+            UI.showToast("Error al guardar: " + e.message, "error"); 
         } finally {
             UI.hideLoading();
         }
     },
-
-
+    
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files); if (!files.length) return;
         let driveFolderId = null, sheetTarget='', subfolder='', idField='';
@@ -941,6 +947,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
