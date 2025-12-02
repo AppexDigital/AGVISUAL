@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v28.0 - ESCRITURA EN MASA REAL (Batch Update)
+// v30.0 - GUARDADO MASIVO DE CELDAS (Batch Cells Fix)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -22,6 +22,18 @@ function findRealHeader(sheet, targetName) {
     return headers.find(h => h.toLowerCase().trim() === target);
 }
 
+function getHeaderIndex(sheet, targetName) {
+    const headers = sheet.headerValues;
+    const target = targetName.toLowerCase().trim();
+    return headers.findIndex(h => h.toLowerCase().trim() === target);
+}
+
+function getSafeValue(row, sheet, targetColumnName) {
+    const realHeader = findRealHeader(sheet, targetColumnName);
+    if (!realHeader) return null;
+    return row.get(realHeader);
+}
+
 exports.handler = async (event, context) => {
   if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
@@ -31,7 +43,7 @@ exports.handler = async (event, context) => {
     const operations = Array.isArray(body) ? body : [body];
     const { doc, drive } = await getServices();
 
-    // Agrupar operaciones por hoja para optimizar carga
+    // Agrupar por hoja
     const opsBySheet = {};
     operations.forEach(op => {
         if (!opsBySheet[op.sheet]) opsBySheet[op.sheet] = [];
@@ -45,17 +57,32 @@ exports.handler = async (event, context) => {
         await sheet.loadHeaderRow();
         const sheetOps = opsBySheet[sheetName];
         
-        // Separar ADD, UPDATE y DELETE
         const adds = sheetOps.filter(op => op.action === 'add');
         const updates = sheetOps.filter(op => op.action === 'update');
         const deletes = sheetOps.filter(op => op.action === 'delete');
 
-        // 1. PROCESAR ADDS (Uno por uno es seguro, no suelen ser masivos)
+        // 1. ADDS (Creación)
         for (const op of adds) {
             if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
                  op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             }
-            // Mapeo de columnas seguro
+            
+            // Lógica Portada Única (Add)
+            if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
+               const rows = await sheet.getRows();
+               const parentKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
+               const realParentKey = findRealHeader(sheet, parentKey);
+               const realCoverKey = findRealHeader(sheet, 'isCover');
+               // Si estamos agregando una portada, quitamos las otras primero (esto requiere save individual, inevitable)
+               if (realParentKey && realCoverKey) {
+                   for (const r of rows) { 
+                       if (r.get(realParentKey) === op.data[parentKey] && String(r.get(realCoverKey)).toLowerCase() === 'si') { 
+                           r.set(realCoverKey, 'No'); await r.save(); 
+                       } 
+                   }
+               }
+            }
+
             const rowData = {};
             Object.keys(op.data).forEach(k => {
                 const h = findRealHeader(sheet, k);
@@ -64,46 +91,75 @@ exports.handler = async (event, context) => {
             await sheet.addRow(rowData);
         }
 
-        // 2. PROCESAR UPDATES (MASIVO / BATCH REAL)
+        // 2. UPDATES (EDICIÓN MASIVA - CORREGIDO)
         if (updates.length > 0) {
-            const rows = await sheet.getRows(); // Carga una sola vez
+            // A. Cargar filas para encontrar índices y CELDAS para escribir
+            const rows = await sheet.getRows(); 
+            await sheet.loadCells(); // Carga toda la data para poder escribir en celdas específicas
+            
             let hasChanges = false;
 
             for (const op of updates) {
                 const criteriaKey = Object.keys(op.criteria)[0];
-                const realKey = findRealHeader(sheet, criteriaKey);
-                if (!realKey) continue;
-
-                // Buscar fila en memoria
-                const row = rows.find(r => String(r.get(realKey)).trim() === String(op.criteria[criteriaKey]).trim());
+                const realCriteriaHeader = findRealHeader(sheet, criteriaKey);
                 
+                if (!realCriteriaHeader) continue;
+
+                // Encontrar la fila usando getRows (que ya tiene los datos mapeados)
+                const row = rows.find(r => String(r.get(realCriteriaHeader)).trim() === String(op.criteria[criteriaKey]).trim());
+
                 if (row) {
-                    // Aplicar cambios en memoria local de la fila
+                    // Lógica Portada Única (Update en memoria)
+                    if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
+                        const parentKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
+                        const realParentKey = findRealHeader(sheet, parentKey);
+                        const realCoverKey = findRealHeader(sheet, 'isCover');
+                        const coverColIndex = getHeaderIndex(sheet, 'isCover');
+
+                        if (realParentKey && coverColIndex !== -1) {
+                            const parentId = row.get(realParentKey);
+                            // Recorrer todas las filas para quitar 'Si' a las otras
+                            rows.forEach(r => {
+                                if (r.get(realParentKey) === parentId && r.rowIndex !== row.rowIndex) {
+                                    // Escribir directamente en la celda
+                                    const cell = sheet.getCell(r.rowIndex - 1, coverColIndex);
+                                    if (String(cell.value).toLowerCase() === 'si') {
+                                        cell.value = 'No';
+                                        hasChanges = true;
+                                    }
+                                }
+                            });
+                        }
+                    }
+
+                    // Aplicar cambios de la operación
                     Object.keys(op.data).forEach(key => {
-                        const header = findRealHeader(sheet, key);
-                        if (header) {
+                        const colIndex = getHeaderIndex(sheet, key);
+                        if (colIndex !== -1) {
+                            // sheet.getCell usa coordenadas (fila, columna). 
+                            // row.rowIndex es base-1 (fila 1 es header), getCell es base-0.
+                            // Por tanto: fila de datos 1 (rowIndex 2) -> getCell(1, col)
+                            const cell = sheet.getCell(row.rowIndex - 1, colIndex);
                             const newVal = op.data[key];
-                            if (row.get(header) !== newVal) {
-                                row.set(header, newVal); // Esto solo marca la celda como "dirty"
+                            if (cell.value !== newVal) {
+                                cell.value = newVal;
                                 hasChanges = true;
                             }
                         }
                     });
                 } else if (['Settings', 'About'].includes(sheetName)) {
-                    // Upsert para config
+                    // Upsert simple si no existe
                      await sheet.addRow({ ...op.criteria, ...op.data });
                 }
             }
 
-            // GUARDADO ATÓMICO: Si hubo cambios, guardar todas las filas modificadas de una sola vez
             if (hasChanges) {
-                await sheet.saveUpdatedCells(); // ESTA ES LA MAGIA QUE EVITA EL ERROR 429
+                await sheet.saveUpdatedCells(); // GUARDA TODO DE UN GOLPE
             }
         }
 
-        // 3. PROCESAR DELETES
+        // 3. DELETES
         if (deletes.length > 0) {
-            // Recargamos filas por si los updates cambiaron algo, aunque para deletes es mejor ser precisos
             const rows = await sheet.getRows(); 
             for (const op of deletes) {
                 const criteriaKey = Object.keys(op.criteria)[0];
@@ -112,11 +168,9 @@ exports.handler = async (event, context) => {
                 
                 const row = rows.find(r => String(r.get(realKey)).trim() === String(op.criteria[criteriaKey]).trim());
                 if (row) {
-                    // Borrar archivo de drive si existe
-                    if (row.get('fileId')) {
-                        try { await drive.files.update({ fileId: row.get('fileId'), requestBody: { trashed: true } }); } catch(e){}
-                    }
-                    await row.delete(); // Delete sigue siendo 1 por 1, pero suelen ser pocos
+                    const fileId = getSafeValue(row, sheet, 'fileId');
+                    if (fileId) try { await drive.files.update({ fileId, requestBody: { trashed: true } }); } catch(e){}
+                    await row.delete();
                 }
             }
         }
