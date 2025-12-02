@@ -45,7 +45,7 @@
         
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .modal-content { background: white; width: 95%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; border-radius: 8px; }
+        .modal-content { background: white; width: 95%; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; border-radius: 8px; }
         .modal-overlay.visible .modal-content { transform: scale(1); }
         
         .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-dark); color: white; padding: 1rem 1.5rem; z-index: 100; transform: translateY(100px); transition: transform 0.3s; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 600; border-radius: 4px; }
@@ -384,7 +384,7 @@ const API = {
         if(operations.length === 0) return;
         return API.call('/.netlify/functions/update-sheet-data', {
             method: 'POST',
-            body: operations // El backend v27.0 ya soporta arrays
+            body: JSON.stringify(operations) // Corregido: se debe enviar como JSON string
         });
     }
 };
@@ -463,7 +463,6 @@ const UI = {
              if(s.logo_black) document.getElementById('preview-logo_black').src = s.logo_black;
              if(s.logo_white) document.getElementById('preview-logo_white').src = s.logo_white;
              if(s.favicon) document.getElementById('preview-favicon').src = s.favicon;
-             
              document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)} ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram URL', s.social_instagram)} ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)} ${UI.inputHTML('settings', 'social_youtube', 'YouTube URL', s.social_youtube)} ${UI.inputHTML('settings', 'social_facebook', 'Facebook URL', s.social_facebook)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
              document.getElementById('about-form-container').innerHTML = `${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}`;
              if(a.profile_image) document.getElementById('about-profile-preview').src = a.profile_image;
@@ -488,6 +487,14 @@ const UI = {
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${p.order||99}</td><td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${p.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
         } else if (view === 'portfolio-manager') {
+            // En portfolio, usamos currentModalImages SI es que se está editando, sino data directa
+            // Pero Portfolio no es un modal, es una vista. Podemos usar batching aquí también?
+            // Sí, pero requiere que 'Guardar Cambios' sea global para la vista.
+            // Vamos a simplificar: en Portfolio, 'Guardar Orden' ya es un botón manual.
+            // Usaremos una lógica similar a la del modal.
+            
+            // NOTA: Para portfolio, usaremos AppState.data directamente, pero modificaremos 'localmente' 
+            // y luego 'Guardar' enviará todo.
             const images = (data.ProjectImages || [])
                 .filter(i => {
                     const v = String(getVal(i, 'showInPortfolio')).toLowerCase().trim();
@@ -607,6 +614,8 @@ const App = {
              const parentId = img.projectId || img.itemId || img.serviceId;
              if(type === 'Projects') this.renderGalleryList(currentModalImages, parentId, 'Projects');
              // ... lógica similar para otros tipos, o un render genérico
+             else if(type === 'Services') this.renderGalleryList(currentModalImages, parentId, 'Services');
+             else if(type === 'RentalItems') this.renderGalleryList(currentModalImages, parentId, 'RentalItems');
         }
     },
 
@@ -617,11 +626,21 @@ const App = {
             currentModalImages.splice(index, 1);
         }
         if (type === 'ClientLogos') UI.renderView('settings');
-        // Nota: Para modales, se necesita re-renderizar la lista interna
+        else {
+            // Buscar el parentId de cualquier imagen restante para renderizar
+            const remainingImg = currentModalImages[0] || pendingDeletions[0];
+            const parentId = remainingImg ? (remainingImg.projectId || remainingImg.itemId || remainingImg.serviceId) : null;
+            if(parentId) this.renderGalleryList(currentModalImages, parentId, type);
+        }
     },
 
     // 3. Guardar TODO de una vez
     async saveGalleryChanges(parentId, type) {
+        // Si es ClientLogos, usamos currentModalImages si existe, o cargamos
+        if (type === 'ClientLogos' && currentModalImages.length === 0 && AppState.data.ClientLogos) {
+             currentModalImages = JSON.parse(JSON.stringify(AppState.data.ClientLogos));
+        }
+
         const batch = [];
         const sheetName = type; // 'ProjectImages', 'ClientLogos', etc.
 
@@ -634,8 +653,9 @@ const App = {
 
         // Procesar Modificados y Nuevos
         currentModalImages.forEach(img => {
-             if (img._modified || (img.id && img.id.startsWith('temp_'))) {
-                 // Si es temp, en realidad ya se creó en upload, así que es update de metadatos
+             // Solo enviamos si se modificó o es nuevo.
+             // Para ClientLogos, como es reordenamiento, enviamos todos para asegurar consistencia si se cambió orden
+             if (img._modified || (img.id && img.id.startsWith('temp_')) || type === 'ClientLogos') {
                  const dataToUpdate = { 
                     order: img.order, caption: img.caption, 
                     isCover: img.isCover, showInPortfolio: img.showInPortfolio, 
@@ -647,12 +667,12 @@ const App = {
 
         if (batch.length > 0) {
             await API.batchUpdate(batch);
-            UI.showToast("Cambios guardados");
             // Sincronizar estado global
             await this.ensureDataForView(AppState.view, true);
         }
         
         if(type !== 'ClientLogos') UI.closeModal();
+        else UI.showToast("Cambios guardados");
     },
 
 
@@ -668,13 +688,19 @@ const App = {
         else if (type === 'AboutProfile') { sheetTarget='About'; subfolder='Perfil'; parentId='profile_image'; }
         else if (type === 'SettingImage') { sheetTarget='Settings'; subfolder='Marca'; }
 
+        // Lógica específica para ClientLogos: Pedir nombre
+        let clientName = '';
+        if (type === 'ClientLogos') {
+            clientName = prompt("Nombre del Cliente (Opcional):") || '';
+        }
+
         let successCount = 0;
         
         // Si es galería (no settings), usamos carga optimista
         if(['Projects', 'RentalItems', 'Services', 'ClientLogos'].includes(type)) {
              // Inicializar memoria si está vacía (caso ClientLogos directo)
-             if (type === 'ClientLogos' && currentModalImages.length === 0 && AppState.data.ClientLogos) {
-                 currentModalImages = JSON.parse(JSON.stringify(AppState.data.ClientLogos));
+             if (type === 'ClientLogos' && currentModalImages.length === 0) {
+                 currentModalImages = JSON.parse(JSON.stringify(AppState.data.ClientLogos || []));
              }
         }
 
@@ -704,8 +730,10 @@ const App = {
                         imageUrl: upRes.imageUrl, 
                         fileId: upRes.fileId, 
                         order: 99,
-                        isCover: 'No', showInPortfolio: 'No'
+                        isCover: 'No', showInPortfolio: 'No',
+                        clientName: clientName // Solo aplica si es logo
                     };
+                    
                     if (type === 'ClientLogos') { newData.logoUrl = upRes.imageUrl; delete newData.imageUrl; }
                     if(idField) newData[idField] = parentId;
 
@@ -745,18 +773,17 @@ const App = {
         this.renderGalleryModal(id, t, 'RentalItems'); 
     },
     async handleClientLogos() { 
-        this.prepareGalleryData(AppState.data.ClientLogos || [], 'dummy', 'dummy'); // Truco: cargar todo, ClientLogos no tiene parentId
-        // Pero para ClientLogos la UI es diferente (grid en settings), no modal estándar.
-        // La subida ya se maneja arriba.
+        this.prepareGalleryData(AppState.data.ClientLogos || [], 'dummy', 'dummy'); // Truco: cargar todo
+        // No abre modal, solo prepara datos para la vista settings
     },
 
     renderGalleryModal(parentId, title, type) {
         const sheetTarget = type === 'Projects' ? 'ProjectImages' : (type === 'RentalItems' ? 'RentalItemImages' : 'ServiceImages');
         
         const html = `<div id="gallery-list-container" class="max-h-[60vh] overflow-y-auto mb-4"></div>
-                      <div class="border-t pt-4 text-center">
-                        <button class="btn btn-primary" onclick="document.getElementById('up-imgs-modal').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button>
-                        <input type="file" id="up-imgs-modal" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')">
+                      <div class="mt-4 pt-4 border-t text-center">
+                         <input type="file" id="up-imgs-modal" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')">
+                         <button class="btn btn-primary" onclick="document.getElementById('up-imgs-modal').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button>
                       </div>`;
 
         const footer = `<button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
@@ -790,6 +817,7 @@ const App = {
         `).join('');
     },
     
+    // --- Lógica CRUD (re-restaurada v22) ---
     async handleEditCrudItem(sheet, id) {
         if (sheet === 'BlockedDates' && !AppState.data.RentalItems) {
              UI.showLoading('Cargando equipos...');
@@ -852,14 +880,14 @@ const App = {
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
     },
     
-    async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
     async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view, true); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
-    
+    async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
+
     async quickUpdate(sheet, id, key, val) { 
         try {
             const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[key]: valStr} } }); 
-            if(AppState.data[sheet]) { const item = AppState.data[sheet].find(i => i.id === id); if(item) item[key] = valStr; if(sheet==='ClientLogos'&&key==='order') UI.renderView(AppState.view); }
+            if(AppState.data[sheet]) { const item = AppState.data[sheet].find(i => i.id === id); if(item) item[key] = valStr; }
             UI.showToast('Guardado');
         } catch(e) { console.error(e); UI.showToast('Error', 'error'); } 
     },
@@ -868,7 +896,7 @@ const App = {
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     
     async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
-    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
+    async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => ({ sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} })); await API.batchUpdate(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
     async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
 };
 
@@ -899,7 +927,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
 
 
 
