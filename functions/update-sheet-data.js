@@ -142,32 +142,36 @@ exports.handler = async (event, context) => {
                         const coverColIdx = getHeaderIndex(sheet, 'isCover');
                       
                         if (parentColIdx > -1 && coverColIdx > -1) {
-                            // CORRECCIÓN APPEX: Usar getCell de forma segura
-                            const currentParentId = sheet.getCell(rowIndex, parentColIdx).value;
-                            
-                            // Iteramos SOLO sobre las filas cargadas (rows) para evitar error de celda no cargada
-                            rows.forEach(r => {
-                                const rIdx = r.rowIndex - 1; // Convertir a índice base-0 (fila 2 = índice 1)
+                            try {
+                                // Obtenemos el ID del padre de la fila actual (Proyecto o Item)
+                                const currentParentId = sheet.getCell(rowIndex, parentColIdx).value;
                                 
-                                // Saltamos la fila que estamos editando actualmente
-                                if (rIdx === rowIndex) return;
+                                // Iteramos por TODAS las celdas cargadas en memoria (sheet.cellStats.loaded)
+                                // Usamos un bucle for simple para máximo control
+                                for (let rIdx = 0; rIdx < sheet.rowCount; rIdx++) {
+                                    if (rIdx === rowIndex) continue; // Saltamos la fila actual
 
-                                // Envolvemos en try-catch por seguridad absoluta
-                                try {
-                                    const pCell = sheet.getCell(rIdx, parentColIdx);
-                                    // Si pertenece al mismo proyecto/item
-                                    if (String(pCell.value) === String(currentParentId)) {
-                                        const cCell = sheet.getCell(rIdx, coverColIdx);
-                                        // Si está marcada como portada, la desmarcamos
-                                        if (String(cCell.value).toLowerCase() === 'si') {
-                                            cCell.value = 'No';
-                                            hasChanges = true;
+                                    try {
+                                        // Intento blindado de leer la celda
+                                        const pCell = sheet.getCell(rIdx, parentColIdx);
+                                        
+                                        // Si la celda existe y pertenece al mismo proyecto
+                                        if (pCell && String(pCell.value) === String(currentParentId)) {
+                                            const cCell = sheet.getCell(rIdx, coverColIdx);
+                                            // Si es otra portada, la apagamos
+                                            if (cCell && String(cCell.value).toLowerCase() === 'si') {
+                                                cCell.value = 'No';
+                                                hasChanges = true;
+                                            }
                                         }
+                                    } catch (innerError) {
+                                        // Si la celda no está cargada (fila vacía), la ignoramos silenciosamente
+                                        continue;
                                     }
-                                } catch (cellError) {
-                                    // Ignoramos celdas que no estén en memoria
                                 }
-                            });
+                            } catch (outerError) {
+                                console.warn("Error en lógica de portada única (no fatal):", outerError.message);
+                            }
                         }
                     }
 
