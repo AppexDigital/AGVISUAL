@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v27.0 - OPERACIONES POR LOTES (BATCH)
+// v28.0 - ESCRITURA EN MASA REAL (Batch Update)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -28,69 +28,96 @@ exports.handler = async (event, context) => {
 
   try {
     const body = JSON.parse(event.body);
-    // Aceptamos una sola operación o un array de operaciones ("batch")
     const operations = Array.isArray(body) ? body : [body];
-    
     const { doc, drive } = await getServices();
-    
-    // Procesamos en serie para no saturar, pero en una sola ejecución de Lambda
-    for (const op of operations) {
-        const { sheet: sheetTitle, action, data, criteria } = op;
-        const sheet = doc.sheetsByTitle[sheetTitle];
-        if (!sheet) continue; 
 
+    // Agrupar operaciones por hoja para optimizar carga
+    const opsBySheet = {};
+    operations.forEach(op => {
+        if (!opsBySheet[op.sheet]) opsBySheet[op.sheet] = [];
+        opsBySheet[op.sheet].push(op);
+    });
+
+    for (const sheetName of Object.keys(opsBySheet)) {
+        const sheet = doc.sheetsByTitle[sheetName];
+        if (!sheet) continue;
+        
         await sheet.loadHeaderRow();
+        const sheetOps = opsBySheet[sheetName];
+        
+        // Separar ADD, UPDATE y DELETE
+        const adds = sheetOps.filter(op => op.action === 'add');
+        const updates = sheetOps.filter(op => op.action === 'update');
+        const deletes = sheetOps.filter(op => op.action === 'delete');
 
-        if (action === 'add') {
-            if (!data.id && !['Settings', 'About'].includes(sheetTitle)) {
-                 data.id = `${sheetTitle.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        // 1. PROCESAR ADDS (Uno por uno es seguro, no suelen ser masivos)
+        for (const op of adds) {
+            if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
+                 op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             }
+            // Mapeo de columnas seguro
             const rowData = {};
-            Object.keys(data).forEach(k => {
-                const realHeader = findRealHeader(sheet, k);
-                if (realHeader) rowData[realHeader] = data[k];
+            Object.keys(op.data).forEach(k => {
+                const h = findRealHeader(sheet, k);
+                if (h) rowData[h] = op.data[k];
             });
             await sheet.addRow(rowData);
-        } 
-        
-        else if (action === 'update') {
-            const rows = await sheet.getRows();
-            const criteriaKey = Object.keys(criteria)[0];
-            const realKey = findRealHeader(sheet, criteriaKey);
-            if (!realKey) continue;
+        }
 
-            const row = rows.find(r => String(r.get(realKey)).trim() === String(criteria[criteriaKey]).trim());
-            
-            // Upsert para Settings/About
-            if (!row && ['Settings', 'About'].includes(sheetTitle)) {
-                await sheet.addRow({ ...criteria, ...data });
-                continue;
+        // 2. PROCESAR UPDATES (MASIVO / BATCH REAL)
+        if (updates.length > 0) {
+            const rows = await sheet.getRows(); // Carga una sola vez
+            let hasChanges = false;
+
+            for (const op of updates) {
+                const criteriaKey = Object.keys(op.criteria)[0];
+                const realKey = findRealHeader(sheet, criteriaKey);
+                if (!realKey) continue;
+
+                // Buscar fila en memoria
+                const row = rows.find(r => String(r.get(realKey)).trim() === String(op.criteria[criteriaKey]).trim());
+                
+                if (row) {
+                    // Aplicar cambios en memoria local de la fila
+                    Object.keys(op.data).forEach(key => {
+                        const header = findRealHeader(sheet, key);
+                        if (header) {
+                            const newVal = op.data[key];
+                            if (row.get(header) !== newVal) {
+                                row.set(header, newVal); // Esto solo marca la celda como "dirty"
+                                hasChanges = true;
+                            }
+                        }
+                    });
+                } else if (['Settings', 'About'].includes(sheetName)) {
+                    // Upsert para config
+                     await sheet.addRow({ ...op.criteria, ...op.data });
+                }
             }
 
-            if (row) {
-                Object.keys(data).forEach(key => { 
-                    const h = findRealHeader(sheet, key);
-                    if (h) row.set(h, data[key]);
-                });
-                await row.save(); // Guarda fila individual
+            // GUARDADO ATÓMICO: Si hubo cambios, guardar todas las filas modificadas de una sola vez
+            if (hasChanges) {
+                await sheet.saveUpdatedCells(); // ESTA ES LA MAGIA QUE EVITA EL ERROR 429
             }
         }
-        
-        else if (action === 'delete') {
-            const rows = await sheet.getRows();
-            const criteriaKey = Object.keys(criteria)[0];
-            const realKey = findRealHeader(sheet, criteriaKey);
-            if(!realKey) continue;
 
-            const row = rows.find(r => String(r.get(realKey)).trim() === String(criteria[criteriaKey]).trim());
-            
-            if (row) {
-                // Lógica de borrado de archivos (simplificada para batch)
-                // En operaciones masivas, es mejor borrar el archivo primero si se tiene el ID a mano
-                if (row.get('fileId')) {
-                    try { await drive.files.update({ fileId: row.get('fileId'), requestBody: { trashed: true } }); } catch(e){}
+        // 3. PROCESAR DELETES
+        if (deletes.length > 0) {
+            // Recargamos filas por si los updates cambiaron algo, aunque para deletes es mejor ser precisos
+            const rows = await sheet.getRows(); 
+            for (const op of deletes) {
+                const criteriaKey = Object.keys(op.criteria)[0];
+                const realKey = findRealHeader(sheet, criteriaKey);
+                if (!realKey) continue;
+                
+                const row = rows.find(r => String(r.get(realKey)).trim() === String(op.criteria[criteriaKey]).trim());
+                if (row) {
+                    // Borrar archivo de drive si existe
+                    if (row.get('fileId')) {
+                        try { await drive.files.update({ fileId: row.get('fileId'), requestBody: { trashed: true } }); } catch(e){}
+                    }
+                    await row.delete(); // Delete sigue siendo 1 por 1, pero suelen ser pocos
                 }
-                await row.delete();
             }
         }
     }
