@@ -17,54 +17,43 @@
         :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-muted: #52525b; --accent: #3a3a3a; --border-color: #e5e7eb; --status-pending: #f59e0b; --status-confirmed: #10b981; --status-paid: #3b82f6; --status-canceled: #ef4444; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-dark); }
         h1, h2, h3, .font-display { font-family: 'Cormorant Garamond', serif; }
-        
-        /* UI Components */
         .loader-circle { width: 50px; height: 50px; border: 4px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
         .btn { padding: 0.5rem 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; border-radius: 4px; }
         .btn-primary { background-color: var(--text-dark); color: white; }
         .btn-primary:hover { background-color: var(--accent); }
         .btn-secondary { border: 1px solid var(--text-dark); color: var(--text-dark); background: transparent; }
         .btn-secondary:hover { background: #f3f4f6; }
         .btn-danger { background-color: #ef4444; color: white; }
-        
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; background: white; }
         .form-input:focus { border-color: var(--text-dark); outline: none; }
         .form-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem; display: block; }
-        
         .sidebar-link { display: flex; align-items: center; padding: 0.75rem 1.5rem; color: var(--text-muted); border-left: 4px solid transparent; transition: all 0.2s; font-size: 0.9rem; }
         .sidebar-link:hover { background-color: #f3f4f6; color: var(--text-dark); }
         .sidebar-link.active { background-color: #f3f4f6; color: var(--text-dark); border-left-color: var(--text-dark); font-weight: 700; }
         .sidebar-link i { width: 1.5rem; text-align: center; margin-right: 0.75rem; }
-        
         .view { display: none; animation: fadeIn 0.3s ease-out; }
         .view.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .modal-overlay.visible { opacity: 1; pointer-events: auto; }
         .modal-content { background: white; width: 95%; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; border-radius: 8px; }
         .modal-overlay.visible .modal-content { transform: scale(1); }
-        
         .toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--text-dark); color: white; padding: 1rem 1.5rem; z-index: 100; transform: translateY(100px); transition: transform 0.3s; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 600; border-radius: 4px; }
         .toast.visible { transform: translateY(0); }
         .toast.error { background: #ef4444; }
-        
         .img-preview { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; background-color: #f9fafb; }
-        
         .tab-nav { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
         .tab-btn { padding: 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid transparent; transition: all 0.2s; cursor: pointer; }
         .tab-btn.active { color: var(--text-dark); border-bottom-color: var(--text-dark); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
         .portfolio-grid-item { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 4px; border: 1px solid #eee; background: #f3f4f6; transition: transform 0.2s; }
         .portfolio-grid-item img { width: 100%; height: 100%; object-fit: cover; }
         .portfolio-grid-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); opacity: 0; transition: opacity 0.2s; display: flex; flex-direction: column; justify-content: center; items-center; gap: 10px; }
         .portfolio-grid-item:hover .portfolio-grid-overlay { opacity: 1; }
         .portfolio-badge { position: absolute; top: 5px; right: 5px; background: #10b981; color: white; font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        
         .status-badge { padding: 2px 8px; border-radius: 10px; color: white; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; }
         .status-Pendiente { background: var(--status-pending); } .status-Confirmado { background: var(--status-confirmed); } .status-Pagado { background: var(--status-paid); } .status-Cancelado { background: var(--status-canceled); }
     </style>
@@ -74,15 +63,14 @@
     <div id="loading-screen" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="loader-circle"></div>
         <p id="loading-text" class="mt-4 font-display text-xl text-text-dark">Cargando Sistema...</p>
+        <button onclick="UI.forceReload()" class="mt-4 text-sm text-gray-400 underline hover:text-gray-600 hidden" id="reload-btn">Recargar</button>
     </div>
 
     <div id="login-screen" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-gray-100">
         <div class="bg-white p-10 shadow-2xl max-w-md w-full text-center border-t-4 border-text-dark">
             <h1 class="font-display text-4xl font-bold mb-2">AG Visual Info</h1>
             <p class="text-text-muted mb-8 uppercase tracking-widest text-xs">Panel de Control</p>
-            <button id="google-login-btn" class="w-full bg-[#4285F4] text-white font-bold py-3 px-4 flex items-center justify-center gap-3 hover:bg-[#3367D6] transition-colors shadow-md rounded">
-                <i class="fab fa-google"></i> Iniciar con Google Workspace
-            </button>
+            <button id="google-login-btn" class="w-full bg-[#4285F4] text-white font-bold py-3 px-4 flex items-center justify-center gap-3 hover:bg-[#3367D6] transition-colors shadow-md rounded"><i class="fab fa-google"></i> Iniciar con Google Workspace</button>
         </div>
     </div>
 
@@ -106,7 +94,7 @@
             <div id="view-dashboard" class="view active">
                 <h1 class="text-4xl font-display font-bold mb-6">Resumen</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p></div>
+                    <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Proyectos Activos</h3><p class="text-4xl font-display font-bold mt-2" id="dash-projects">...</p></div>
                     <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Fotos Portafolio</h3><p class="text-4xl font-display font-bold mt-2" id="dash-portfolio">...</p></div>
                     <div class="bg-white p-6 shadow-sm border border-gray-200 rounded"><h3 class="text-xs text-text-muted uppercase font-bold">Reservas</h3><p class="text-4xl font-display font-bold mt-2 text-yellow-600" id="dash-bookings">...</p></div>
                 </div>
@@ -159,7 +147,7 @@
             
             <div id="view-settings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Configuración Global</h1>
-                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad & Redes</button><button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio (Sobre Mí)</button><button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button></div>
+                <div class="tab-nav"><button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad</button><button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio</button><button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button></div>
                 <div id="tab-settings-gen" class="tab-content active space-y-8">
                      <div class="bg-white p-6 rounded border border-gray-200">
                          <h3 class="font-bold text-lg mb-4 border-b pb-2">Identidad de Marca</h3>
@@ -190,16 +178,7 @@
 
     <div id="modal-container"></div>
     <div id="toast-container"></div>
-    <div id="confirm-modal-overlay" class="modal-overlay">
-        <div id="confirm-modal-content" class="modal-content p-6 bg-white rounded-lg max-w-sm text-center">
-            <h3 class="text-xl font-bold mb-2">Confirmar</h3>
-            <p id="confirm-message" class="text-gray-600 mb-6">¿Continuar?</p>
-            <div class="flex justify-center gap-3">
-                <button id="confirm-cancel-btn" class="btn btn-secondary">No</button>
-                <button id="confirm-ok-btn" class="btn btn-danger">Sí</button>
-            </div>
-        </div>
-    </div>
+    <div id="confirm-modal-overlay" class="modal-overlay"><div id="confirm-modal-content" class="modal-content p-6 text-center"><h3 class="text-xl font-bold mb-2">Confirmar</h3><p id="confirm-message" class="text-gray-600 mb-6"></p><div class="flex justify-center gap-3"><button id="confirm-cancel-btn" class="btn btn-secondary">No</button><button id="confirm-ok-btn" class="btn btn-danger">Sí</button></div></div></div>
 
 <script>
 const GOOGLE_REDIRECT_URI = 'postmessage';
@@ -234,10 +213,7 @@ const API = {
 
 const Auth = {
     async init() { if (AppState.token) { if (Date.now() >= AppState.token.expires_at) await this.refresh(); UI.showApp(); } else UI.showLogin(); },
-    async login() { 
-        if (typeof google === 'undefined') { alert("Error: Google JS no cargó."); return; }
-        try { const c = await fetch('/.netlify/functions/get-auth-config').then(r=>r.json()); google.accounts.oauth2.initCodeClient({ client_id: c.clientId, scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive', callback: (r) => r.code && this.exchangeCode(r.code) }).requestCode(); } catch(e){alert(e.message);} 
-    },
+    async login() { try { const c = await fetch('/.netlify/functions/get-auth-config').then(r=>r.json()); google.accounts.oauth2.initCodeClient({ client_id: c.clientId, scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive', callback: (r) => r.code && this.exchangeCode(r.code) }).requestCode(); } catch(e){alert(e.message);} },
     async exchangeCode(code) { UI.showLoading('Autenticando...'); try { const t = await fetch('/.netlify/functions/auth-google', { method: 'POST', body: JSON.stringify({ code, redirectUri: GOOGLE_REDIRECT_URI }) }).then(r=>r.json()); if(t.error) throw new Error(t.error); this.setToken(t); UI.showApp(); } catch(e){alert(e.message); UI.showLogin();} },
     async refresh() { if(!AppState.token?.refresh_token) return false; try{ const t = await fetch('/.netlify/functions/auth-refresh', { method: 'POST', body: JSON.stringify({ refresh_token: AppState.token.refresh_token }) }).then(r=>r.json()); if(t.error) throw new Error; this.setToken({...AppState.token, ...t}); return true; }catch{return false;} },
     setToken(t) { if(t.expires_in) t.expires_at = Date.now()+(t.expires_in*1000); AppState.token=t; localStorage.setItem('gAuthToken', JSON.stringify(t)); },
@@ -251,23 +227,19 @@ const UI = {
         const loader = document.getElementById('loading-screen');
         if(loader) loader.style.display = 'flex';
         try {
-            await App.loadData('dashboard'); 
+            await App.loadData('dashboard');
             document.getElementById('app-screen').style.display = 'flex';
             if(loader) loader.style.display = 'none';
             if (typeof App.switchView === 'function') App.switchView('dashboard'); else UI.renderView('dashboard');
         } catch (e) {
-            console.error("Error inicio:", e);
             if(loader) loader.style.display = 'none';
-            alert("Error al iniciar: " + e.message);
+            alert("Error inicio: " + e.message);
             document.getElementById('login-screen').style.display = 'flex';
         }
     },
     forceReload: () => location.reload(),
-    showLoading: (msg) => { 
-        const txt = document.getElementById('loading-text'); const scr = document.getElementById('loading-screen'); const btn = document.getElementById('reload-btn');
-        if(txt) txt.innerText=msg; if(scr) scr.style.display='flex'; if(btn) btn.classList.add('hidden'); 
-    },
-    hideLoading: () => { const scr = document.getElementById('loading-screen'); if(scr) scr.style.display='none'; },
+    showLoading: (msg) => { const t=document.getElementById('loading-text'), s=document.getElementById('loading-screen'), b=document.getElementById('reload-btn'); if(t)t.innerText=msg; if(s)s.style.display='flex'; if(b)b.classList.add('hidden'); },
+    hideLoading: () => { const s=document.getElementById('loading-screen'); if(s)s.style.display='none'; },
     showToast: (msg, type='success') => { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.classList.add('visible'),10); setTimeout(()=>t.remove(),3000); },
     showConfirm: (msg, cb) => { const o=document.getElementById('confirm-modal-overlay'); document.getElementById('confirm-message').textContent=msg; const ok=document.getElementById('confirm-ok-btn'), ca=document.getElementById('confirm-cancel-btn'); const nok=ok.cloneNode(true), nca=ca.cloneNode(true); ok.parentNode.replaceChild(nok,ok); ca.parentNode.replaceChild(nca,ca); nok.addEventListener('click', ()=>{o.classList.remove('visible'); cb();}); nca.addEventListener('click', ()=>o.classList.remove('visible')); o.classList.add('visible'); },
     switchTab(id) { const v=document.querySelector('.view.active'); if(!v)return; v.querySelectorAll('.tab-btn,.tab-content').forEach(e=>e.classList.remove('active')); v.querySelectorAll(`.tab-btn[onclick*="${id}"]`).forEach(b=>b.classList.add('active')); document.getElementById(`tab-${id}`).classList.add('active'); },
@@ -285,7 +257,6 @@ const UI = {
         document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
         const data = AppState.data;
 
-        // Helper robusto
         const getVal = (item, key) => {
             const foundKey = Object.keys(item).find(k => k.toLowerCase().trim() === key.toLowerCase().trim());
             return foundKey ? item[foundKey] : undefined;
@@ -328,17 +299,8 @@ const UI = {
                 .sort((a,b) => (parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
 
             document.getElementById('portfolio-manager-grid').innerHTML = images.length ? images.map(i => `
-                <div class="portfolio-grid-item group">
-                    <img src="${i.imageUrl}" class="img-preview w-full h-full object-cover">
-                    <div class="portfolio-grid-overlay">
-                        <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
-                        <button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')">
-                            <i class="fas fa-times"></i> Quitar
-                        </button>
-                    </div>
-                    <span class="portfolio-badge">#${i.portfolioOrder||99}</span>
-                </div>
-            `).join('') : '<p class="col-span-full text-center text-gray-500 py-10">No hay imágenes marcadas para el portafolio.<br>Ve a "Proyectos", abre la galería y marca "Portafolio" en las fotos.</p>';
+                <div class="portfolio-grid-item group"><img src="${i.imageUrl}" class="img-preview w-full h-full object-cover"><div class="portfolio-grid-overlay"><input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)"><button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')"><i class="fas fa-times"></i> Quitar</button></div><span class="portfolio-badge">#${i.portfolioOrder||99}</span></div>
+            `).join('') : '<p class="col-span-full text-center text-gray-500 py-10">No hay imágenes marcadas para el portafolio.</p>';
         } else if (view === 'videos') {
             document.getElementById('videos-table-body').innerHTML = (data.Videos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(v => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${v.order||99}</td><td class="p-4 font-bold text-sm">${v.title}</td><td class="p-4 text-xs text-blue-500 truncate max-w-xs"><a href="${v.embedUrl}" target="_blank">${v.embedUrl}</a></td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
@@ -368,53 +330,24 @@ const UI = {
     }
 };
 
-// --- CAPA LÓGICA ---
 const App = {
-    // LAZY LOADING INTELIGENTE
     async switchView(viewId) {
-        UI.showLoading('Cargando sección...');
-        try {
-            await this.ensureDataForView(viewId);
-            UI.renderView(viewId);
-        } catch(e) {
-            console.error(e);
-            UI.showToast("Error cargando datos", "error");
-        } finally {
-            UI.hideLoading();
-        }
+        UI.showLoading('Cargando...');
+        try { await this.ensureDataForView(viewId); UI.renderView(viewId); }
+        catch(e) { console.error(e); UI.showToast("Error cargando: " + e.message, "error"); }
+        finally { UI.hideLoading(); }
     },
 
     async ensureDataForView(view, force = false) {
         let sheets = []; const d = AppState.data;
-        
-        // Lógica: Si 'force' es true, pedimos las hojas AUNQUE ya las tengamos.
-        // Si 'force' es false, solo las pedimos si no existen en AppState.
         const need = (key) => force || !d[key];
-
-        if (view === 'projects' || view === 'portfolio-manager') { 
-            if(need('Projects')) sheets.push('Projects');
-            if(need('ProjectImages')) sheets.push('ProjectImages'); 
-        }
-        else if (view === 'rentals') { 
-            if(need('RentalItems')) sheets.push('RentalItems','RentalCategories','RentalItemImages'); 
-        }
-        else if (view === 'services') { 
-            if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); 
-        }
-        else if (view === 'videos') { 
-            if(need('Videos')) sheets.push('Videos'); 
-        }
-        else if (view === 'bookings') { 
-            if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); 
-        }
-        else if (view === 'settings') { 
-            if(need('Settings')) sheets.push('Settings','About','ClientLogos'); 
-        }
-        
-        // Si hay hojas que pedir, llamamos al backend
+        if (view === 'projects' || view === 'portfolio-manager') { if(need('Projects')) sheets.push('Projects'); sheets.push('ProjectImages'); }
+        else if (view === 'rentals') { if(need('RentalItems')) sheets.push('RentalItems','RentalCategories','RentalItemImages'); }
+        else if (view === 'services') { if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); }
+        else if (view === 'videos') { if(need('Videos')) sheets.push('Videos'); }
+        else if (view === 'bookings') { if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); }
+        else if (view === 'settings') { if(need('Settings')) sheets.push('Settings','About','ClientLogos'); }
         if (sheets.length > 0) { 
-            // Eliminar duplicados
-            sheets = [...new Set(sheets)];
             const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets.join(',')}`); 
             AppState.data = { ...AppState.data, ...nd }; 
         }
@@ -440,18 +373,12 @@ const App = {
 
     async uploadImages(input, parentId, parentTitle, type) {
         const files = Array.from(input.files); if (!files.length) return;
-        let driveFolderId = null, sheetTarget='', subfolder='', idField='';
-        let extraData = {}; // Datos adicionales (ej. nombre cliente)
-
+        let clientName = ""; if (type === 'ClientLogos') clientName = prompt("Nombre del Cliente (Opcional):") || "";
+        let driveFolderId = null, sheetTarget='', subfolder='', idField='', extraData={};
         if (type === 'Projects') { const row = AppState.data.Projects.find(p => p.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='ProjectImages'; subfolder='Proyectos'; idField='projectId'; }
         else if (type === 'RentalItems') { const row = AppState.data.RentalItems.find(r => r.id === parentId); driveFolderId = row?.driveFolderId; sheetTarget='RentalItemImages'; subfolder='Alquiler'; idField='itemId'; }
         else if (type === 'Services') { sheetTarget='ServiceImages'; subfolder='Servicios'; idField='serviceId'; parentTitle = parentTitle || 'General'; }
-        else if (type === 'ClientLogos') { 
-            sheetTarget='ClientLogos'; subfolder='Logos'; parentId='general'; 
-            // Prompt para nombre del cliente
-            const cName = prompt("Nombre del Cliente (Opcional):");
-            if(cName) extraData.clientName = cName;
-        }
+        else if (type === 'ClientLogos') { sheetTarget='ClientLogos'; subfolder='Logos'; parentId='general'; extraData.clientName = clientName; }
         else if (type === 'AboutProfile') { sheetTarget='About'; subfolder='Perfil'; parentId='profile_image'; }
         else if (type === 'SettingImage') { sheetTarget='Settings'; subfolder='Marca'; }
 
@@ -470,52 +397,36 @@ const App = {
 
                 if (type === 'SettingImage') {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: {key: parentId}, data: {value: upRes.imageUrl} } });
-                    document.getElementById(`preview-${parentId}`).src = upRes.imageUrl;
                 } else if (type === 'AboutProfile') {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'About', action: 'update', criteria: {section: 'profile_image'}, data: {content: upRes.imageUrl} } });
-                    document.getElementById('about-profile-preview').src = upRes.imageUrl;
                 } else {
-                    const newData = { 
-                        id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, 
-                        imageUrl: type === 'ClientLogos' ? upRes.imageUrl : upRes.imageUrl, // En clientlogos suele ser logoUrl
-                        fileId: upRes.fileId, 
-                        order: 99,
-                        ...extraData
-                    };
-                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; 
-                    else newData.imageUrl = upRes.imageUrl;
-
+                    const newData = { id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, imageUrl: upRes.imageUrl, fileId: upRes.fileId, order: 99, ...extraData };
+                    if (type === 'ClientLogos') newData.logoUrl = upRes.imageUrl; else newData.imageUrl = upRes.imageUrl;
                     if (type !== 'ClientLogos') { newData.isCover = 'No'; newData.showInPortfolio = 'No'; }
                     if(idField) newData[idField] = parentId;
-                    
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: sheetTarget, action: 'add', data: newData } });
                 }
                 successCount++;
             } catch (e) { console.error(e); UI.showToast('Error: '+e.message, 'error'); }
         }
-        
         UI.hideLoading();
-        if(successCount) UI.showToast('Subida completa');
-        
-        // RECARGA FORZADA DE DATOS PARA VER CAMBIOS
-        await this.ensureDataForView(AppState.view, true); // TRUE fuerza la recarga
-        
-        // Re-renderizar modal o vista
-        if(type==='Projects') this.handleProjectImages(parentId, parentTitle);
-        else if(type==='RentalItems') this.handleRentalImages(parentId, parentTitle);
-        else if(type==='Services') this.handleServiceImages(parentId, parentTitle);
-        else if(type==='ClientLogos') UI.renderView('settings');
+        if(successCount) {
+            UI.showToast('Subida completa');
+            await App.ensureDataForView(AppState.view, true);
+            if(type==='Projects') this.handleProjectImages(parentId, parentTitle);
+            else if(type==='RentalItems') this.handleRentalImages(parentId, parentTitle);
+            else if(type==='Services') this.handleServiceImages(parentId, parentTitle);
+            else UI.renderView(AppState.view);
+        }
     },
 
     async handleEditCrudItem(sheet, id) {
-        // Si voy a editar Bloqueos, necesito tener cargados los Items de Alquiler para el select
         if (sheet === 'BlockedDates' && !AppState.data.RentalItems) {
              UI.showLoading('Cargando equipos...');
              const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems');
              AppState.data = { ...AppState.data, ...d };
              UI.hideLoading();
         }
-
         const isNew = !id; let html = '';
         if(sheet==='Projects'){
              const p=isNew?{}:AppState.data.Projects.find(x=>x.id===id);
@@ -529,7 +440,6 @@ const App = {
         } else if(sheet==='RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
-             // Aquí agregamos el campo ORDEN que faltaba
              html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
         } else if(sheet==='RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
@@ -538,11 +448,9 @@ const App = {
              const items = AppState.data.RentalItems || [];
              html = `${UI.selectHTML('c', 'itemId', 'Equipo', items)} ${UI.inputHTML('c', 'reason', 'Motivo')} ${UI.inputHTML('c', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('c', 'endDate', 'Hasta', '', 'date')}`;
         } else if(sheet==='ClientLogos'){
-             // Edición manual de logos si se requiere
              const l = AppState.data.ClientLogos.find(x=>x.id===id);
              html = `${UI.inputHTML('c', 'order', 'Orden', l?.order||99, 'number')} ${UI.inputHTML('c', 'clientName', 'Cliente', l?.clientName)}`;
         }
-        
         UI.showModal(isNew?'Nuevo':'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>`);
     },
 
@@ -572,7 +480,6 @@ const App = {
             if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
             UI.showLoading('Guardando...');
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
-            // Recarga forzada para ver cambios
             await App.ensureDataForView(AppState.view, true);
             UI.closeModal(); UI.renderView(AppState.view); UI.showToast('Guardado');
         } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
@@ -580,48 +487,31 @@ const App = {
     
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
     async handleDelete(sheet, id, key='id') { UI.showConfirm("¿Borrar registro?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); await App.ensureDataForView(AppState.view, true); UI.renderView(AppState.view); UI.showToast('Borrado'); }catch(e){alert(e.message);} }); },
-    
     async quickUpdate(sheet, id, key, val) { 
         try {
             const valStr = val === true ? 'Si' : (val === false ? 'No' : val);
             await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: 'update', criteria: {id}, data: {[key]: valStr} } }); 
-            if(AppState.data[sheet]) {
-                 const item = AppState.data[sheet].find(i => i.id === id);
-                 if(item) item[key] = valStr;
-            }
+            if(AppState.data[sheet]) { const item = AppState.data[sheet].find(i => i.id === id); if(item) item[key] = valStr; if(sheet==='ClientLogos'&&key==='order') UI.renderView(AppState.view); }
             UI.showToast('Guardado');
         } catch(e) { console.error(e); UI.showToast('Error', 'error'); } 
     },
-    
     async handleSaveSettings() { const data={}; document.querySelectorAll('#settings-form-container input').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'Settings',action:'update',criteria:{key:k},data:{value:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     
     async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
     async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} } })); await Promise.all(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
-    
-    async removeFromPortfolio(id) { 
-        await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); 
-        const item = AppState.data.ProjectImages.find(i => i.id === id);
-        if(item) item.showInPortfolio = 'No';
-        UI.renderView('portfolio-manager'); 
-    },
+    async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
     
     // Handlers Galería
     async handleProjectImages(id, t) { this.renderImageModal((AppState.data.ProjectImages||[]).filter(i => i.projectId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Projects'); },
     async handleServiceImages(id, t) { this.renderImageModal((AppState.data.ServiceImages||[]).filter(i => i.serviceId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'Services'); },
     async handleRentalImages(id, t) { this.renderImageModal((AppState.data.RentalItemImages||[]).filter(i => i.itemId === id).sort((a,b)=>(a.order||99)-(b.order||99)), id, t, 'RentalItems'); },
     async handleClientLogos() { 
-        // Botón directo en la vista de settings para editar nombre
-        this.renderImageModal((AppState.data.ClientLogos||[]).sort((a,b)=>(a.order||99)-(b.order||99)), 'general', 'Logos Clientes', 'ClientLogos');
+        UI.showModal('Gestión de Logos de Clientes', `<div class="text-center p-8"><p class="mb-4">Sube los logos de tus clientes.</p><button class="btn btn-primary" onclick="document.getElementById('up-cl-logos').click()">Seleccionar Archivos</button><input type="file" id="up-cl-logos" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, 'general', 'Logos Clientes', 'ClientLogos')"></div>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>'); 
     },
     renderImageModal(images, parentId, title, type) {
-        const getChecked = (val) => {
-            const v = String(val).toLowerCase().trim();
-            return (v === 'si' || v === 'yes' || v === 'true') ? 'checked' : '';
-        };
-
-        const sheet = type === 'Projects' ? 'ProjectImages' : type === 'Services' ? 'ServiceImages' : (type === 'ClientLogos' ? 'ClientLogos' : 'RentalItemImages');
-        
+        const getChecked = (val) => { const v = String(val).toLowerCase().trim(); return (v === 'si' || v === 'yes' || v === 'true') ? 'checked' : ''; };
+        const sheet = type === 'Projects' ? 'ProjectImages' : type === 'Services' ? 'ServiceImages' : 'RentalItemImages';
         const html = images.map(i => `
             <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" id="img-row-${i.id}">
                 <img src="${type === 'ClientLogos' ? i.logoUrl : i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
@@ -637,10 +527,8 @@ const App = {
                 <button class="text-red-500 p-2 hover:bg-red-50 rounded" onclick="App.handleDeleteImage('${sheet}', '${i.id}', document.getElementById('img-row-${i.id}'))"><i class="fas fa-trash"></i></button>
             </div>
         `).join('');
-        
-        // Botón de subida
         let uploadBtn = `<div class="border-t pt-4 text-center"><button class="btn btn-primary" onclick="document.getElementById('up-imgs-${parentId}').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button><input type="file" id="up-imgs-${parentId}" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')"></div>`;
-        
+        if(type==='ClientLogos') uploadBtn=''; 
         UI.showModal(title, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html || '<p class="text-center text-gray-400 py-4">Sin imágenes.</p>'}</div>${uploadBtn}`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
     }
 };
@@ -666,12 +554,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } 
         });
     }
-
     setTimeout(() => Auth.init(), 100);
 });
 </script>
 </body>
 </html>
+
 
 
 
