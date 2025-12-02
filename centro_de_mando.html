@@ -407,7 +407,7 @@ const API = {
                 
                 // Pequeña pausa de seguridad entre lotes (2 segundos)
                 if (i + BATCH_SIZE < operations.length) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 10000));
                 }
             } catch (e) {
                 console.error(`Error en lote ${batchNum}:`, e);
@@ -986,6 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
