@@ -115,7 +115,11 @@ exports.handler = async (event) => {
     }
 
     // URL robusta
-    let imgUrl = res.data.thumbnailLink ? res.data.thumbnailLink.replace('=s220', '=s3000') : res.data.webViewLink;
+    // URL robusta: Mantenemos el dominio googleusercontent pero aseguramos alta resolución
+    // Usamos una expresión regular para reemplazar CUALQUIER tamaño (=s...) por =s3000
+    let imgUrl = res.data.thumbnailLink 
+        ? res.data.thumbnailLink.replace(/=s\d+/, '=s3000') 
+        : res.data.webViewLink;
 
     return {
       statusCode: 200,
