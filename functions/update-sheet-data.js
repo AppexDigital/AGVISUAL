@@ -1,7 +1,7 @@
 // functions/update-sheet-data.js
-// v91.0 - BACKEND RÁPIDO (Sin pausas)
-// - Eliminamos el throttle del servidor para evitar Timeout 504.
-// - Mantenemos la lógica de borrado por bloques y búsqueda inteligente.
+// v100.0 - PARALELISMO + ROBUSTEZ
+// - Eliminación en Drive paralela (Promise.all) para evitar timeout con 79 fotos.
+// - Búsqueda de columnas simplificada y segura.
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -19,59 +19,52 @@ async function getServices() {
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-function getRealHeader(sheet, name) {
-    const headers = sheet.headerValues;
-    const target = name.toLowerCase().replace(/\s/g, '');
-    return headers.find(h => h.toLowerCase().replace(/\s/g, '') === target);
+// Helper simple y efectivo
+function getHeaderKey(sheet, keyName) {
+    const target = keyName.toLowerCase().replace(/[^a-z0-9]/g, ''); // solo letras y numeros
+    return sheet.headerValues.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
 }
 
-function getDataVal(dataObj, keyName) {
-    if (!dataObj) return undefined;
-    const target = keyName.toLowerCase().replace(/\s/g, '');
-    const key = Object.keys(dataObj).find(k => k.toLowerCase().replace(/\s/g, '') === target);
-    return key ? dataObj[key] : undefined;
+function getDataValue(data, keyName) {
+    if(!data) return undefined;
+    const target = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const key = Object.keys(data).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
+    return key ? data[key] : undefined;
 }
 
-function getColIndex(sheet, name) {
-    const header = getRealHeader(sheet, name);
-    if (!header) return -1;
-    return sheet.headerValues.indexOf(header);
-}
-
-async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValue, drive) {
+// Borrado en cascada optimizado
+async function deleteChildRows(doc, childSheetName, parentIdHeaderName, parentIdValue, drive) {
     try {
         const sheet = doc.sheetsByTitle[childSheetName];
         if (!sheet) return;
-        
-        const rows = await sheet.getRows(); 
-        const pHeader = getRealHeader(sheet, parentIdHeader);
-        const fHeader = getRealHeader(sheet, 'fileId');
+        const rows = await sheet.getRows();
+        const pHeader = getHeaderKey(sheet, parentIdHeaderName);
+        const fHeader = getHeaderKey(sheet, 'fileId');
 
         if (!pHeader) return;
 
+        // Filtrar filas a borrar
         const rowsToDelete = rows.filter(r => String(r.get(pHeader)).trim() === String(parentIdValue).trim());
-        
         if (rowsToDelete.length === 0) return;
 
-        // Borrar archivos de Drive (Intentar lo más rápido posible)
+        // 1. Borrar de Drive en PARALELO (Velocidad máxima)
         if (fHeader && drive) {
-            // Ejecutamos en paralelo para velocidad (Promise.all)
-            const fileDeletions = rowsToDelete.map(row => {
-                const fileId = row.get(fHeader);
-                if (fileId) {
-                    return drive.files.update({ fileId: fileId, requestBody: { trashed: true } })
-                        .catch(e => console.warn(`Error file ${fileId}:`, e.message));
-                }
-            });
-            await Promise.all(fileDeletions);
+            const drivePromises = rowsToDelete
+                .map(r => r.get(fHeader))
+                .filter(fid => fid)
+                .map(fid => drive.files.update({ fileId: fid, requestBody: { trashed: true } }).catch(e => console.log('Error Drive:', e.message)));
+            
+            await Promise.all(drivePromises); // Esperamos a que todos se borren a la vez
         }
 
-        // BORRADO POR BLOQUES (Optimizado)
+        // 2. Borrar del Sheet en BLOQUES
         const ranges = [];
+        // Ordenamos descendente por índice
         const sortedRows = [...rowsToDelete].sort((a, b) => b.rowIndex - a.rowIndex);
 
         sortedRows.forEach(row => {
             const lastRange = ranges[ranges.length - 1];
+            // rowIndex es 1-based. Si lastRange.start - 1 == row.rowIndex, son contiguos hacia arriba
             if (lastRange && (lastRange.start - 1 === row.rowIndex)) {
                 lastRange.start = row.rowIndex;
                 lastRange.count++;
@@ -83,9 +76,8 @@ async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValu
         for (const range of ranges) {
             await sheet.deleteRows(range.start - 1, range.count);
         }
-
     } catch (e) {
-        console.warn(`Error cascada ${childSheetName}:`, e.message);
+        console.error(`Fallo cascada ${childSheetName}:`, e.message);
     }
 }
 
@@ -103,6 +95,7 @@ exports.handler = async (event, context) => {
     const operations = Array.isArray(body) ? body : [body];
     const { doc, drive } = await getServices();
 
+    // Agrupar
     const opsBySheet = {};
     operations.forEach(op => {
         if (!opsBySheet[op.sheet]) opsBySheet[op.sheet] = [];
@@ -119,32 +112,35 @@ exports.handler = async (event, context) => {
         const updates = sheetOps.filter(op => op.action === 'update');
         const deletes = sheetOps.filter(op => op.action === 'delete');
 
-        // A. CREACIÓN
-        for (const op of adds) {
-            if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
-                 op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+        // A. ADDS
+        if (adds.length > 0) {
+            const rowsToAdd = [];
+            for (const op of adds) {
+                if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
+                     op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+                }
+                const rowData = {};
+                Object.keys(op.data).forEach(k => {
+                    const h = getHeaderKey(sheet, k);
+                    if (h) rowData[h] = op.data[k];
+                });
+                rowsToAdd.push(rowData);
             }
-            const rowData = {};
-            Object.keys(op.data).forEach(k => {
-                const h = getRealHeader(sheet, k);
-                if (h) rowData[h] = op.data[k];
-            });
-            await sheet.addRow(rowData); 
+            if (rowsToAdd.length > 0) await sheet.addRows(rowsToAdd);
         }
 
-        // B. ACTUALIZACIÓN (Batching en Memoria)
+        // B. UPDATES
         if (updates.length > 0) {
             try { await sheet.loadCells(); } catch(e) {}
             const rows = await sheet.getRows(); 
-            let hasBatchChanges = false;
-            const fallbackUpdates = [];
+            let hasChanges = false;
 
             for (const op of updates) {
                 const criteriaKey = Object.keys(op.criteria)[0];
                 const criteriaVal = String(op.criteria[criteriaKey]).trim();
-                const realHeaderKey = getRealHeader(sheet, criteriaKey);
+                const realHeaderKey = getHeaderKey(sheet, criteriaKey);
 
-                if (!realHeaderKey) { 
+                if (!realHeaderKey) { // Config upsert
                     if(['Settings', 'About'].includes(sheetName)) await sheet.addRow({ ...op.criteria, ...op.data });
                     continue;
                 }
@@ -152,13 +148,13 @@ exports.handler = async (event, context) => {
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
-                    // Renombrado
+                    // Renombrado (Drive)
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
-                        const newTitle = getDataVal(op.data, titleKey);
+                        const newTitle = getDataValue(op.data, titleKey);
                         if (newTitle) {
-                            const currentTitle = targetRow.get(getRealHeader(sheet, titleKey));
-                            const folderId = targetRow.get(getRealHeader(sheet, 'driveFolderId'));
+                            const currentTitle = targetRow.get(getHeaderKey(sheet, titleKey));
+                            const folderId = targetRow.get(getHeaderKey(sheet, 'driveFolderId'));
                             if (folderId && currentTitle !== newTitle) {
                                 try { await drive.files.update({ fileId: folderId, requestBody: { name: newTitle } }); } catch(e){}
                             }
@@ -166,85 +162,89 @@ exports.handler = async (event, context) => {
                     }
 
                     const rIdx = targetRow.rowIndex - 1;
-                    let rowBatchSuccess = true;
-                    try {
-                        // Portada Única
-                        if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
-                            const pKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
-                            const pCol = getColIndex(sheet, pKey);
-                            const cCol = getColIndex(sheet, 'isCover');
-                            const pId = sheet.getCell(rIdx, pCol).value;
-                            
-                            for(let i=0; i<rows.length; i++) {
-                                const otherIdx = rows[i].rowIndex - 1;
-                                if(otherIdx === rIdx) continue;
-                                try {
-                                    if(String(sheet.getCell(otherIdx, pCol).value) === String(pId) && 
-                                       String(sheet.getCell(otherIdx, cCol).value).toLowerCase() === 'si') {
-                                        sheet.getCell(otherIdx, cCol).value = 'No';
-                                        hasBatchChanges = true;
-                                    }
-                                } catch(e){}
+                    
+                    // Portada Única
+                    if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
+                         const pKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
+                         const pHeader = getHeaderKey(sheet, pKey);
+                         const cHeader = getHeaderKey(sheet, 'isCover');
+                         const pCol = sheet.headerValues.indexOf(pHeader);
+                         const cCol = sheet.headerValues.indexOf(cHeader);
+                         
+                         if (pCol > -1 && cCol > -1) {
+                             const pId = sheet.getCell(rIdx, pCol).value;
+                             for(let i=0; i<rows.length; i++) {
+                                 if((rows[i].rowIndex - 1) === rIdx) continue;
+                                 try {
+                                     if(String(sheet.getCell(rows[i].rowIndex - 1, pCol).value) === String(pId)) {
+                                         sheet.getCell(rows[i].rowIndex - 1, cCol).value = 'No';
+                                         hasChanges = true;
+                                     }
+                                 } catch(e){}
+                             }
+                         }
+                    }
+
+                    // Aplicar
+                    Object.keys(op.data).forEach(key => {
+                        const h = getHeaderKey(sheet, key);
+                        if (h) {
+                            const col = sheet.headerValues.indexOf(h);
+                            if (col > -1) {
+                                const cell = sheet.getCell(rIdx, col);
+                                if (String(cell.value) !== String(op.data[key])) {
+                                    cell.value = op.data[key];
+                                    hasChanges = true;
+                                }
                             }
                         }
-                        // Aplicar Datos
-                        Object.keys(op.data).forEach(key => {
-                            const colIdx = getColIndex(sheet, key);
-                            if (colIdx !== -1) {
-                                const cell = sheet.getCell(rIdx, colIdx);
-                                if (String(cell.value) !== String(op.data[key])) { cell.value = op.data[key]; hasBatchChanges = true; }
-                            }
-                        });
-                    } catch (err) { rowBatchSuccess = false; }
-
-                    if (!rowBatchSuccess) fallbackUpdates.push({ row: targetRow, data: op.data, sheetName });
+                    });
                 }
             }
-
-            if (hasBatchChanges) await sheet.saveUpdatedCells();
-            for (const fallback of fallbackUpdates) {
-                Object.keys(fallback.data).forEach(k=>{ const h=getRealHeader(sheet,k); if(h) fallback.row.set(h,fallback.data[k]); });
-                await fallback.row.save();
-            }
+            if (hasChanges) await sheet.saveUpdatedCells();
         }
 
-        // C. BORRADOS
+        // C. DELETES
         if (deletes.length > 0) {
             const currentRows = await sheet.getRows(); 
+            
+            // Integridad Alquiler
+            if (sheetName === 'RentalCategories') {
+                 const itemsSheet = doc.sheetsByTitle['RentalItems'];
+                 if (itemsSheet) {
+                     const allItems = await itemsSheet.getRows();
+                     const catHeader = getHeaderKey(itemsSheet, 'categoryId');
+                     const idsToCheck = deletes.map(d => String(d.criteria[Object.keys(d.criteria)[0]]).trim());
+                     if (allItems.some(i => idsToCheck.includes(String(i.get(catHeader)).trim()))) {
+                         throw new Error('⚠️ No se puede borrar: Categoría en uso.');
+                     }
+                 }
+            }
+
             for (const op of deletes) {
                 const criteriaKey = Object.keys(op.criteria)[0];
                 const criteriaVal = String(op.criteria[criteriaKey]).trim();
-                const realKeyHeader = getRealHeader(sheet, criteriaKey);
+                const realKeyHeader = getHeaderKey(sheet, criteriaKey);
                 if (!realKeyHeader) continue;
-
-                // Integridad
-                if (sheetName === 'RentalCategories') {
-                    const itemsSheet = doc.sheetsByTitle['RentalItems'];
-                    if (itemsSheet) {
-                        await itemsSheet.loadHeaderRow();
-                        const allItems = await itemsSheet.getRows();
-                        const catHeader = getRealHeader(itemsSheet, 'categoryId');
-                        if (allItems.some(item => String(item.get(catHeader)).trim() === String(criteriaVal))) {
-                            throw new Error(`⚠️ No se puede eliminar: Hay equipos asociados.`);
-                        }
-                    }
-                }
 
                 const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
                 if (row) {
-                    // Borrar archivo Drive
-                    let fileId = getDataVal(op.data, 'fileId');
+                    // 1. Borrar Archivo Drive
+                    let fileId = getDataValue(op.data, 'fileId');
                     if (!fileId) {
-                        const hFile = getRealHeader(sheet, 'fileId'); 
+                        const hFile = getHeaderKey(sheet, 'fileId');
                         if (hFile) fileId = row.get(hFile);
                     }
-                    if (fileId) try { await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); } catch(e){}
+                    if (fileId) {
+                        // No esperamos a que termine, lanzamos la promesa (fire and forget para velocidad)
+                        drive.files.update({ fileId: fileId, requestBody: { trashed: true } }).catch(e => console.warn('Drive err:', e.message));
+                    }
 
-                    // Borrar Carpeta y Cascada
+                    // 2. Borrar Carpeta Drive y Hijos
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
-                        const hFolder = getRealHeader(sheet, 'driveFolderId');
+                        const hFolder = getHeaderKey(sheet, 'driveFolderId');
                         const folderId = hFolder ? row.get(hFolder) : null;
-                        if (folderId) try { await drive.files.update({ fileId: folderId, requestBody: { trashed: true } }); } catch(e){}
+                        if (folderId) drive.files.update({ fileId: folderId, requestBody: { trashed: true } }).catch(e => {});
 
                         if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal, drive);
                         if (sheetName === 'RentalItems') {
@@ -257,16 +257,16 @@ exports.handler = async (event, context) => {
                             await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal, drive);
                         }
                     }
+                    
                     await row.delete();
                 }
             }
         }
     }
 
-    return { statusCode: 200, body: JSON.stringify({ message: 'Proceso completado.' }) };
-
+    return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
   } catch (error) {
-    console.error('Backend Critical Error:', error);
+    console.error('Error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
