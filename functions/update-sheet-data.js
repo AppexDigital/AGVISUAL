@@ -1,8 +1,8 @@
 // functions/update-sheet-data.js
-// v101.0 - NÚCLEO ESTABLE (v72) + MEJORAS DE BORRADO
-// - Regresamos a la lógica secuencial segura para ADDS (soluciona foto 1 perdida).
-// - Mantenemos borrado por bloques para proyectos grandes (evita timeout).
-// - Búsqueda flexible de columnas (fileId vs FileID).
+// v200.0 - ESTRATEGIA TANQUE (Seguridad Absoluta)
+// - Eliminado por completo el uso de celdas (adiós error "Cell not loaded").
+// - Incluye helpers getDataVal y getRealHeader corregidos.
+// - Lógica de borrado robusta.
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -20,30 +20,14 @@ async function getServices() {
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-// Helper: Encuentra el header real probando variantes comunes
+// Helper Sabueso de Columnas
 function getRealHeader(sheet, name) {
-    // 1. Búsqueda exacta o normalizada
     const headers = sheet.headerValues;
     const target = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    let found = headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
-    
-    // 2. Red de seguridad: Mapeo manual de nombres comunes si falla el automático
-    if (!found) {
-        const map = {
-            'fileid': ['File ID', 'FileId', 'ID Archivo'],
-            'drivefolderid': ['Drive Folder ID', 'Folder ID', 'ID Carpeta', 'Carpeta Drive'],
-            'projectid': ['Project ID', 'ProjectID', 'ID Proyecto'],
-            'itemid': ['Item ID', 'ItemID', 'ID Equipo'],
-            'serviceid': ['Service ID', 'ServiceID', 'ID Servicio']
-        };
-        const aliases = map[target];
-        if (aliases) {
-            found = headers.find(h => aliases.includes(h));
-        }
-    }
-    return found;
+    return headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
 }
 
+// Helper Sabueso de Datos (ESTE FALTABA)
 function getDataVal(dataObj, keyName) {
     if (!dataObj) return undefined;
     const target = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -51,12 +35,7 @@ function getDataVal(dataObj, keyName) {
     return key ? dataObj[key] : undefined;
 }
 
-function getColIndex(sheet, name) {
-    const header = getRealHeader(sheet, name);
-    if (!header) return -1;
-    return sheet.headerValues.indexOf(header);
-}
-
+// Cascada segura (Solo borra filas, deja que el bloque principal borre archivos)
 async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValue) {
     try {
         const childSheet = doc.sheetsByTitle[childSheetName];
@@ -66,39 +45,17 @@ async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValu
         const rows = await childSheet.getRows();
         const header = getRealHeader(childSheet, parentIdHeader);
         
-        if (!header) {
-            console.warn(`No se encontró la columna ${parentIdHeader} en ${childSheetName}`);
-            return;
-        }
+        if (!header) return;
 
         // Filtrar filas a borrar
         const rowsToDelete = rows.filter(r => String(r.get(header)).trim() === String(parentIdValue).trim());
         
-        if (rowsToDelete.length === 0) return;
-
-        // BORRADO OPTIMIZADO POR BLOQUES (Solo Excel)
-        const ranges = [];
-        // Ordenamos descendente (de abajo hacia arriba) para no afectar índices
-        const sortedRows = [...rowsToDelete].sort((a, b) => b.rowIndex - a.rowIndex);
-
-        sortedRows.forEach(row => {
-            const lastRange = ranges[ranges.length - 1];
-            // Si es consecutivo (recordar orden inverso: 10, 9, 8...)
-            if (lastRange && (lastRange.start - 1 === row.rowIndex)) {
-                lastRange.start = row.rowIndex;
-                lastRange.count++;
-            } else {
-                ranges.push({ start: row.rowIndex, count: 1 });
-            }
-        });
-
-        // Ejecutar borrado en Sheet
-        for (const range of ranges) {
-            await childSheet.deleteRows(range.start - 1, range.count);
+        // Borrar uno a uno (Lento pero seguro, evita errores de índice)
+        for (const row of rowsToDelete) {
+            await row.delete();
         }
-        
     } catch (e) {
-        console.warn(`Error no fatal en cascada ${childSheetName}:`, e.message);
+        console.warn(`Error cascada ${childSheetName}:`, e.message);
     }
 }
 
@@ -132,15 +89,14 @@ exports.handler = async (event, context) => {
         const updates = sheetOps.filter(op => op.action === 'update');
         const deletes = sheetOps.filter(op => op.action === 'delete');
 
-        // --- A. CREACIÓN (ADDS) - LÓGICA SECUENCIAL SEGURA (v72) ---
-        // Esto arregla el problema de la "primera foto perdida"
+        // --- A. CREACIÓN (ADDS) ---
         for (const op of adds) {
             if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
                  op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             }
             const rowData = {};
             Object.keys(op.data).forEach(k => {
-                const h = getRealHeader(sheet, k); // Usamos el sabueso
+                const h = getRealHeader(sheet, k);
                 if (h) rowData[h] = op.data[k];
             });
             await sheet.addRow(rowData); 
@@ -148,11 +104,9 @@ exports.handler = async (event, context) => {
 
         // --- B. ACTUALIZACIÓN (UPDATES) ---
         if (updates.length > 0) {
-            try { await sheet.loadCells(); } catch(e) {}
+            // NO usamos loadCells. Usamos getRows (objetos seguros).
             const rows = await sheet.getRows(); 
-            let hasBatchChanges = false;
-            const fallbackUpdates = [];
-
+            
             for (const op of updates) {
                 const criteriaKey = Object.keys(op.criteria)[0];
                 const criteriaVal = String(op.criteria[criteriaKey]).trim();
@@ -166,70 +120,53 @@ exports.handler = async (event, context) => {
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
-                    // Renombrado (con Sabueso)
+                    // Renombrado
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
-                        const newTitle = op.data[titleKey] || op.data[titleKey.toLowerCase()] || op.data['Title']; // Intento manual
+                        const newTitle = getDataVal(op.data, titleKey);
                         if (newTitle) {
-                            const hTitle = getRealHeader(sheet, titleKey);
-                            const hFolder = getRealHeader(sheet, 'driveFolderId');
-                            const currentTitle = targetRow.get(hTitle);
-                            const folderId = targetRow.get(hFolder);
+                            const currentTitle = targetRow.get(getRealHeader(sheet, titleKey));
+                            const folderId = targetRow.get(getRealHeader(sheet, 'driveFolderId'));
                             if (folderId && currentTitle !== newTitle) {
                                 try { await drive.files.update({ fileId: folderId, requestBody: { name: newTitle } }); } catch(e){}
                             }
                         }
                     }
 
-                    const rIdx = targetRow.rowIndex - 1;
-                    let rowBatchSuccess = true;
-                    try {
-                        // Portada Única
-                        if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
-                            const pKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
-                            const pCol = getColIndex(sheet, pKey);
-                            const cCol = getColIndex(sheet, 'isCover');
-                            
-                            if (pCol > -1 && cCol > -1) {
-                                const pId = sheet.getCell(rIdx, pCol).value;
-                                rows.forEach(r => {
-                                    const otherIdx = r.rowIndex - 1;
-                                    if (otherIdx !== rIdx) {
-                                        try {
-                                            const pVal = sheet.getCell(otherIdx, pCol).value;
-                                            if (String(pVal) === String(pId)) {
-                                                const cCell = sheet.getCell(otherIdx, cCol);
-                                                if (String(cCell.value).toLowerCase() === 'si') {
-                                                    cCell.value = 'No';
-                                                    hasBatchChanges = true;
-                                                }
-                                            }
-                                        } catch(e) {}
-                                    }
-                                });
+                    // Lógica Portada Única (Segura con Objetos)
+                    if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
+                        const pKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
+                        const pHeader = getRealHeader(sheet, pKey);
+                        const cHeader = getRealHeader(sheet, 'isCover');
+                        
+                        if (pHeader && cHeader) {
+                            const currentPId = targetRow.get(pHeader);
+                            // Barrido seguro fila por fila
+                            for (const r of rows) {
+                                if (r !== targetRow && String(r.get(pHeader)) === String(currentPId) && String(r.get(cHeader)).toLowerCase() === 'si') {
+                                    r.set(cHeader, 'No');
+                                    await r.save(); // Guardado individual seguro
+                                }
                             }
                         }
-                        // Aplicar
-                        Object.keys(op.data).forEach(key => {
-                            const colIdx = getColIndex(sheet, key);
-                            if (colIdx !== -1) {
-                                const cell = sheet.getCell(rIdx, colIdx);
-                                if (String(cell.value) !== String(op.data[key])) { cell.value = op.data[key]; hasBatchChanges = true; }
-                            }
-                        });
-                    } catch (cellError) { rowBatchSuccess = false; }
+                    }
 
-                    if (!rowBatchSuccess) fallbackUpdates.push({ row: targetRow, data: op.data, sheetName });
+                    // Aplicar Datos
+                    let hasChanges = false;
+                    Object.keys(op.data).forEach(key => {
+                        const h = getRealHeader(sheet, key);
+                        if (h) {
+                            targetRow.set(h, op.data[key]);
+                            hasChanges = true;
+                        }
+                    });
+
+                    if (hasChanges) await targetRow.save(); // Guardado individual seguro
                 }
-            }
-            if (hasBatchChanges) await sheet.saveUpdatedCells();
-            for (const fallback of fallbackUpdates) {
-                Object.keys(fallback.data).forEach(k=>{ const h=getRealHeader(sheet,k); if(h) fallback.row.set(h,fallback.data[k]); });
-                await fallback.row.save();
             }
         }
 
-        // --- C. BORRADOS (DELETES) - MEJORADO ---
+        // --- C. BORRADOS (DELETES) ---
         if (deletes.length > 0) {
             const currentRows = await sheet.getRows(); 
             for (const op of deletes) {
@@ -238,69 +175,55 @@ exports.handler = async (event, context) => {
                 const realKeyHeader = getRealHeader(sheet, criteriaKey);
                 if (!realKeyHeader) continue;
 
-                // Integridad Alquiler (Mantenemos esto igual)
-                if (sheetName === 'RentalCategories') { /* ... código existente ... */ }
+                // Integridad
+                if (sheetName === 'RentalCategories') {
+                    const itemsSheet = doc.sheetsByTitle['RentalItems'];
+                    if (itemsSheet) {
+                        await itemsSheet.loadHeaderRow();
+                        const allItems = await itemsSheet.getRows();
+                        const catHeader = getRealHeader(itemsSheet, 'categoryId');
+                        if (allItems.some(i => String(i.get(catHeader)).trim() === String(criteriaVal))) {
+                            throw new Error(`⚠️ No se puede eliminar: Hay equipos asociados.`);
+                        }
+                    }
+                }
 
-                    const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
-                  
-                    // ... (código anterior para encontrar row)
-                  
-                    if (row) {
-                        // 1. Borrar Archivo Drive (Imagen individual)
-                        // Intentamos obtener el ID desde los datos enviados (op.data) O desde la fila (row.get)
-                        let fileId = getDataVal(op.data, 'fileId'); 
-                        
-                        if (!fileId) {
-                            const hFile = getRealHeader(sheet, 'fileId');
-                            if (hFile) fileId = row.get(hFile); // Lectura segura usando el header real
-                        }
-    
-                        if (fileId) {
-                            // Fire and forget (No bloqueante para velocidad)
-                            drive.files.update({ fileId: fileId, requestBody: { trashed: true } }).catch(e => console.warn('Drive file err:', e.message));
-                        }
-    
-                        // 2. Borrar Carpeta y Hijos (Proyecto/Item/Servicio)
-                        if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
-                            const hFolder = getRealHeader(sheet, 'driveFolderId');
-                            const folderId = hFolder ? row.get(hFolder) : null; // Lectura segura
-                            
-                            if (folderId) {
-                                drive.files.update({ fileId: folderId, requestBody: { trashed: true } }).catch(e => console.warn('Drive folder err:', e.message));
-                            }
-    
-                            // Cascada de Hijos
-                            if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal, drive);
-                            if (sheetName === 'RentalItems') {
-                                await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal, drive);
-                                await deleteChildRows(doc, 'BlockedDates', 'itemId', criteriaVal, drive);
-                                await deleteChildRows(doc, 'Bookings', 'itemId', criteriaVal, drive);
-                            }
-                            if (sheetName === 'Services') {
-                                await deleteChildRows(doc, 'ServiceImages', 'serviceId', criteriaVal, drive);
-                                await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal, drive);
-                            }
-                        }
-                        
-                        await row.delete();
+                const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
+                if (row) {
+                    // 1. Borrar Archivo Drive (Imagen)
+                    // Buscamos ID en data o en la fila
+                    let fileId = getDataVal(op.data, 'fileId');
+                    if (!fileId) {
+                        const hFile = getRealHeader(sheet, 'fileId');
+                        if (hFile) fileId = row.get(hFile);
                     }
 
-                    // B. Si es una Imagen Suelta -> Borrar ARCHIVO
-                    // Solo si NO estamos borrando un proyecto padre (para ahorrar API calls)
-                    // Buscamos fileId en la data enviada o en la fila
-                    const fileIdVal = getDataVal(op.data, 'fileId'); 
-                    const hFile = getRealHeader(sheet, 'fileId');
-                    const rowFileId = hFile ? row.get(hFile) : null;
-                    const finalFileId = fileIdVal || rowFileId;
-
-                    // Solo borramos archivo individual si NO es una de las hojas padres
-                    if (!['Projects', 'RentalItems', 'Services'].includes(sheetName) && finalFileId) {
-                        try {
-                            await drive.files.update({ fileId: finalFileId, requestBody: { trashed: true } });
-                        } catch(e) { console.warn("Fallo al borrar archivo individual:", e.message); }
+                    if (fileId) {
+                        // AWAIT EXPLÍCITO PARA QUE NO FALLE
+                        try { await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); } catch(e) { console.warn("Drive file err:", e.message); }
                     }
 
-                    // --- 2. BORRAR FILA DEL SHEET ---
+                    // 2. Borrar Carpeta y Hijos
+                    if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
+                        const hFolder = getRealHeader(sheet, 'driveFolderId');
+                        const folderId = hFolder ? row.get(hFolder) : null;
+                        
+                        if (folderId) {
+                            try { await drive.files.update({ fileId: folderId, requestBody: { trashed: true } }); } catch(e) { console.warn("Drive folder err:", e.message); }
+                        }
+
+                        if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal);
+                        if (sheetName === 'RentalItems') {
+                            await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal);
+                            await deleteChildRows(doc, 'BlockedDates', 'itemId', criteriaVal);
+                            await deleteChildRows(doc, 'Bookings', 'itemId', criteriaVal);
+                        }
+                        if (sheetName === 'Services') {
+                            await deleteChildRows(doc, 'ServiceImages', 'serviceId', criteriaVal);
+                            await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal);
+                        }
+                    }
+                    
                     await row.delete();
                 }
             }
