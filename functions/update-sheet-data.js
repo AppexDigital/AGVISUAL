@@ -1,7 +1,8 @@
 // functions/update-sheet-data.js
-// v100.0 - PARALELISMO + ROBUSTEZ
-// - Eliminación en Drive paralela (Promise.all) para evitar timeout con 79 fotos.
-// - Búsqueda de columnas simplificada y segura.
+// v101.0 - NÚCLEO ESTABLE (v72) + MEJORAS DE BORRADO
+// - Regresamos a la lógica secuencial segura para ADDS (soluciona foto 1 perdida).
+// - Mantenemos borrado por bloques para proyectos grandes (evita timeout).
+// - Búsqueda flexible de columnas (fileId vs FileID).
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -19,65 +20,53 @@ async function getServices() {
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-// Helper simple y efectivo
-function getHeaderKey(sheet, keyName) {
-    const target = keyName.toLowerCase().replace(/[^a-z0-9]/g, ''); // solo letras y numeros
-    return sheet.headerValues.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
+// Helper Flexible (Sabueso)
+function getRealHeader(sheet, name) {
+    const headers = sheet.headerValues;
+    const target = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
 }
 
-function getDataValue(data, keyName) {
-    if(!data) return undefined;
-    const target = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const key = Object.keys(data).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
-    return key ? data[key] : undefined;
+function getColIndex(sheet, name) {
+    const header = getRealHeader(sheet, name);
+    if (!header) return -1;
+    return sheet.headerValues.indexOf(header);
 }
 
-// Borrado en cascada optimizado
-async function deleteChildRows(doc, childSheetName, parentIdHeaderName, parentIdValue, drive) {
+// Helper Cascada
+async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValue, drive) {
     try {
-        const sheet = doc.sheetsByTitle[childSheetName];
-        if (!sheet) return;
-        const rows = await sheet.getRows();
-        const pHeader = getHeaderKey(sheet, parentIdHeaderName);
-        const fHeader = getHeaderKey(sheet, 'fileId');
+        const childSheet = doc.sheetsByTitle[childSheetName];
+        if (!childSheet) return;
+        const rows = await childSheet.getRows();
+        const header = getRealHeader(childSheet, parentIdHeader);
+        const fHeader = getRealHeader(childSheet, 'fileId');
+        if (!header) return;
 
-        if (!pHeader) return;
-
-        // Filtrar filas a borrar
-        const rowsToDelete = rows.filter(r => String(r.get(pHeader)).trim() === String(parentIdValue).trim());
+        const rowsToDelete = rows.filter(r => String(r.get(header)).trim() === String(parentIdValue).trim());
         if (rowsToDelete.length === 0) return;
 
-        // 1. Borrar de Drive en PARALELO (Velocidad máxima)
+        // 1. Borrar archivos de Drive (Best effort)
         if (fHeader && drive) {
-            const drivePromises = rowsToDelete
-                .map(r => r.get(fHeader))
-                .filter(fid => fid)
-                .map(fid => drive.files.update({ fileId: fid, requestBody: { trashed: true } }).catch(e => console.log('Error Drive:', e.message)));
-            
-            await Promise.all(drivePromises); // Esperamos a que todos se borren a la vez
+            const deletions = rowsToDelete.map(r => {
+                const fid = r.get(fHeader);
+                if (fid) return drive.files.update({ fileId: fid, requestBody: { trashed: true } }).catch(e => {});
+            });
+            await Promise.all(deletions);
         }
 
-        // 2. Borrar del Sheet en BLOQUES
+        // 2. Borrar filas en bloque (Optimización v90 aplicada a v72)
         const ranges = [];
-        // Ordenamos descendente por índice
-        const sortedRows = [...rowsToDelete].sort((a, b) => b.rowIndex - a.rowIndex);
-
-        sortedRows.forEach(row => {
-            const lastRange = ranges[ranges.length - 1];
-            // rowIndex es 1-based. Si lastRange.start - 1 == row.rowIndex, son contiguos hacia arriba
-            if (lastRange && (lastRange.start - 1 === row.rowIndex)) {
-                lastRange.start = row.rowIndex;
-                lastRange.count++;
-            } else {
-                ranges.push({ start: row.rowIndex, count: 1 });
-            }
+        const sorted = [...rowsToDelete].sort((a, b) => b.rowIndex - a.rowIndex);
+        sorted.forEach(row => {
+            const last = ranges[ranges.length - 1];
+            if (last && (last.start - 1 === row.rowIndex)) { last.start = row.rowIndex; last.count++; }
+            else { ranges.push({ start: row.rowIndex, count: 1 }); }
         });
+        for (const range of ranges) await childSheet.deleteRows(range.start - 1, range.count);
 
-        for (const range of ranges) {
-            await sheet.deleteRows(range.start - 1, range.count);
-        }
     } catch (e) {
-        console.error(`Fallo cascada ${childSheetName}:`, e.message);
+        console.warn(`Error cascada ${childSheetName}:`, e.message);
     }
 }
 
@@ -95,7 +84,6 @@ exports.handler = async (event, context) => {
     const operations = Array.isArray(body) ? body : [body];
     const { doc, drive } = await getServices();
 
-    // Agrupar
     const opsBySheet = {};
     operations.forEach(op => {
         if (!opsBySheet[op.sheet]) opsBySheet[op.sheet] = [];
@@ -112,49 +100,49 @@ exports.handler = async (event, context) => {
         const updates = sheetOps.filter(op => op.action === 'update');
         const deletes = sheetOps.filter(op => op.action === 'delete');
 
-        // A. ADDS
-        if (adds.length > 0) {
-            const rowsToAdd = [];
-            for (const op of adds) {
-                if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
-                     op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
-                }
-                const rowData = {};
-                Object.keys(op.data).forEach(k => {
-                    const h = getHeaderKey(sheet, k);
-                    if (h) rowData[h] = op.data[k];
-                });
-                rowsToAdd.push(rowData);
+        // --- A. CREACIÓN (ADDS) - LÓGICA SECUENCIAL SEGURA (v72) ---
+        // Esto arregla el problema de la "primera foto perdida"
+        for (const op of adds) {
+            if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
+                 op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             }
-            if (rowsToAdd.length > 0) await sheet.addRows(rowsToAdd);
+            const rowData = {};
+            Object.keys(op.data).forEach(k => {
+                const h = getRealHeader(sheet, k); // Usamos el sabueso
+                if (h) rowData[h] = op.data[k];
+            });
+            await sheet.addRow(rowData); 
         }
 
-        // B. UPDATES
+        // --- B. ACTUALIZACIÓN (UPDATES) ---
         if (updates.length > 0) {
             try { await sheet.loadCells(); } catch(e) {}
             const rows = await sheet.getRows(); 
-            let hasChanges = false;
+            let hasBatchChanges = false;
+            const fallbackUpdates = [];
 
             for (const op of updates) {
                 const criteriaKey = Object.keys(op.criteria)[0];
                 const criteriaVal = String(op.criteria[criteriaKey]).trim();
-                const realHeaderKey = getHeaderKey(sheet, criteriaKey);
+                const realHeaderKey = getRealHeader(sheet, criteriaKey);
 
-                if (!realHeaderKey) { // Config upsert
-                    if(['Settings', 'About'].includes(sheetName)) await sheet.addRow({ ...op.criteria, ...op.data });
+                if (!realHeaderKey && ['Settings', 'About'].includes(sheetName)) {
+                    await sheet.addRow({ ...op.criteria, ...op.data });
                     continue;
                 }
 
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
-                    // Renombrado (Drive)
+                    // Renombrado (con Sabueso)
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
-                        const newTitle = getDataValue(op.data, titleKey);
+                        const newTitle = op.data[titleKey] || op.data[titleKey.toLowerCase()] || op.data['Title']; // Intento manual
                         if (newTitle) {
-                            const currentTitle = targetRow.get(getHeaderKey(sheet, titleKey));
-                            const folderId = targetRow.get(getHeaderKey(sheet, 'driveFolderId'));
+                            const hTitle = getRealHeader(sheet, titleKey);
+                            const hFolder = getRealHeader(sheet, 'driveFolderId');
+                            const currentTitle = targetRow.get(hTitle);
+                            const folderId = targetRow.get(hFolder);
                             if (folderId && currentTitle !== newTitle) {
                                 try { await drive.files.update({ fileId: folderId, requestBody: { name: newTitle } }); } catch(e){}
                             }
@@ -162,88 +150,95 @@ exports.handler = async (event, context) => {
                     }
 
                     const rIdx = targetRow.rowIndex - 1;
-                    
-                    // Portada Única
-                    if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
-                         const pKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
-                         const pHeader = getHeaderKey(sheet, pKey);
-                         const cHeader = getHeaderKey(sheet, 'isCover');
-                         const pCol = sheet.headerValues.indexOf(pHeader);
-                         const cCol = sheet.headerValues.indexOf(cHeader);
-                         
-                         if (pCol > -1 && cCol > -1) {
-                             const pId = sheet.getCell(rIdx, pCol).value;
-                             for(let i=0; i<rows.length; i++) {
-                                 if((rows[i].rowIndex - 1) === rIdx) continue;
-                                 try {
-                                     if(String(sheet.getCell(rows[i].rowIndex - 1, pCol).value) === String(pId)) {
-                                         sheet.getCell(rows[i].rowIndex - 1, cCol).value = 'No';
-                                         hasChanges = true;
-                                     }
-                                 } catch(e){}
-                             }
-                         }
-                    }
-
-                    // Aplicar
-                    Object.keys(op.data).forEach(key => {
-                        const h = getHeaderKey(sheet, key);
-                        if (h) {
-                            const col = sheet.headerValues.indexOf(h);
-                            if (col > -1) {
-                                const cell = sheet.getCell(rIdx, col);
-                                if (String(cell.value) !== String(op.data[key])) {
-                                    cell.value = op.data[key];
-                                    hasChanges = true;
-                                }
+                    let rowBatchSuccess = true;
+                    try {
+                        // Portada Única
+                        if ((sheetName === 'ProjectImages' || sheetName === 'RentalItemImages') && String(op.data.isCover).toLowerCase() === 'si') {
+                            const pKey = sheetName === 'ProjectImages' ? 'projectId' : 'itemId';
+                            const pCol = getColIndex(sheet, pKey);
+                            const cCol = getColIndex(sheet, 'isCover');
+                            
+                            if (pCol > -1 && cCol > -1) {
+                                const pId = sheet.getCell(rIdx, pCol).value;
+                                rows.forEach(r => {
+                                    const otherIdx = r.rowIndex - 1;
+                                    if (otherIdx !== rIdx) {
+                                        try {
+                                            const pVal = sheet.getCell(otherIdx, pCol).value;
+                                            if (String(pVal) === String(pId)) {
+                                                const cCell = sheet.getCell(otherIdx, cCol);
+                                                if (String(cCell.value).toLowerCase() === 'si') {
+                                                    cCell.value = 'No';
+                                                    hasBatchChanges = true;
+                                                }
+                                            }
+                                        } catch(e) {}
+                                    }
+                                });
                             }
                         }
-                    });
+                        // Aplicar
+                        Object.keys(op.data).forEach(key => {
+                            const colIdx = getColIndex(sheet, key);
+                            if (colIdx !== -1) {
+                                const cell = sheet.getCell(rIdx, colIdx);
+                                if (String(cell.value) !== String(op.data[key])) { cell.value = op.data[key]; hasBatchChanges = true; }
+                            }
+                        });
+                    } catch (cellError) { rowBatchSuccess = false; }
+
+                    if (!rowBatchSuccess) fallbackUpdates.push({ row: targetRow, data: op.data, sheetName });
                 }
             }
-            if (hasChanges) await sheet.saveUpdatedCells();
+            if (hasBatchChanges) await sheet.saveUpdatedCells();
+            for (const fallback of fallbackUpdates) {
+                Object.keys(fallback.data).forEach(k=>{ const h=getRealHeader(sheet,k); if(h) fallback.row.set(h,fallback.data[k]); });
+                await fallback.row.save();
+            }
         }
 
-        // C. DELETES
+        // --- C. BORRADOS (DELETES) - MEJORADO ---
         if (deletes.length > 0) {
             const currentRows = await sheet.getRows(); 
-            
-            // Integridad Alquiler
-            if (sheetName === 'RentalCategories') {
-                 const itemsSheet = doc.sheetsByTitle['RentalItems'];
-                 if (itemsSheet) {
-                     const allItems = await itemsSheet.getRows();
-                     const catHeader = getHeaderKey(itemsSheet, 'categoryId');
-                     const idsToCheck = deletes.map(d => String(d.criteria[Object.keys(d.criteria)[0]]).trim());
-                     if (allItems.some(i => idsToCheck.includes(String(i.get(catHeader)).trim()))) {
-                         throw new Error('⚠️ No se puede borrar: Categoría en uso.');
-                     }
-                 }
-            }
-
             for (const op of deletes) {
                 const criteriaKey = Object.keys(op.criteria)[0];
                 const criteriaVal = String(op.criteria[criteriaKey]).trim();
-                const realKeyHeader = getHeaderKey(sheet, criteriaKey);
+                const realKeyHeader = getRealHeader(sheet, criteriaKey);
                 if (!realKeyHeader) continue;
+
+                // Integridad Alquiler
+                if (sheetName === 'RentalCategories') {
+                    const itemsSheet = doc.sheetsByTitle['RentalItems'];
+                    if (itemsSheet) {
+                        await itemsSheet.loadHeaderRow();
+                        const allItems = await itemsSheet.getRows();
+                        const catHeader = getRealHeader(itemsSheet, 'categoryId');
+                        if (allItems.some(i => String(i.get(catHeader)).trim() === String(criteriaVal))) {
+                            throw new Error('⚠️ No se puede borrar: Categoría en uso.');
+                        }
+                    }
+                }
 
                 const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
                 if (row) {
                     // 1. Borrar Archivo Drive
-                    let fileId = getDataValue(op.data, 'fileId');
+                    // Buscamos el fileId en el objeto data (si viene) O en la fila
+                    let fileId = op.data && (op.data.fileId || op.data.fileid);
                     if (!fileId) {
-                        const hFile = getHeaderKey(sheet, 'fileId');
+                        const hFile = getRealHeader(sheet, 'fileId');
                         if (hFile) fileId = row.get(hFile);
                     }
+
                     if (fileId) {
-                        // No esperamos a que termine, lanzamos la promesa (fire and forget para velocidad)
-                        drive.files.update({ fileId: fileId, requestBody: { trashed: true } }).catch(e => console.warn('Drive err:', e.message));
+                        // Fire and forget para velocidad
+                        drive.files.update({ fileId: fileId, requestBody: { trashed: true } }).catch(e => console.warn('Drive file err:', e.message));
                     }
 
-                    // 2. Borrar Carpeta Drive y Hijos
+                    // 2. Borrar Carpeta y Hijos
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
-                        const hFolder = getHeaderKey(sheet, 'driveFolderId');
+                        const hFolder = getRealHeader(sheet, 'driveFolderId');
                         const folderId = hFolder ? row.get(hFolder) : null;
+                        
                         if (folderId) drive.files.update({ fileId: folderId, requestBody: { trashed: true } }).catch(e => {});
 
                         if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal, drive);
