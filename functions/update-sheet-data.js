@@ -44,6 +44,13 @@ function getRealHeader(sheet, name) {
     return found;
 }
 
+function getDataVal(dataObj, keyName) {
+    if (!dataObj) return undefined;
+    const target = keyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const key = Object.keys(dataObj).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
+    return key ? dataObj[key] : undefined;
+}
+
 function getColIndex(sheet, name) {
     const header = getRealHeader(sheet, name);
     if (!header) return -1;
@@ -234,36 +241,48 @@ exports.handler = async (event, context) => {
                 // Integridad Alquiler (Mantenemos esto igual)
                 if (sheetName === 'RentalCategories') { /* ... código existente ... */ }
 
-                const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
-                
-                if (row) {
-                    // --- 1. GESTIÓN DE DRIVE (Prioridad Alta) ---
-                    
-                    // A. Si es un Proyecto/Item/Servicio -> Borrar CARPETA
-                    if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
-                        const hFolder = getRealHeader(sheet, 'driveFolderId');
-                        const folderId = hFolder ? row.get(hFolder) : null;
+                    const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
+                  
+                    // ... (código anterior para encontrar row)
+                  
+                    if (row) {
+                        // 1. Borrar Archivo Drive (Imagen individual)
+                        // Intentamos obtener el ID desde los datos enviados (op.data) O desde la fila (row.get)
+                        let fileId = getDataVal(op.data, 'fileId'); 
                         
-                        if (folderId) {
-                            try {
-                                console.log(`Enviando carpeta ${folderId} a papelera...`);
-                                await drive.files.update({ fileId: folderId, requestBody: { trashed: true } });
-                            } catch(e) {
-                                console.warn(`Fallo al borrar carpeta ${folderId}:`, e.message);
+                        if (!fileId) {
+                            const hFile = getRealHeader(sheet, 'fileId');
+                            if (hFile) fileId = row.get(hFile); // Lectura segura usando el header real
+                        }
+    
+                        if (fileId) {
+                            // Fire and forget (No bloqueante para velocidad)
+                            drive.files.update({ fileId: fileId, requestBody: { trashed: true } }).catch(e => console.warn('Drive file err:', e.message));
+                        }
+    
+                        // 2. Borrar Carpeta y Hijos (Proyecto/Item/Servicio)
+                        if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
+                            const hFolder = getRealHeader(sheet, 'driveFolderId');
+                            const folderId = hFolder ? row.get(hFolder) : null; // Lectura segura
+                            
+                            if (folderId) {
+                                drive.files.update({ fileId: folderId, requestBody: { trashed: true } }).catch(e => console.warn('Drive folder err:', e.message));
+                            }
+    
+                            // Cascada de Hijos
+                            if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal, drive);
+                            if (sheetName === 'RentalItems') {
+                                await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal, drive);
+                                await deleteChildRows(doc, 'BlockedDates', 'itemId', criteriaVal, drive);
+                                await deleteChildRows(doc, 'Bookings', 'itemId', criteriaVal, drive);
+                            }
+                            if (sheetName === 'Services') {
+                                await deleteChildRows(doc, 'ServiceImages', 'serviceId', criteriaVal, drive);
+                                await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal, drive);
                             }
                         }
-
-                        // Ejecutar cascada (Solo limpieza de Excel)
-                        if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal);
-                        if (sheetName === 'RentalItems') {
-                            await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal);
-                            await deleteChildRows(doc, 'BlockedDates', 'itemId', criteriaVal);
-                            await deleteChildRows(doc, 'Bookings', 'itemId', criteriaVal);
-                        }
-                        if (sheetName === 'Services') {
-                            await deleteChildRows(doc, 'ServiceImages', 'serviceId', criteriaVal);
-                            await deleteChildRows(doc, 'ServiceContentBlocks', 'serviceId', criteriaVal);
-                        }
+                        
+                        await row.delete();
                     }
 
                     // B. Si es una Imagen Suelta -> Borrar ARCHIVO
