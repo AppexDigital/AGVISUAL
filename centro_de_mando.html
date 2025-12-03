@@ -974,13 +974,64 @@ const App = {
     
     async handleDelete(sheet, id, key='id') { 
         UI.showConfirm("¿Borrar registro? Esta acción eliminará también las carpetas y archivos asociados.", async ()=>{ 
-            try{ 
-                UI.showLoading('Eliminando y limpiando archivos...'); // <-- Feedback visual
-                await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{[key]:id}}}); 
+            try { 
+                UI.showLoading('Analizando elementos a eliminar...');
+                
+                // 1. Identificar si es un Padre con muchos hijos (Project, Service, RentalItem)
+                let childSheet = null;
+                let childKey = null;
+
+                if (sheet === 'Projects') { childSheet = 'ProjectImages'; childKey = 'projectId'; }
+                else if (sheet === 'Services') { childSheet = 'ServiceImages'; childKey = 'serviceId'; } // Blocks son pocos, no preocupan
+                else if (sheet === 'RentalItems') { childSheet = 'RentalItemImages'; childKey = 'itemId'; }
+
+                // 2. Si tiene hijos, borrarlos en LOTES primero
+                if (childSheet && AppState.data[childSheet]) {
+                    const children = AppState.data[childSheet].filter(c => c[childKey] === id);
+                    
+                    if (children.length > 0) {
+                        const BATCH_SIZE = 10;
+                        const totalBatches = Math.ceil(children.length / BATCH_SIZE);
+
+                        for (let i = 0; i < children.length; i += BATCH_SIZE) {
+                            const batch = children.slice(i, i + BATCH_SIZE).map(child => ({
+                                sheet: childSheet,
+                                action: 'delete',
+                                criteria: { id: child.id },
+                                data: { fileId: child.fileId } // Importante para borrar de Drive
+                            }));
+
+                            UI.showLoading(`Eliminando imágenes (Lote ${(i/BATCH_SIZE)+1}/${totalBatches})...`);
+                            await API.batchUpdate(batch);
+                            
+                            // Pausa de seguridad para no saturar API de Drive
+                            if (i + BATCH_SIZE < children.length) await new Promise(r => setTimeout(r, 1000));
+                        }
+                    }
+                }
+
+                // 3. Finalmente, borrar el Padre (y su carpeta en Drive)
+                UI.showLoading('Eliminando registro principal...');
+                // Aquí enviamos driveFolderId si existe para que el backend borre la carpeta
+                const parentItem = AppState.data[sheet]?.find(x => x[key] === id);
+                const extraData = parentItem?.driveFolderId ? { fileId: parentItem.driveFolderId } : {}; // fileId se usa genérico para borrar en backend
+
+                await API.call('/.netlify/functions/update-sheet-data',{
+                    method:'POST',
+                    body:{
+                        sheet,
+                        action:'delete',
+                        criteria:{[key]:id},
+                        data: extraData 
+                    }
+                }); 
+
                 await App.ensureDataForView(AppState.view, true); 
                 UI.renderView(AppState.view); 
-                UI.showToast('Registro eliminado correctamente'); 
+                UI.showToast('Registro y archivos eliminados correctamente'); 
+
             } catch(e){ 
+                console.error(e);
                 alert("Error al eliminar: " + e.message); 
             } finally {
                 UI.hideLoading();
@@ -1033,6 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
