@@ -33,12 +33,16 @@ function getColIndex(sheet, name) {
     return sheet.headerValues.indexOf(header);
 }
 
-// Helper Cascada
+// Helper Cascada (CORREGIDO: Carga headers explícitamente)
 async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValue, drive) {
     try {
         const childSheet = doc.sheetsByTitle[childSheetName];
         if (!childSheet) return;
+        
+        // IMPORTANTE: Cargar headers antes de buscar columnas
+        await childSheet.loadHeaderRow();
         const rows = await childSheet.getRows();
+        
         const header = getRealHeader(childSheet, parentIdHeader);
         const fHeader = getRealHeader(childSheet, 'fileId');
         if (!header) return;
@@ -46,16 +50,17 @@ async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValu
         const rowsToDelete = rows.filter(r => String(r.get(header)).trim() === String(parentIdValue).trim());
         if (rowsToDelete.length === 0) return;
 
-        // 1. Borrar archivos de Drive (Best effort)
+        // 1. Borrar archivos de Drive (En paralelo y con AWAIT)
         if (fHeader && drive) {
             const deletions = rowsToDelete.map(r => {
                 const fid = r.get(fHeader);
-                if (fid) return drive.files.update({ fileId: fid, requestBody: { trashed: true } }).catch(e => {});
+                // Usamos await implícito en el Promise.all
+                if (fid) return drive.files.update({ fileId: fid, requestBody: { trashed: true } }).catch(e => console.warn('Child file delete err:', e.message));
             });
             await Promise.all(deletions);
         }
 
-        // 2. Borrar filas en bloque (Optimización v90 aplicada a v72)
+        // 2. Borrar filas en bloque
         const ranges = [];
         const sorted = [...rowsToDelete].sort((a, b) => b.rowIndex - a.rowIndex);
         sorted.forEach(row => {
@@ -220,9 +225,9 @@ exports.handler = async (event, context) => {
                 }
 
                 const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
+                
                 if (row) {
-                    // 1. Borrar Archivo Drive
-                    // Buscamos el fileId en el objeto data (si viene) O en la fila
+                    // 1. Borrar Archivo Drive (Imagen individual)
                     let fileId = op.data && (op.data.fileId || op.data.fileid);
                     if (!fileId) {
                         const hFile = getRealHeader(sheet, 'fileId');
@@ -230,16 +235,23 @@ exports.handler = async (event, context) => {
                     }
 
                     if (fileId) {
-                        // Fire and forget para velocidad
-                        drive.files.update({ fileId: fileId, requestBody: { trashed: true } }).catch(e => console.warn('Drive file err:', e.message));
+                        // CORRECCIÓN: Usamos AWAIT para asegurar que se borre antes de terminar
+                        try {
+                            await drive.files.update({ fileId: fileId, requestBody: { trashed: true } });
+                        } catch(e) { console.warn('Drive file err:', e.message); }
                     }
 
-                    // 2. Borrar Carpeta y Hijos
+                    // 2. Borrar Carpeta y Hijos (Proyecto/Item/Servicio)
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const hFolder = getRealHeader(sheet, 'driveFolderId');
                         const folderId = hFolder ? row.get(hFolder) : null;
                         
-                        if (folderId) drive.files.update({ fileId: folderId, requestBody: { trashed: true } }).catch(e => {});
+                        // CORRECCIÓN: AWAIT para la carpeta
+                        if (folderId) {
+                            try {
+                                await drive.files.update({ fileId: folderId, requestBody: { trashed: true } });
+                            } catch(e) { console.warn('Drive folder err:', e.message); }
+                        }
 
                         if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal, drive);
                         if (sheetName === 'RentalItems') {
@@ -255,6 +267,8 @@ exports.handler = async (event, context) => {
                     
                     await row.delete();
                 }
+
+              
             }
         }
     }
