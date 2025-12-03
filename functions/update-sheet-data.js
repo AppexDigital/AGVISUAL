@@ -120,15 +120,27 @@ exports.handler = async (event, context) => {
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
-                    // Renombrado
+                    // Renombrado (Drive) - CORREGIDO
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
                         const newTitle = getDataVal(op.data, titleKey);
+                        
                         if (newTitle) {
-                            const currentTitle = targetRow.get(getRealHeader(sheet, titleKey));
-                            const folderId = targetRow.get(getRealHeader(sheet, 'driveFolderId'));
+                            const hTitle = getRealHeader(sheet, titleKey);
+                            const hFolder = getRealHeader(sheet, 'driveFolderId');
+                            
+                            const currentTitle = hTitle ? targetRow.get(hTitle) : '';
+                            const folderId = hFolder ? targetRow.get(hFolder) : null;
+
                             if (folderId && currentTitle !== newTitle) {
-                                try { await drive.files.update({ fileId: folderId, requestBody: { name: newTitle } }); } catch(e){}
+                                console.log(`[Drive] Renombrando carpeta ${folderId} a "${newTitle}"`);
+                                try { 
+                                    await drive.files.update({ 
+                                        fileId: folderId, 
+                                        requestBody: { name: newTitle },
+                                        supportsAllDrives: true  // <--- CLAVE PARA CARPETAS COMPARTIDAS
+                                    }); 
+                                } catch(e){ console.warn("[Drive Error] Renombrado falló:", e.message); }
                             }
                         }
                     }
@@ -191,27 +203,42 @@ exports.handler = async (event, context) => {
                 const row = currentRows.find(r => String(r.get(realKeyHeader)).trim() === criteriaVal);
                 if (row) {
                     // 1. Borrar Archivo Drive (Imagen)
-                    // Buscamos ID en data o en la fila
+                    // Prioridad: 1. Dato enviado desde frontend 2. Dato en la fila
                     let fileId = getDataVal(op.data, 'fileId');
+                    
                     if (!fileId) {
                         const hFile = getRealHeader(sheet, 'fileId');
                         if (hFile) fileId = row.get(hFile);
                     }
 
                     if (fileId) {
-                        // AWAIT EXPLÍCITO PARA QUE NO FALLE
-                        try { await drive.files.update({ fileId: fileId, requestBody: { trashed: true } }); } catch(e) { console.warn("Drive file err:", e.message); }
+                        console.log(`[Drive] Enviando archivo ${fileId} a papelera`);
+                        try { 
+                            await drive.files.update({ 
+                                fileId: fileId, 
+                                requestBody: { trashed: true },
+                                supportsAllDrives: true // <--- CLAVE
+                            }); 
+                        } catch(e) { console.warn("[Drive Error] Borrado archivo:", e.message); }
                     }
 
-                    // 2. Borrar Carpeta y Hijos
+                    // 2. Borrar Carpeta y Hijos (Proyecto)
                     if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const hFolder = getRealHeader(sheet, 'driveFolderId');
                         const folderId = hFolder ? row.get(hFolder) : null;
                         
                         if (folderId) {
-                            try { await drive.files.update({ fileId: folderId, requestBody: { trashed: true } }); } catch(e) { console.warn("Drive folder err:", e.message); }
+                            console.log(`[Drive] Enviando carpeta ${folderId} a papelera`);
+                            try { 
+                                await drive.files.update({ 
+                                    fileId: folderId, 
+                                    requestBody: { trashed: true },
+                                    supportsAllDrives: true // <--- CLAVE
+                                }); 
+                            } catch(e) { console.warn("[Drive Error] Borrado carpeta:", e.message); }
                         }
 
+                        // Cascada de Hijos (Solo limpieza de Excel)
                         if (sheetName === 'Projects') await deleteChildRows(doc, 'ProjectImages', 'projectId', criteriaVal);
                         if (sheetName === 'RentalItems') {
                             await deleteChildRows(doc, 'RentalItemImages', 'itemId', criteriaVal);
