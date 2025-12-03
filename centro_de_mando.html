@@ -676,8 +676,15 @@ const App = {
 
             // Procesar Borrados
             pendingDeletions.forEach(img => {
+                // Si la imagen tiene un ID real (no es temporal recién subida y borrada)
                 if (img.id && !img.id.startsWith('temp_')) {
-                     batch.push({ sheet: sheetName, action: 'delete', criteria: { id: img.id }, data: { fileId: img.fileId } });
+                     batch.push({ 
+                        sheet: sheetName, 
+                        action: 'delete', 
+                        criteria: { id: img.id }, 
+                        // IMPORTANTE: Aquí pasamos el ID del archivo de Drive para que el backend lo borre
+                        data: { fileId: img.fileId } 
+                     });
                 }
             });
 
@@ -1019,6 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
