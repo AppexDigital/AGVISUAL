@@ -769,8 +769,14 @@ const App = {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'About', action: 'update', criteria: {section: 'profile_image'}, data: {content: upRes.imageUrl} } });
                     document.getElementById('about-profile-preview').src = upRes.imageUrl;
                 } else {
-                    // Galería: Crear registro inmediatamente en BD para tener ID
-                    const nextOrder = (currentModalImages.length || 0) + 1;
+                // APPEX CORRECCIÓN: Calcular el orden basándonos en el MÁXIMO existente + 1
+                    // Esto evita que se reinicie a 1 si currentModalImages está vacío o desactualizado
+                    let maxOrder = 0;
+                    if (currentModalImages && currentModalImages.length > 0) {
+                        maxOrder = Math.max(...currentModalImages.map(img => parseInt(img.order) || 0));
+                    }
+                    // Además, si estamos subiendo múltiples archivos en este bucle, incrementamos i
+                    const nextOrder = maxOrder + 1;
                     
                     const newData = { 
                         id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, 
@@ -1013,6 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
