@@ -801,6 +801,13 @@ const App = {
                     
                     // Agregar a memoria local
                     currentModalImages.push(newData);
+
+                    // 5. [NUEVO AJUSTE] Sincronizar Memoria Global
+                    // Esto asegura que si cierras y abres el modal, la foto siga ahí
+                    if (AppState.data[sheetTarget]) {
+                        AppState.data[sheetTarget].push(newData);
+                    }
+                    
                 }
                 successCount++;
             } catch (e) { console.error(e); UI.showToast('Error: '+e.message, 'error'); }
@@ -1026,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
