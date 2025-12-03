@@ -770,11 +770,13 @@ const App = {
                     document.getElementById('about-profile-preview').src = upRes.imageUrl;
                 } else {
                     // Galería: Crear registro inmediatamente en BD para tener ID
+                    const nextOrder = (currentModalImages.length || 0) + 1;
+                    
                     const newData = { 
                         id: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, 
                         imageUrl: upRes.imageUrl, 
                         fileId: upRes.fileId, 
-                        order: 1,
+                        order: nextOrder,
                         isCover: 'No', showInPortfolio: 'No',
                         clientName: clientName // Solo aplica si es logo
                     };
@@ -1011,6 +1013,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
