@@ -1343,11 +1343,52 @@ const App = {
                  `;
              }
 
-        } else if(sheet === 'Videos'){
-             const v=isNew?{}:AppState.data.Videos.find(x=>x.id===id);
-             modalTitle = isNew ? 'Nuevo Video' : 'Editar Video';
-             html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL (YouTube/Vimeo)',v?.embedUrl)} <div class="text-right mb-4"><label class="btn btn-secondary btn-sm cursor-pointer"><i class="fas fa-file-video"></i> Subir Video <input type="file" accept="video/*" class="hidden" onchange="App.uploadVideo(this, 'embedUrl')"></label></div>`;
-        
+        } else if(sheet === 'Services'){
+             const s = isNew ? {} : AppState.data.Services.find(x => x.id === id);
+             modalTitle = isNew ? 'Nuevo Servicio' : `Editar ${s.title}`;
+             
+             // 1. Autocalcular siguiente orden
+             let nextOrder = 1;
+             if (isNew && AppState.data.Services && AppState.data.Services.length > 0) {
+                 const maxOrder = Math.max(...AppState.data.Services.map(srv => parseInt(srv.order) || 0));
+                 nextOrder = maxOrder + 1;
+             }
+
+             // 2. Lista de Iconos Curada (FontAwesome)
+             const iconList = [
+                 'fas fa-camera', 'fas fa-camera-retro', 'fas fa-video', 'fas fa-film',
+                 'fas fa-ring', 'fas fa-heart', 'fas fa-user-friends', 'fas fa-users',
+                 'fas fa-portrait', 'fas fa-id-card', 'fas fa-user-tie', 'fas fa-baby',
+                 'fas fa-building', 'fas fa-store', 'fas fa-utensils', 'fas fa-wine-glass',
+                 'fas fa-plane', 'fas fa-mountain', 'fas fa-tree', 'fa-solid fa-helicopter',
+                 'fas fa-book-open', 'fas fa-images', 'fas fa-photo-video', 'fas fa-layer-group',
+                 'fas fa-star', 'fas fa-magic', 'fas fa-lightbulb', 'fas fa-certificate'
+             ];
+             
+             const currentIcon = s?.iconClass || 'fas fa-camera';
+
+             // 3. Generar HTML del Selector
+             let iconsHtml = `<div class="mb-4"><label class="form-label">Selecciona un Icono</label>`;
+             iconsHtml += `<div class="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto p-2 border rounded bg-gray-50">`;
+             iconsHtml += `<input type="hidden" id="c-iconClass" data-key="iconClass" value="${currentIcon}">`; // Input oculto que guarda el valor
+             
+             iconList.forEach(icon => {
+                 const isSelected = icon === currentIcon ? 'bg-gray-800 text-white ring-2 ring-offset-1 ring-gray-800' : 'bg-white text-gray-600 hover:bg-gray-200';
+                 iconsHtml += `<button type="button" class="icon-option p-2 rounded text-center transition-all ${isSelected}" onclick="App.selectIcon(this, '${icon}')"><i class="${icon} text-lg"></i></button>`;
+             });
+             iconsHtml += `</div></div>`;
+
+             html = `${UI.inputHTML('c','order','Orden',s?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${iconsHtml} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
+             
+             // Helper temporal para selección visual (inyectado en App)
+             App.selectIcon = (btn, iconClass) => {
+                 document.querySelectorAll('.icon-option').forEach(b => {
+                     b.className = 'icon-option p-2 rounded text-center transition-all bg-white text-gray-600 hover:bg-gray-200';
+                 });
+                 btn.className = 'icon-option p-2 rounded text-center transition-all bg-gray-800 text-white ring-2 ring-offset-1 ring-gray-800';
+                 document.getElementById('c-iconClass').value = iconClass;
+             };
+            
         } else if(sheet === 'Services'){
              const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
              modalTitle = isNew ? 'Nuevo Servicio' : `Editar ${s.title}`;
@@ -1511,8 +1552,61 @@ const App = {
                 // Actualizamos memoria global para reflejar cambios inmediatamente
                 AppState.data.Projects = allProjects;
 
+            } else if (sheet === 'Services') {
+                // --- LÓGICA ESPECIAL SERVICIOS (Reordenamiento + Validación) ---
+                const errors = [];
+                if (!data.title || !data.title.trim()) errors.push("Título");
+                if (!data.order || isNaN(data.order)) errors.push("Orden");
+                if (!data.iconClass) errors.push("Icono");
+
+                // Validación de duplicados
+                const exists = (AppState.data.Services || []).some(s => 
+                    s.title.trim().toLowerCase() === data.title.trim().toLowerCase() && s.id !== id
+                );
+                if (exists) {
+                    UI.showToast(`Error: Ya existe un servicio llamado "${data.title}".`, 'error');
+                    return;
+                }
+                if (errors.length > 0) {
+                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
+                    return;
+                }
+
+                // Reordenamiento Inteligente
+                let allServices = [...(AppState.data.Services || [])].filter(s => s.id !== id);
+                const currentService = { ...data, id: isNew ? data[idField] : id };
+                
+                allServices.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+
+                let targetOrder = parseInt(data.order) || 1;
+                let targetIndex = targetOrder - 1;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex > allServices.length) targetIndex = allServices.length;
+
+                allServices.splice(targetIndex, 0, currentService);
+
+                const batch = [];
+                allServices.forEach((s, index) => {
+                    const newOrder = index + 1;
+                    if (parseInt(s.order) !== newOrder || s.id === currentService.id) {
+                        s.order = newOrder;
+                        const dataToSave = (s.id === currentService.id) ? s : { order: newOrder };
+                        batch.push({
+                            sheet: 'Services',
+                            action: (s.id === currentService.id && isNew) ? 'add' : 'update',
+                            criteria: (s.id === currentService.id && isNew) ? null : { id: s.id },
+                            data: dataToSave
+                        });
+                    }
+                });
+
+                // Mensaje Personalizado
+                const loadingMsg = `${isNew ? 'Creado' : 'Guardando'} servicio ${itemName}`;
+                await API.batchUpdate(batch, loadingMsg);
+                AppState.data.Services = allServices;
+
             } else {
-                // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS ---
+                // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS (Rentals, Videos, etc.) ---
                 await API.call('/.netlify/functions/update-sheet-data', { 
                     method: 'POST', 
                     body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } 
@@ -1754,6 +1848,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
