@@ -979,12 +979,13 @@ const App = {
     async handleDelete(sheet, id, key='id') { 
         UI.showConfirm("¿Borrar registro? Esta acción eliminará también las carpetas y archivos asociados.", async ()=>{ 
             try { 
-                UI.showLoading('Analizando elementos a eliminar...');
+               
 
                 // APPEX UX: Obtener nombre y fijar mensaje único desde el inicio
                 const parentItem = AppState.data[sheet]?.find(x => x[key] === id);
                 const itemName = parentItem?.title || parentItem?.name || 'elemento';
-                const baseMessage = `Eliminando ${sheet === 'Projects' ? 'proyecto' : ''} ${itemName}`;
+                const typeLabel = sheet === 'Projects' ? 'Proyecto' : (sheet === 'RentalItems' ? 'Equipo' : 'Registro');
+                const baseMessage = `Eliminando ${typeLabel} ${itemName}`;
                 UI.showLoading(`${baseMessage}...`);
                 
                 // 1. Identificar si es un Padre con muchos hijos (Project, Service, RentalItem)
@@ -1001,7 +1002,6 @@ const App = {
                     
                     if (children.length > 0) {
                         const BATCH_SIZE = 10;
-                        const totalItems = children.length;
                         let processedCount = 0;
 
                         for (let i = 0; i < children.length; i += BATCH_SIZE) {
@@ -1014,10 +1014,14 @@ const App = {
                             
                             processedCount += batch.length;
                             // Actualizamos mensaje: "Eliminando proyecto X (Borrando fotos 10/50...)"
-                            UI.showLoading(`${baseMessage} (Limpiando registros ${processedCount}/${totalItems})...`);
+                            UI.showLoading(`${baseMessage} (Borrando registros ${processedCount}/${children.length})...`);
 
                             
-                            await API.batchUpdate(batch);
+                            // Usamos API.call directo para que NO cambie nuestro mensaje
+                            await API.call('/.netlify/functions/update-sheet-data', {
+                                method: 'POST',
+                                body: batch
+                            });
                             
                             // Pausa de seguridad para no saturar API de Drive
                             if (i + BATCH_SIZE < children.length) await new Promise(r => setTimeout(r, 1000));
@@ -1099,6 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
