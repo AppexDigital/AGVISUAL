@@ -1226,16 +1226,81 @@ const App = {
             const data = {};
             document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('c-', '')] = el.value);
             const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
-            if(isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
-            
-            // APPEX UX: Feedback específico con nombre del proyecto
+            if (isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
+
             const itemName = data.title || data.name || 'registro';
             UI.showLoading(`Guardando ${sheet === 'Projects' ? 'proyecto' : ''} ${itemName}...`);
-            
-            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } });
+
+            // --- LOGICA ESPECIAL PARA PROYECTOS (Reordenamiento Inteligente) ---
+            if (sheet === 'Projects') {
+                // 1. Obtenemos la lista actual (excluyendo el que estamos editando si ya existe)
+                let allProjects = [...(AppState.data.Projects || [])].filter(p => p.id !== id);
+                
+                // 2. Preparamos el objeto del proyecto actual
+                const currentProject = { ...data, id: isNew ? data[idField] : id };
+                
+                // 3. Ordenamos la lista existente por orden para asegurar la secuencia
+                allProjects.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+
+                // 4. Calculamos dónde insertar el proyecto actual (Matemática de Array: base 0 vs base 1)
+                let targetOrder = parseInt(data.order) || 1;
+                let targetIndex = targetOrder - 1;
+                
+                // Límites de seguridad
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex > allProjects.length) targetIndex = allProjects.length;
+
+                // 5. Insertamos el proyecto en la posición deseada (empujando al resto hacia abajo)
+                allProjects.splice(targetIndex, 0, currentProject);
+
+                // 6. Renumeramos TODOS y preparamos el lote (Batch) de actualización
+                const batch = [];
+                allProjects.forEach((p, index) => {
+                    const newOrder = index + 1;
+                    
+                    // Si el orden cambió O es el proyecto que estamos guardando, lo añadimos al lote
+                    if (parseInt(p.order) !== newOrder || p.id === currentProject.id) {
+                        p.order = newOrder; // Actualizamos memoria local
+                        
+                        // Definimos los datos a guardar
+                        // Si es el proyecto actual, guardamos TODOS sus datos del formulario
+                        // Si es un vecino desplazado, solo guardamos su nuevo 'order'
+                        const dataToSave = (p.id === currentProject.id) ? p : { order: newOrder };
+                        
+                        batch.push({
+                            sheet: 'Projects',
+                            action: (p.id === currentProject.id && isNew) ? 'add' : 'update',
+                            criteria: (p.id === currentProject.id && isNew) ? null : { id: p.id },
+                            data: dataToSave
+                        });
+                    }
+                });
+
+                // 7. Enviamos todo en una sola petición inteligente
+                await API.batchUpdate(batch);
+
+                // Actualizamos memoria global para reflejar cambios inmediatamente
+                AppState.data.Projects = allProjects;
+
+            } else {
+                // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS ---
+                await API.call('/.netlify/functions/update-sheet-data', { 
+                    method: 'POST', 
+                    body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } 
+                });
+            }
+
             await App.ensureDataForView(AppState.view, true);
-            UI.closeModal(); UI.renderView(AppState.view); UI.showToast('Guardado');
-        } catch (e) { alert(e.message); } finally { UI.hideLoading(); }
+            UI.closeModal(); 
+            UI.renderView(AppState.view); 
+            UI.showToast('Guardado y reordenado correctamente');
+
+        } catch (e) { 
+            console.error(e);
+            alert("Error: " + e.message); 
+        } finally { 
+            UI.hideLoading(); 
+        }
     },
     
     async handleDelete(sheet, id, key='id') { 
@@ -1374,6 +1439,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
