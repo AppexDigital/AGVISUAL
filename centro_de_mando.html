@@ -979,44 +979,95 @@ const App = {
         `).join('');
     },
     
-    // --- Lógica CRUD (re-restaurada v22) ---
     async handleEditCrudItem(sheet, id) {
+        // Carga perezosa para dependencias (ej. Equipos para Bloqueos)
         if (sheet === 'BlockedDates' && !AppState.data.RentalItems) {
-             UI.showLoading('Cargando equipos...');
+             UI.showLoading('Cargando datos...');
              const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems');
              AppState.data = { ...AppState.data, ...d };
              UI.hideLoading();
         }
-        const isNew = !id; let html = '';
-        if(sheet==='Projects'){
-             const p=isNew?{}:AppState.data.Projects.find(x=>x.id===id);
+
+        const isNew = !id; 
+        let html = '';
+        let modalTitle = isNew ? 'Nuevo Registro' : 'Editar Registro';
+        let leftButtons = ''; // Botones extra para la izquierda (Galería, Eliminar)
+
+        // --- LÓGICA POR TIPO DE HOJA ---
+        
+        if(sheet === 'Projects'){
+             const p = isNew ? {} : AppState.data.Projects.find(x => x.id === id);
              
-             // APPEX: Calcular orden automático (Máximo actual + 1)
+             // 1. Título Dinámico
+             modalTitle = isNew ? 'Nuevo Proyecto' : `Editar Proyecto ${p.title}`;
+
+             // Lógica de auto-secuencia (que ya teníamos)
              let nextOrder = 1;
              if (isNew && AppState.data.Projects && AppState.data.Projects.length > 0) {
                  const maxOrder = Math.max(...AppState.data.Projects.map(proj => parseInt(proj.order) || 0));
                  nextOrder = maxOrder + 1;
              }
              
-             html=`${UI.inputHTML('c','order','Orden',p?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
-        } else if(sheet==='Videos'){
+             html = `${UI.inputHTML('c','order','Orden',p?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
+
+             // 2. Botones de Izquierda (Solo al editar)
+             if (!isNew) {
+                 leftButtons = `
+                    <button class="btn btn-danger mr-2" onclick="UI.closeModal(); App.handleDelete('Projects', '${id}')" title="Eliminar Proyecto">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-success" onclick="App.handleProjectImages('${id}', '${p.title.replace(/'/g,"")}')" title="Ir a Fotos">
+                        <i class="fas fa-images mr-2"></i> Galería
+                    </button>
+                 `;
+             }
+
+        } else if(sheet === 'Videos'){
              const v=isNew?{}:AppState.data.Videos.find(x=>x.id===id);
+             modalTitle = isNew ? 'Nuevo Video' : 'Editar Video';
              html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL (YouTube/Vimeo)',v?.embedUrl)} <div class="text-right mb-4"><label class="btn btn-secondary btn-sm cursor-pointer"><i class="fas fa-file-video"></i> Subir Video <input type="file" accept="video/*" class="hidden" onchange="App.uploadVideo(this, 'embedUrl')"></label></div>`;
-        } else if(sheet==='Services'){
+        
+        } else if(sheet === 'Services'){
              const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
+             modalTitle = isNew ? 'Nuevo Servicio' : `Editar ${s.title}`;
              html=`${UI.inputHTML('c','order','Orden',s?.order||99,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${UI.inputHTML('c','iconClass','Icono (FontAwesome)',s?.iconClass)} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
-        } else if(sheet==='RentalItems'){
+        
+        } else if(sheet === 'RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
+             modalTitle = isNew ? 'Nuevo Equipo' : `Editar ${i.name}`;
              html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
-        } else if(sheet==='RentalCategories'){
+             
+             if (!isNew) {
+                 leftButtons = `
+                    <button class="btn btn-danger mr-2" onclick="UI.closeModal(); App.handleDelete('RentalItems', '${id}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-success" onclick="App.handleRentalImages('${id}', '${i.name.replace(/'/g,"")}')"><i class="fas fa-images mr-2"></i> Fotos</button>
+                 `;
+             }
+
+        } else if(sheet === 'RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
-        } else if(sheet==='BlockedDates'){
+        
+        } else if(sheet === 'BlockedDates'){
              const items = AppState.data.RentalItems || [];
              html = `${UI.selectHTML('c', 'itemId', 'Equipo', items)} ${UI.inputHTML('c', 'reason', 'Motivo')} ${UI.inputHTML('c', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('c', 'endDate', 'Hasta', '', 'date')}`;
         }
-        UI.showModal(isNew?'Nuevo':'Editar', `<form id="crud-form">${html}</form>`, `<button class="btn btn-secondary mr-2" onclick="UI.closeModal()">Cancelar</button><button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>`);
+
+        // 3. Footer Estratégico (Izquierda: Acciones / Derecha: Guardar)
+        const footer = `
+            <div class="flex justify-between items-center w-full">
+                <div class="flex items-center">
+                    ${leftButtons}
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>
+                </div>
+            </div>
+        `;
+
+        UI.showModal(modalTitle, `<form id="crud-form">${html}</form>`, footer);
     },
 
     async handleServiceContent(id, title) {
@@ -1181,6 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
