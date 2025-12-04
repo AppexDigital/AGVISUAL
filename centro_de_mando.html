@@ -580,21 +580,26 @@ const UI = {
                     return v === 'si' || v === 'yes' || v === 'true' || v === '1';
                 })
                 .sort((a,b) => (parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
+            
+            // AJUSTE: Grid (Izq->Der), Esquinas Cuadradas, Click Lightbox
+            // 1. Sincronizamos la memoria global para que el Lightbox sepa qué fotos mostrar
+            currentModalImages = images; 
 
-            // AJUSTE: Diseño Masonry (Columnas) y Drag & Drop
-            // Nota: Eliminamos 'grid' y usamos 'columns-4'. Eliminamos 'aspect-square' y 'object-cover' para tamaño real.
             const container = document.getElementById('portfolio-manager-grid');
-            container.className = "columns-2 md:columns-4 gap-4 space-y-4 p-4"; // Layout Masonry
+            // Usamos 'grid' y 'items-start' para que se alineen arriba pero mantengan su altura natural
+            container.className = "grid grid-cols-2 md:grid-cols-4 gap-4 p-4 items-start"; 
 
             container.innerHTML = images.length ? images.map(i => `
-                <div class="relative group break-inside-avoid mb-4 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
+                <div class="relative group mb-4 border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
                      draggable="true"
                      ondragstart="App.dragStartPortfolio(event, '${i.id}')"
                      ondragover="App.dragOverPortfolio(event)"
                      ondrop="App.dragDropPortfolio(event, '${i.id}')">
                     
-                    <img src="${i.imageUrl}" class="w-full h-auto block">
-                    
+                    <img src="${i.imageUrl}" 
+                         class="w-full h-auto block cursor-zoom-in"
+                         onclick="UI.openLightbox('${i.id}')">
+
                     <div class="portfolio-grid-overlay absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                         <div class="text-white font-bold text-xs uppercase tracking-widest mb-1">Orden</div>
                         <input type="number" class="w-16 p-2 text-center text-lg rounded border-none text-black font-bold shadow-lg" 
@@ -671,11 +676,20 @@ const UI = {
         UI.updateLightboxContent();
     },
 
-    updateLightboxContent: () => {
-        const imgData = currentModalImages[UI.lightboxIndex];
+    updateLightboxContent() {
+        const imgData = currentModalImages[this.lightboxIndex];
         document.getElementById('admin-lb-img').src = imgData.imageUrl;
-        // Si no hay caption, mostrar el nombre del archivo o vacío
-        document.getElementById('admin-lb-caption').textContent = imgData.caption || `Imagen #${imgData.order}`;
+        
+        // AJUSTE: Buscar Nombre del Proyecto (Contexto)
+        let contextName = 'Galería';
+        if (imgData.projectId && AppState.data.Projects) {
+            const p = AppState.data.Projects.find(x => x.id === imgData.projectId);
+            if (p) contextName = p.title;
+        }
+        
+        // Formato: "Nombre Proyecto - Pie de Foto"
+        const captionText = imgData.caption ? ` - ${imgData.caption}` : '';
+        document.getElementById('admin-lb-caption').textContent = `${contextName}${captionText}`;
     }
 };
   
@@ -1617,6 +1631,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
