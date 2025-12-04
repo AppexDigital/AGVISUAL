@@ -719,9 +719,12 @@ const App = {
                  // Solo enviamos si se modificó o es nuevo.
                  // Para ClientLogos, como es reordenamiento, enviamos todos para asegurar consistencia si se cambió orden
                  if (img._modified || (img.id && img.id.startsWith('temp_')) || type === 'ClientLogos') {
-                     const dataToUpdate = { 
-                        order: img.order, caption: img.caption, 
-                        isCover: img.isCover, showInPortfolio: img.showInPortfolio, 
+                    const dataToUpdate = { 
+                        order: img.order, 
+                        caption: img.caption, 
+                        isCover: img.isCover, 
+                        showInPortfolio: img.showInPortfolio,
+                        portfolioOrder: img.portfolioOrder,
                         clientName: img.clientName 
                      };
                      batch.push({ sheet: sheetName, action: 'update', criteria: { id: img.id }, data: dataToUpdate });
@@ -1161,6 +1164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
