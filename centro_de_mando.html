@@ -525,14 +525,12 @@ const UI = {
         } 
         else if (view === 'projects') {
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
-                // Lógica de portada existente
+                // ... (lógica de portada y conteo igual que antes) ...
                 const cover = (data.ProjectImages||[]).find(i => {
                     const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
                     const isCov = String(getVal(i, 'isCover')).toLowerCase().trim();
                     return pid === p.id && (isCov === 'si' || isCov === 'yes');
                 });
-
-                // APPEX: Calcular cantidad de fotos
                 const imageCount = (data.ProjectImages || []).filter(i => {
                      const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
                      return pid === p.id;
@@ -543,7 +541,11 @@ const UI = {
                     <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td>
                     <td class="p-4 font-bold text-sm">${p.title}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
-                    <td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button></td>
+                    <td class="p-4 flex items-center gap-3">
+                        <button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button>
+                        <button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
                 </tr>`;
             }).join('');
         } else if (view === 'portfolio-manager') {
@@ -1276,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
