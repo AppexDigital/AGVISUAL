@@ -143,7 +143,11 @@
                 <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
                     <table class="w-full text-left text-sm">
                         <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                            <tr><th class="p-4">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4 text-center">Fotos</th><th class="p-4">Acciones</th></tr>
+                            <tr>
+                                <th class="p-4 text-center">Orden</th> <th class="p-4">Portada</th>
+                                <th class="p-4">Título</th>
+                                <th class="p-4 text-center">Fotos</th>
+                                <th class="p-4 text-center">Acciones</th> </tr>
                         </thead>
                         <tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody>
                     </table>
@@ -522,8 +526,7 @@ const UI = {
                     <input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.updateLocalImage('${i.id}', 'order', this.value, 'ClientLogos')">
                 </div>
              `).join('');
-        } 
-        else if (view === 'projects') {
+        } else if (view === 'projects') {
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
                 // ... (lógica de portada y conteo igual que antes) ...
                 const cover = (data.ProjectImages||[]).find(i => {
@@ -537,7 +540,7 @@ const UI = {
                 }).length;
 
                 return `<tr class="border-b hover:bg-gray-50">
-                    <td class="p-4 font-mono text-xs">${p.order||99}</td>
+                    <td class="p-4 font-mono text-xs text-center">${p.order||99}</td> 
                     <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td>
                     <td class="p-4 font-bold text-sm">${p.title}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
@@ -550,6 +553,11 @@ const UI = {
                     </td>
                 </tr>`;
             }).join('');
+            const thead = document.querySelector('#view-projects thead tr');
+            if(thead) {
+                thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4 text-center">Fotos</th><th class="p-4 text-center">Acciones</th>';
+            }
+            
         } else if (view === 'portfolio-manager') {
             // En portfolio, usamos currentModalImages SI es que se está editando, sino data directa
             // Pero Portfolio no es un modal, es una vista. Podemos usar batching aquí también?
@@ -1280,6 +1288,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
