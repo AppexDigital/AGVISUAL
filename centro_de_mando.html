@@ -8,9 +8,18 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <style>
+        /* Estilos para que el editor se vea profesional y limpio */
+        .ql-toolbar { border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem; background: #f9fafb; border-color: #e5e7eb; }
+        .ql-container { border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem; background: white; font-family: 'Montserrat', sans-serif; font-size: 0.9rem; border-color: #e5e7eb; }
+        .ql-editor { min-height: 120px; } /* Altura mínima para escribir cómodo */
+    </style>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
@@ -402,8 +411,11 @@
 const GOOGLE_REDIRECT_URI = 'postmessage';
 // Estado Global + Memoria para Edición en Batch
 const AppState = { data: {}, token: JSON.parse(localStorage.getItem('gAuthToken') || 'null'), view: 'dashboard' };
-let currentModalImages = []; // Aquí viven las fotos MIENTRAS editas el modal
-let pendingDeletions = [];   // Fotos marcadas para borrar en batch
+
+let currentModalImages = []; 
+let currentServiceBlocks = []; // Memoria para bloques de servicio
+let activeQuillEditor = null;  // Instancia del editor de texto
+let pendingDeletions = [];
 
 // --- API (Con soporte Batch) ---
 const API = {
@@ -1378,16 +1390,24 @@ const App = {
              });
              iconsHtml += `</div></div>`;
 
-             html = `${UI.inputHTML('c','order','Orden',s?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${iconsHtml} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
+             const editorHtml = `<div class="mb-4"><label class="form-label">Introducción (Bio)</label><div id="editor-intro"></div></div>`;
+             html = `${UI.inputHTML('c','order','Orden',s?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${iconsHtml} ${editorHtml}`;
              
-             // Helper temporal para selección visual (inyectado en App)
-             App.selectIcon = (btn, iconClass) => {
-                 document.querySelectorAll('.icon-option').forEach(b => {
-                     b.className = 'icon-option p-2 rounded text-center transition-all bg-white text-gray-600 hover:bg-gray-200';
-                 });
+            // Helper de selección de icono
+            App.selectIcon = (btn, iconClass) => {
+                 document.querySelectorAll('.icon-option').forEach(b => b.className = 'icon-option p-2 rounded text-center transition-all bg-white text-gray-600 hover:bg-gray-200');
                  btn.className = 'icon-option p-2 rounded text-center transition-all bg-gray-800 text-white ring-2 ring-offset-1 ring-gray-800';
                  document.getElementById('c-iconClass').value = iconClass;
              };
+
+            // Inicializar Quill después de renderizar el modal
+             setTimeout(() => {
+                 activeQuillEditor = new Quill('#editor-intro', {
+                     theme: 'snow',
+                     modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']] }
+                 });
+                 if (s?.introText) activeQuillEditor.root.innerHTML = s.introText;
+             }, 100);
             
         } else if(sheet === 'Services'){
              const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
@@ -1432,17 +1452,202 @@ const App = {
         UI.showModal(modalTitle, `<form id="crud-form">${html}</form>`, footer);
     },
 
-    async handleServiceContent(id, title) {
-        const blocks = (AppState.data.ServiceContentBlocks||[]).filter(b=>b.serviceId===id).sort((a,b)=>(a.order||99)-(b.order||99));
-        const html = blocks.map(b => `
-            <div class="p-3 border rounded mb-2 bg-white relative group">
-                <button class="absolute top-2 right-2 text-red-400 hover:text-red-600" onclick="App.handleDelete('ServiceContentBlocks', '${b.id}')">&times;</button>
-                <input type="text" class="font-bold w-full border-b mb-2 p-1" value="${b.blockTitle}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockTitle', this.value)" placeholder="Título Sección">
-                <textarea class="w-full border p-1 text-sm" rows="3" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'blockContentHtml', this.value)" placeholder="Contenido HTML...">${b.blockContentHtml}</textarea>
-                <input type="number" class="w-16 text-xs border p-1" value="${b.order||99}" onchange="App.quickUpdate('ServiceContentBlocks', '${b.id}', 'order', this.value)" placeholder="Orden">
+   // --- GESTIÓN DE CONTENIDO DE SERVICIOS (SISTEMA MAESTRO-DETALLE) ---
+
+    handleServiceContent(id, title) {
+        // 1. Cargar datos a memoria local
+        currentServiceBlocks = JSON.parse(JSON.stringify(
+            (AppState.data.ServiceContentBlocks || []).filter(b => b.serviceId === id)
+        ));
+        pendingDeletions = []; 
+
+        // Renderizar la vista de lista inicial
+        this.renderServiceBlocksModal(id, title);
+    },
+
+    // Renderiza el modal en "Modo Lista"
+    renderServiceBlocksModal(serviceId, title) {
+        const modalTitle = `Contenido: ${title}`;
+        const html = `<div id="service-blocks-container" class="max-h-[60vh] overflow-y-auto mb-4 space-y-2 p-1"></div>`;
+        
+        const footer = `
+            <div class="flex justify-between w-full">
+                <button class="btn btn-secondary" onclick="App.addServiceBlockLocal('${serviceId}')">
+                    <i class="fas fa-plus mr-2"></i> Nuevo Bloque
+                </button>
+                <div class="flex gap-2">
+                    <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="App.saveServiceBlocks('${serviceId}')">Guardar Todo</button>
+                </div>
+            </div>`;
+
+        UI.showModal(modalTitle, html, footer);
+        this.renderServiceBlocksList(serviceId, title);
+    },
+
+    // Renderiza la lista de bloques (Drag & Drop)
+    renderServiceBlocksList(serviceId, serviceTitle) {
+        const container = document.getElementById('service-blocks-container');
+        if (!container) return;
+
+        const sortedBlocks = currentServiceBlocks.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+
+        if (sortedBlocks.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-400 py-8">No hay contenido aún.</p>';
+            return;
+        }
+
+        container.innerHTML = sortedBlocks.map(b => `
+            <div class="p-4 border rounded bg-white relative group transition-all hover:shadow-md flex items-center gap-4"
+                 draggable="true"
+                 ondragstart="App.dragStartBlock(event, '${b.id}')"
+                 ondragover="App.dragOverBlock(event)"
+                 ondrop="App.dragDropBlock(event, '${b.id}')">
+                
+                <div class="text-gray-300 cursor-move hover:text-gray-600"><i class="fas fa-grip-vertical"></i></div>
+
+                <div class="flex-1">
+                    <div class="flex justify-between items-center mb-1">
+                        <h4 class="font-bold text-sm">${b.blockTitle || '(Sin Título)'}</h4>
+                        <span class="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Orden: ${b.order}</span>
+                    </div>
+                    <div class="text-xs text-gray-500 truncate max-w-xs">${b.blockContentHtml?.replace(/<[^>]*>/g, '') || '...'}</div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button class="text-blue-500 p-2 hover:bg-blue-50 rounded" onclick="App.openBlockEditor('${b.id}', '${serviceId}', '${serviceTitle}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="text-red-400 p-2 hover:bg-red-50 rounded" onclick="App.deleteServiceBlockLocal('${b.id}', '${serviceId}', '${serviceTitle}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </div>
         `).join('');
-        UI.showModal(`Contenido: ${title}`, `<div class="max-h-[60vh] overflow-y-auto mb-4">${html}</div><button class="btn btn-primary w-full" onclick="App.addServiceBlock('${id}')">+ Añadir Bloque</button>`, '<button class="btn btn-secondary" onclick="UI.closeModal()">Cerrar</button>');
+    },
+
+    // Abre el "Modo Editor" para un bloque específico (Quill)
+    openBlockEditor(blockId, serviceId, serviceTitle) {
+        const block = currentServiceBlocks.find(b => b.id === blockId);
+        if (!block) return;
+
+        const modalTitle = `Editar Bloque: ${block.blockTitle}`;
+        const html = `
+            <div class="space-y-4">
+                ${UI.inputHTML('blk', 'blockTitle', 'Título de Sección', block.blockTitle)}
+                <div class="mb-4">
+                    <label class="form-label">Contenido (Texto Rico)</label>
+                    <div id="editor-block-content" class="h-64"></div>
+                </div>
+            </div>`;
+
+        const footer = `
+            <div class="flex justify-end gap-2 w-full">
+                <button class="btn btn-secondary" onclick="App.renderServiceBlocksModal('${serviceId}', '${serviceTitle}')">Volver</button>
+                <button class="btn btn-primary" onclick="App.saveBlockEditor('${blockId}', '${serviceId}', '${serviceTitle}')">Aplicar Cambios</button>
+            </div>`;
+
+        UI.showModal(modalTitle, html, footer);
+
+        // Iniciar Quill para el bloque
+        setTimeout(() => {
+            activeQuillEditor = new Quill('#editor-block-content', {
+                theme: 'snow',
+                modules: { toolbar: [['bold', 'italic', 'underline', 'strike'], ['blockquote', 'code-block'], [{ 'header': 1 }, { 'header': 2 }], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link'], ['clean']] }
+            });
+            if (block.blockContentHtml) activeQuillEditor.root.innerHTML = block.blockContentHtml;
+        }, 100);
+    },
+
+    // Guarda los cambios del editor en memoria y vuelve a la lista
+    saveBlockEditor(blockId, serviceId, serviceTitle) {
+        const block = currentServiceBlocks.find(b => b.id === blockId);
+        if (block && activeQuillEditor) {
+            block.blockTitle = document.getElementById('blk-blockTitle').value;
+            block.blockContentHtml = activeQuillEditor.root.innerHTML;
+            block._modified = true;
+        }
+        this.renderServiceBlocksModal(serviceId, serviceTitle);
+    },
+
+    // Agrega un bloque nuevo y abre su editor inmediatamente
+    addServiceBlockLocal(serviceId) {
+        let nextOrder = 1;
+        if (currentServiceBlocks.length > 0) nextOrder = Math.max(...currentServiceBlocks.map(b => parseInt(b.order) || 0)) + 1;
+
+        const newBlock = {
+            id: `blk_${Date.now()}`,
+            serviceId: serviceId,
+            blockTitle: 'Nueva Sección',
+            blockContentHtml: '',
+            order: nextOrder,
+            _isNew: true
+        };
+        currentServiceBlocks.push(newBlock);
+        // Obtener título para volver
+        const s = AppState.data.Services.find(x => x.id === serviceId);
+        this.openBlockEditor(newBlock.id, serviceId, s?.title || '');
+    },
+
+    deleteServiceBlockLocal(id, serviceId, serviceTitle) {
+        const index = currentServiceBlocks.findIndex(b => b.id === id);
+        if (index > -1) {
+            const item = currentServiceBlocks[index];
+            if (!item._isNew) pendingDeletions.push(item);
+            currentServiceBlocks.splice(index, 1);
+            this.renderServiceBlocksList(serviceId, serviceTitle); // Repintado inmediato
+        }
+    },
+
+    // Lógica de Reordenamiento (Drag & Drop para bloques)
+    dragStartBlock(e, id) { e.dataTransfer.setData("text/plain", id); },
+    dragOverBlock(e) { e.preventDefault(); },
+    dragDropBlock(e, targetId) {
+        e.preventDefault();
+        const movedId = e.dataTransfer.getData("text/plain");
+        if (movedId === targetId) return;
+        
+        // Lógica simple de swap de orden visual
+        const movedBlock = currentServiceBlocks.find(b => b.id === movedId);
+        const targetBlock = currentServiceBlocks.find(b => b.id === targetId);
+        
+        if (movedBlock && targetBlock) {
+             const tempOrder = movedBlock.order;
+             movedBlock.order = targetBlock.order;
+             targetBlock.order = tempOrder;
+             movedBlock._modified = true;
+             targetBlock._modified = true;
+             
+             const s = AppState.data.Services.find(x => x.id === movedBlock.serviceId);
+             this.renderServiceBlocksList(movedBlock.serviceId, s?.title);
+        }
+    },
+
+    // Guardado Final a API
+    async saveServiceBlocks(serviceId) {
+        UI.showLoading('Guardando contenido...');
+        try {
+            const batch = [];
+            pendingDeletions.forEach(b => batch.push({ sheet: 'ServiceContentBlocks', action: 'delete', criteria: { id: b.id } }));
+            currentServiceBlocks.forEach(b => {
+                if (b._modified || b._isNew) {
+                    const { _isNew, _modified, ...cleanData } = b;
+                    const action = b._isNew ? 'add' : 'update';
+                    const criteria = b._isNew ? null : { id: b.id };
+                    batch.push({ sheet: 'ServiceContentBlocks', action, criteria, data: cleanData });
+                }
+            });
+
+            if (batch.length > 0) {
+                await API.batchUpdate(batch, "Actualizando contenido...");
+                await App.ensureDataForView('services', true);
+                UI.showToast('Contenido actualizado');
+                UI.closeModal();
+            } else {
+                UI.showToast('No hay cambios', 'info');
+                UI.closeModal();
+            }
+        } catch(e) { console.error(e); UI.showToast("Error: "+e.message, 'error'); } finally { UI.hideLoading(); }
     },
     
     async addServiceBlock(sid) {
@@ -1603,6 +1808,70 @@ const App = {
                 // Mensaje Personalizado
                 const loadingMsg = `${isNew ? 'Creado' : 'Guardando'} servicio ${itemName}`;
                 await API.batchUpdate(batch, loadingMsg);
+                AppState.data.Services = allServices;
+                
+            } else if (sheet === 'Services') {
+                // --- LÓGICA ESPECIAL SERVICIOS (Reordenamiento + Validación + Quill) ---
+                
+                // Extraer HTML de Quill
+                if (activeQuillEditor) {
+                    data.introText = activeQuillEditor.root.innerHTML;
+                }
+
+                const errors = [];
+                if (!data.title || !data.title.trim()) errors.push("Título");
+                if (!data.order || isNaN(data.order)) errors.push("Orden");
+                if (!data.iconClass) errors.push("Icono");
+
+                // Validación de duplicados
+                const exists = (AppState.data.Services || []).some(s => 
+                    s.title.trim().toLowerCase() === data.title.trim().toLowerCase() && s.id !== id
+                );
+                if (exists) {
+                    UI.showToast(`Error: Ya existe un servicio llamado "${data.title}".`, 'error');
+                    return;
+                }
+                if (errors.length > 0) {
+                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
+                    return;
+                }
+
+                // Reordenamiento Inteligente
+                let allServices = [...(AppState.data.Services || [])].filter(s => s.id !== id);
+                const currentService = { ...data, id: isNew ? data[idField] : id };
+                
+                allServices.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+
+                let targetOrder = parseInt(data.order) || 1;
+                let targetIndex = targetOrder - 1;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex > allServices.length) targetIndex = allServices.length;
+
+                allServices.splice(targetIndex, 0, currentService);
+
+                const batch = [];
+                allServices.forEach((s, index) => {
+                    const newOrder = index + 1;
+                    // Si el orden cambia O es el servicio actual (para guardar sus datos)
+                    if (parseInt(s.order) !== newOrder || s.id === currentService.id) {
+                        s.order = newOrder;
+                        // Si es el actual, guardamos TODO. Si es vecino, solo el orden.
+                        const dataToSave = (s.id === currentService.id) ? s : { order: newOrder };
+                        
+                        batch.push({
+                            sheet: 'Services',
+                            action: (s.id === currentService.id && isNew) ? 'add' : 'update',
+                            criteria: (s.id === currentService.id && isNew) ? null : { id: s.id },
+                            data: dataToSave
+                        });
+                    }
+                });
+
+                // Mensaje Personalizado Solicitado
+                const loadingMsg = `${isNew ? 'Creado' : 'Editado'} servicio ${data.title}`;
+                await API.batchUpdate(batch, loadingMsg);
+                
+                // Actualizar memoria
                 AppState.data.Services = allServices;
 
             } else {
@@ -1848,6 +2117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
