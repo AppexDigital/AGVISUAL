@@ -386,20 +386,27 @@ const API = {
     },
     
     // Función inteligente para guardar en lotes (Chuncking) y evitar Timeout
-    async batchUpdate(operations) {
+    // Se añade el parámetro customLoadingMessage = null
+    async batchUpdate(operations, customLoadingMessage = null) {
         if(operations.length === 0) return;
 
-        // Tamaño del lote (30 es seguro para evitar los 10s de timeout)
         const BATCH_SIZE = 10; 
-        const totalBatches = Math.ceil(operations.length / BATCH_SIZE);
         
-        UI.showLoading(`Procesando ${operations.length} cambios...`);
+        // Si no hay mensaje personalizado, usa el genérico. Si hay, usa ese.
+        if (!customLoadingMessage) {
+            UI.showLoading(`Procesando ${operations.length} cambios...`);
+        } else {
+            UI.showLoading(customLoadingMessage);
+        }
 
         for (let i = 0; i < operations.length; i += BATCH_SIZE) {
             const batch = operations.slice(i, i + BATCH_SIZE);
-            // APPEX UX: Mostrar progreso real de ítems (ej: "Procesando 10/104 cambios")
-            const currentCount = Math.min(i + BATCH_SIZE, operations.length);
-            UI.showLoading(`Procesando ${currentCount}/${operations.length} cambios...`);
+            
+            // SOLO actualiza el contador si NO hay mensaje personalizado fijo
+            if (!customLoadingMessage) {
+                const currentCount = Math.min(i + BATCH_SIZE, operations.length);
+                UI.showLoading(`Procesando ${currentCount}/${operations.length} cambios...`);
+            }
 
             try {
                 await API.call('/.netlify/functions/update-sheet-data', {
@@ -1299,7 +1306,11 @@ const App = {
                 });
 
                 // 7. Enviamos todo en una sola petición inteligente
-                await API.batchUpdate(batch);
+                // Definimos el mensaje fijo "Creando proyecto [Nombre]" o "Guardando..."
+                const loadingMsg = `${isNew ? 'Creando' : 'Guardando'} proyecto ${itemName}`;
+                
+                // Pasamos el mensaje como segundo argumento
+                await API.batchUpdate(batch, loadingMsg);
 
                 // Actualizamos memoria global para reflejar cambios inmediatamente
                 AppState.data.Projects = allProjects;
@@ -1461,3 +1472,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
