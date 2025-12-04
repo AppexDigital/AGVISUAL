@@ -581,19 +581,36 @@ const UI = {
                 })
                 .sort((a,b) => (parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
 
-            document.getElementById('portfolio-manager-grid').innerHTML = images.length ? images.map(i => `
-                <div class="portfolio-grid-item group">
-                    <img src="${i.imageUrl}" class="img-preview w-full h-full object-cover">
-                    <div class="portfolio-grid-overlay">
-                        <input type="number" class="w-16 p-1 text-center text-sm rounded border mb-2 text-black font-bold" value="${i.portfolioOrder||99}" onchange="App.updateLocalPortfolioOrder('${i.id}', this.value)">
-                        <button class="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600" onclick="App.removeFromPortfolio('${i.id}')">
-                            <i class="fas fa-times"></i> Quitar
+            // AJUSTE: Diseño Masonry (Columnas) y Drag & Drop
+            // Nota: Eliminamos 'grid' y usamos 'columns-4'. Eliminamos 'aspect-square' y 'object-cover' para tamaño real.
+            const container = document.getElementById('portfolio-manager-grid');
+            container.className = "columns-2 md:columns-4 gap-4 space-y-4 p-4"; // Layout Masonry
+
+            container.innerHTML = images.length ? images.map(i => `
+                <div class="relative group break-inside-avoid mb-4 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
+                     draggable="true"
+                     ondragstart="App.dragStartPortfolio(event, '${i.id}')"
+                     ondragover="App.dragOverPortfolio(event)"
+                     ondrop="App.dragDropPortfolio(event, '${i.id}')">
+                    
+                    <img src="${i.imageUrl}" class="w-full h-auto block">
+                    
+                    <div class="portfolio-grid-overlay absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                        <div class="text-white font-bold text-xs uppercase tracking-widest mb-1">Orden</div>
+                        <input type="number" class="w-16 p-2 text-center text-lg rounded border-none text-black font-bold shadow-lg" 
+                               value="${i.portfolioOrder||99}" 
+                               onchange="App.reorderGlobalPortfolio('${i.id}', this.value)">
+                        
+                        <button class="mt-2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold hover:bg-red-600 transition" onclick="App.removeFromPortfolio('${i.id}')">
+                            <i class="fas fa-times mr-1"></i> Quitar
                         </button>
                     </div>
-                    <span class="portfolio-badge">#${i.portfolioOrder||99}</span>
+                    <span class="portfolio-badge absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-mono">#${i.portfolioOrder||99}</span>
                 </div>
-            `).join('') : '<p class="col-span-full text-center text-gray-500 py-10">No hay imágenes marcadas para el portafolio.<br>Ve a "Proyectos", abre la galería y marca "Portafolio" en las fotos.</p>';
-        } else if (view === 'videos') {
+            `).join('') : '<p class="col-span-full text-center text-gray-500 py-10 w-full">No hay imágenes marcadas para el portafolio.</p>';
+        } 
+        
+        else if (view === 'videos') {
             document.getElementById('videos-table-body').innerHTML = (data.Videos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(v => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${v.order||99}</td><td class="p-4 font-bold text-sm">${v.title}</td><td class="p-4 text-xs text-blue-500 truncate max-w-xs"><a href="${v.embedUrl}" target="_blank">${v.embedUrl}</a></td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
@@ -1481,8 +1498,67 @@ const App = {
     
     async handleSaveSettings() { const data={}; document.querySelectorAll('#settings-form-container input').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'Settings',action:'update',criteria:{key:k},data:{value:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
+
+
     
-    async updateLocalPortfolioOrder(id, val) { const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.portfolioOrder = val; },
+    // --- INICIO CÓDIGO NUEVO (Punto 2) ---
+    
+    // 1. Función Cerebro: Mueve un ítem y renumerar todo el resto
+    reorderGlobalPortfolio(movedId, newTargetOrder) {
+        // a. Obtener todas las imágenes que están en portfolio
+        let portfolioList = (AppState.data.ProjectImages || [])
+            .filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si')
+            .sort((a, b) => (parseInt(a.portfolioOrder) || 99) - (parseInt(b.portfolioOrder) || 99));
+
+        // b. Encontrar el ítem que se mueve
+        const currentIndex = portfolioList.findIndex(i => i.id === movedId);
+        if (currentIndex === -1) return;
+        const [movedItem] = portfolioList.splice(currentIndex, 1);
+
+        // c. Calcular nueva posición (Array base 0)
+        let newIndex = parseInt(newTargetOrder) - 1;
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex > portfolioList.length) newIndex = portfolioList.length;
+
+        // d. Insertar
+        portfolioList.splice(newIndex, 0, movedItem);
+
+        // e. Renumerar secuencialmente (1, 2, 3, 4...)
+        portfolioList.forEach((img, index) => {
+            img.portfolioOrder = index + 1;
+        });
+
+        // f. Refrescar la vista inmediatamente
+        UI.renderView('portfolio-manager');
+    },
+
+    // 2. Handlers para Drag & Drop del Portafolio
+    dragStartPortfolio(e, id) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", id);
+        e.target.style.opacity = '0.4';
+    },
+    dragOverPortfolio(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+    },
+    dragDropPortfolio(e, targetId) {
+        e.preventDefault();
+        document.querySelectorAll('.portfolio-grid-item, .group').forEach(el => el.style.opacity = '1'); // Restaurar opacidad
+        
+        const movedId = e.dataTransfer.getData("text/plain");
+        if (movedId === targetId) return;
+
+        // Buscar el orden del elemento destino
+        const targetItem = AppState.data.ProjectImages.find(i => i.id === targetId);
+        
+        if (targetItem) {
+            // Mover el ítem arrastrado a la posición del ítem destino
+            this.reorderGlobalPortfolio(movedId, targetItem.portfolioOrder);
+        }
+    },
+    // --- FIN CÓDIGO NUEVO ---
+    
     async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => ({ sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} })); await API.batchUpdate(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
     async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
 };
@@ -1541,6 +1617,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
