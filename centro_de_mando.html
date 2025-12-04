@@ -1138,16 +1138,17 @@ const App = {
                  ondragstart="App.dragStart(event, '${i.id}')"
                  ondragover="App.dragOver(event)"
                  ondrop="App.dragDrop(event, '${i.id}')">
-                
+
                 <div class="cursor-move text-gray-300 hover:text-gray-600 px-2 select-none" title="Arrastrar para reordenar">
                     <i class="fas fa-grip-vertical"></i>
                 </div>
-                
+
                 <img src="${i.imageUrl}" 
                      class="w-16 h-16 object-contain rounded bg-gray-100 select-none cursor-zoom-in hover:opacity-80 transition" 
-                     ondblclick="UI.openLightbox('${i.id}')">
+                     onclick="UI.openLightbox('${i.id}')">
                 
                 <div class="flex-1 grid grid-cols-2 gap-2">
+                
                     <label class="text-xs font-bold text-gray-500">Orden 
                         <input type="number" class="border p-1 w-full rounded font-bold text-black" 
                                value="${i.order}" 
@@ -1630,6 +1631,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
