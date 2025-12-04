@@ -997,21 +997,29 @@ const App = {
                     
                     if (children.length > 0) {
                         const BATCH_SIZE = 10;
-                        const totalBatches = Math.ceil(children.length / BATCH_SIZE);
-
+                        // Total de elementos a borrar (Hijos + 1 Padre)
+                        const totalItemsToDelete = children.length + 1; 
+                        let itemsDeleted = 0;
+                        
                         for (let i = 0; i < children.length; i += BATCH_SIZE) {
                             const batch = children.slice(i, i + BATCH_SIZE).map(child => ({
                                 sheet: childSheet,
                                 action: 'delete',
                                 criteria: { id: child.id },
-                                data: { fileId: child.fileId } // Importante para borrar de Drive
+                                data: { fileId: child.fileId }
                             }));
 
-                            UI.showLoading(`Eliminando imágenes (Lote ${(i/BATCH_SIZE)+1}/${totalBatches})...`);
+                            // Actualizamos contador
+                            const currentBatchCount = batch.length;
+                            itemsDeleted += currentBatchCount;
+
+                            // Mensaje: "Eliminando 10/48 items..."
+                            UI.showLoading(`Eliminando ${itemsDeleted}/${totalItemsToDelete} registros asociados...`);
+                            
                             await API.batchUpdate(batch);
                             
-                            // Pausa de seguridad para no saturar API de Drive
                             if (i + BATCH_SIZE < children.length) await new Promise(r => setTimeout(r, 1000));
+                        
                         }
                     }
                 }
@@ -1092,6 +1100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
