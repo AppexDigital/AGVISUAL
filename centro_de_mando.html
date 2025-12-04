@@ -1419,8 +1419,10 @@ const App = {
             // Detectamos si es 'Projects' para aplicar reglas estrictas
             if (sheet === 'Projects') {
                 const errors = [];
+                const newTitle = data.title ? data.title.trim() : "";
+
                 // Validar Título (Nombre)
-                if (!data.title || !data.title.trim()) {
+                if (!newTitle) {
                     errors.push("Nombre");
                 }
                 // Validar Orden
@@ -1428,7 +1430,20 @@ const App = {
                     errors.push("Orden");
                 }
 
-                // Si hay errores, abortamos y mostramos el Toast en la esquina
+                // --- AJUSTE: Validación de Nombre Único ---
+                // Verificamos si existe otro proyecto con el mismo nombre (ignorando mayúsculas/minúsculas)
+                // Excluimos el proyecto actual (p.id !== id) por si solo estamos editando otra cosa del mismo proyecto
+                const exists = (AppState.data.Projects || []).some(p => 
+                    p.title.trim().toLowerCase() === newTitle.toLowerCase() && p.id !== id
+                );
+
+                if (exists) {
+                    UI.showToast(`Error: Ya existe un proyecto llamado "${newTitle}". Use otro nombre.`, 'error');
+                    return; // DETIENE LA EJECUCIÓN PARA EVITAR CONFLICTO DE CARPETAS
+                }
+                // -------------------------------------------
+
+                // Si hay errores de campos vacíos, abortamos
                 if (errors.length > 0) {
                     UI.showToast(`Faltan campos obligatorios: ${errors.join(', ')}`, 'error');
                     return; // DETIENE LA EJECUCIÓN AQUÍ
@@ -1739,6 +1754,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
