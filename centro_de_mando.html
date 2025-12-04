@@ -920,7 +920,15 @@ const App = {
         const isNew = !id; let html = '';
         if(sheet==='Projects'){
              const p=isNew?{}:AppState.data.Projects.find(x=>x.id===id);
-             html=`${UI.inputHTML('c','order','Orden',p?.order||99,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
+             
+             // APPEX: Calcular orden automático (Máximo actual + 1)
+             let nextOrder = 1;
+             if (isNew && AppState.data.Projects && AppState.data.Projects.length > 0) {
+                 const maxOrder = Math.max(...AppState.data.Projects.map(proj => parseInt(proj.order) || 0));
+                 nextOrder = maxOrder + 1;
+             }
+             
+             html=`${UI.inputHTML('c','order','Orden',p?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
         } else if(sheet==='Videos'){
              const v=isNew?{}:AppState.data.Videos.find(x=>x.id===id);
              html=`${UI.inputHTML('c','order','Orden',v?.order||99,'number')} ${UI.inputHTML('c','title','Título',v?.title)} ${UI.inputHTML('c','embedUrl','URL (YouTube/Vimeo)',v?.embedUrl)} <div class="text-right mb-4"><label class="btn btn-secondary btn-sm cursor-pointer"><i class="fas fa-file-video"></i> Subir Video <input type="file" accept="video/*" class="hidden" onchange="App.uploadVideo(this, 'embedUrl')"></label></div>`;
@@ -1103,6 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
