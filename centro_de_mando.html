@@ -881,15 +881,22 @@ const App = {
     renderGalleryModal(parentId, title, type) {
         const sheetTarget = type === 'Projects' ? 'ProjectImages' : (type === 'RentalItems' ? 'RentalItemImages' : 'ServiceImages');
         
-        // Botón Todo a Portafolio (Arriba)
-        const portfolioBtn = type === 'Projects' 
-            ? `<button class="btn btn-sm btn-secondary mb-2" onclick="App.toggleAllPortfolio()"><i class="fas fa-check-double mr-1"></i> Todo a Portafolio</button>` 
-            : '';
+        // APPEX UX: Integrar el botón "Todo a Portafolio" en el encabezado del modal
+        let modalTitle = `<span>${title}</span>`;
+        
+        if (type === 'Projects') {
+            modalTitle = `
+                <div class="flex items-center gap-4">
+                    <span>${title}</span>
+                    <button class="btn btn-secondary py-1 px-3 text-xs font-normal" onclick="App.toggleAllPortfolio()">
+                        <i class="fas fa-check-double mr-1"></i> Todo a Portafolio
+                    </button>
+                </div>
+            `;
+        }
 
-        // CUERPO: Limpio, solo la lista (sin botón de subir, sin scroll forzado aquí porque lo maneja el modal)
-        const html = `
-            <div class="flex justify-between items-center sticky top-0 bg-white z-10 pb-2">${portfolioBtn}</div>
-            <div id="gallery-list-container"></div>`;
+        // CUERPO: Ahora es 100% limpio, solo la lista de imágenes
+        const html = `<div id="gallery-list-container"></div>`;
 
         // FOOTER: Botón de Subir a la izquierda, Acciones a la derecha
         const footer = `
@@ -904,10 +911,10 @@ const App = {
                 </div>
             </div>`;
 
-        UI.showModal(title, html, footer);
+        UI.showModal(modalTitle, html, footer);
         this.renderGalleryList(currentModalImages, parentId, type);
     },
-
+    
     // Nueva función para marcar todo
     toggleAllPortfolio() {
         // Verificamos si todos están marcados para desmarcar, o viceversa
@@ -1174,6 +1181,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
