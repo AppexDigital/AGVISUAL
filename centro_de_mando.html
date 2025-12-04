@@ -581,32 +581,31 @@ const UI = {
                 })
                 .sort((a,b) => (parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
             
-            // AJUSTE: Grid (Izq->Der), Esquinas Cuadradas, Click Lightbox
-            // 1. Sincronizamos la memoria global para que el Lightbox sepa qué fotos mostrar
+            // AJUSTE: Retorno a Collage (Masonry) y arreglo de Clic
             currentModalImages = images; 
 
             const container = document.getElementById('portfolio-manager-grid');
-            // Usamos 'grid' y 'items-start' para que se alineen arriba pero mantengan su altura natural
-            container.className = "grid grid-cols-2 md:grid-cols-4 gap-4 p-4 items-start"; 
+            // Usamos 'columns' para efecto collage y 'block' para evitar saltos raros
+            container.className = "columns-2 md:columns-4 gap-4 p-4 space-y-4 block"; 
 
             container.innerHTML = images.length ? images.map(i => `
-                <div class="relative group mb-4 border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg"
+                <div class="relative group break-inside-avoid mb-4 border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg cursor-zoom-in"
                      draggable="true"
                      ondragstart="App.dragStartPortfolio(event, '${i.id}')"
                      ondragover="App.dragOverPortfolio(event)"
-                     ondrop="App.dragDropPortfolio(event, '${i.id}')">
+                     ondrop="App.dragDropPortfolio(event, '${i.id}')"
+                     onclick="UI.openLightbox('${i.id}')"> <img src="${i.imageUrl}" class="w-full h-auto block">
                     
-                    <img src="${i.imageUrl}" 
-                         class="w-full h-auto block cursor-zoom-in"
-                         onclick="UI.openLightbox('${i.id}')">
-
                     <div class="portfolio-grid-overlay absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                         <div class="text-white font-bold text-xs uppercase tracking-widest mb-1">Orden</div>
-                        <input type="number" class="w-16 p-2 text-center text-lg rounded border-none text-black font-bold shadow-lg" 
+                        
+                        <input type="number" class="w-16 p-2 text-center text-lg rounded-none border-none text-black font-bold shadow-lg square" 
                                value="${i.portfolioOrder||99}" 
+                               onclick="event.stopPropagation()" 
                                onchange="App.reorderGlobalPortfolio('${i.id}', this.value)">
                         
-                        <button class="mt-2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold hover:bg-red-600 transition" onclick="App.removeFromPortfolio('${i.id}')">
+                        <button class="mt-2 bg-red-500 text-white px-3 py-1 rounded-none text-xs font-bold hover:bg-red-600 transition" 
+                                onclick="event.stopPropagation(); App.removeFromPortfolio('${i.id}')">
                             <i class="fas fa-times mr-1"></i> Quitar
                         </button>
                     </div>
@@ -1631,6 +1630,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
