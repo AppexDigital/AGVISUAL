@@ -1509,6 +1509,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- NUEVO: Soporte de Teclado para Lightbox ---
+    document.addEventListener('keydown', (e) => {
+        const lb = document.getElementById('admin-lightbox');
+        // Solo si el lightbox existe y está visible (no tiene la clase hidden)
+        if (lb && !lb.classList.contains('hidden')) {
+            if (e.key === 'ArrowLeft') UI.navLightbox(-1);
+            if (e.key === 'ArrowRight') UI.navLightbox(1);
+            if (e.key === 'Escape') UI.closeLightbox();
+        }
+    });
+
     setTimeout(() => Auth.init(), 100);
 });
 </script>
@@ -1530,5 +1541,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
