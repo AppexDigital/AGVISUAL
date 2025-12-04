@@ -337,12 +337,12 @@
     <div id="modal-container"></div>
     <div id="toast-container"></div>
     <div id="confirm-modal-overlay" class="modal-overlay">
-        <div id="confirm-modal-content" class="modal-content p-6 bg-white rounded-lg max-w-sm text-center">
-            <h3 class="text-xl font-bold mb-2">Confirmar</h3>
-            <p id="confirm-message" class="text-gray-600 mb-6">¿Continuar?</p>
-            <div class="flex justify-center gap-3">
-                <button id="confirm-cancel-btn" class="btn btn-secondary">No</button>
-                <button id="confirm-ok-btn" class="btn btn-danger">Sí</button>
+        <div id="confirm-modal-content" class="modal-content p-6 bg-white rounded-lg max-w-md text-center">
+            <h3 id="confirm-title" class="text-xl font-bold mb-2">Confirmar</h3>
+            <p id="confirm-message" class="text-gray-600 mb-6">Mensaje...</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirm-cancel-btn" class="btn btn-secondary flex-1 justify-center">Cancelar</button>
+                <button id="confirm-ok-btn" class="btn btn-danger flex-1 justify-center">Eliminar</button>
             </div>
         </div>
     </div>
@@ -453,7 +453,27 @@ const UI = {
     },
     hideLoading: () => { const scr = document.getElementById('loading-screen'); if(scr) scr.style.display='none'; },
     showToast: (msg, type='success') => { const t=document.createElement('div'); t.className=`toast ${type}`; t.innerText=msg; document.getElementById('toast-container').appendChild(t); setTimeout(()=>t.classList.add('visible'),10); setTimeout(()=>t.remove(),3000); },
-    showConfirm: (msg, cb) => { const o=document.getElementById('confirm-modal-overlay'); document.getElementById('confirm-message').textContent=msg; const ok=document.getElementById('confirm-ok-btn'), ca=document.getElementById('confirm-cancel-btn'); const nok=ok.cloneNode(true), nca=ca.cloneNode(true); ok.parentNode.replaceChild(nok,ok); ca.parentNode.replaceChild(nca,ca); nok.addEventListener('click', ()=>{o.classList.remove('visible'); cb();}); nca.addEventListener('click', ()=>o.classList.remove('visible')); o.classList.add('visible'); },
+    showConfirm: (title, msg, cb) => { 
+        const o = document.getElementById('confirm-modal-overlay');
+        // Actualizamos Título y Mensaje
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-message').textContent = msg;
+        
+        const ok = document.getElementById('confirm-ok-btn');
+        const ca = document.getElementById('confirm-cancel-btn');
+        
+        // Clonamos botones para limpiar eventos anteriores
+        const nok = ok.cloneNode(true); 
+        const nca = ca.cloneNode(true);
+        
+        ok.parentNode.replaceChild(nok, ok); 
+        ca.parentNode.replaceChild(nca, ca);
+        
+        nok.addEventListener('click', () => { o.classList.remove('visible'); cb(); });
+        nca.addEventListener('click', () => { o.classList.remove('visible'); });
+        
+        o.classList.add('visible'); 
+    },
     switchTab(id) { const v=document.querySelector('.view.active'); if(!v)return; v.querySelectorAll('.tab-btn,.tab-content').forEach(e=>e.classList.remove('active')); v.querySelectorAll(`.tab-btn[onclick*="${id}"]`).forEach(b=>b.classList.add('active')); document.getElementById(`tab-${id}`).classList.add('active'); },
     
     inputHTML: (p,k,l,v='',t='text') => `<div class="mb-4"><label class="form-label">${l}</label><input type="${t}" id="${p}-${k}" data-key="${k}" class="form-input" value="${v||''}"></div>`,
@@ -1106,10 +1126,19 @@ const App = {
     },
     
     async handleDelete(sheet, id, key='id') { 
-        UI.showConfirm("¿Borrar registro? Esta acción eliminará también las carpetas y archivos asociados.", async ()=>{ 
-            try { 
-               
+        // 1. Calcular nombres para el mensaje
+        const item = AppState.data[sheet]?.find(x => x[key] === id);
+        const name = item?.title || item?.name || 'Registro';
+        const typeLabel = sheet === 'Projects' ? 'proyecto' : (sheet === 'RentalItems' ? 'equipo' : 'elemento');
 
+        // 2. Textos personalizados
+        const titleText = `¿Desea Eliminar el ${typeLabel} ${name}?`;
+        const msgText = "Esta acción eliminará también las carpetas y archivos asociados.";
+
+        // 3. Llamar al nuevo showConfirm con (Título, Mensaje, Callback)
+        UI.showConfirm(titleText, msgText, async ()=>{ 
+            try {
+               
                 // APPEX UX: Obtener nombre y fijar mensaje único desde el inicio
                 const parentItem = AppState.data[sheet]?.find(x => x[key] === id);
                 const itemName = parentItem?.title || parentItem?.name || 'elemento';
@@ -1232,6 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
