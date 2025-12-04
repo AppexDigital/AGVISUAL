@@ -1224,7 +1224,29 @@ const App = {
         try {
             const isNew = !id || id === 'null';
             const data = {};
-            document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => data[el.id.replace('c-', '')] = el.value);
+            document.querySelectorAll('#crud-form input, #crud-form textarea, #crud-form select').forEach(el => {
+                data[el.id.replace('c-', '')] = el.value;
+            });
+
+            // Detectamos si es 'Projects' para aplicar reglas estrictas
+            if (sheet === 'Projects') {
+                const errors = [];
+                // Validar Título (Nombre)
+                if (!data.title || !data.title.trim()) {
+                    errors.push("Nombre");
+                }
+                // Validar Orden
+                if (!data.order || isNaN(data.order)) {
+                    errors.push("Orden");
+                }
+
+                // Si hay errores, abortamos y mostramos el Toast en la esquina
+                if (errors.length > 0) {
+                    UI.showToast(`Faltan campos obligatorios: ${errors.join(', ')}`, 'error');
+                    return; // DETIENE LA EJECUCIÓN AQUÍ
+                }
+            }
+            
             const idField = sheet === 'BlockedDates' ? 'blockId' : 'id';
             if (isNew) data[idField] = `${sheet.toLowerCase().slice(0,5)}_${Date.now()}`;
 
@@ -1297,7 +1319,7 @@ const App = {
 
         } catch (e) { 
             console.error(e);
-            alert("Error: " + e.message); 
+            UI.showToast("Error al guardar: " + e.message, "error");
         } finally { 
             UI.hideLoading(); 
         }
@@ -1439,6 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
