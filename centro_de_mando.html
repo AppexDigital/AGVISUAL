@@ -627,10 +627,38 @@ const App = {
         const img = currentModalImages.find(i => i.id === id);
         if (img) {
             if (key === 'isCover' && (value === 'Si' || value === true)) {
-                currentModalImages.forEach(i => i.isCover = 'No'); // Un solo cover
+                currentModalImages.forEach(i => i.isCover = 'No'); 
             }
+
+            // APPEX: Lógica de Secuencia para Checkbox Individual
+            if (key === 'showInPortfolio') {
+                const isChecking = (value === 'Si' || value === true);
+                if (isChecking) {
+                    // 1. Buscar el máximo global en la base de datos
+                    let globalMax = 0;
+                    if (AppState.data.ProjectImages) {
+                        const orders = AppState.data.ProjectImages
+                            .filter(i => String(i.showInPortfolio).toLowerCase() === 'si')
+                            .map(i => parseInt(i.portfolioOrder) || 0);
+                        if (orders.length > 0) globalMax = Math.max(...orders);
+                    }
+
+                    // 2. Buscar el máximo local (por si acabamos de marcar otras en este mismo modal)
+                    let localMax = 0;
+                    const localOrders = currentModalImages
+                        .filter(i => String(i.showInPortfolio).toLowerCase() === 'si')
+                        .map(i => parseInt(i.portfolioOrder) || 0);
+                    if (localOrders.length > 0) localMax = Math.max(...localOrders);
+
+                    // 3. El nuevo número es el mayor de los dos + 1
+                    img.portfolioOrder = Math.max(globalMax, localMax) + 1;
+                } else {
+                    img.portfolioOrder = 99;
+                }
+            }
+
             img[key] = (value === true ? 'Si' : (value === false ? 'No' : value));
-            img._modified = true; // Marcar para update
+            img._modified = true; 
         }
         // Re-renderizar solo el modal o lista
         if (type === 'ClientLogos') UI.renderView('settings');
@@ -873,9 +901,31 @@ const App = {
         const allSelected = currentModalImages.every(i => String(i.showInPortfolio).toLowerCase() === 'si');
         const newState = allSelected ? 'No' : 'Si';
 
+        // APPEX: Calcular el inicio de la secuencia global
+        let nextPortfolioOrder = 1;
+        if (newState === 'Si' && AppState.data.ProjectImages) {
+            // Buscamos el número más alto entre TODAS las fotos de TODOS los proyectos
+            const allOrders = AppState.data.ProjectImages
+                .filter(img => String(img.showInPortfolio).toLowerCase() === 'si')
+                .map(img => parseInt(img.portfolioOrder) || 0);
+            
+            if (allOrders.length > 0) {
+                nextPortfolioOrder = Math.max(...allOrders) + 1;
+            }
+        }
+        
         currentModalImages.forEach(img => {
-            img.showInPortfolio = newState;
-            img._modified = true;
+            // Solo aplicamos cambios si el estado es diferente
+            if (img.showInPortfolio !== newState) {
+                img.showInPortfolio = newState;
+                img._modified = true;
+                
+                if (newState === 'Si') {
+                    img.portfolioOrder = nextPortfolioOrder++; // Asigna y aumenta (11, 12, 13...)
+                } else {
+                    img.portfolioOrder = 99; // Reinicia si se desmarca
+                }
+            }
         });
         
         // Re-renderizar la lista actual (buscando el ID del padre desde la primera imagen)
@@ -1111,6 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
