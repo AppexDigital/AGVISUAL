@@ -1013,10 +1013,10 @@ const App = {
              // 2. Botones de Izquierda (Solo al editar)
             if (!isNew) {
                  leftButtons = `
-                    <button class="btn btn-danger mr-2" onclick="UI.closeModal(); App.handleDelete('Projects', '${id}')" title="Eliminar Proyecto">
+                    <button class="btn btn-danger h-10 px-4 mr-2" onclick="UI.closeModal(); App.handleDelete('Projects', '${id}')" title="Eliminar Proyecto">
                         <i class="fas fa-trash"></i>
                     </button>
-                    <button class="btn btn-secondary" onclick="App.handleProjectImages('${id}', '${p.title.replace(/'/g,"")}')" title="Ir a Fotos">
+                    <button class="btn btn-secondary h-10" onclick="App.handleProjectImages('${id}', '${p.title.replace(/'/g,"")}')" title="Ir a Fotos">
                         <i class="fas fa-images mr-2"></i> Galería
                     </button>
                  `;
@@ -1232,6 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
