@@ -746,7 +746,7 @@ const App = {
                 UI.showToast("Cambios guardados exitosamente");
                 
                 // APPEX: Cerrar modal SOLO si todo salió bien (excepto en ClientLogos que es vista plana)
-               // if(type !== 'ClientLogos') UI.closeModal(); 
+               if(type !== 'ClientLogos') UI.closeModal(); 
             } else {
                 UI.showToast("No se detectaron cambios para guardar", "info");
             }
@@ -1167,6 +1167,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
