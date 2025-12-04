@@ -889,6 +889,7 @@ const App = {
         else if(['Projects', 'RentalItems', 'Services'].includes(type)) {
              // Re-renderizar modal con los nuevos datos en memoria
              this.renderGalleryList(currentModalImages, parentId, type);
+            UI.renderView(AppState.view);
         }
     },
 
@@ -1275,6 +1276,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
