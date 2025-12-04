@@ -541,10 +541,12 @@ const UI = {
                     <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview"></td>
                     <td class="p-4 font-bold text-sm">${p.title}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
-                    <td class="p-4 flex items-center gap-3">
-                        <button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button>
-                        <button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button>
+                    <td class="p-4 align-middle">
+                        <div class="flex items-center justify-center gap-3">
+                            <button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button>
+                            <button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
                     </td>
                 </tr>`;
             }).join('');
@@ -1278,6 +1280,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
