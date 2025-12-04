@@ -614,14 +614,54 @@ const UI = {
             document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
             `).join('');
+            
             document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
                  const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
                  return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
-            }).join('');
+            }).join(''); 
         }
+    },
+
+    // --- INICIO CÓDIGO NUEVO LIGHTBOX ---
+    lightboxIndex: 0,
+
+    openLightbox: (id) => {
+        // Usamos currentModalImages porque es lo que el usuario está viendo/editando
+        const index = currentModalImages.findIndex(i => i.id === id);
+        if (index === -1) return;
+        
+        UI.lightboxIndex = index;
+        UI.updateLightboxContent();
+        const lb = document.getElementById('admin-lightbox');
+        lb.classList.remove('hidden');
+        lb.classList.add('flex');
+    },
+
+    closeLightbox: () => {
+        const lb = document.getElementById('admin-lightbox');
+        lb.classList.add('hidden');
+        lb.classList.remove('flex');
+    },
+
+    navLightbox: (dir) => {
+        const list = currentModalImages;
+        let newIndex = UI.lightboxIndex + dir;
+        // Navegación circular
+        if (newIndex < 0) newIndex = list.length - 1;
+        if (newIndex >= list.length) newIndex = 0;
+        
+        UI.lightboxIndex = newIndex;
+        UI.updateLightboxContent();
+    },
+
+    updateLightboxContent: () => {
+        const imgData = currentModalImages[UI.lightboxIndex];
+        document.getElementById('admin-lb-img').src = imgData.imageUrl;
+        // Si no hay caption, mostrar el nombre del archivo o vacío
+        document.getElementById('admin-lb-caption').textContent = imgData.caption || `Imagen #${imgData.order}`;
     }
 };
-
+  
 // --- LOGICA PRINCIPAL (App) ---
 const App = {
     async switchView(viewId) {
@@ -1072,8 +1112,10 @@ const App = {
                 <div class="cursor-move text-gray-300 hover:text-gray-600 px-2 select-none" title="Arrastrar para reordenar">
                     <i class="fas fa-grip-vertical"></i>
                 </div>
-
-                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100 select-none pointer-events-none">
+                
+                <img src="${i.imageUrl}" 
+                     class="w-16 h-16 object-contain rounded bg-gray-100 select-none cursor-zoom-in hover:opacity-80 transition" 
+                     ondblclick="UI.openLightbox('${i.id}')">
                 
                 <div class="flex-1 grid grid-cols-2 gap-2">
                     <label class="text-xs font-bold text-gray-500">Orden 
@@ -1470,6 +1512,23 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => Auth.init(), 100);
 });
 </script>
+
+    <div id="admin-lightbox" class="fixed inset-0 z-[200] bg-black/95 hidden flex-col items-center justify-center select-none" onclick="if(event.target===this) UI.closeLightbox()">
+        <button class="absolute top-4 right-6 text-white text-5xl hover:text-gray-300 transition" onclick="UI.closeLightbox()">&times;</button>
+        
+        <div class="flex items-center justify-between w-full px-4 md:px-12 h-full py-12">
+            <button class="text-white text-6xl hover:text-accent-primary transition p-4" onclick="UI.navLightbox(-1)">&#8249;</button>
+            
+            <div class="flex flex-col items-center justify-center max-h-full max-w-[80vw]">
+                <img id="admin-lb-img" class="max-h-[80vh] w-auto object-contain shadow-2xl border border-gray-800 bg-black">
+                <p id="admin-lb-caption" class="text-white font-mono text-lg mt-4 text-center bg-black/50 px-4 py-2 rounded min-h-[3rem]"></p>
+            </div>
+
+            <button class="text-white text-6xl hover:text-accent-primary transition p-4" onclick="UI.navLightbox(1)">&#8250;</button>
+        </div>
+    </div>
+    
 </body>
 </html>
+
 
