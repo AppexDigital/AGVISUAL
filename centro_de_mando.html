@@ -668,8 +668,51 @@ const App = {
         pendingDeletions = [];
     },
 
+    // --- NUEVA FUNCIÓN: Lógica de Reordenamiento Inteligente ---
+    reorderGalleryImages(movedImageId, newTargetOrder) {
+        // 1. Trabajamos sobre una copia ordenada de la memoria actual
+        let list = [...currentModalImages].sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+        
+        // 2. Extraer el elemento que se mueve
+        const currentIndex = list.findIndex(i => i.id === movedImageId);
+        if (currentIndex === -1) return;
+        const [movedItem] = list.splice(currentIndex, 1);
+
+        // 3. Calcular nueva posición (Array base 0)
+        let newIndex = parseInt(newTargetOrder) - 1; 
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex > list.length) newIndex = list.length;
+
+        // 4. Insertar en el nuevo lugar
+        list.splice(newIndex, 0, movedItem);
+
+        // 5. Renumerar todo secuencialmente (1, 2, 3...)
+        list.forEach((img, index) => {
+            const newOrder = index + 1;
+            if (img.order != newOrder) {
+                img.order = newOrder;
+                img._modified = true; // Marcamos para guardar
+            }
+        });
+
+        // 6. Actualizar memoria y Renderizar
+        currentModalImages = list;
+        
+        // Detectar contexto para refrescar la vista correcta
+        const parentId = movedItem.projectId || movedItem.itemId || movedItem.serviceId;
+        let type = 'Projects'; 
+        if(movedItem.itemId) type = 'RentalItems';
+        if(movedItem.serviceId) type = 'Services';
+        
+        this.renderGalleryList(currentModalImages, parentId, type);
+    },
+
     // 2. Actualizamos en memoria (rápido, sin llamadas API)
     updateLocalImage(id, key, value, type) {
+        if (key === 'order') {
+            this.reorderGalleryImages(id, value);
+            return; 
+        }
         const img = currentModalImages.find(i => i.id === id);
         if (img) {
             if (key === 'isCover' && (value === 'Si' || value === true)) {
@@ -1008,22 +1051,65 @@ const App = {
         const container = document.getElementById('gallery-list-container');
         if(!container) return;
 
+        const sortedImages = images.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
         const getChecked = (val) => String(val).toLowerCase().trim() === 'si' || String(val).toLowerCase().trim() === 'yes' ? 'checked' : '';
+        
+        container.innerHTML = sortedImages.filter(i => !pendingDeletions.includes(i)).map(i => `
+            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white transition-all duration-200 hover:shadow-md" 
+                 id="img-row-${i.id}" 
+                 draggable="true"
+                 ondragstart="App.dragStart(event, '${i.id}')"
+                 ondragover="App.dragOver(event)"
+                 ondrop="App.dragDrop(event, '${i.id}')">
+                
+                <div class="cursor-move text-gray-300 hover:text-gray-600 px-2 select-none" title="Arrastrar para reordenar">
+                    <i class="fas fa-grip-vertical"></i>
+                </div>
 
-        container.innerHTML = images.filter(i => !pendingDeletions.includes(i)).map(i => `
-            <div class="flex items-center gap-4 p-3 border rounded mb-2 bg-white" id="img-row-${i.id}">
-                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100">
+                <img src="${i.imageUrl}" class="w-16 h-16 object-contain rounded bg-gray-100 select-none pointer-events-none">
+                
                 <div class="flex-1 grid grid-cols-2 gap-2">
-                    <label class="text-xs font-bold text-gray-500">Orden <input type="number" class="border p-1 w-full rounded" value="${i.order||99}" onchange="App.updateLocalImage('${i.id}', 'order', this.value, '${type}')"></label>
+                    <label class="text-xs font-bold text-gray-500">Orden 
+                        <input type="number" class="border p-1 w-full rounded font-bold text-black" 
+                               value="${i.order}" 
+                               onchange="App.updateLocalImage('${i.id}', 'order', this.value, '${type}')">
+                    </label>
                     ${type==='Projects' ? `<label class="text-xs font-bold text-gray-500">Pie <input type="text" class="border p-1 w-full rounded" value="${i.caption||''}" onchange="App.updateLocalImage('${i.id}', 'caption', this.value, '${type}')"></label>` : ''}
                 </div>
+                
                 <div class="flex flex-col gap-1">
-                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.isCover)} onchange="App.updateLocalImage('${i.id}', 'isCover', this.checked, '${type}')"> Portada</label>` : ''}
-                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" ${getChecked(i.showInPortfolio)} onchange="App.updateLocalImage('${i.id}', 'showInPortfolio', this.checked, '${type}')"> Portafolio</label>` : ''}
+                    ${type !== 'Services' ? `<label class="flex items-center gap-2 text-xs cursor-pointer select-none"><input type="checkbox" ${getChecked(i.isCover)} onchange="App.updateLocalImage('${i.id}', 'isCover', this.checked, '${type}')"> Portada</label>` : ''}
+                    ${type === 'Projects' ? `<label class="flex items-center gap-2 text-xs cursor-pointer select-none"><input type="checkbox" ${getChecked(i.showInPortfolio)} onchange="App.updateLocalImage('${i.id}', 'showInPortfolio', this.checked, '${type}')"> Portafolio</label>` : ''}
                 </div>
+                
                 <button class="text-red-500 p-2 hover:bg-red-50 rounded" onclick="App.handleDeleteImageLocal('${i.id}', '${type}')"><i class="fas fa-trash"></i></button>
             </div>
         `).join('');
+    },
+    // --- NUEVAS FUNCIONES: Drag & Drop Helpers ---
+    dragStart(e, id) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", id);
+        e.target.classList.add('opacity-50', 'bg-gray-50'); // Feedback visual
+    },
+    dragOver(e) {
+        e.preventDefault(); // Necesario para permitir el drop
+        e.dataTransfer.dropEffect = "move";
+    },
+    dragDrop(e, targetId) {
+        e.preventDefault();
+        // Limpiar estilos visuales
+        document.querySelectorAll('[draggable]').forEach(el => el.classList.remove('opacity-50', 'bg-gray-50'));
+
+        const movedId = e.dataTransfer.getData("text/plain");
+        if (movedId === targetId) return;
+
+        // Encontrar el orden del elemento sobre el que soltamos
+        const targetItem = currentModalImages.find(i => i.id === targetId);
+        if (targetItem) {
+            // Llamamos al cerebro para que haga la matemática
+            this.reorderGalleryImages(movedId, targetItem.order);
+        }
     },
     
     async handleEditCrudItem(sheet, id) {
@@ -1288,6 +1374,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
 
 
 
