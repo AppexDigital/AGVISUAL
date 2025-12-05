@@ -1915,32 +1915,34 @@ const App = {
     },
     
     async handleDelete(sheet, id, key='id') { 
-        // 1. Calcular nombres para el mensaje
+        // 1. Calcular nombres para el mensaje del Modal de Confirmación
         const item = AppState.data[sheet]?.find(x => x[key] === id);
         const name = item?.title || item?.name || 'Registro';
-        const typeLabel = sheet === 'Projects' ? 'proyecto' : (sheet === 'RentalItems' ? 'equipo' : 'elemento');
+        
+        // AJUSTE 1: Etiqueta para el Modal de Confirmación
+        const typeLabel = sheet === 'Projects' ? 'proyecto' : (sheet === 'Services' ? 'servicio' : (sheet === 'RentalItems' ? 'equipo' : 'elemento'));
 
-        // 2. Textos personalizados
         const titleText = `¿Desea Eliminar el ${typeLabel} ${name}?`;
         const msgText = "Esta acción eliminará también las carpetas y archivos asociados.";
 
-        // 3. Llamar al nuevo showConfirm con (Título, Mensaje, Callback)
         UI.showConfirm(titleText, msgText, async ()=>{ 
             try {
-               
-                // APPEX UX: Obtener nombre y fijar mensaje único desde el inicio
+                // Recuperamos datos para el Mensaje de Carga
                 const parentItem = AppState.data[sheet]?.find(x => x[key] === id);
                 const itemName = parentItem?.title || parentItem?.name || 'elemento';
-                const typeLabel = sheet === 'Projects' ? 'Proyecto' : (sheet === 'RentalItems' ? 'Equipo' : 'Registro');
-                const baseMessage = `Eliminando ${typeLabel} ${itemName}`;
+                
+                // AJUSTE 2: Etiqueta para la Pantalla de Carga (Aquí estaba diciendo "Registro")
+                const loadTypeLabel = sheet === 'Projects' ? 'Proyecto' : (sheet === 'Services' ? 'Servicio' : (sheet === 'RentalItems' ? 'Equipo' : 'Registro'));
+                
+                const baseMessage = `Eliminando ${loadTypeLabel} ${itemName}`;
                 UI.showLoading(`${baseMessage}...`);
                 
-                // 1. Identificar si es un Padre con muchos hijos (Project, Service, RentalItem)
+                // 1. Identificar si es un Padre con muchos hijos
                 let childSheet = null;
                 let childKey = null;
 
                 if (sheet === 'Projects') { childSheet = 'ProjectImages'; childKey = 'projectId'; }
-                else if (sheet === 'Services') { childSheet = 'ServiceImages'; childKey = 'serviceId'; } // Blocks son pocos, no preocupan
+                else if (sheet === 'Services') { childSheet = 'ServiceImages'; childKey = 'serviceId'; }
                 else if (sheet === 'RentalItems') { childSheet = 'RentalItemImages'; childKey = 'itemId'; }
 
                 // 2. Si tiene hijos, borrarlos en LOTES primero
@@ -1956,31 +1958,27 @@ const App = {
                                 sheet: childSheet,
                                 action: 'delete',
                                 criteria: { id: child.id },
-                                data: { fileId: child.fileId } // Importante para borrar de Drive
+                                data: { fileId: child.fileId }
                             }));
                             
                             processedCount += batch.length;
-                            // Actualizamos mensaje: "Eliminando proyecto X (Borrando fotos 10/50...)"
+                            // El mensaje se actualiza usando la etiqueta correcta: "Eliminando Servicio X (Borrando...)"
                             UI.showLoading(`${baseMessage} (Borrando registros ${processedCount}/${children.length})...`);
 
-                            
-                            // Usamos API.call directo para que NO cambie nuestro mensaje
                             await API.call('/.netlify/functions/update-sheet-data', {
                                 method: 'POST',
                                 body: batch
                             });
                             
-                            // Pausa de seguridad para no saturar API de Drive
                             if (i + BATCH_SIZE < children.length) await new Promise(r => setTimeout(r, 1000));
                         }
                     }
                 }
 
+                // Mensaje final de limpieza
                 UI.showLoading(`${baseMessage} (Finalizando)...`);
                 
-                // Aquí enviamos driveFolderId si existe para que el backend borre la carpeta
-                // const parentItem = AppState.data[sheet]?.find(x => x[key] === id);
-                const extraData = parentItem?.driveFolderId ? { fileId: parentItem.driveFolderId } : {}; // fileId se usa genérico para borrar en backend
+                const extraData = parentItem?.driveFolderId ? { fileId: parentItem.driveFolderId } : {}; 
 
                 await API.call('/.netlify/functions/update-sheet-data',{
                     method:'POST',
@@ -2136,6 +2134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
