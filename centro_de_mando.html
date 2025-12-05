@@ -250,25 +250,15 @@
                 </div>
             </div>
 
-            <div id="view-rentals" class="view">
+           <div id="view-rentals" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Alquiler</h1>
+                
                 <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button>
                     <button class="tab-btn" onclick="UI.switchTab('rental-cats')">Categorías</button>
+                    <button class="tab-btn active" onclick="UI.switchTab('rental-items')">Equipos</button>
+                    <button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos</button>
                 </div>
-                <div id="tab-rental-items" class="tab-content active">
-                    <div class="flex justify-end mb-4">
-                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button>
-                    </div>
-                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                                <tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr>
-                            </thead>
-                            <tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
-                </div>
+
                 <div id="tab-rental-cats" class="tab-content">
                     <div class="flex justify-end mb-4">
                         <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalCategories', null)"><i class="fas fa-plus"></i> Nueva Categoría</button>
@@ -282,24 +272,21 @@
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <div id="view-bookings" class="view">
-                <h1 class="text-3xl font-display font-bold mb-6">Reservas</h1>
-                <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('booking-list')">Solicitudes</button>
-                    <button class="tab-btn" onclick="UI.switchTab('blocked-dates')">Bloqueos</button>
-                </div>
-                <div id="tab-booking-list" class="tab-content active">
-                     <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                <div id="tab-rental-items" class="tab-content active">
+                    <div class="flex justify-end mb-4">
+                        <button class="btn btn-primary" onclick="App.handleEditCrudItem('RentalItems', null)"><i class="fas fa-plus"></i> Nuevo Equipo</button>
+                    </div>
+                    <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                                <tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr>
+                                <tr><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th></tr>
                             </thead>
-                            <tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody>
+                            <tbody id="rental-items-table-body" class="divide-y divide-gray-100"></tbody>
                         </table>
                     </div>
                 </div>
+                
                 <div id="tab-blocked-dates" class="tab-content">
                     <div class="flex justify-end mb-4">
                         <button class="btn btn-primary" onclick="App.handleEditCrudItem('BlockedDates', null)"><i class="fas fa-ban"></i> Nuevo Bloqueo</button>
@@ -314,7 +301,26 @@
                     </div>
                 </div>
             </div>
+
+
             
+
+            <div id="view-bookings" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Reservas</h1>
+                    <button class="btn btn-primary" onclick="App.handleManualBooking()"><i class="fas fa-plus"></i> Nueva Reserva</button>
+                </div>
+                
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr><th class="p-4">Fecha</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th></tr>
+                        </thead>
+                        <tbody id="bookings-list-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="view-settings" class="view">
                 <h1 class="text-3xl font-display font-bold mb-6">Configuración</h1>
                 <div class="tab-nav">
@@ -776,23 +782,27 @@ const UI = {
             if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-center">Acciones</th>';
             
         } else if (view === 'rentals') { 
+             // 1. Equipos
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
                 const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
                 const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${i.name}</td><td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td><td class="p-4 font-mono text-sm">$${i.pricePerDay}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
             }).join('');
+            
+            // 2. Categorías
             document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || []).map(c => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${c.order}</td><td class="p-4 font-bold text-sm">${c.name}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
+
+            // 3. Bloqueos (NUEVO AQUÍ)
+            document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
+                 const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
+                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
         } else if (view === 'bookings') {
             document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
             `).join('');
-            
-            document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
-                 const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
-                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
-            }).join(''); 
         }
     },
 
@@ -2259,6 +2269,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
