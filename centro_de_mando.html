@@ -2004,8 +2004,11 @@ const App = {
         const name = item?.title || item?.name || 'Registro';
         
         // AJUSTE 1: Etiqueta para el Modal de Confirmación
-        const typeLabel = sheet === 'Projects' ? 'proyecto' : (sheet === 'Services' ? 'servicio' : (sheet === 'RentalItems' ? 'equipo' : 'elemento'));
-
+        const typeLabel = sheet === 'Projects' ? 'proyecto' : 
+                                 (sheet === 'Services' ? 'servicio' : 
+                                 (sheet === 'RentalItems' ? 'equipo' : 
+                                 (sheet === 'Videos' ? 'video' : 'elemento')));
+        
         const titleText = `¿Desea Eliminar el ${typeLabel} ${name}?`;
         const msgText = "Esta acción eliminará también las carpetas y archivos asociados.";
 
@@ -2016,7 +2019,10 @@ const App = {
                 const itemName = parentItem?.title || parentItem?.name || 'elemento';
                 
                 // AJUSTE 2: Etiqueta para la Pantalla de Carga (Aquí estaba diciendo "Registro")
-                const loadTypeLabel = sheet === 'Projects' ? 'Proyecto' : (sheet === 'Services' ? 'Servicio' : (sheet === 'RentalItems' ? 'Equipo' : 'Registro'));
+            const loadTypeLabel = sheet === 'Projects' ? 'Proyecto' : 
+                                     (sheet === 'Services' ? 'Servicio' : 
+                                     (sheet === 'RentalItems' ? 'Equipo' : 
+                                     (sheet === 'Videos' ? 'Video' : 'Registro')));
                 
                 const baseMessage = `Eliminando ${loadTypeLabel} ${itemName}`;
                 UI.showLoading(`${baseMessage}...`);
@@ -2218,6 +2224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
