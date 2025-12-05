@@ -1390,8 +1390,29 @@ const App = {
                  `;
              }
 
+            // --- INICIO BLOQUE RESTAURADO DE VIDEOS ---
+        } else if(sheet === 'Videos'){
+             const v = isNew ? {} : AppState.data.Videos.find(x => x.id === id);
+             modalTitle = isNew ? 'Nuevo Video' : 'Editar Video';
+             
+             // Autocalcular siguiente orden
+             let nextOrder = 1;
+             if (isNew && AppState.data.Videos && AppState.data.Videos.length > 0) {
+                 const maxOrder = Math.max(...AppState.data.Videos.map(vid => parseInt(vid.order) || 0));
+                 nextOrder = maxOrder + 1;
+             }
+
+             html = `${UI.inputHTML('c','order','Orden', v?.order || nextOrder, 'number')} 
+                     ${UI.inputHTML('c','title','Título', v?.title)} 
+                     ${UI.inputHTML('c','embedUrl','URL del Video (YouTube/Vimeo)', v?.embedUrl)}`;
+        // --- FIN BLOQUE RESTAURADO DE VIDEOS ---
+
         } else if(sheet === 'Services'){
              const s = isNew ? {} : AppState.data.Services.find(x => x.id === id);
+
+
+
+            
              modalTitle = isNew ? 'Nuevo Servicio' : `Editar ${s.title}`;
              
              let nextOrder = 1;
@@ -2134,6 +2155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
