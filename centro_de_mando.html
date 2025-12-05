@@ -919,7 +919,7 @@ const App = {
             if(need('Projects')) sheets.push('Projects');
             if(need('ProjectImages')) sheets.push('ProjectImages'); 
         }
-        else if (view === 'rentals') { if(need('RentalItems')) sheets.push('RentalItems','RentalCategories','RentalItemImages'); }
+        else if (view === 'rentals') { if(need('RentalItems')) sheets.push('RentalItems','RentalCategories','RentalItemImages','BlockedDates'); }
         else if (view === 'services') { if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); }
         else if (view === 'videos') { if(need('Videos')) sheets.push('Videos'); }
         else if (view === 'bookings') { if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); }
@@ -2439,6 +2439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
