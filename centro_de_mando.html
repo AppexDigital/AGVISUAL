@@ -972,7 +972,7 @@ const App = {
                     // 3. El nuevo número es el mayor de los dos + 1
                     img.portfolioOrder = Math.max(globalMax, localMax) + 1;
                 } else {
-                    img.portfolioOrder = 99;
+                    img.portfolioOrder = ''; // <--- AJUSTE: Se limpia el campo (vacío)
                 }
             }
 
@@ -2167,7 +2167,42 @@ const App = {
     // --- FIN CÓDIGO NUEVO ---
     
     async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => ({ sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} })); await API.batchUpdate(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
-    async removeFromPortfolio(id) { await this.quickUpdate('ProjectImages', id, 'showInPortfolio', 'No'); const item = AppState.data.ProjectImages.find(i => i.id === id); if(item) item.showInPortfolio = 'No'; UI.renderView('portfolio-manager'); },
+    // CÓDIGO NUEVO (Con Feedback y Limpieza de Orden)
+    async removeFromPortfolio(id) { 
+        // 1. Feedback Visual Inmediato
+        UI.showToast('Removiendo imagen...', 'info'); 
+        
+        try {
+            // 2. Enviar actualización al servidor (Dos campos: No portfolio y Sin orden)
+            await API.call('/.netlify/functions/update-sheet-data', { 
+                method: 'POST', 
+                body: { 
+                    sheet: 'ProjectImages', 
+                    action: 'update', 
+                    criteria: { id: id }, 
+                    data: { 
+                        showInPortfolio: 'No', 
+                        portfolioOrder: '' // <--- ESTO BORRA EL NÚMERO EN EL SHEET
+                    } 
+                } 
+            });
+
+            // 3. Actualizar Memoria Local
+            const item = AppState.data.ProjectImages.find(i => i.id === id); 
+            if(item) {
+                item.showInPortfolio = 'No';
+                item.portfolioOrder = ''; // Limpiamos memoria también
+            }
+
+            // 4. Refrescar Vista y Confirmar
+            UI.renderView('portfolio-manager'); 
+            UI.showToast('Guardado');
+
+        } catch(e) {
+            console.error(e);
+            UI.showToast('Error al remover: ' + e.message, 'error');
+        }
+    },
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2224,6 +2259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
