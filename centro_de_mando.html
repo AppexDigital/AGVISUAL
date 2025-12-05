@@ -782,17 +782,54 @@ const UI = {
             if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-center">Acciones</th>';
             
         } else if (view === 'rentals') { 
-             // 1. Equipos
-             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
-                const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
-                const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
-                return `<tr class="border-b hover:bg-gray-50"><td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td><td class="p-4 font-bold text-sm">${i.name}</td><td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td><td class="p-4 font-mono text-sm">$${i.pricePerDay}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button><button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
-            }).join('');
+             // 1. Equipos (Ordenados por Orden)
+             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
+                .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
+                .map(i => {
+                    const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
+                    const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
+                    
+                    // AJUSTE: Agregada columna Orden al inicio
+                    return `<tr class="border-b hover:bg-gray-50">
+                        <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
+                        <td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td>
+                        <td class="p-4 font-bold text-sm">${i.name}</td>
+                        <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
+                        <td class="p-4 font-mono text-sm">$${i.pricePerDay}</td>
+                        <td class="p-4 flex gap-3">
+                            <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
+                            <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                }).join('');
             
-            // 2. Categorías
-            document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || []).map(c => `
-                <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs font-bold text-gray-400">${c.order}</td><td class="p-4 font-bold text-sm">${c.name}</td><td class="p-4 flex gap-3"><button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button></td></tr>
+             // AJUSTE: Actualizar encabezado de tabla Equipos
+             const theadItems = document.querySelector('#tab-rental-items thead tr');
+             if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th>';
+
+            // 2. Categorías (Ordenadas por Orden)
+            document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || [])
+                .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
+                .map(c => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 text-xs font-bold text-gray-400 text-center">${c.order}</td>
+                    <td class="p-4 font-bold text-sm">${c.name}</td>
+                    <td class="p-4 flex gap-3">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
             `).join('');
+            
+            // 3. Bloqueos (Se mantiene igual, solo aseguramos que esté ahí)
+             document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
+                 const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
+                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
+            }).join('');
+
+
+            
 
             // 3. Bloqueos (NUEVO AQUÍ)
             document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
@@ -1501,7 +1538,15 @@ const App = {
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
              modalTitle = isNew ? 'Nuevo Equipo' : `Editar ${i.name}`;
-             html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
+             
+             // Autocalcular Orden
+             let nextOrder = 1;
+             if (isNew && AppState.data.RentalItems && AppState.data.RentalItems.length > 0) {
+                 const maxOrder = Math.max(...AppState.data.RentalItems.map(it => parseInt(it.order) || 0));
+                 nextOrder = maxOrder + 1;
+             }
+
+             html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
              
              if (!isNew) {
                  leftButtons = `
@@ -1512,8 +1557,16 @@ const App = {
 
         } else if(sheet === 'RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
-             html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
+             modalTitle = isNew ? 'Nueva Categoría' : 'Editar Categoría';
+             
+             // Autocalcular Orden
+             let nextOrder = 1;
+             if (isNew && AppState.data.RentalCategories && AppState.data.RentalCategories.length > 0) {
+                 const maxOrder = Math.max(...AppState.data.RentalCategories.map(cat => parseInt(cat.order) || 0));
+                 nextOrder = maxOrder + 1;
+             }
 
+             html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
             // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
         } else if(sheet === 'Bookings'){
              // 1. Asegurar que tenemos la lista de equipos para el selector
@@ -1968,6 +2021,68 @@ const App = {
                 await API.batchUpdate(batch, loadingMsg);
                 AppState.data.Services = allServices;
 
+
+            } else if (sheet === 'RentalItems' || sheet === 'RentalCategories') {
+                // --- LÓGICA UNIFICADA PARA ALQUILER (Equipos y Categorías) ---
+                const isCat = sheet === 'RentalCategories';
+                const listName = isCat ? 'RentalCategories' : 'RentalItems';
+                const nameField = isCat ? 'name' : 'name'; // Ambos usan 'name' en este caso
+                
+                const errors = [];
+                if (!data.name || !data.name.trim()) errors.push("Nombre");
+                if (!data.order || isNaN(data.order)) errors.push("Orden");
+                if (!isCat && !data.pricePerDay) errors.push("Precio");
+                if (!isCat && !data.categoryId) errors.push("Categoría");
+
+                // Validación de nombre único
+                const exists = (AppState.data[listName] || []).some(item => 
+                    item.name.trim().toLowerCase() === data.name.trim().toLowerCase() && item.id !== id
+                );
+                if (exists) {
+                    UI.showToast(`Error: Ya existe ${isCat ? 'una categoría' : 'un equipo'} llamado "${data.name}".`, 'error');
+                    return;
+                }
+                if (errors.length > 0) {
+                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
+                    return;
+                }
+
+                // Reordenamiento Inteligente
+                let allItems = [...(AppState.data[listName] || [])].filter(x => x.id !== id);
+                const currentItem = { ...data, id: isNew ? data[idField] : id };
+                
+                allItems.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+
+                let targetOrder = parseInt(data.order) || 1;
+                let targetIndex = targetOrder - 1;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex > allItems.length) targetIndex = allItems.length;
+
+                allItems.splice(targetIndex, 0, currentItem);
+
+                // Preparar Batch
+                const batch = [];
+                allItems.forEach((item, index) => {
+                    const newOrder = index + 1;
+                    if (parseInt(item.order) !== newOrder || item.id === currentItem.id) {
+                        item.order = newOrder;
+                        const dataToSave = (item.id === currentItem.id) ? currentItem : { order: newOrder };
+                        batch.push({
+                            sheet: sheet,
+                            action: (item.id === currentItem.id && isNew) ? 'add' : 'update',
+                            criteria: (item.id === currentItem.id && isNew) ? null : { id: item.id },
+                            data: dataToSave
+                        });
+                    }
+                });
+
+                // Mensaje Personalizado
+                const typeLabel = isCat ? 'Categoría' : 'Equipo';
+                const loadingMsg = `${isNew ? 'Guardando' : 'Editando'} ${typeLabel} ${data.name}`; // Ajustado según solicitud
+                
+                await API.batchUpdate(batch, loadingMsg);
+                AppState.data[listName] = allItems;
+
                 // --- INICIO CÓDIGO NUEVO (GUARDADO RESERVAS) ---
             } else if (sheet === 'Bookings') {
                 const errors = [];
@@ -2077,32 +2192,38 @@ const App = {
     },
     
     async handleDelete(sheet, id, key='id') { 
-        // 1. Calcular nombres para el mensaje del Modal de Confirmación
+        // AJUSTE 5: Verificación de Dependencias (Categorías)
+        if (sheet === 'RentalCategories') {
+            const hasChildren = (AppState.data.RentalItems || []).some(item => item.categoryId === id);
+            if (hasChildren) {
+                // Notificación Roja (Error) sin abrir modal
+                UI.showToast('No se puede eliminar: Esta categoría tiene equipos asociados.', 'error');
+                return; // DETENER PROCESO AQUÍ
+            }
+        }
+
+        // 1. Calcular nombres y etiquetas
         const item = AppState.data[sheet]?.find(x => x[key] === id);
         const name = item?.title || item?.name || 'Registro';
         
-        // AJUSTE 1: Etiqueta para el Modal de Confirmación
-        const typeLabel = sheet === 'Projects' ? 'proyecto' : 
-                                 (sheet === 'Services' ? 'servicio' : 
-                                 (sheet === 'RentalItems' ? 'equipo' : 
-                                 (sheet === 'Videos' ? 'video' : 'elemento')));
-        
-        const titleText = `¿Desea eliminar el ${typeLabel} ${name}?`;
+        const typeLabel = sheet === 'Projects' ? 'Proyecto' : 
+                         (sheet === 'Services' ? 'Servicio' : 
+                         (sheet === 'RentalItems' ? 'Equipo' : 
+                         (sheet === 'RentalCategories' ? 'Categoría' : // Nueva etiqueta
+                         (sheet === 'Videos' ? 'Video' : 'Registro'))));
+
+        const titleText = `¿Desea eliminar ${typeLabel === 'Categoría' ? 'la' : 'el'} ${typeLabel} ${name}?`;
         const msgText = "Esta acción eliminará también las carpetas y archivos asociados.";
 
         UI.showConfirm(titleText, msgText, async ()=>{ 
             try {
-                // Recuperamos datos para el Mensaje de Carga
                 const parentItem = AppState.data[sheet]?.find(x => x[key] === id);
                 const itemName = parentItem?.title || parentItem?.name || 'elemento';
                 
-                // AJUSTE 2: Etiqueta para la Pantalla de Carga (Aquí estaba diciendo "Registro")
-            const loadTypeLabel = sheet === 'Projects' ? 'Proyecto' : 
-                                     (sheet === 'Services' ? 'Servicio' : 
-                                     (sheet === 'RentalItems' ? 'Equipo' : 
-                                     (sheet === 'Videos' ? 'Video' : 'Elemento')));
-                
+                // Mensaje de carga personalizado
+                const loadTypeLabel = typeLabel; // Reutilizamos la lógica de arriba
                 const baseMessage = `Eliminando ${loadTypeLabel} ${itemName}`;
+                
                 UI.showLoading(`${baseMessage}...`);
                 
                 // 1. Identificar si es un Padre con muchos hijos
@@ -2113,54 +2234,34 @@ const App = {
                 else if (sheet === 'Services') { childSheet = 'ServiceImages'; childKey = 'serviceId'; }
                 else if (sheet === 'RentalItems') { childSheet = 'RentalItemImages'; childKey = 'itemId'; }
 
-                // 2. Si tiene hijos, borrarlos en LOTES primero
+                // 2. Borrado en cascada (Lotes)
                 if (childSheet && AppState.data[childSheet]) {
                     const children = AppState.data[childSheet].filter(c => c[childKey] === id);
-                    
                     if (children.length > 0) {
                         const BATCH_SIZE = 10;
                         let processedCount = 0;
-
                         for (let i = 0; i < children.length; i += BATCH_SIZE) {
                             const batch = children.slice(i, i + BATCH_SIZE).map(child => ({
-                                sheet: childSheet,
-                                action: 'delete',
-                                criteria: { id: child.id },
-                                data: { fileId: child.fileId }
+                                sheet: childSheet, action: 'delete', criteria: { id: child.id }, data: { fileId: child.fileId }
                             }));
-                            
                             processedCount += batch.length;
-                            // El mensaje se actualiza usando la etiqueta correcta: "Eliminando Servicio X (Borrando...)"
                             UI.showLoading(`${baseMessage} (Borrando registros ${processedCount}/${children.length})...`);
-
-                            await API.call('/.netlify/functions/update-sheet-data', {
-                                method: 'POST',
-                                body: batch
-                            });
-                            
+                            await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: batch });
                             if (i + BATCH_SIZE < children.length) await new Promise(r => setTimeout(r, 1000));
                         }
                     }
                 }
 
-                // Mensaje final de limpieza
                 UI.showLoading(`${baseMessage} (Finalizando)...`);
-                
                 const extraData = parentItem?.driveFolderId ? { fileId: parentItem.driveFolderId } : {}; 
 
                 await API.call('/.netlify/functions/update-sheet-data',{
-                    method:'POST',
-                    body:{
-                        sheet,
-                        action:'delete',
-                        criteria:{[key]:id},
-                        data: extraData 
-                    }
+                    method:'POST', body:{ sheet, action:'delete', criteria:{[key]:id}, data: extraData }
                 }); 
 
                 await App.ensureDataForView(AppState.view, true); 
                 UI.renderView(AppState.view); 
-                UI.showToast('Registro y archivos eliminados correctamente'); 
+                UI.showToast('Eliminado correctamente'); 
 
             } catch(e){ 
                 console.error(e);
@@ -2170,6 +2271,7 @@ const App = {
             }
         }); 
     },
+
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
 
     async quickUpdate(sheet, id, key, val) { 
@@ -2337,6 +2439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
