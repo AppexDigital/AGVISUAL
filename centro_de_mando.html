@@ -1914,7 +1914,70 @@ const App = {
                 const loadingMsg = `${isNew ? 'Creado' : 'Guardando'} servicio ${itemName}`;
                 await API.batchUpdate(batch, loadingMsg);
                 AppState.data.Services = allServices;
-            } else {
+            
+            } else if (sheet === 'Videos') {
+                // --- LÓGICA ESPECIAL VIDEOS (Validación + Reordenamiento) ---
+                
+                const errors = [];
+                if (!data.title || !data.title.trim()) errors.push("Título");
+                if (!data.order || isNaN(data.order)) errors.push("Orden");
+                // (La URL no es obligatoria estrictamente por sistema, pero podrías agregarla aquí si quieres)
+
+                // 1. Validación de duplicados (Título único)
+                const exists = (AppState.data.Videos || []).some(v => 
+                    v.title.trim().toLowerCase() === data.title.trim().toLowerCase() && v.id !== id
+                );
+                
+                if (exists) {
+                    UI.showToast(`Error: Ya existe un video llamado "${data.title}".`, 'error');
+                    return;
+                }
+                if (errors.length > 0) {
+                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
+                    return;
+                }
+
+                // 2. Reordenamiento Inteligente
+                let allVideos = [...(AppState.data.Videos || [])].filter(v => v.id !== id);
+                const currentVideo = { ...data, id: isNew ? data[idField] : id };
+                
+                // Ordenar existentes
+                allVideos.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+
+                // Calcular posición de inserción
+                let targetOrder = parseInt(data.order) || 1;
+                let targetIndex = targetOrder - 1;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex > allVideos.length) targetIndex = allVideos.length;
+
+                // Insertar
+                allVideos.splice(targetIndex, 0, currentVideo);
+
+                // 3. Preparar Batch (Renumerar todo)
+                const batch = [];
+                allVideos.forEach((v, index) => {
+                    const newOrder = index + 1;
+                    // Si el orden cambia O es el video actual
+                    if (parseInt(v.order) !== newOrder || v.id === currentVideo.id) {
+                        v.order = newOrder;
+                        const dataToSave = (v.id === currentVideo.id) ? currentVideo : { order: newOrder };
+                        
+                        batch.push({
+                            sheet: 'Videos',
+                            action: (v.id === currentVideo.id && isNew) ? 'add' : 'update',
+                            criteria: (v.id === currentVideo.id && isNew) ? null : { id: v.id },
+                            data: dataToSave
+                        });
+                    }
+                });
+
+                // 4. Enviar
+                const loadingMsg = `${isNew ? 'Agregando' : 'Actualizando'} video ${data.title}`;
+                await API.batchUpdate(batch, loadingMsg);
+                AppState.data.Videos = allVideos;
+            
+            
+            else {
                 // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS (Rentals, Videos, etc.) ---
                 await API.call('/.netlify/functions/update-sheet-data', { 
                     method: 'POST', 
@@ -2155,6 +2218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
