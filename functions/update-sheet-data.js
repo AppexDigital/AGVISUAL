@@ -120,9 +120,11 @@ exports.handler = async (event, context) => {
                 const targetRow = rows.find(r => String(r.get(realHeaderKey)).trim() === criteriaVal);
 
                 if (targetRow) {
+                  
                     // Renombrado (Drive) - CORREGIDO
-                    if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
+                if (['Projects', 'RentalItems', 'Services'].includes(sheetName)) {
                         const titleKey = sheetName === 'RentalItems' ? 'name' : 'title';
+                      
                         const newTitle = getDataVal(op.data, titleKey);
                         
                         if (newTitle) {
