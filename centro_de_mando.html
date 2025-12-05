@@ -1103,10 +1103,12 @@ const App = {
                 const upRes = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
                 
                 // Guardar ID carpeta padre si es nuevo
-                if ((type === 'Projects' || type === 'RentalItems') && upRes.driveFolderId && upRes.driveFolderId !== driveFolderId) {
+                if ((type === 'Projects' || type === 'RentalItems'|| type === 'Services') && upRes.driveFolderId && upRes.driveFolderId !== driveFolderId) {
                     driveFolderId = upRes.driveFolderId;
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: type, action: 'update', criteria: {id: parentId}, data: {driveFolderId} } });
                 }
+
+                
 
                 if (type === 'SettingImage') {
                     await API.call('/.netlify/functions/update-sheet-data', { method: 'POST', body: { sheet: 'Settings', action: 'update', criteria: {key: parentId}, data: {value: upRes.imageUrl} } });
@@ -1837,9 +1839,14 @@ const App = {
                 const batch = [];
                 allServices.forEach((s, index) => {
                     const newOrder = index + 1;
+                    // Si el orden cambia O es el servicio actual (para guardar sus datos)
                     if (parseInt(s.order) !== newOrder || s.id === currentService.id) {
-                        s.order = newOrder;
-                        const dataToSave = (s.id === currentService.id) ? s : { order: newOrder };
+                        s.order = newOrder; // Actualizamos la memoria local del vecino
+                        
+                        // CORRECCIÓN: Si es el servicio actual, enviamos 'currentService' (que tiene el introText nuevo)
+                        // Si es un vecino, solo enviamos su nuevo orden.
+                        const dataToSave = (s.id === currentService.id) ? currentService : { order: newOrder };
+                        
                         batch.push({
                             sheet: 'Services',
                             action: (s.id === currentService.id && isNew) ? 'add' : 'update',
@@ -2167,6 +2174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
