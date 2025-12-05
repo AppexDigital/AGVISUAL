@@ -762,7 +762,7 @@ const UI = {
                         <span class="bg-gray-100 px-2 py-1 rounded">${imageCount} Fotos</span>
                     </td>
 
-                    <td class="p-4 flex gap-3 justify-end">
+                    <td class="p-4 flex gap-3 justify-center">
                         <button class="text-blue-600 hover:text-blue-800 p-2" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button>
                         <button class="text-indigo-600 hover:text-indigo-800 p-2" onclick="App.handleServiceContent('${s.id}', '${s.title}')" title="Contenido"><i class="fas fa-align-left"></i></button>
                         <button class="text-green-600 hover:text-green-800 p-2" onclick="App.handleServiceImages('${s.id}', '${s.title}')" title="Galería"><i class="fas fa-images"></i></button>
@@ -2136,6 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
