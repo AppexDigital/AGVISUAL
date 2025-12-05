@@ -773,7 +773,7 @@ const UI = {
             
             // Actualizar Encabezados de Tabla
             const thead = document.querySelector('#view-services thead tr');
-            if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-right">Acciones</th>';
+            if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-center">Acciones</th>';
             
         } else if (view === 'rentals') { 
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
@@ -2136,6 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
