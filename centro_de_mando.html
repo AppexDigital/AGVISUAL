@@ -740,10 +740,27 @@ const UI = {
             document.getElementById('videos-table-body').innerHTML = (data.Videos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(v => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${v.order||99}</td><td class="p-4 font-bold text-sm">${v.title}</td><td class="p-4 text-xs text-blue-500 truncate max-w-xs"><a href="${v.embedUrl}" target="_blank">${v.embedUrl}</a></td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
+            
         } else if (view === 'services') {
+             // AJUSTE: Renderizar Columna de Icono
              document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => `
-                <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${s.order||99}</td><td class="p-4 font-bold text-sm">${s.title}</td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button><button class="text-indigo-600" onclick="App.handleServiceContent('${s.id}', '${s.title}')" title="Contenido"><i class="fas fa-align-left"></i></button><button class="text-green-600" onclick="App.handleServiceImages('${s.id}', '${s.title}')" title="Galería"><i class="fas fa-images"></i></button><button class="text-red-600" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button></td></tr>
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 font-mono text-xs w-16 text-center">${s.order||99}</td>
+                    <td class="p-4 w-16 text-center text-xl text-gray-600"><i class="${s.iconClass || 'fas fa-circle-question'}"></i></td>
+                    <td class="p-4 font-bold text-sm">${s.title}</td>
+                    <td class="p-4 flex gap-3 justify-end">
+                        <button class="text-blue-600 hover:text-blue-800 p-2" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-indigo-600 hover:text-indigo-800 p-2" onclick="App.handleServiceContent('${s.id}', '${s.title}')" title="Contenido"><i class="fas fa-align-left"></i></button>
+                        <button class="text-green-600 hover:text-green-800 p-2" onclick="App.handleServiceImages('${s.id}', '${s.title}')" title="Galería"><i class="fas fa-images"></i></button>
+                        <button class="text-red-600 hover:text-red-800 p-2" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
             `).join('');
+            // AJUSTE: Actualizar encabezado de tabla
+            const thead = document.querySelector('#view-services thead tr');
+            if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-right">Acciones</th>';
+
+            
         } else if (view === 'rentals') { 
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
                 const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
@@ -1407,20 +1424,25 @@ const App = {
                  document.getElementById('c-iconClass').value = iconClass;
              };
 
-             setTimeout(() => {
-                 // AJUSTE 3: Configuración de Quill con Alineación
+            setTimeout(() => {
+                 // Configuración de Quill
                  activeQuillEditor = new Quill('#editor-intro', {
                      theme: 'snow',
                      modules: { 
                          toolbar: [
                              ['bold', 'italic', 'underline'], 
-                             [{ 'align': [] }], // Botones de alineación (Izq, Centro, Der, Justificado)
+                             [{ 'align': [] }], 
                              [{ 'list': 'ordered'}, { 'list': 'bullet' }], 
                              ['clean']
                          ] 
                      }
                  });
-                 if (s?.introText) activeQuillEditor.root.innerHTML = s.introText;
+                 
+                 // AJUSTE: Inyección segura del contenido HTML guardado
+                 // Usamos pasteHTML si existe para mantener formato, o innerHTML directo
+                 if (s && s.introText) {
+                    activeQuillEditor.root.innerHTML = s.introText;
+                 }
              }, 100);
             
         } else if(sheet === 'Services'){
@@ -2142,6 +2164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
