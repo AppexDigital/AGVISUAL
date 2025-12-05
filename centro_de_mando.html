@@ -1802,64 +1802,6 @@ const App = {
 
                 // Actualizamos memoria global para reflejar cambios inmediatamente
                 AppState.data.Projects = allProjects;
-
-            } else if (sheet === 'Services') {
-                // --- LÓGICA ESPECIAL SERVICIOS (Reordenamiento + Validación) ---
-                const errors = [];
-                if (!data.title || !data.title.trim()) errors.push("Título");
-                if (!data.order || isNaN(data.order)) errors.push("Orden");
-                if (!data.iconClass) errors.push("Icono");
-
-                // Validación de duplicados
-                const exists = (AppState.data.Services || []).some(s => 
-                    s.title.trim().toLowerCase() === data.title.trim().toLowerCase() && s.id !== id
-                );
-                if (exists) {
-                    UI.showToast(`Error: Ya existe un servicio llamado "${data.title}".`, 'error');
-                    return;
-                }
-                if (errors.length > 0) {
-                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
-                    return;
-                }
-
-                // Reordenamiento Inteligente
-                let allServices = [...(AppState.data.Services || [])].filter(s => s.id !== id);
-                const currentService = { ...data, id: isNew ? data[idField] : id };
-                
-                allServices.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
-
-                let targetOrder = parseInt(data.order) || 1;
-                let targetIndex = targetOrder - 1;
-                if (targetIndex < 0) targetIndex = 0;
-                if (targetIndex > allServices.length) targetIndex = allServices.length;
-
-                allServices.splice(targetIndex, 0, currentService);
-
-                const batch = [];
-                allServices.forEach((s, index) => {
-                    const newOrder = index + 1;
-                    // Si el orden cambia O es el servicio actual (para guardar sus datos)
-                    if (parseInt(s.order) !== newOrder || s.id === currentService.id) {
-                        s.order = newOrder; // Actualizamos la memoria local del vecino
-                        
-                        // CORRECCIÓN: Si es el servicio actual, enviamos 'currentService' (que tiene el introText nuevo)
-                        // Si es un vecino, solo enviamos su nuevo orden.
-                        const dataToSave = (s.id === currentService.id) ? currentService : { order: newOrder };
-                        
-                        batch.push({
-                            sheet: 'Services',
-                            action: (s.id === currentService.id && isNew) ? 'add' : 'update',
-                            criteria: (s.id === currentService.id && isNew) ? null : { id: s.id },
-                            data: dataToSave
-                        });
-                    }
-                });
-
-                // Mensaje Personalizado
-                const loadingMsg = `${isNew ? 'Creado' : 'Guardando'} servicio ${itemName}`;
-                await API.batchUpdate(batch, loadingMsg);
-                AppState.data.Services = allServices;
                 
                 } else if (sheet === 'Services') {
                 // --- LÓGICA ESPECIAL SERVICIOS (Reordenamiento + Validación + Quill) ---
@@ -2174,6 +2116,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
