@@ -742,24 +742,38 @@ const UI = {
             `).join('');
             
         } else if (view === 'services') {
-             // AJUSTE: Renderizar Columna de Icono
-             document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => `
+             // AJUSTE: Tabla Rediseñada con Contadores
+             document.getElementById('services-table-body').innerHTML = (data.Services || []).sort((a,b) => (a.order||99)-(b.order||99)).map(s => {
+                
+                // Cálculos en tiempo real
+                const blockCount = (data.ServiceContentBlocks || []).filter(b => b.serviceId === s.id).length;
+                const imageCount = (data.ServiceImages || []).filter(i => i.serviceId === s.id).length;
+
+                return `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-4 font-mono text-xs w-16 text-center">${s.order||99}</td>
                     <td class="p-4 w-16 text-center text-xl text-gray-600"><i class="${s.iconClass || 'fas fa-circle-question'}"></i></td>
                     <td class="p-4 font-bold text-sm">${s.title}</td>
+                    
+                    <td class="p-4 text-center font-mono text-sm text-gray-500">
+                        <span class="bg-gray-100 px-2 py-1 rounded">${blockCount} Bloques</span>
+                    </td>
+                    <td class="p-4 text-center font-mono text-sm text-gray-500">
+                        <span class="bg-gray-100 px-2 py-1 rounded">${imageCount} Fotos</span>
+                    </td>
+
                     <td class="p-4 flex gap-3 justify-end">
                         <button class="text-blue-600 hover:text-blue-800 p-2" onclick="App.handleEditCrudItem('Services', '${s.id}')"><i class="fas fa-edit"></i></button>
                         <button class="text-indigo-600 hover:text-indigo-800 p-2" onclick="App.handleServiceContent('${s.id}', '${s.title}')" title="Contenido"><i class="fas fa-align-left"></i></button>
                         <button class="text-green-600 hover:text-green-800 p-2" onclick="App.handleServiceImages('${s.id}', '${s.title}')" title="Galería"><i class="fas fa-images"></i></button>
                         <button class="text-red-600 hover:text-red-800 p-2" onclick="App.handleDelete('Services', '${s.id}')"><i class="fas fa-trash"></i></button>
                     </td>
-                </tr>
-            `).join('');
-            // AJUSTE: Actualizar encabezado de tabla
+                </tr>`;
+            }).join('');
+            
+            // Actualizar Encabezados de Tabla
             const thead = document.querySelector('#view-services thead tr');
-            if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-right">Acciones</th>';
-
+            if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-right">Acciones</th>';
             
         } else if (view === 'rentals') { 
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || []).map(i => {
@@ -1624,7 +1638,7 @@ const App = {
         const newBlock = {
             id: `blk_${Date.now()}`,
             serviceId: serviceId,
-            blockTitle: 'Nueva Sección',
+            blockTitle: '',
             blockContentHtml: '',
             order: nextOrder,
             _isNew: true
@@ -1686,7 +1700,15 @@ const App = {
 
             if (batch.length > 0) {
                 await API.batchUpdate(batch, "Actualizando contenido...");
+                
+                // 1. Actualizar datos en memoria desde el servidor
                 await App.ensureDataForView('services', true);
+                
+                // 2. AJUSTE CRÍTICO: Forzar repintado de la tabla para ver los contadores nuevos
+                if (AppState.view === 'services') {
+                    UI.renderView('services');
+                }
+                
                 UI.showToast('Contenido actualizado');
                 UI.closeModal();
             } else {
@@ -2114,6 +2136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
