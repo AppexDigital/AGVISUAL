@@ -1513,9 +1513,46 @@ const App = {
         } else if(sheet === 'RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||99, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
-        
+
+            // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
+        } else if(sheet === 'Bookings'){
+             // 1. Asegurar que tenemos la lista de equipos para el selector
+             if (!AppState.data.RentalItems) {
+                 UI.showLoading('Cargando equipos...');
+                 const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems');
+                 AppState.data = { ...AppState.data, ...d };
+                 UI.hideLoading();
+             }
+             
+             const b = isNew ? {} : AppState.data.Bookings.find(x => x.id === id);
+             const items = AppState.data.RentalItems || [];
+             const statuses = [{id:'Pendiente',name:'Pendiente'}, {id:'Confirmado',name:'Confirmado'}, {id:'Pagado',name:'Pagado'}, {id:'Cancelado',name:'Cancelado'}];
+             
+             modalTitle = isNew ? 'Nueva Reserva Manual' : `Editar Reserva ${b.id}`;
+             
+             // 2. Estructura del Formulario
+             html = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${UI.inputHTML('c', 'customerName', 'Cliente', b?.customerName)}
+                    ${UI.inputHTML('c', 'customerEmail', 'Email', b?.customerEmail, 'email')}
+                    ${UI.inputHTML('c', 'customerPhone', 'Teléfono', b?.customerPhone)}
+                    ${UI.selectHTML('c', 'status', 'Estado', statuses, b?.status || 'Confirmado')}
+                </div>
+                <hr class="my-4 border-gray-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${UI.selectHTML('c', 'itemId', 'Equipo', items, b?.itemId)}
+                    ${UI.inputHTML('c', 'totalPrice', 'Total ($)', b?.totalPrice, 'number')}
+                    ${UI.inputHTML('c', 'startDate', 'Desde', b?.startDate, 'date')}
+                    ${UI.inputHTML('c', 'endDate', 'Hasta', b?.endDate, 'date')}
+                </div>
+             `;
+        // --- FIN CÓDIGO NUEVO ---
+
+            
         } else if(sheet === 'BlockedDates'){
              const items = AppState.data.RentalItems || [];
+
+            
              html = `${UI.selectHTML('c', 'itemId', 'Equipo', items)} ${UI.inputHTML('c', 'reason', 'Motivo')} ${UI.inputHTML('c', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('c', 'endDate', 'Hasta', '', 'date')}`;
         }
 
@@ -1753,6 +1790,12 @@ const App = {
         try { await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'ServiceContentBlocks',action:'add',data:{id:`blk_${Date.now()}`,serviceId:sid,blockTitle:'Nuevo',blockContentHtml:'',order:99}}}); await App.ensureDataForView('services', true); const s=AppState.data.Services.find(x=>x.id===sid); this.handleServiceContent(sid,s.title); } catch(e){alert(e.message);}
     },
 
+    // --- INICIO CÓDIGO NUEVO ---
+    handleManualBooking() {
+        this.handleEditCrudItem('Bookings', null);
+    },
+    // --- FIN CÓDIGO NUEVO ---
+
     async saveCrud(sheet, id) {
         try {
             const isNew = !id || id === 'null';
@@ -1924,6 +1967,31 @@ const App = {
                 const loadingMsg = `${isNew ? 'Creado' : 'Guardando'} servicio ${itemName}`;
                 await API.batchUpdate(batch, loadingMsg);
                 AppState.data.Services = allServices;
+
+                // --- INICIO CÓDIGO NUEVO (GUARDADO RESERVAS) ---
+            } else if (sheet === 'Bookings') {
+                const errors = [];
+                if (!data.customerName) errors.push("Cliente");
+                if (!data.itemId) errors.push("Equipo");
+                if (!data.startDate || !data.endDate) errors.push("Fechas");
+                
+                if (errors.length > 0) {
+                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
+                    return;
+                }
+                
+                // Guardar nombre del equipo (Snapshot)
+                const item = AppState.data.RentalItems?.find(i => i.id === data.itemId);
+                if(item) data.itemName = item.name;
+                
+                // Fecha de creación automática
+                if(isNew) data.bookingTimestamp = new Date().toISOString();
+
+                await API.call('/.netlify/functions/update-sheet-data', { 
+                    method: 'POST', 
+                    body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } 
+                });
+            // --- FIN CÓDIGO NUEVO ---
             
             } else if (sheet === 'Videos') {
                 // --- LÓGICA ESPECIAL VIDEOS (Validación + Reordenamiento) ---
@@ -2269,6 +2337,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
