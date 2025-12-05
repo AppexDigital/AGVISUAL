@@ -1803,26 +1803,24 @@ const App = {
                 // Actualizamos memoria global para reflejar cambios inmediatamente
                 AppState.data.Projects = allProjects;
                 
-                } else if (sheet === 'Services') {
-                // --- LÓGICA ESPECIAL SERVICIOS (Reordenamiento + Validación + Quill) ---
+            } else if (sheet === 'Services') {
+                // --- LÓGICA UNIFICADA Y CORREGIDA PARA SERVICIOS ---
                 
-                // AJUSTE: Extracción directa del DOM (Más robusto)
+                // 1. CAPTURA DE INTRO (Blindada):
+                // Buscamos físicamente el texto en la pantalla para asegurar que se guarde.
                 const editorElement = document.querySelector('#editor-intro .ql-editor');
                 if (editorElement) {
                     data.introText = editorElement.innerHTML;
                 } else {
-                    // Fallback por seguridad
                     data.introText = activeQuillEditor ? activeQuillEditor.root.innerHTML : '';
                 }
 
+                // 2. VALIDACIONES
                 const errors = [];
-
-                
                 if (!data.title || !data.title.trim()) errors.push("Título");
                 if (!data.order || isNaN(data.order)) errors.push("Orden");
                 if (!data.iconClass) errors.push("Icono");
 
-                // Validación de duplicados
                 const exists = (AppState.data.Services || []).some(s => 
                     s.title.trim().toLowerCase() === data.title.trim().toLowerCase() && s.id !== id
                 );
@@ -1835,7 +1833,7 @@ const App = {
                     return;
                 }
 
-                // Reordenamiento Inteligente
+                // 3. REORDENAMIENTO INTELIGENTE
                 let allServices = [...(AppState.data.Services || [])].filter(s => s.id !== id);
                 const currentService = { ...data, id: isNew ? data[idField] : id };
                 
@@ -1848,14 +1846,17 @@ const App = {
 
                 allServices.splice(targetIndex, 0, currentService);
 
+                // 4. PREPARAR EL BATCH
                 const batch = [];
                 allServices.forEach((s, index) => {
                     const newOrder = index + 1;
-                    // Si el orden cambia O es el servicio actual (para guardar sus datos)
+                    // Si el orden cambió O es el servicio actual
                     if (parseInt(s.order) !== newOrder || s.id === currentService.id) {
                         s.order = newOrder;
-                        // Si es el actual, guardamos TODO. Si es vecino, solo el orden.
-                        const dataToSave = (s.id === currentService.id) ? s : { order: newOrder };
+                        
+                        // CLAVE DEL ÉXITO:
+                        // Si es el servicio actual, enviamos 'currentService' (que ya tiene la intro capturada arriba).
+                        const dataToSave = (s.id === currentService.id) ? currentService : { order: newOrder };
                         
                         batch.push({
                             sheet: 'Services',
@@ -1866,13 +1867,10 @@ const App = {
                     }
                 });
 
-                // Mensaje Personalizado Solicitado
-                const loadingMsg = `${isNew ? 'Creado' : 'Editado'} servicio ${data.title}`;
+                // 5. ENVIAR
+                const loadingMsg = `${isNew ? 'Creado' : 'Guardando'} servicio ${itemName}`;
                 await API.batchUpdate(batch, loadingMsg);
-                
-                // Actualizar memoria
                 AppState.data.Services = allServices;
-
             } else {
                 // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS (Rentals, Videos, etc.) ---
                 await API.call('/.netlify/functions/update-sheet-data', { 
@@ -2116,6 +2114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
