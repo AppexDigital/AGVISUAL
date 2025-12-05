@@ -2009,7 +2009,7 @@ const App = {
                                  (sheet === 'RentalItems' ? 'equipo' : 
                                  (sheet === 'Videos' ? 'video' : 'elemento')));
         
-        const titleText = `¿Desea Eliminar el ${typeLabel} ${name}?`;
+        const titleText = `¿Desea eliminar el ${typeLabel} ${name}?`;
         const msgText = "Esta acción eliminará también las carpetas y archivos asociados.";
 
         UI.showConfirm(titleText, msgText, async ()=>{ 
@@ -2022,7 +2022,7 @@ const App = {
             const loadTypeLabel = sheet === 'Projects' ? 'Proyecto' : 
                                      (sheet === 'Services' ? 'Servicio' : 
                                      (sheet === 'RentalItems' ? 'Equipo' : 
-                                     (sheet === 'Videos' ? 'Video' : 'Registro')));
+                                     (sheet === 'Videos' ? 'Video' : 'Elemento')));
                 
                 const baseMessage = `Eliminando ${loadTypeLabel} ${itemName}`;
                 UI.showLoading(`${baseMessage}...`);
@@ -2224,6 +2224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
