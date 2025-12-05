@@ -1977,7 +1977,7 @@ const App = {
                 AppState.data.Videos = allVideos;
             
             
-            else {
+            } else {
                 // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS (Rentals, Videos, etc.) ---
                 await API.call('/.netlify/functions/update-sheet-data', { 
                     method: 'POST', 
@@ -2218,6 +2218,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
