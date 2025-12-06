@@ -1,5 +1,5 @@
 // functions/get-website-data.js
-// v11.0 - HIDRATACIÓN TOTAL (Con Paginación Infinita)
+// v13.0 - ESTRATEGIA BARRIDO MASIVO (Web Pública)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -32,7 +32,7 @@ exports.handler = async (event, context) => {
   const headers = {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', // Anti-caché agresivo
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0',
   };
@@ -41,6 +41,7 @@ exports.handler = async (event, context) => {
 
   try {
     const { doc, drive } = await getServices();
+    
     const sheetTitles = [
         'Settings', 'About', 'Videos', 'ClientLogos', 
         'Projects', 'ProjectImages', 
@@ -60,12 +61,11 @@ exports.handler = async (event, context) => {
     const sheetsData = {};
     results.forEach(res => sheetsData[res.title] = res.data);
 
-    // --- HIDRATACIÓN ROBUSTA (PAGINACIÓN) ---
+    // --- HIDRATACIÓN MASIVA ---
     try {
         const freshLinksMap = new Map();
         let pageToken = null;
 
-        // Bucle infinito hasta leer todas las imágenes de Drive
         do {
             const driveRes = await drive.files.list({
                 q: "mimeType contains 'image/' and trashed = false",
@@ -85,15 +85,12 @@ exports.handler = async (event, context) => {
                 });
             }
             pageToken = driveRes.data.nextPageToken;
-
         } while (pageToken);
 
-        // Inyección de links
         const refreshImages = (list) => {
             if (!list) return [];
             return list.map(item => {
                 const cleanId = item.fileId ? item.fileId.trim() : null;
-
                 if (cleanId && freshLinksMap.has(cleanId)) {
                     item.imageUrl = freshLinksMap.get(cleanId);
                 }
@@ -110,7 +107,7 @@ exports.handler = async (event, context) => {
         sheetsData.ClientLogos = refreshImages(sheetsData.ClientLogos);
 
     } catch (e) {
-        console.warn("Drive refresh failed, serving cached links:", e.message);
+        console.warn("Drive refresh failed:", e.message);
     }
 
     // --- PROCESAMIENTO FINAL ---
@@ -154,7 +151,6 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Error fetching website data:', error);
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to fetch website data', details: error.message }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) };
   }
 };
