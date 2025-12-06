@@ -115,19 +115,29 @@ exports.handler = async (event) => {
     }
 
 
-  // En lugar de usar el thumbnailLink (que caduca), construimos el enlace de exportación directa.
-    // Este enlace le dice a Google: "Busca el archivo con este ID y muéstralo".
-    // Al haber hecho el archivo público (role: 'reader', type: 'anyone') arriba, este enlace funcionará para siempre.
-    const imgUrl = `https://drive.google.com/uc?export=view&id=${res.data.id}`;
+    // CÓDIGO NUEVO (Estable para Web)
+    
+    // Utilizamos el thumbnailLink oficial de Google.
+    // Estos enlaces vienen de 'googleusercontent.com' y están optimizados para web,
+    // por lo que NO tienen problemas de CORS (se ven en la etiqueta <img>).
+    // Por defecto vienen pequeños (=s220). Lo reemplazamos por =s1600 (1600px de ancho),
+    // que es una excelente calidad para web y es un tamaño estándar que NO caduca.
+    
+    let imgUrl = res.data.webViewLink; // Fallback por si acaso
+
+    if (res.data.thumbnailLink) {
+        // Usamos una expresión regular para encontrar cualquier parámetro de tamaño (=s...)
+        // y reemplazarlo de forma segura por =s1600.
+        imgUrl = res.data.thumbnailLink.replace(/=s\d+.*$/, '=s1600');
+    }
     
     return {
-      statusCode: 200,
-      body: JSON.stringify({ 
-          message: 'OK', 
-          fileId: res.data.id, 
-          imageUrl: imgUrl, 
-          driveFolderId: finalFolderId 
-      })
+        statusCode: 200,
+        body: JSON.stringify({ 
+            id: res.data.id,
+            // Devolvemos la URL optimizada para web
+            webViewLink: imgUrl 
+        })
     };
 
   } catch (e) {
