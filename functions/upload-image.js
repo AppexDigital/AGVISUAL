@@ -114,31 +114,29 @@ exports.handler = async (event) => {
         console.warn("Advertencia: No se pudo hacer público el archivo automáticamente.", permError.message);
     }
 
-
-    // CÓDIGO NUEVO (Estable para Web)
+// URL robusta: Priorizamos thumbnailLink (googleusercontent) porque carga más rápido en <img> tags.
+    // Si existe, forzamos tamaño grande (=s3000) reemplazando el parámetro por defecto (=s220).
+    let imgUrl = res.data.webViewLink; // Fallback por defecto
     
-    // Utilizamos el thumbnailLink oficial de Google.
-    // Estos enlaces vienen de 'googleusercontent.com' y están optimizados para web,
-    // por lo que NO tienen problemas de CORS (se ven en la etiqueta <img>).
-    // Por defecto vienen pequeños (=s220). Lo reemplazamos por =s1600 (1600px de ancho),
-    // que es una excelente calidad para web y es un tamaño estándar que NO caduca.
-    
-    let imgUrl = res.data.webViewLink; // Fallback por si acaso
-
     if (res.data.thumbnailLink) {
-        // Usamos una expresión regular para encontrar cualquier parámetro de tamaño (=s...)
-        // y reemplazarlo de forma segura por =s1600.
-        imgUrl = res.data.thumbnailLink.replace(/=s\d+.*$/, '=s1600');
+        // A veces llega como "...=s220", a veces sin parámetro. 
+        // Esta lógica asegura que termine en =s3000 manteniendo el dominio googleusercontent.
+        const link = res.data.thumbnailLink;
+        if (link.includes('=')) {
+            imgUrl = link.substring(0, link.lastIndexOf('=')) + '=s3000';
+        } else {
+            imgUrl = link + '=s3000';
+        }
     }
     
     return {
-        statusCode: 200,
-        body: JSON.stringify({ 
-            message: 'OK', 
-            fileId: res.data.id,          // Frontend espera 'fileId'
-            imageUrl: imgUrl,             // Frontend espera 'imageUrl'
-            driveFolderId: finalFolderId  // Frontend espera 'driveFolderId' (para crear subcarpetas futuras)
-        })
+      statusCode: 200,
+      body: JSON.stringify({ 
+          message: 'OK', 
+          fileId: res.data.id, 
+          imageUrl: imgUrl, 
+          driveFolderId: finalFolderId 
+      })
     };
 
   } catch (e) {
