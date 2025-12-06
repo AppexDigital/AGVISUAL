@@ -94,6 +94,12 @@ exports.handler = async (event, context) => {
             if (!op.data.id && !['Settings', 'About'].includes(sheetName)) {
                  op.data.id = `${sheetName.toLowerCase().slice(0, 5)}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
             }
+
+          // AJUSTE: Limpieza de datos. No guardamos URLs de imágenes que caducan.
+            const cleanData = { ...op.data };
+            delete cleanData.imageUrl;
+            delete cleanData.logoUrl;
+          
             const rowData = {};
             Object.keys(op.data).forEach(k => {
                 const h = getRealHeader(sheet, k);
@@ -167,6 +173,12 @@ exports.handler = async (event, context) => {
 
                     // Aplicar Datos
                     let hasChanges = false;
+
+                  // AJUSTE: Limpieza de datos para Updates
+                    const cleanData = { ...op.data };
+                    delete cleanData.imageUrl;
+                    delete cleanData.logoUrl;
+                  
                     Object.keys(op.data).forEach(key => {
                         const h = getRealHeader(sheet, key);
                         if (h) {
