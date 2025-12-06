@@ -114,20 +114,11 @@ exports.handler = async (event) => {
         console.warn("Advertencia: No se pudo hacer público el archivo automáticamente.", permError.message);
     }
 
-// URL robusta: Priorizamos thumbnailLink (googleusercontent) porque carga más rápido en <img> tags.
-    // Si existe, forzamos tamaño grande (=s3000) reemplazando el parámetro por defecto (=s220).
-    let imgUrl = res.data.webViewLink; // Fallback por defecto
-    
-    if (res.data.thumbnailLink) {
-        // A veces llega como "...=s220", a veces sin parámetro. 
-        // Esta lógica asegura que termine en =s3000 manteniendo el dominio googleusercontent.
-        const link = res.data.thumbnailLink;
-        if (link.includes('=')) {
-            imgUrl = link.substring(0, link.lastIndexOf('=')) + '=s3000';
-        } else {
-            imgUrl = link + '=s3000';
-        }
-    }
+
+  // En lugar de usar el thumbnailLink (que caduca), construimos el enlace de exportación directa.
+    // Este enlace le dice a Google: "Busca el archivo con este ID y muéstralo".
+    // Al haber hecho el archivo público (role: 'reader', type: 'anyone') arriba, este enlace funcionará para siempre.
+    const imgUrl = `https://drive.google.com/uc?export=view&id=${res.data.id}`;
     
     return {
       statusCode: 200,
