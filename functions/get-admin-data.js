@@ -1,5 +1,5 @@
 // functions/get-admin-data.js
-// v10.0 - Read-time Hydration (Links Frescos)
+// v11.0 - HIDRATACIÓN TOTAL (Con Paginación Infinita)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -33,8 +33,16 @@ function rowsToObjects(sheet, rows) {
 }
 
 exports.handler = async (event, context) => {
+  // Evitar cacheo en el navegador para forzar la petición de links frescos
+  const headers = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+  };
+
   if (!(await validateGoogleToken(event))) {
-    return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'No autorizado.' }) };
   }
 
   try {
@@ -66,44 +74,54 @@ exports.handler = async (event, context) => {
     const results = await Promise.all(promises);
     results.forEach(res => adminData[res.title] = res.data);
 
-    // --- HIDRATACIÓN DE LINKS (Versión Robusta) ---
+    // --- HIDRATACIÓN ROBUSTA (PAGINACIÓN COMPLETA) ---
     if (requestedSheets.some(s => ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'].includes(s))) {
         try {
-            // Pedimos TODOS los archivos que no estén en la papelera.
-            // Quitamos el filtro de 'image/' por si acaso Drive clasificó mal el tipo MIME,
-            // ya que de todos modos filtraremos por ID.
-            const driveRes = await drive.files.list({
-                q: "trashed = false", 
-                fields: 'files(id, thumbnailLink)',
-                pageSize: 1000, 
-                supportsAllDrives: true,
-                includeItemsFromAllDrives: true
-            });
-
             const freshLinksMap = new Map();
-            if (driveRes.data.files) {
-                driveRes.data.files.forEach(f => {
-                    if (f.thumbnailLink) {
-                        // Lógica de reemplazo segura: Cortar en '=' y añadir tamaño
-                        const cleanLink = f.thumbnailLink.split('=')[0];
-                        const highResLink = `${cleanLink}=s1600`;
-                        freshLinksMap.set(f.id, highResLink);
-                    }
-                });
-            }
+            let pageToken = null;
 
+            // BUCLE DE PAGINACIÓN: Seguimos pidiendo mientras Google diga que hay más
+            do {
+                const driveRes = await drive.files.list({
+                    // Filtramos SOLO imágenes para no llenar la lista con basura
+                    q: "mimeType contains 'image/' and trashed = false",
+                    fields: 'nextPageToken, files(id, thumbnailLink)',
+                    pageSize: 1000, 
+                    pageToken: pageToken, // Pedimos la página siguiente
+                    supportsAllDrives: true,
+                    includeItemsFromAllDrives: true
+                });
+
+                // Procesamos este lote
+                if (driveRes.data.files) {
+                    driveRes.data.files.forEach(f => {
+                        if (f.thumbnailLink) {
+                            // Generamos el link fresco
+                            const cleanLink = f.thumbnailLink.split('=')[0];
+                            const highResLink = `${cleanLink}=s1600`;
+                            freshLinksMap.set(f.id, highResLink);
+                        }
+                    });
+                }
+
+                // Actualizamos el token para la siguiente vuelta (o null si terminó)
+                pageToken = driveRes.data.nextPageToken;
+
+            } while (pageToken); // Repetir si hay token
+
+            // Inyección de links frescos
             const imageSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
             imageSheets.forEach(sheetKey => {
                 if (adminData[sheetKey]) {
                     adminData[sheetKey] = adminData[sheetKey].map(row => {
-                        // La clave es el FILE ID. Si existe en el mapa, tenemos link fresco.
-                        if (row.fileId && freshLinksMap.has(row.fileId)) {
-                            row.imageUrl = freshLinksMap.get(row.fileId);
-                            // Marcamos visualmente para debug (opcional, puedes quitar esto luego)
-                            // console.log('Link refrescado para:', row.fileId); 
+                        // Usamos trim() para evitar errores por espacios invisibles en el ID
+                        const cleanId = row.fileId ? row.fileId.trim() : null;
+                        
+                        if (cleanId && freshLinksMap.has(cleanId)) {
+                            row.imageUrl = freshLinksMap.get(cleanId);
                         }
-                        if (sheetKey === 'ClientLogos' && row.fileId && freshLinksMap.has(row.fileId)) {
-                            row.logoUrl = freshLinksMap.get(row.fileId);
+                        if (sheetKey === 'ClientLogos' && cleanId && freshLinksMap.has(cleanId)) {
+                            row.logoUrl = freshLinksMap.get(cleanId);
                         }
                         return row;
                     });
@@ -117,7 +135,7 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(adminData),
     };
 
