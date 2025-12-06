@@ -134,8 +134,8 @@ exports.handler = async (event) => {
       body: JSON.stringify({ 
           message: 'OK', 
           fileId: res.data.id, 
-          imageUrl: imgUrl, 
-          driveFolderId: finalFolderId 
+          imageUrl: res.data.thumbnailLink ? res.data.thumbnailLink.replace(/=s\d+.*$/, '=s1600') : '', 
+          driveFolderId: finalFolderId
       })
     };
 
