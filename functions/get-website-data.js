@@ -1,5 +1,5 @@
 // functions/get-website-data.js
-// v10.0 - Read-time Hydration (Links Frescos)
+// v11.0 - HIDRATACIÓN TOTAL (Con Paginación Infinita)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -29,12 +29,18 @@ function rowsToObjects(sheet, rows) {
 }
 
 exports.handler = async (event, context) => {
-  if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
+  const headers = {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate', // Anti-caché agresivo
+      'Pragma': 'no-cache',
+      'Expires': '0',
+  };
+
+  if (event.httpMethod !== 'GET') return { statusCode: 405, headers, body: 'Method Not Allowed' };
 
   try {
     const { doc, drive } = await getServices();
-    
-    // Lista de todas las hojas necesarias
     const sheetTitles = [
         'Settings', 'About', 'Videos', 'ClientLogos', 
         'Projects', 'ProjectImages', 
@@ -54,55 +60,60 @@ exports.handler = async (event, context) => {
     const sheetsData = {};
     results.forEach(res => sheetsData[res.title] = res.data);
 
-    // --- LÓGICA DE HIDRATACIÓN (READ-TIME HYDRATION) ---
+    // --- HIDRATACIÓN ROBUSTA (PAGINACIÓN) ---
     try {
-        // Pedimos links frescos a Drive
-        const driveRes = await drive.files.list({
-            q: "mimeType contains 'image/' and trashed = false",
-            fields: 'files(id, thumbnailLink)',
-            pageSize: 1000,
-            supportsAllDrives: true,
-            includeItemsFromAllDrives: true
-        });
-
         const freshLinksMap = new Map();
-        if (driveRes.data.files) {
-            driveRes.data.files.forEach(f => {
-                if (f.thumbnailLink) {
-                    freshLinksMap.set(f.id, f.thumbnailLink.replace(/=s\d+.*$/, '=s1600'));
-                }
-            });
-        }
+        let pageToken = null;
 
-        // Función auxiliar para inyectar links en una lista
+        // Bucle infinito hasta leer todas las imágenes de Drive
+        do {
+            const driveRes = await drive.files.list({
+                q: "mimeType contains 'image/' and trashed = false",
+                fields: 'nextPageToken, files(id, thumbnailLink)',
+                pageSize: 1000,
+                pageToken: pageToken,
+                supportsAllDrives: true,
+                includeItemsFromAllDrives: true
+            });
+
+            if (driveRes.data.files) {
+                driveRes.data.files.forEach(f => {
+                    if (f.thumbnailLink) {
+                        const cleanLink = f.thumbnailLink.split('=')[0];
+                        freshLinksMap.set(f.id, `${cleanLink}=s1600`);
+                    }
+                });
+            }
+            pageToken = driveRes.data.nextPageToken;
+
+        } while (pageToken);
+
+        // Inyección de links
         const refreshImages = (list) => {
             if (!list) return [];
             return list.map(item => {
-                if (item.fileId && freshLinksMap.has(item.fileId)) {
-                    item.imageUrl = freshLinksMap.get(item.fileId);
+                const cleanId = item.fileId ? item.fileId.trim() : null;
+
+                if (cleanId && freshLinksMap.has(cleanId)) {
+                    item.imageUrl = freshLinksMap.get(cleanId);
                 }
-                if (item.logoUrl && item.fileId && freshLinksMap.has(item.fileId)) {
-                     item.logoUrl = freshLinksMap.get(item.fileId);
+                if (item.logoUrl && cleanId && freshLinksMap.has(cleanId)) {
+                     item.logoUrl = freshLinksMap.get(cleanId);
                 }
                 return item;
             });
         };
 
-        // Aplicamos la frescura a todas las listas relevantes
         sheetsData.ProjectImages = refreshImages(sheetsData.ProjectImages);
         sheetsData.ServiceImages = refreshImages(sheetsData.ServiceImages);
         sheetsData.RentalItemImages = refreshImages(sheetsData.RentalItemImages);
         sheetsData.ClientLogos = refreshImages(sheetsData.ClientLogos);
 
-        // Nota: Para 'Settings' y 'About' (imágenes únicas), la lógica es más compleja porque no son listas.
-        // Si el logo principal falla, se podría agregar lógica específica aquí, pero por ahora cubrimos el 99% (galerías).
-
     } catch (e) {
         console.warn("Drive refresh failed, serving cached links:", e.message);
     }
-    // ---------------------------------------------------
 
-    // Procesamiento y Estructura de Datos (Igual que antes, pero con datos frescos)
+    // --- PROCESAMIENTO FINAL ---
     const portfolioImages = (sheetsData.ProjectImages || [])
       .filter(img => img.showInPortfolio && img.showInPortfolio.toLowerCase() === 'si')
       .sort((a, b) => (parseInt(a.portfolioOrder) || 99) - (parseInt(b.portfolioOrder) || 99));
@@ -138,12 +149,12 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers,
       body: JSON.stringify(websiteData),
     };
 
   } catch (error) {
     console.error('Error fetching website data:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: 'Failed to fetch website data', details: error.message }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Failed to fetch website data', details: error.message }) };
   }
 };
