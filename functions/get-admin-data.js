@@ -113,14 +113,21 @@ exports.handler = async (event, context) => {
                 if (adminData[sheetKey]) {
                     adminData[sheetKey] = adminData[sheetKey].map(row => {
                         const cleanId = row.fileId ? row.fileId.trim() : null;
-                        
-                        // Si el ID existe en nuestro mapa fresco, usamos ese link
-                        if (cleanId && freshLinksMap.has(cleanId)) {
-                            row.imageUrl = freshLinksMap.get(cleanId);
-                        }
-                        
-                        if (sheetKey === 'ClientLogos' && cleanId && freshLinksMap.has(cleanId)) {
-                            row.logoUrl = freshLinksMap.get(cleanId);
+
+                      // LÓGICA DE HIERRO:
+                        // 1. Si hay ID y hay link fresco -> Usar link fresco.
+                        // 2. Si hay ID pero NO hay link fresco -> Construir link directo de respaldo (lh3.googleusercontent.com/d/ID).
+                        // 3. Si no hay ID -> Dejar vacío.
+                        if (cleanId) {
+                            if (freshLinksMap.has(cleanId)) {
+                                row.imageUrl = freshLinksMap.get(cleanId);
+                                if (sheetKey === 'ClientLogos') row.logoUrl = freshLinksMap.get(cleanId);
+                            } else {
+                                // Fallback de emergencia: Link directo de descarga (suele funcionar para visualización básica)
+                                const fallbackUrl = `https://lh3.googleusercontent.com/d/${cleanId}`;
+                                row.imageUrl = fallbackUrl;
+                                if (sheetKey === 'ClientLogos') row.logoUrl = fallbackUrl;
+                            }
                         }
                         return row;
                     });
