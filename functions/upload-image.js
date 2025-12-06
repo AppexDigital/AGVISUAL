@@ -134,9 +134,10 @@ exports.handler = async (event) => {
     return {
         statusCode: 200,
         body: JSON.stringify({ 
-            id: res.data.id,
-            // Devolvemos la URL optimizada para web
-            webViewLink: imgUrl 
+            message: 'OK', 
+            fileId: res.data.id,          // Frontend espera 'fileId'
+            imageUrl: imgUrl,             // Frontend espera 'imageUrl'
+            driveFolderId: finalFolderId  // Frontend espera 'driveFolderId' (para crear subcarpetas futuras)
         })
     };
 
