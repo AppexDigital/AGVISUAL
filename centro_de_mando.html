@@ -782,21 +782,26 @@ const UI = {
             if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-center">Acciones</th>';
             
         } else if (view === 'rentals') { 
-             // 1. Equipos (Ordenados por Orden)
+             // 1. EQUIPOS (Con Portada Real)
+             // Ordenamos por 'order' y buscamos la imagen marcada como 'isCover'
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
                 .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
                 .map(i => {
-                    const img = (data.RentalItemImages || []).find(im => im.itemId === i.id)?.imageUrl;
+                    const images = data.RentalItemImages || [];
+                    // Lógica de Portada: buscar isCover='Si', si no hay, usar la primera
+                    const coverObj = images.find(im => im.itemId === i.id && String(im.isCover).toLowerCase() === 'si');
+                    const firstObj = images.find(im => im.itemId === i.id);
+                    const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
+
                     const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
                     
-                    // AJUSTE: Agregada columna Orden al inicio
                     return `<tr class="border-b hover:bg-gray-50">
                         <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
-                        <td class="p-4"><img src="${img || 'https://placehold.co/50'}" class="img-preview"></td>
+                        <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto"></td>
                         <td class="p-4 font-bold text-sm">${i.name}</td>
                         <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
                         <td class="p-4 font-mono text-sm">$${i.pricePerDay}</td>
-                        <td class="p-4 flex gap-3">
+                        <td class="p-4 flex gap-3 justify-center">
                             <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
                             <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
                             <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
@@ -804,38 +809,79 @@ const UI = {
                     </tr>`;
                 }).join('');
             
-             // AJUSTE: Actualizar encabezado de tabla Equipos
-             const theadItems = document.querySelector('#tab-rental-items thead tr');
-             if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Img</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4">Acciones</th>';
+            // Actualizar Encabezado Equipos (Cambiamos Img por PORTADA y centramos acciones)
+            const theadItems = document.querySelector('#tab-rental-items thead tr');
+            if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Portada</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4 text-center">Acciones</th>';
 
-            // 2. Categorías (Ordenadas por Orden)
+            // 2. CATEGORÍAS (Encabezados Centrados)
             document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || [])
                 .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
                 .map(c => `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-4 text-xs font-bold text-gray-400 text-center">${c.order}</td>
                     <td class="p-4 font-bold text-sm">${c.name}</td>
-                    <td class="p-4 flex gap-3">
+                    <td class="p-4 flex gap-3 justify-center">
                         <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalCategories', '${c.id}')"><i class="fas fa-edit"></i></button>
                         <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalCategories', '${c.id}')"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
             
-            // 3. Bloqueos (Se mantiene igual, solo aseguramos que esté ahí)
-             document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
-                 const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
-                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
-            }).join('');
+            // Actualizar Encabezado Categorías (Centrado)
+            const theadCats = document.querySelector('#tab-rental-cats thead tr');
+            if(theadCats) theadCats.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Nombre</th><th class="p-4 text-center">Acciones</th>';
 
-
+            // 3. BLOQUEOS (Filtro + Orden Cronológico + Edición)
+            const currentFilter = AppState.blockedDatesFilter || 'all';
             
+            // a. Filtrar y Ordenar cronológicamente (fecha más próxima arriba)
+            let blockedList = (data.BlockedDates || [])
+                .sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
+            
+            if (currentFilter !== 'all') {
+                blockedList = blockedList.filter(bl => bl.itemId === currentFilter);
+            }
 
-            // 3. Bloqueos (NUEVO AQUÍ)
-            document.getElementById('blocked-dates-table-body').innerHTML = (data.BlockedDates || []).map(bl => {
+            // b. Renderizar Tabla de Bloqueos (Con botón de Editar)
+            document.getElementById('blocked-dates-table-body').innerHTML = blockedList.map(bl => {
                  const item = (data.RentalItems || []).find(i => i.id === bl.itemId);
-                 return `<tr class="border-b hover:bg-gray-50"><td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td><td class="p-4 text-sm">${bl.reason}</td><td class="p-4 text-xs font-mono">${bl.startDate}</td><td class="p-4 text-xs font-mono">${bl.endDate}</td><td class="p-4"><button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button></td></tr>`;
+                 return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 font-bold text-sm">${item?.name || 'Desconocido'}</td>
+                    <td class="p-4 text-sm">${bl.reason}</td>
+                    <td class="p-4 text-xs font-mono">${bl.startDate}</td>
+                    <td class="p-4 text-xs font-mono">${bl.endDate}</td>
+                    <td class="p-4 flex gap-3 justify-center">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('BlockedDates', '${bl.blockId}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('BlockedDates', '${bl.blockId}', 'blockId')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
             }).join('');
+
+            // c. Inyectar el Filtro en el HTML (si no existe)
+            const blockTabContainer = document.getElementById('tab-blocked-dates');
+            let filterContainer = document.getElementById('blocked-filter-container');
+            
+            if (!filterContainer) {
+                // Buscamos el contenedor del botón "Nuevo Bloqueo" para poner el filtro al lado
+                const headerDiv = blockTabContainer.querySelector('.flex.justify-end');
+                
+                // Modificamos el header existente para que acepte elementos a la izquierda (el filtro)
+                headerDiv.className = "flex justify-between items-center mb-4";
+                headerDiv.id = "blocked-filter-container"; // Marcamos para no duplicar
+                
+                // Creamos el select
+                const selectHTML = `<select class="form-select text-sm w-64 border-gray-300 rounded shadow-sm" onchange="App.setBlockedFilter(this.value)" id="blocked-filter-select"></select>`;
+                headerDiv.insertAdjacentHTML('afterbegin', selectHTML);
+            }
+
+            // d. Llenar el Select con los equipos disponibles (Ordenados por nombre)
+            const selectEl = document.getElementById('blocked-filter-select');
+            if (selectEl) {
+                const items = (data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
+                const options = items.map(i => `<option value="${i.id}" ${currentFilter === i.id ? 'selected' : ''}>${i.name}</option>`).join('');
+                selectEl.innerHTML = `<option value="all">Todos los Equipos</option>${options}`;
+            }
+
         } else if (view === 'bookings') {
             document.getElementById('bookings-list-body').innerHTML = (data.Bookings || []).sort((a,b) => new Date(b.bookingTimestamp) - new Date(a.bookingTimestamp)).map(b => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 text-xs text-gray-500">${new Date(b.bookingTimestamp).toLocaleDateString()}</td><td class="p-4"><div class="font-bold text-sm">${b.customerName}</div><div class="text-xs text-gray-500">${b.customerEmail}</div></td><td class="p-4 text-sm">${b.itemName}<br><span class="text-xs text-gray-500">${b.startDate} a ${b.endDate}</span></td><td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td><td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td><td class="p-4 flex gap-2"><select class="form-select text-xs w-auto py-1" onchange="App.quickUpdate('Bookings', '${b.id}', 'status', this.value)"><option value="Pendiente" ${b.status==='Pendiente'?'selected':''}>Pendiente</option><option value="Confirmado" ${b.status==='Confirmado'?'selected':''}>Confirmado</option><option value="Pagado" ${b.status==='Pagado'?'selected':''}>Pagado</option><option value="Cancelado" ${b.status==='Cancelado'?'selected':''}>Cancelado</option></select></td></tr>
@@ -1843,6 +1889,12 @@ const App = {
         try { await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'ServiceContentBlocks',action:'add',data:{id:`blk_${Date.now()}`,serviceId:sid,blockTitle:'Nuevo',blockContentHtml:'',order:99}}}); await App.ensureDataForView('services', true); const s=AppState.data.Services.find(x=>x.id===sid); this.handleServiceContent(sid,s.title); } catch(e){alert(e.message);}
     },
 
+    // --- Helper para Filtro de Bloqueos ---
+    setBlockedFilter(val) {
+        AppState.blockedDatesFilter = val; // Guardamos el filtro en memoria
+        UI.renderView('rentals'); // Refrescamos para ver el cambio
+    },
+
     // --- INICIO CÓDIGO NUEVO ---
     handleManualBooking() {
         this.handleEditCrudItem('Bookings', null);
@@ -2439,6 +2491,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
