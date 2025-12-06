@@ -1,5 +1,5 @@
 // functions/get-admin-data.js
-// v11.0 - HIDRATACIÓN TOTAL (Con Paginación Infinita)
+// v13.0 - ESTRATEGIA BARRIDO MASIVO (Segura para 5000+ fotos)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -33,7 +33,7 @@ function rowsToObjects(sheet, rows) {
 }
 
 exports.handler = async (event, context) => {
-  // Evitar cacheo en el navegador para forzar la petición de links frescos
+  // Headers para evitar que el navegador guarde links viejos
   const headers = {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -74,52 +74,51 @@ exports.handler = async (event, context) => {
     const results = await Promise.all(promises);
     results.forEach(res => adminData[res.title] = res.data);
 
-    // --- HIDRATACIÓN ROBUSTA (PAGINACIÓN COMPLETA) ---
+    // --- HIDRATACIÓN MASIVA (BARRIDO TOTAL) ---
+    // Solo si hay hojas de imágenes involucradas
     if (requestedSheets.some(s => ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'].includes(s))) {
+        
         try {
             const freshLinksMap = new Map();
             let pageToken = null;
 
-            // BUCLE DE PAGINACIÓN: Seguimos pidiendo mientras Google diga que hay más
+            // BUCLE: Pedimos páginas de 1000 en 1000 hasta terminar
             do {
                 const driveRes = await drive.files.list({
-                    // Filtramos SOLO imágenes para no llenar la lista con basura
+                    // Pedimos TODO lo que sea imagen y no esté borrado
                     q: "mimeType contains 'image/' and trashed = false",
                     fields: 'nextPageToken, files(id, thumbnailLink)',
                     pageSize: 1000, 
-                    pageToken: pageToken, // Pedimos la página siguiente
+                    pageToken: pageToken, // Puntero para la siguiente página
                     supportsAllDrives: true,
                     includeItemsFromAllDrives: true
                 });
 
-                // Procesamos este lote
                 if (driveRes.data.files) {
                     driveRes.data.files.forEach(f => {
                         if (f.thumbnailLink) {
-                            // Generamos el link fresco
+                            // Limpiamos y mejoramos el link
                             const cleanLink = f.thumbnailLink.split('=')[0];
-                            const highResLink = `${cleanLink}=s1600`;
-                            freshLinksMap.set(f.id, highResLink);
+                            freshLinksMap.set(f.id, `${cleanLink}=s1600`);
                         }
                     });
                 }
 
-                // Actualizamos el token para la siguiente vuelta (o null si terminó)
-                pageToken = driveRes.data.nextPageToken;
+                pageToken = driveRes.data.nextPageToken; // ¿Hay más?
+            } while (pageToken); // Si hay token, repetimos el bucle
 
-            } while (pageToken); // Repetir si hay token
-
-            // Inyección de links frescos
+            // Inyección de links frescos en los datos
             const imageSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
             imageSheets.forEach(sheetKey => {
                 if (adminData[sheetKey]) {
                     adminData[sheetKey] = adminData[sheetKey].map(row => {
-                        // Usamos trim() para evitar errores por espacios invisibles en el ID
                         const cleanId = row.fileId ? row.fileId.trim() : null;
                         
+                        // Si el ID existe en nuestro mapa fresco, usamos ese link
                         if (cleanId && freshLinksMap.has(cleanId)) {
                             row.imageUrl = freshLinksMap.get(cleanId);
                         }
+                        
                         if (sheetKey === 'ClientLogos' && cleanId && freshLinksMap.has(cleanId)) {
                             row.logoUrl = freshLinksMap.get(cleanId);
                         }
@@ -129,7 +128,7 @@ exports.handler = async (event, context) => {
             });
 
         } catch (driveError) {
-            console.error("Error crítico en hidratación:", driveError);
+            console.error("Error en barrido de Drive:", driveError);
         }
     }
 
