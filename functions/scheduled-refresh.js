@@ -23,7 +23,7 @@ exports.handler = async (event, context) => {
         do {
             const res = await drive.files.list({
                 q: "trashed = false",
-                fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)',
+                fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)', // Pedimos todo por si acaso
                 pageSize: 1000,
                 pageToken: pageToken,
                 supportsAllDrives: true, includeItemsFromAllDrives: true
@@ -32,18 +32,15 @@ exports.handler = async (event, context) => {
             if (res.data.files) {
                 res.data.files.forEach(f => {
                     let link = null;
-                    
-                    // 1. Prioridad: Link de Contenido (Directo)
+                    // Estrategia Robusta: Prioridad webContentLink, luego s0
                     if (f.webContentLink) {
                         link = f.webContentLink;
-                    } 
-                    // 2. Respaldo: Link Original (s0)
-                    else if (f.thumbnailLink) {
+                    } else if (f.thumbnailLink) {
                         link = f.thumbnailLink.split('=')[0] + '=s0';
                     }
-                    
+
                     if (link) {
-                        // Siempre forzar HTTPS para evitar bloqueos en móvil
+                        // Forzamos HTTPS
                         link = link.replace(/^http:\/\//i, 'https://');
                         freshLinksMap.set(f.id, link);
                     }
@@ -59,7 +56,11 @@ exports.handler = async (event, context) => {
             const sheet = doc.sheetsByTitle[title];
             if (!sheet) continue;
 
-            await sheet.loadCells(); 
+            // --- CORRECCIÓN CRÍTICA AQUÍ ---
+            await sheet.loadHeaderRow(); // <--- ESTA LÍNEA FALTABA Y CAUSABA EL ERROR
+            await sheet.loadCells();     // Cargamos celdas para editar
+            // -------------------------------
+
             const rows = await sheet.getRows();
             const headers = sheet.headerValues;
             const colIdIndex = headers.indexOf('fileId'); 
@@ -68,8 +69,9 @@ exports.handler = async (event, context) => {
             if (colIdIndex === -1 || colUrlIndex === -1) continue;
 
             let updates = 0;
+            // Iteramos sobre las filas usando el índice visual del Excel
             for (let i = 0; i < rows.length; i++) {
-                const rowIndex = i + 1; 
+                const rowIndex = i + 1; // +1 por el header
                 const cellId = sheet.getCell(rowIndex, colIdIndex);
                 const cellUrl = sheet.getCell(rowIndex, colUrlIndex);
                 const fileId = cellId.value;
@@ -78,6 +80,7 @@ exports.handler = async (event, context) => {
                     const cleanId = fileId.trim();
                     if (freshLinksMap.has(cleanId)) {
                         const newLink = freshLinksMap.get(cleanId);
+                        // Solo gastamos recursos si el link es diferente
                         if (cellUrl.value !== newLink) {
                             cellUrl.value = newLink;
                             updates++;
@@ -85,13 +88,17 @@ exports.handler = async (event, context) => {
                     }
                 }
             }
-            if (updates > 0) await sheet.saveUpdatedCells();
+            
+            if (updates > 0) {
+                await sheet.saveUpdatedCells();
+                console.log(`Hoja ${title}: ${updates} links actualizados.`);
+            }
         }
 
-        return { statusCode: 200, body: "Mantenimiento Exitoso" };
+        return { statusCode: 200, body: "Mantenimiento Exitoso: Links Actualizados" };
 
     } catch (error) {
         console.error("Error Cron:", error);
-        return { statusCode: 500, body: error.message };
+        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     }
 };
