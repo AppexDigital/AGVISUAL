@@ -116,17 +116,10 @@ exports.handler = async (event) => {
 
 // URL robusta: Priorizamos thumbnailLink (googleusercontent) porque carga más rápido en <img> tags.
     // Si existe, forzamos tamaño grande (=s3000) reemplazando el parámetro por defecto (=s220).
-    let imgUrl = res.data.webViewLink; // Fallback por defecto
-    
+// Construir URL inicial segura
+    let imgUrl = res.data.webViewLink;
     if (res.data.thumbnailLink) {
-        // A veces llega como "...=s220", a veces sin parámetro. 
-        // Esta lógica asegura que termine en =s3000 manteniendo el dominio googleusercontent.
-        const link = res.data.thumbnailLink;
-        if (link.includes('=')) {
-            imgUrl = link.substring(0, link.lastIndexOf('=')) + '=s3000';
-        } else {
-            imgUrl = link + '=s3000';
-        }
+        imgUrl = res.data.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://') + '=s1600';
     }
     
     return {
@@ -134,7 +127,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ 
           message: 'OK', 
           fileId: res.data.id, 
-          imageUrl: res.data.thumbnailLink ? res.data.thumbnailLink.replace(/=s\d+.*$/, '=s1600') : '', 
+          imageUrl: imgUrl,
           driveFolderId: finalFolderId
       })
     };
