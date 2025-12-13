@@ -98,9 +98,8 @@ exports.handler = async (event, context) => {
                     driveRes.data.files.forEach(f => {
                         if (f.thumbnailLink) {
                             // Limpiamos y mejoramos el link
-                            const cleanLink = f.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://');
-                            const highResLink = `${cleanLink}=s1600`;
-                            freshLinksMap.set(f.id, highResLink);
+                            const cleanLink = f.thumbnailLink.split('=')[0];
+                            freshLinksMap.set(f.id, `${cleanLink}=s1600`);
                         }
                     });
                 }
