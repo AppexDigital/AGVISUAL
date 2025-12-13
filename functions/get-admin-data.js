@@ -1,3 +1,5 @@
+// functions/get-admin-data.js
+// v13.0 - ESTRATEGIA BARRIDO MASIVO (Segura para 5000+ fotos)
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -31,6 +33,7 @@ function rowsToObjects(sheet, rows) {
 }
 
 exports.handler = async (event, context) => {
+  // Headers para evitar que el navegador guarde links viejos
   const headers = {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -53,6 +56,8 @@ exports.handler = async (event, context) => {
     }
 
     const adminData = {};
+
+    // 1. Cargar datos de Sheets
     const promises = requestedSheets.map(async (title) => {
         try {
             const sheet = doc.sheetsByTitle[title];
@@ -61,6 +66,7 @@ exports.handler = async (event, context) => {
             const rows = await sheet.getRows();
             return { title, data: rowsToObjects(sheet, rows) };
         } catch (e) {
+            console.warn(`Error hoja ${title}: ${e.message}`);
             return { title, data: [] };
         }
     });
@@ -68,23 +74,22 @@ exports.handler = async (event, context) => {
     const results = await Promise.all(promises);
     results.forEach(res => adminData[res.title] = res.data);
 
-    // --- HIDRATACIÓN ---
-    const imageSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
-    if (requestedSheets.some(s => imageSheets.includes(s))) {
+    // --- HIDRATACIÓN MASIVA (BARRIDO TOTAL) ---
+    // Solo si hay hojas de imágenes involucradas
+    if (requestedSheets.some(s => ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'].includes(s))) {
         
-        const freshLinksMap = new Map();
-        
-        // 1. BARRIDO (Filtro RESTAURADO para evitar error 502)
         try {
+            const freshLinksMap = new Map();
             let pageToken = null;
-            let pageCount = 0;
-            
+
+            // BUCLE: Pedimos páginas de 1000 en 1000 hasta terminar
             do {
                 const driveRes = await drive.files.list({
-                    q: "trashed = false", // <--- FILTRO CORRECTO
+                    // Pedimos TODO lo que sea imagen y no esté borrado
+                    q: "mimeType contains 'image/' and trashed = false",
                     fields: 'nextPageToken, files(id, thumbnailLink)',
                     pageSize: 1000, 
-                    pageToken: pageToken,
+                    pageToken: pageToken, // Puntero para la siguiente página
                     supportsAllDrives: true,
                     includeItemsFromAllDrives: true
                 });
@@ -92,58 +97,47 @@ exports.handler = async (event, context) => {
                 if (driveRes.data.files) {
                     driveRes.data.files.forEach(f => {
                         if (f.thumbnailLink) {
-                            // Variable renombrada para evitar conflictos
-                            const linkBarrido = f.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://');
-                            freshLinksMap.set(f.id, `${linkBarrido}=s1600`);
+                            // Limpiamos y mejoramos el link
+                            const cleanLink = f.thumbnailLink.split('=')[0];
+                            const secureLink = cleanLink.replace(/^http:\/\//i, 'https://');
+                            freshLinksMap.set(f.id, `${secureLink}=s1600`);
                         }
                     });
                 }
-                pageToken = driveRes.data.nextPageToken;
-                pageCount++;
-                if (pageCount > 10) break; // Límite de seguridad
 
-            } while (pageToken);
-        } catch (e) { console.error("Error barrido:", e); }
+                pageToken = driveRes.data.nextPageToken; // ¿Hay más?
+            } while (pageToken); // Si hay token, repetimos el bucle
 
-        // 2. FASE RESCATE (Limitada)
-        const missingIds = new Set();
-        imageSheets.forEach(sheetKey => {
-            if (adminData[sheetKey]) {
-                adminData[sheetKey].forEach(row => {
-                    const id = row.fileId ? row.fileId.trim() : null;
-                    if (id && !freshLinksMap.has(id)) missingIds.add(id);
-                });
-            }
-        });
+            // Inyección de links frescos en los datos
+            const imageSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
+            imageSheets.forEach(sheetKey => {
+                if (adminData[sheetKey]) {
+                    adminData[sheetKey] = adminData[sheetKey].map(row => {
+                        const cleanId = row.fileId ? row.fileId.trim() : null;
 
-        if (missingIds.size > 0 && missingIds.size < 20) {
-            const missingArray = Array.from(missingIds);
-            await Promise.all(missingArray.map(async (id) => {
-                try {
-                    const res = await drive.files.get({ fileId: id, fields: 'thumbnailLink', supportsAllDrives: true });
-                    if (res.data.thumbnailLink) {
-                        // Variable renombrada para evitar conflictos
-                        const linkRescate = res.data.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://');
-                        freshLinksMap.set(id, `${linkRescate}=s1600`);
-                    }
-                } catch (err) {}
-            }));
+                      // LÓGICA DE HIERRO:
+                        // 1. Si hay ID y hay link fresco -> Usar link fresco.
+                        // 2. Si hay ID pero NO hay link fresco -> Construir link directo de respaldo (lh3.googleusercontent.com/d/ID).
+                        // 3. Si no hay ID -> Dejar vacío.
+                        if (cleanId) {
+                            if (freshLinksMap.has(cleanId)) {
+                                row.imageUrl = freshLinksMap.get(cleanId);
+                                if (sheetKey === 'ClientLogos') row.logoUrl = freshLinksMap.get(cleanId);
+                            } else {
+                                // Fallback de emergencia: Link directo de descarga (suele funcionar para visualización básica)
+                                const fallbackUrl = `https://lh3.googleusercontent.com/d/${cleanId}`;
+                                row.imageUrl = fallbackUrl;
+                                if (sheetKey === 'ClientLogos') row.logoUrl = fallbackUrl;
+                            }
+                        }
+                        return row;
+                    });
+                }
+            });
+
+        } catch (driveError) {
+            console.error("Error en barrido de Drive:", driveError);
         }
-
-        // 3. INYECCIÓN
-        imageSheets.forEach(sheetKey => {
-            if (adminData[sheetKey]) {
-                adminData[sheetKey] = adminData[sheetKey].map(row => {
-                    const cleanId = row.fileId ? row.fileId.trim() : null;
-                    if (cleanId && freshLinksMap.has(cleanId)) {
-                        const finalLink = freshLinksMap.get(cleanId);
-                        row.imageUrl = finalLink;
-                        if (sheetKey === 'ClientLogos') row.logoUrl = finalLink;
-                    }
-                    return row;
-                });
-            }
-        });
     }
 
     return {
@@ -153,6 +147,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
+    console.error('Data Error:', error);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
