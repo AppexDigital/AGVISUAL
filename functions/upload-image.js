@@ -103,7 +103,7 @@ exports.handler = async (event) => {
     const res = await drive.files.create({
       resource: { name: file.filename, parents: [finalFolderId] },
       media: { mimeType: file.mimeType, body: fs.createReadStream(tempFilePath) },
-      fields: 'id, thumbnailLink, webViewLink', webContentLink',
+      fields: 'id, thumbnailLink, webViewLink',
       supportsAllDrives: true
     });
 
@@ -114,18 +114,15 @@ exports.handler = async (event) => {
         console.warn("Advertencia: No se pudo hacer público el archivo automáticamente.", permError.message);
     }
 
-// URL robusta: Priorizamos thumbnailLink (googleusercontent) porque carga más rápido en <img> tags.
-    // Si existe, forzamos tamaño grande (=s3000) reemplazando el parámetro por defecto (=s220).
-// Construir URL inicial segura
-// ESTRATEGIA ROBUSTA: Prioridad a descarga directa o tamaño original
-    let imgUrl = res.data.webContentLink; 
+// ESTRATEGIA ROBUSTA RÁPIDA: Usar thumbnailLink con tamaño original (=s0)
+    let imgUrl = null;
     
-    if (!imgUrl && res.data.thumbnailLink) {
-        // Si no hay webContentLink, usamos thumbnailLink forzando tamaño original (s0)
-        imgUrl = res.data.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://') + '=s0'; 
+    if (res.data.thumbnailLink) {
+        // Forzamos HTTPS y tamaño original. Este link es muy estable.
+        imgUrl = res.data.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://') + '=s0';
     }
     
-    // Fallback final
+    // Fallback final por si acaso
     if (!imgUrl) {
         imgUrl = `https://drive.google.com/uc?export=view&id=${res.data.id}`;
     }
