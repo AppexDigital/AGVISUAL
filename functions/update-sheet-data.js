@@ -97,8 +97,7 @@ exports.handler = async (event, context) => {
 
           // AJUSTE: Limpieza de datos. No guardamos URLs de imágenes que caducan.
             const cleanData = { ...op.data };
-            delete cleanData.imageUrl;
-            delete cleanData.logoUrl;
+            
           
             const rowData = {};
             Object.keys(op.data).forEach(k => {
@@ -176,8 +175,7 @@ exports.handler = async (event, context) => {
 
                   // AJUSTE: Limpieza de datos para Updates
                     const cleanData = { ...op.data };
-                    delete cleanData.imageUrl;
-                    delete cleanData.logoUrl;
+                    
                   
                     Object.keys(op.data).forEach(key => {
                         const h = getRealHeader(sheet, key);
