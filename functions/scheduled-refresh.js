@@ -23,7 +23,7 @@ exports.handler = async (event, context) => {
         do {
             const res = await drive.files.list({
                 q: "trashed = false",
-                fields: 'nextPageToken, files(id, thumbnailLink)',
+                fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)',
                 pageSize: 1000,
                 pageToken: pageToken,
                 supportsAllDrives: true, includeItemsFromAllDrives: true
@@ -31,9 +31,20 @@ exports.handler = async (event, context) => {
             
             if (res.data.files) {
                 res.data.files.forEach(f => {
-                    if (f.thumbnailLink) {
-                        // Generamos link HTTPS 1600px
-                        const link = f.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://') + '=s1600';
+                    let link = null;
+                    
+                    // 1. Prioridad: Link de Contenido (Directo)
+                    if (f.webContentLink) {
+                        link = f.webContentLink;
+                    } 
+                    // 2. Respaldo: Link Original (s0)
+                    else if (f.thumbnailLink) {
+                        link = f.thumbnailLink.split('=')[0] + '=s0';
+                    }
+                    
+                    if (link) {
+                        // Siempre forzar HTTPS para evitar bloqueos en móvil
+                        link = link.replace(/^http:\/\//i, 'https://');
                         freshLinksMap.set(f.id, link);
                     }
                 });
