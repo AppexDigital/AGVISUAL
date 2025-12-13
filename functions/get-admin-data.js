@@ -81,7 +81,7 @@ exports.handler = async (event, context) => {
             
             do {
                 const driveRes = await drive.files.list({
-                    q: "mimeType contains 'image/' and trashed = false", // <--- FILTRO CORRECTO
+                    q: "trashed = false", // <--- FILTRO CORRECTO
                     fields: 'nextPageToken, files(id, thumbnailLink)',
                     pageSize: 1000, 
                     pageToken: pageToken,
