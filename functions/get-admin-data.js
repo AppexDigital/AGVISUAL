@@ -99,7 +99,7 @@ exports.handler = async (event, context) => {
                         if (f.thumbnailLink) {
                             const cleanLink = f.thumbnailLink.split('=')[0];
                             // REGLA DE ORO: Forzar HTTPS siempre
-                            const secureLink = cleanLink.replace(/^http:\/\//i, 'https://'); 
+                            const cleanLink = f.thumbnailLink.split('=')[0].replace(/^http:\/\//i, 'https://'); 
                             freshLinksMap.set(f.id, `${secureLink}=s1600`);
                         }
                     });
