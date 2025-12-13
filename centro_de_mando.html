@@ -336,7 +336,7 @@
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p>
                                 <div class="h-24 bg-gray-100 border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer" crossorigin="anonymous">
+                                    <img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer" >
                                     <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_black').click()">
                                         <i class="fas fa-camera text-white"></i>
                                     </div>
@@ -346,7 +346,7 @@
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p>
                                 <div class="h-24 bg-gray-800 border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer" crossorigin="anonymous">
+                                    <img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer" >
                                     <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_white').click()">
                                         <i class="fas fa-camera text-white"></i>
                                     </div>
@@ -356,7 +356,7 @@
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Favicon</p>
                                 <div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain" referrerpolicy="no-referrer" crossorigin="anonymous">
+                                    <img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain" referrerpolicy="no-referrer" >
                                     <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-favicon').click()">
                                         <i class="fas fa-camera text-white"></i>
                                     </div>
@@ -372,7 +372,7 @@
                     <div class="bg-white p-6 rounded border border-gray-200 max-w-3xl">
                         <div class="mb-6 flex items-center gap-6">
                             <div class="relative group w-32 h-32 flex-shrink-0">
-                                <img id="about-profile-preview" src="https://placehold.co/128" class="w-full h-full rounded-full object-cover border shadow-sm" referrerpolicy="no-referrer" crossorigin="anonymous">
+                                <img id="about-profile-preview" src="https://placehold.co/128" class="w-full h-full rounded-full object-cover border shadow-sm" referrerpolicy="no-referrer" >
                                 <div class="absolute inset-0 bg-black/50 rounded-full hidden group-hover:flex items-center justify-center cursor-pointer" onclick="document.getElementById('upload-profile-pic').click()">
                                     <i class="fas fa-camera text-white text-2xl"></i>
                                 </div>
@@ -656,7 +656,7 @@ const UI = {
              const logos = currentModalImages.length > 0 ? currentModalImages : (data.ClientLogos || []);
              document.getElementById('clientlogos-grid').innerHTML = logos.sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `
                 <div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square">
-                    <img src="${i.logoUrl}" class="max-w-full max-h-full object-contain" referrerpolicy="no-referrer" crossorigin="anonymous">
+                    <img src="${i.logoUrl}" class="max-w-full max-h-full object-contain" referrerpolicy="no-referrer" >
                     <button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImageLocal('${i.id}', 'ClientLogos')"><i class="fas fa-trash"></i></button>
                     <input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.updateLocalImage('${i.id}', 'order', this.value, 'ClientLogos')">
                 </div>
@@ -676,7 +676,7 @@ const UI = {
 
                 return `<tr class="border-b hover:bg-gray-50">
                     <td class="p-4 font-mono text-xs text-center">${p.order||99}</td> 
-                    <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" crossorigin="anonymous"></td>
+                    <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" ></td>
                     <td class="p-4 font-bold text-sm">${p.title}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
                     <td class="p-4 align-middle">
@@ -722,7 +722,7 @@ const UI = {
                      ondragstart="App.dragStartPortfolio(event, '${i.id}')"
                      ondragover="App.dragOverPortfolio(event)"
                      ondrop="App.dragDropPortfolio(event, '${i.id}')"
-                     onclick="UI.openLightbox('${i.id}')"> <img src="${i.imageUrl}" class="w-full h-auto block" referrerpolicy="no-referrer" crossorigin="anonymous">
+                     onclick="UI.openLightbox('${i.id}')"> <img src="${i.imageUrl}" class="w-full h-auto block" referrerpolicy="no-referrer" >
                     
                     <div class="portfolio-grid-overlay absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                         <div class="text-white font-bold text-xs uppercase tracking-widest mb-1">Orden</div>
@@ -796,7 +796,7 @@ const UI = {
                     const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
                     return `<tr class="border-b hover:bg-gray-50">
                         <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
-                        <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" crossorigin="anonymous"></td>
+                        <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
                         <td class="p-4 font-bold text-sm">${i.name}</td>
                         <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
                         <td class="p-4 font-mono text-sm">$${i.pricePerDay}</td>
@@ -1394,7 +1394,7 @@ const App = {
                      class="w-16 h-16 object-contain rounded bg-gray-100 select-none cursor-zoom-in hover:opacity-80 transition" 
                      onclick="UI.openLightbox('${i.id}')"
                      referrerpolicy="no-referrer" 
-                     crossorigin="anonymous">
+                     >
                 
                 <div class="flex-1 grid grid-cols-2 gap-2">
                 
@@ -2482,7 +2482,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="text-white text-6xl hover:text-accent-primary transition p-4" onclick="UI.navLightbox(-1)">&#8249;</button>
             
             <div class="flex flex-col items-center justify-center max-h-full max-w-[80vw]">
-                <img id="admin-lb-img" class="max-h-[80vh] w-auto object-contain shadow-2xl border border-gray-800 bg-black" referrerpolicy="no-referrer" crossorigin="anonymous">
+                <img id="admin-lb-img" class="max-h-[80vh] w-auto object-contain shadow-2xl border border-gray-800 bg-black" referrerpolicy="no-referrer" >
                 <p id="admin-lb-caption" class="text-white font-mono text-lg mt-4 text-center bg-black/50 px-4 py-2 rounded min-h-[3rem]"></p>
             </div>
 
@@ -2492,6 +2492,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
