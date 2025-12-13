@@ -85,11 +85,10 @@ exports.handler = async (event, context) => {
             // BUCLE: Pedimos páginas de 1000 en 1000 hasta terminar
             do {
                 const driveRes = await drive.files.list({
-                    // Pedimos TODO lo que sea imagen y no esté borrado
-                    q: "mimeType contains 'image/' and trashed = false",
+                    q: "mimeType contains 'image/' and trashed = false", // <--- FILTRO RESTAURADO
                     fields: 'nextPageToken, files(id, thumbnailLink)',
                     pageSize: 1000, 
-                    pageToken: pageToken, // Puntero para la siguiente página
+                    pageToken: pageToken,
                     supportsAllDrives: true,
                     includeItemsFromAllDrives: true
                 });
