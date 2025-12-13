@@ -97,9 +97,10 @@ exports.handler = async (event, context) => {
                 if (driveRes.data.files) {
                     driveRes.data.files.forEach(f => {
                         if (f.thumbnailLink) {
-                            // Limpiamos y mejoramos el link
                             const cleanLink = f.thumbnailLink.split('=')[0];
-                            freshLinksMap.set(f.id, `${cleanLink}=s1600`);
+                            // REGLA DE ORO: Forzar HTTPS siempre
+                            const secureLink = cleanLink.replace(/^http:\/\//i, 'https://'); 
+                            freshLinksMap.set(f.id, `${secureLink}=s1600`);
                         }
                     });
                 }
