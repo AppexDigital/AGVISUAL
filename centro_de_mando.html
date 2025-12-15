@@ -1669,7 +1669,6 @@ const App = {
                 // Ejecutar una vez al abrir
                 calculate();
             }, 50);
-        }
         } else if(sheet === 'RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
              modalTitle = isNew ? 'Nueva Categoría' : 'Editar Categoría';
@@ -2691,6 +2690,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
