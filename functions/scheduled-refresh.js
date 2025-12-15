@@ -1,15 +1,19 @@
-const { schedule } = require('@netlify/functions');
+// functions/scheduled-refresh.js
+// V26.0 - MODO ESM NATIVO (MODERNO)
 
-// Definimos la función normal primero
-const myHandler = async (event, context) => {
-    console.log("LOG: Ejecución Programada (Cron) detectada.");
+// Usamos la sintaxis moderna que tus librerías v5 exigen
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { JWT } from 'google-auth-library';
+import { google } from 'googleapis';
+
+// Exportación moderna
+export const handler = async (event, context) => {
+    console.log(">>> LOG: ROBOT INICIADO (Modo ESM)");
+
+    // PRUEBA DE VIDA INICIAL
+    // Si ves este texto, significa que el conflicto de versiones se arregló.
     return {
         statusCode: 200,
-        body: "¡ESTOY VIVO! Y ahora funciono con el Cron Job activado."
+        body: "¡ESTOY VIVO! El sistema Scheduled funciona en modo ESM Moderno."
     };
 };
-
-// TRUCO MAESTRO: Envolvemos la función con 'schedule'
-// Esto conecta el código con la configuración del toml sin que explote.
-// El horario aquí ("0 6,18 * * *") debe coincidir con el del toml.
-module.exports.handler = schedule("0 6,18 * * *", myHandler);;
