@@ -2720,14 +2720,24 @@ const App = {
     },
     
     async handleDelete(sheet, id, key='id') { 
-        // --- LÓGICA DE CASCADA PARA RESERVAS ---
+        // 1. Validación de Dependencias (Categorías)
+        if (sheet === 'RentalCategories') {
+            const hasChildren = (AppState.data.RentalItems || []).some(item => item.categoryId === id);
+            if (hasChildren) {
+                UI.showToast('No se puede eliminar: Esta categoría tiene equipos asociados.', 'error');
+                return; 
+            }
+        }
+
+        // 2. Lógica Especial de Cascada para RESERVAS
         if (sheet === 'Bookings') {
+            // Usamos 'bookingItem' para evitar conflicto con la variable 'item' de abajo
             const bookingItem = AppState.data.Bookings?.find(b => b.id === id);
-            // Buscar bloqueo asociado usando la columna bookingId
-            // Convertimos a String para evitar errores de tipo
+            
+            // Buscar bloqueo asociado (convertir a String para seguridad)
             const linkedBlock = (AppState.data.BlockedDates || []).find(b => String(b.bookingId) === String(id));
             
-            // Mensaje informativo advirtiendo que se borra el bloqueo también
+            // Mensaje informativo
             const confirmMsg = linkedBlock 
                 ? "Al eliminar esta reserva, se liberarán automáticamente las fechas en el calendario (se borrará el bloqueo asociado)." 
                 : "Se eliminará el registro de la reserva.";
@@ -2747,43 +2757,14 @@ const App = {
                 UI.showToast('Proceso completado correctamente');
                 UI.hideLoading();
             });
-            return; // DETENER PROCESO AQUÍ (No ejecutar el delete genérico de abajo)
-        }
-        // ---------------------------------------
-
-        // --- NUEVO: Lógica Cascada para Reservas ---
-        if (sheet === 'Bookings') {
-            const item = AppState.data.Bookings?.find(b => b.id === id);
-            // Buscar bloqueo asociado
-            const linkedBlock = (AppState.data.BlockedDates || []).find(b => b.bookingId === id);
-            
-        // --- LÓGICA DE CASCADA PARA RESERVAS ---
-        if (sheet === 'Bookings') {
-            // Convertimos IDs a String para comparar seguro
-            const linkedBlock = (AppState.data.BlockedDates || []).find(b => String(b.bookingId) === String(id));
-            
-            if (linkedBlock) {
-                UI.showConfirm(`¿Eliminar Reserva?`, "Se eliminará también el bloqueo de fechas asociado.", async () => {
-                    UI.showLoading(`Eliminando todo...`);
-                    const batch = [
-                        { sheet: 'Bookings', action: 'delete', criteria: { id: id } },
-                        { sheet: 'BlockedDates', action: 'delete', criteria: { blockId: linkedBlock.blockId } }
-                    ];
-                    await API.batchUpdate(batch);
-                    await App.ensureDataForView(AppState.view, true);
-                    UI.renderView(AppState.view);
-                    UI.showToast('Reserva y Bloqueo eliminados');
-                    UI.hideLoading();
-                });
-                return; // Importante: Salir aquí
-            }
+            return; // DETENER PROCESO AQUÍ (Importante)
         }
 
-        // 1. Calcular nombres y etiquetas
+        // 3. Lógica General para el resto (Proyectos, Servicios, etc.)
         const item = AppState.data[sheet]?.find(x => x[key] === id);
         let name = item?.title || item?.name || 'Registro';
 
-        // Lógica Especial para Bloqueos
+        // Lógica Especial para obtener nombre en Bloqueos
         if (sheet === 'BlockedDates') {
             const rentalItem = (AppState.data.RentalItems || []).find(r => r.id === item?.itemId);
             name = rentalItem ? rentalItem.name : 'Desconocido';
@@ -2792,8 +2773,8 @@ const App = {
         const typeLabel = sheet === 'Projects' ? 'Proyecto' : 
                          (sheet === 'Services' ? 'Servicio' : 
                          (sheet === 'RentalItems' ? 'Equipo' : 
-                         (sheet === 'RentalCategories' ? 'Categoría' : // Nueva etiqueta
-                         (sheet === 'BlockedDates' ? 'Bloqueo del Equipo' : // <--- ETIQUETA NUEVA
+                         (sheet === 'RentalCategories' ? 'Categoría' : 
+                         (sheet === 'BlockedDates' ? 'Bloqueo del Equipo' : 
                          (sheet === 'Videos' ? 'Video' : 'Registro')))));
 
         const titleText = `¿Desea eliminar ${sheet === 'BlockedDates' ? 'el' : (typeLabel === 'Categoría' ? 'la' : 'el')} ${typeLabel} ${name}?`;
@@ -2804,13 +2785,12 @@ const App = {
                 const parentItem = AppState.data[sheet]?.find(x => x[key] === id);
                 const itemName = parentItem?.title || parentItem?.name || 'elemento';
                 
-                // Mensaje de carga personalizado
-                const loadTypeLabel = typeLabel; // Reutilizamos la lógica de arriba
+                const loadTypeLabel = typeLabel; 
                 const baseMessage = `Eliminando ${loadTypeLabel} ${itemName}`;
                 
                 UI.showLoading(`${baseMessage}...`);
                 
-                // 1. Identificar si es un Padre con muchos hijos
+                // Borrado en Cascada para Padres con Hijos (Imágenes)
                 let childSheet = null;
                 let childKey = null;
 
@@ -2818,7 +2798,6 @@ const App = {
                 else if (sheet === 'Services') { childSheet = 'ServiceImages'; childKey = 'serviceId'; }
                 else if (sheet === 'RentalItems') { childSheet = 'RentalItemImages'; childKey = 'itemId'; }
 
-                // 2. Borrado en cascada (Lotes)
                 if (childSheet && AppState.data[childSheet]) {
                     const children = AppState.data[childSheet].filter(c => c[childKey] === id);
                     if (children.length > 0) {
@@ -3023,6 +3002,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
