@@ -896,124 +896,106 @@ const UI = {
             }
 
         } else if (view === 'bookings') {
-            // 1. Obtener datos y preparar filtros
             const allBookings = AppState.data.Bookings || [];
             const searchTerm = (AppState.bookingSearch || '').toLowerCase();
-            const timeFilter = AppState.bookingTimeFilter || 'active'; // active, inactive, all
-            const statusFilter = AppState.bookingStatusFilter || 'all'; // all, Pendiente, Confirmado...
+            const timeFilter = AppState.bookingTimeFilter || 'active';
+            const statusFilter = AppState.bookingStatusFilter || 'all';
 
-            // 2. Lógica de Filtrado Maestro
+            // --- Lógica de Filtrado ---
             let filtered = allBookings.filter(b => {
-                // a. Filtro de Texto (Busca en todo)
                 const textMatch = !searchTerm || 
                     (b.customerName||'').toLowerCase().includes(searchTerm) ||
                     (b.customerEmail||'').toLowerCase().includes(searchTerm) ||
-                    (b.itemName||'').toLowerCase().includes(searchTerm) ||
+                    (b.customerCedula||'').toLowerCase().includes(searchTerm) || // Buscar por cédula también
                     (b.id||'').toLowerCase().includes(searchTerm);
-                
                 if (!textMatch) return false;
 
-                // b. Filtro de Tiempo (Activas vs Inactivas)
                 const isCanceled = b.status === 'Cancelado';
                 const today = new Date().toISOString().split('T')[0];
-                const isPast = b.endDate < today; // Si ya terminó
+                const isPast = b.endDate < today;
 
-                if (timeFilter === 'active') {
-                    // Activas: Futuras o en curso Y NO canceladas
-                    if (isCanceled || isPast) return false;
-                } else if (timeFilter === 'inactive') {
-                    // Inactivas: Pasadas O Canceladas
-                    if (!isCanceled && !isPast) return false;
-                }
-
-                // c. Filtro de Estado Específico
+                if (timeFilter === 'active') { if (isCanceled || isPast) return false; }
+                else if (timeFilter === 'inactive') { if (!isCanceled && !isPast) return false; }
                 if (statusFilter !== 'all' && b.status !== statusFilter) return false;
-
                 return true;
             });
 
-            // 3. Ordenamiento (Próximo a lejano)
             filtered.sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
 
-            // 4. Inyectar HTML de Filtros (Si no existe)
+            // --- Inyectar Controles con Título ---
             const viewContainer = document.getElementById('view-bookings');
-            if (!document.getElementById('booking-controls')) {
-                const controlsHTML = `
-                    <div id="booking-controls" class="bg-white p-4 rounded border mb-6 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-end">
-                        <div class="flex-1 w-full grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div class="md:col-span-2">
-                                <label class="form-label">Buscar</label>
-                                <input type="text" class="form-input" placeholder="Nombre, email, equipo..." onkeyup="App.setBookingFilter('search', this.value)">
-                            </div>
-                            <div>
-                                <label class="form-label">Vigencia</label>
-                                <select class="form-select" onchange="App.setBookingFilter('time', this.value)">
-                                    <option value="active">Activas (Futuras)</option>
-                                    <option value="inactive">Histórico / Canceladas</option>
-                                    <option value="all">Todas</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="form-label">Estado</label>
-                                <select class="form-select" onchange="App.setBookingFilter('status', this.value)">
-                                    <option value="all">Todos los Estados</option>
-                                    <option value="Pendiente">Pendiente</option>
-                                    <option value="Confirmado">Confirmado</option>
-                                    <option value="Pagado">Pagado</option>
-                                    <option value="Cancelado">Cancelado</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary h-10" onclick="App.handleManualBooking()"><i class="fas fa-plus mr-2"></i> Nueva Reserva</button>
-                    </div>
-                `;
-                // Insertamos controles antes de la tabla, borrando el header viejo
-                const header = viewContainer.querySelector('.flex.justify-between');
-                if(header) header.remove(); // Quitamos el header viejo
-                viewContainer.insertAdjacentHTML('afterbegin', controlsHTML);
-                
-                // Helper para filtros
-                App.setBookingFilter = (type, val) => {
-                    if(type === 'search') AppState.bookingSearch = val;
-                    if(type === 'time') AppState.bookingTimeFilter = val;
-                    if(type === 'status') AppState.bookingStatusFilter = val;
-                    UI.renderView('bookings');
-                };
-            }
+            // Limpiamos header viejo si existe para redibujarlo bien con el título
+            const oldControls = document.getElementById('booking-controls');
+            if (oldControls) oldControls.remove();
+            
+            // Eliminamos el header original estático si aun existe para que no se duplique
+            const staticHeader = viewContainer.querySelector('.flex.justify-between.items-center.mb-6');
+            if(staticHeader) staticHeader.remove();
 
-            // 5. Renderizar Tabla
+            const controlsHTML = `
+                <div id="booking-controls" class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h1 class="text-3xl font-display font-bold">Reservas</h1>
+                        <button class="btn btn-primary" onclick="App.handleManualBooking()"><i class="fas fa-plus mr-2"></i> Nueva Reserva</button>
+                    </div>
+                    <div class="bg-white p-4 rounded border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" class="form-input" placeholder="Buscar Cliente, ID, Email..." value="${AppState.bookingSearch||''}" onkeyup="App.setBookingFilter('search', this.value)">
+                        <select class="form-select" onchange="App.setBookingFilter('time', this.value)">
+                            <option value="active" ${timeFilter==='active'?'selected':''}>Activas (Futuras)</option>
+                            <option value="inactive" ${timeFilter==='inactive'?'selected':''}>Histórico / Canceladas</option>
+                            <option value="all" ${timeFilter==='all'?'selected':''}>Todas</option>
+                        </select>
+                        <select class="form-select" onchange="App.setBookingFilter('status', this.value)">
+                            <option value="all">Todos los Estados</option>
+                            <option value="Pendiente" ${statusFilter==='Pendiente'?'selected':''}>Pendiente</option>
+                            <option value="Confirmado" ${statusFilter==='Confirmado'?'selected':''}>Confirmado</option>
+                            <option value="Pagado" ${statusFilter==='Pagado'?'selected':''}>Pagado</option>
+                            <option value="Cancelado" ${statusFilter==='Cancelado'?'selected':''}>Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            viewContainer.insertAdjacentHTML('afterbegin', controlsHTML);
+            
+            App.setBookingFilter = (t, v) => {
+                if(t==='search') AppState.bookingSearch=v; if(t==='time') AppState.bookingTimeFilter=v; if(t==='status') AppState.bookingStatusFilter=v;
+                UI.renderView('bookings');
+            };
+
+            // --- Renderizar Tabla (Columnas Nuevas) ---
             document.getElementById('bookings-list-body').innerHTML = filtered.map(b => `
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="p-4">
+                <tr class="border-b hover:bg-gray-50 align-top">
+                    <td class="p-4 whitespace-nowrap">
                         <div class="font-bold text-sm">${new Date(b.startDate).toLocaleDateString()}</div>
                         <div class="text-xs text-gray-400">hasta ${new Date(b.endDate).toLocaleDateString()}</div>
                     </td>
                     <td class="p-4">
-                        <div class="font-bold text-sm">${b.customerName}</div>
-                        <div class="text-xs text-gray-500">${b.customerEmail || ''}</div>
-                        ${b.customerCedula ? `<div class="text-[10px] text-gray-400">ID: ${b.customerCedula}</div>` : ''}
+                        <div class="font-bold text-sm text-gray-900">${b.customerName}</div>
+                        ${b.customerCedula ? `<div class="text-xs text-gray-600 font-mono">ID: ${b.customerCedula}</div>` : ''}
+                        <div class="text-xs text-blue-600 truncate max-w-[150px]" title="${b.customerEmail}">${b.customerEmail || '-'}</div>
+                        ${b.customerPhone ? `<div class="text-xs text-gray-500"><i class="fas fa-phone-alt mr-1"></i>${b.customerPhone}</div>` : ''}
                     </td>
-                    <td class="p-4 text-sm">
+                    <td class="p-4">
+                        <div class="text-xs text-gray-600 whitespace-normal max-w-[180px] leading-tight">
+                            ${b.customerAddress || '<span class="text-gray-300 italic">Sin dirección</span>'}
+                        </div>
+                    </td>
+                    <td class="p-4 text-sm font-medium">
                         ${b.itemName}
                     </td>
-                    <td class="p-4 font-mono text-sm font-bold">$${b.totalPrice}</td>
+                    <td class="p-4 font-mono text-sm font-bold text-right">$${b.totalPrice}</td>
                     <td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td>
                     <td class="p-4">
-                        <div class="flex gap-2">
-                            <button class="text-blue-600 hover:bg-blue-50 p-2 rounded" onclick="App.handleEditCrudItem('Bookings', '${b.id}')" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="text-red-600 hover:bg-red-50 p-2 rounded" onclick="App.handleDelete('Bookings', '${b.id}')" title="Eliminar">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <div class="flex flex-col gap-2">
+                            <button class="btn-secondary btn-sm justify-center" onclick="App.handleEditCrudItem('Bookings', '${b.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-danger btn-sm justify-center" onclick="App.handleDelete('Bookings', '${b.id}')"><i class="fas fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>
             `).join('');
             
-            // Actualizar Encabezados Tabla
             const thead = document.querySelector('#view-bookings thead tr');
-            if(thead) thead.innerHTML = '<th class="p-4">Fechas</th><th class="p-4">Cliente</th><th class="p-4">Equipo</th><th class="p-4">Total</th><th class="p-4">Estado</th><th class="p-4">Acciones</th>';
+            if(thead) thead.innerHTML = '<th class="p-4">Fechas</th><th class="p-4">Cliente</th><th class="p-4">Dirección</th><th class="p-4">Equipo</th><th class="p-4 text-right">Total</th><th class="p-4">Estado</th><th class="p-4 text-center">Acciones</th>';
         }
     },
 
@@ -1891,20 +1873,16 @@ const App = {
 
             
         } else if(sheet === 'BlockedDates'){
-             // 1. Obtener Datos para Edición
-             // Buscamos por 'blockId' que es la llave única de esta hoja
              const b = isNew ? {} : AppState.data.BlockedDates.find(x => x.blockId === id);
              
-             // --- NUEVO: DETECCIÓN DE VÍNCULO (Redirección a Reserva) ---
-             if (b && b.bookingId) {
-                 // Es un bloqueo de reserva. No dejar editar aquí. Redirigir.
-                 UI.showToast('Este bloqueo pertenece a una Reserva. Redirigiendo...', 'info');
-                 
-                 // Cerrar este intento de modal y abrir la reserva
+             // --- REDIRECCIÓN SEGURA ---
+             // Verificamos si existe b.bookingId y no es vacío/null
+             if (b && b.bookingId && String(b.bookingId) !== "undefined") {
+                 UI.showToast('Redirigiendo a la Reserva original...', 'info');
                  setTimeout(() => {
-                     App.handleEditCrudItem('Bookings', b.bookingId);
-                 }, 500); // Pequeño delay para UX
-                 return; // Detener apertura del modal de bloqueo
+                     App.handleEditCrudItem('Bookings', b.bookingId); // Abrir modal de reserva
+                 }, 300);
+                 return; // Detener apertura de modal de bloqueo
              }
              // -----------------------------------------------------------
 
@@ -2698,10 +2676,14 @@ const App = {
             // Buscar bloqueo asociado
             const linkedBlock = (AppState.data.BlockedDates || []).find(b => b.bookingId === id);
             
-            // Si existe bloqueo, preguntar y borrar ambos
+        // --- LÓGICA DE CASCADA PARA RESERVAS ---
+        if (sheet === 'Bookings') {
+            // Convertimos IDs a String para comparar seguro
+            const linkedBlock = (AppState.data.BlockedDates || []).find(b => String(b.bookingId) === String(id));
+            
             if (linkedBlock) {
-                UI.showConfirm(`¿Eliminar Reserva de ${item?.customerName}?`, "Esto eliminará también el bloqueo de fechas asociado.", async () => {
-                    UI.showLoading(`Eliminando Reserva y liberando fechas...`);
+                UI.showConfirm(`¿Eliminar Reserva?`, "Se eliminará también el bloqueo de fechas asociado.", async () => {
+                    UI.showLoading(`Eliminando todo...`);
                     const batch = [
                         { sheet: 'Bookings', action: 'delete', criteria: { id: id } },
                         { sheet: 'BlockedDates', action: 'delete', criteria: { blockId: linkedBlock.blockId } }
@@ -2709,10 +2691,10 @@ const App = {
                     await API.batchUpdate(batch);
                     await App.ensureDataForView(AppState.view, true);
                     UI.renderView(AppState.view);
-                    UI.showToast('Reserva eliminada y fechas liberadas');
+                    UI.showToast('Reserva y Bloqueo eliminados');
                     UI.hideLoading();
                 });
-                return; // Salimos para que no ejecute el delete normal de abajo
+                return; // Importante: Salir aquí
             }
         }
 
@@ -2960,6 +2942,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
