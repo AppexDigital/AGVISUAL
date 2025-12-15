@@ -5,3 +5,6 @@
 [functions]
   node_bundler = "esbuild"
 
+# Reactivamos el Cron Job (Robot Nocturno)
+[functions.scheduled-refresh]
+  schedule = "0 6,18 * * *"
