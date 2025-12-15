@@ -1596,6 +1596,7 @@ const App = {
                     </button>
                  `;
              }
+         }   
          } else if(sheet === 'RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
@@ -2691,6 +2692,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
