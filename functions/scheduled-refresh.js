@@ -20,85 +20,93 @@ exports.handler = async (event, context) => {
         const freshLinksMap = new Map();
         let pageToken = null;
         
-        do {
-            const res = await drive.files.list({
-                q: "trashed = false",
-                fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)', // Pedimos todo por si acaso
-                pageSize: 1000,
-                pageToken: pageToken,
-                supportsAllDrives: true, includeItemsFromAllDrives: true
-            });
-            
-            if (res.data.files) {
-                res.data.files.forEach(f => {
-                    let link = null;
-                    // Estrategia Robusta: Prioridad webContentLink, luego s0
-                    if (f.webContentLink) {
-                        link = f.webContentLink;
-                    } else if (f.thumbnailLink) {
-                        link = f.thumbnailLink.split('=')[0] + '=s0';
-                    }
-
-                    if (link) {
-                        // Forzamos HTTPS
-                        link = link.replace(/^http:\/\//i, 'https://');
-                        freshLinksMap.set(f.id, link);
-                    }
+        try {
+            do {
+                const res = await drive.files.list({
+                    q: "trashed = false",
+                    fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)', 
+                    pageSize: 1000,
+                    pageToken: pageToken,
+                    supportsAllDrives: true, includeItemsFromAllDrives: true
                 });
-            }
-            pageToken = res.data.nextPageToken;
-        } while (pageToken);
+                
+                if (res.data.files) {
+                    res.data.files.forEach(f => {
+                        let link = null;
+                        if (f.webContentLink) link = f.webContentLink;
+                        else if (f.thumbnailLink) link = f.thumbnailLink.split('=')[0] + '=s0';
 
-        // 2. Actualizar Excel
+                        if (link) {
+                            link = link.replace(/^http:\/\//i, 'https://');
+                            freshLinksMap.set(f.id, link);
+                        }
+                    });
+                }
+                pageToken = res.data.nextPageToken;
+            } while (pageToken);
+        } catch (driveError) {
+            return { statusCode: 500, body: `Error conectando con Drive: ${driveError.message}` };
+        }
+
+        // 2. Actualizar Excel (Lógica de Rejilla Segura)
         const targetSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
+        let logReport = "";
 
         for (const title of targetSheets) {
             const sheet = doc.sheetsByTitle[title];
             if (!sheet) continue;
 
-            // --- CORRECCIÓN CRÍTICA AQUÍ ---
-            await sheet.loadHeaderRow(); // <--- ESTA LÍNEA FALTABA Y CAUSABA EL ERROR
-            await sheet.loadCells();     // Cargamos celdas para editar
-            // -------------------------------
+            try {
+                await sheet.loadHeaderRow(); 
+                await sheet.loadCells(); // Carga toda la hoja en memoria
+                
+                const headers = sheet.headerValues;
+                const colIdIndex = headers.indexOf('fileId'); 
+                const colUrlIndex = headers.indexOf(title === 'ClientLogos' ? 'logoUrl' : 'imageUrl');
 
-            const rows = await sheet.getRows();
-            const headers = sheet.headerValues;
-            const colIdIndex = headers.indexOf('fileId'); 
-            const colUrlIndex = headers.indexOf(title === 'ClientLogos' ? 'logoUrl' : 'imageUrl');
+                if (colIdIndex === -1 || colUrlIndex === -1) {
+                    logReport += `[${title}] Saltado: Falta columna fileId o URL.\n`;
+                    continue;
+                }
 
-            if (colIdIndex === -1 || colUrlIndex === -1) continue;
+                let updates = 0;
+                // Recorremos por índice de fila real (rowCount)
+                // Empezamos en 1 para saltar el encabezado (fila 0)
+                for (let r = 1; r < sheet.rowCount; r++) {
+                    const cellId = sheet.getCell(r, colIdIndex);
+                    const fileId = cellId.value;
 
-            let updates = 0;
-            // Iteramos sobre las filas usando el índice visual del Excel
-            for (let i = 0; i < rows.length; i++) {
-                const rowIndex = i + 1; // +1 por el header
-                const cellId = sheet.getCell(rowIndex, colIdIndex);
-                const cellUrl = sheet.getCell(rowIndex, colUrlIndex);
-                const fileId = cellId.value;
-
-                if (fileId && typeof fileId === 'string') {
-                    const cleanId = fileId.trim();
-                    if (freshLinksMap.has(cleanId)) {
-                        const newLink = freshLinksMap.get(cleanId);
-                        // Solo gastamos recursos si el link es diferente
-                        if (cellUrl.value !== newLink) {
-                            cellUrl.value = newLink;
-                            updates++;
+                    if (fileId && typeof fileId === 'string') {
+                        const cleanId = fileId.trim();
+                        if (freshLinksMap.has(cleanId)) {
+                            const newLink = freshLinksMap.get(cleanId);
+                            const cellUrl = sheet.getCell(r, colUrlIndex);
+                            
+                            if (cellUrl.value !== newLink) {
+                                cellUrl.value = newLink;
+                                updates++;
+                            }
                         }
                     }
                 }
-            }
-            
-            if (updates > 0) {
-                await sheet.saveUpdatedCells();
-                console.log(`Hoja ${title}: ${updates} links actualizados.`);
+                
+                if (updates > 0) {
+                    await sheet.saveUpdatedCells();
+                    logReport += `[${title}] Éxito: ${updates} links actualizados.\n`;
+                } else {
+                    logReport += `[${title}] Al día: No hubo cambios necesarios.\n`;
+                }
+
+            } catch (sheetError) {
+                console.error(`Error en hoja ${title}:`, sheetError);
+                logReport += `[${title}] ERROR CRÍTICO: ${sheetError.message}\n`;
             }
         }
 
-        return { statusCode: 200, body: "Mantenimiento Exitoso: Links Actualizados" };
+        return { statusCode: 200, body: `Mantenimiento Completado.\n\nReporte:\n${logReport}` };
 
     } catch (error) {
-        console.error("Error Cron:", error);
-        return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+        console.error("Error General:", error);
+        return { statusCode: 500, body: `Error General del Sistema: ${error.message}` };
     }
 };
