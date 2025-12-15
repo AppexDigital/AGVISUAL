@@ -123,4 +123,4 @@ const myHandler = async (event, context) => {
 //module.exports.handler = schedule("0 6,18 * * *", myHandler);
 
 // CAMBIO TEMPORAL PARA PRUEBA (8:36 AM CR / 14:36 UTC)
-module.exports.handler = schedule("36 14 * * *", myHandler);
+module.exports.handler = schedule("5 15 * * *", myHandler);
