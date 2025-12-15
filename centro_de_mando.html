@@ -796,12 +796,11 @@ const UI = {
                     const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
                     const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
                     
-                    // --- CÁLCULOS MATEMÁTICOS (FUERA DEL HTML) ---
+                    // --- CÁLCULOS (SOLO AQUÍ, AFUERA DEL HTML) ---
                     const basePrice = parseFloat(i.pricePerDay) || 0;
                     const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
                     const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
                     const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
-                    // ---------------------------------------------
 
                     return `<tr class="border-b hover:bg-gray-50">
                         <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
@@ -820,7 +819,6 @@ const UI = {
                         </td>
                     </tr>`;
                 }).join('');
-            
             // Actualizar Encabezado Equipos (Cambiamos Img por PORTADA y centramos acciones)
             const theadItems = document.querySelector('#tab-rental-items thead tr');
             if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Portada</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4 text-center">Precio</th><th class="p-4 text-center">Acciones</th>';
@@ -2693,6 +2691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
