@@ -901,12 +901,19 @@ const UI = {
             const timeFilter = AppState.bookingTimeFilter || 'active';
             const statusFilter = AppState.bookingStatusFilter || 'all';
 
+            // Helper para fechas sin desfase horario (UTC puro)
+            const formatDateSafe = (isoStr) => {
+                if(!isoStr) return '';
+                const [y, m, d] = isoStr.split('-');
+                return `${d}/${m}/${y}`;
+            };
+
             // --- Lógica de Filtrado ---
             let filtered = allBookings.filter(b => {
                 const textMatch = !searchTerm || 
                     (b.customerName||'').toLowerCase().includes(searchTerm) ||
                     (b.customerEmail||'').toLowerCase().includes(searchTerm) ||
-                    (b.customerCedula||'').toLowerCase().includes(searchTerm) || // Busca en nueva columna
+                    (b.customerCedula||'').toLowerCase().includes(searchTerm) ||
                     (b.id||'').toLowerCase().includes(searchTerm);
                 if (!textMatch) return false;
 
@@ -922,12 +929,11 @@ const UI = {
 
             filtered.sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
 
-            // --- Inyectar Controles con Título ---
+            // --- Inyectar Controles (Sin botón duplicado) ---
             const viewContainer = document.getElementById('view-bookings');
             const oldControls = document.getElementById('booking-controls');
             if (oldControls) oldControls.remove();
             
-            // IMPORTANTE: Título "Reservas" y Filtros
             const controlsHTML = `
                 <div id="booking-controls" class="mb-6">
                     <div class="flex justify-between items-center mb-4">
@@ -958,18 +964,18 @@ const UI = {
                 UI.renderView('bookings');
             };
 
-            // --- Renderizar Tabla (Con nuevas columnas y estilo) ---
+            // --- Renderizar Tabla (Botones Estandarizados y Fechas Ok) ---
             document.getElementById('bookings-list-body').innerHTML = filtered.map(b => `
                 <tr class="border-b hover:bg-gray-50 align-top">
                     <td class="p-4 whitespace-nowrap">
-                        <div class="font-bold text-sm">${new Date(b.startDate).toLocaleDateString()}</div>
-                        <div class="text-xs text-gray-400">hasta ${new Date(b.endDate).toLocaleDateString()}</div>
+                        <div class="font-bold text-sm">${formatDateSafe(b.startDate)}</div>
+                        <div class="text-xs text-gray-400">hasta ${formatDateSafe(b.endDate)}</div>
                     </td>
                     <td class="p-4">
                         <div class="font-bold text-sm text-gray-900">${b.customerName}</div>
                         ${b.customerCedula ? `<div class="text-xs text-gray-600 font-mono">ID: ${b.customerCedula}</div>` : ''}
                         <div class="text-xs text-blue-600 truncate max-w-[150px]" title="${b.customerEmail}">${b.customerEmail || '-'}</div>
-                        ${b.customerPhone ? `<div class="text-xs text-gray-500"><i class="fas fa-phone-alt mr-1"></i>${b.customerPhone}</div>` : ''}
+                        ${b.customerPhone ? `<div class="text-xs text-gray-500">${b.customerPhone}</div>` : ''}
                     </td>
                     <td class="p-4">
                         <div class="text-xs text-gray-600 whitespace-normal max-w-[180px] leading-tight">
@@ -981,16 +987,13 @@ const UI = {
                     </td>
                     <td class="p-4 font-mono text-sm font-bold text-right">$${b.totalPrice}</td>
                     <td class="p-4"><span class="status-badge status-${b.status}">${b.status}</span></td>
-                    <td class="p-4">
-                        <div class="flex flex-col gap-2">
-                            <button class="btn-secondary btn-sm justify-center" onclick="App.handleEditCrudItem('Bookings', '${b.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-danger btn-sm justify-center" onclick="App.handleDelete('Bookings', '${b.id}')"><i class="fas fa-trash"></i></button>
-                        </div>
+                    <td class="p-4 flex gap-3 justify-center">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('Bookings', '${b.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('Bookings', '${b.id}')"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
             
-            // Actualizar Encabezado de Tabla
             const thead = document.querySelector('#view-bookings thead tr');
             if(thead) thead.innerHTML = '<th class="p-4">Fechas</th><th class="p-4">Cliente</th><th class="p-4">Dirección</th><th class="p-4">Equipo</th><th class="p-4 text-right">Total</th><th class="p-4">Estado</th><th class="p-4 text-center">Acciones</th>';
         }
@@ -1780,7 +1783,6 @@ const App = {
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
             // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
         } else if(sheet === 'Bookings'){
-             // 1. Cargar dependencias
              if (!AppState.data.RentalItems || !AppState.data.BlockedDates) {
                  UI.showLoading('Cargando datos...');
                  const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems,BlockedDates');
@@ -1789,13 +1791,20 @@ const App = {
              }
              
              const b = isNew ? {} : AppState.data.Bookings.find(x => x.id === id);
-             // Ordenar equipos alfabéticamente
              const items = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
              const statuses = ['Pendiente', 'Confirmado', 'Pagado', 'Cancelado'].map(s => ({id:s, name:s}));
              
              modalTitle = isNew ? 'Nueva Reserva' : `Editar Reserva de ${b.customerName}`;
              
-             // 2. Formulario Extendido
+             // --- Botón de Borrar en el Modal (Izquierda) ---
+             if (!isNew) {
+                 leftButtons = `
+                    <button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('Bookings', '${id}')">
+                        <i class="fas fa-trash mr-2"></i> Eliminar Reserva
+                    </button>
+                 `;
+             }
+
              html = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     ${UI.inputHTML('c', 'customerName', 'Cliente', b?.customerName)}
@@ -1803,19 +1812,19 @@ const App = {
                     ${UI.inputHTML('c', 'customerEmail', 'Email', b?.customerEmail, 'email')}
                     ${UI.inputHTML('c', 'customerPhone', 'Teléfono', b?.customerPhone)}
                 </div>
-                ${UI.inputHTML('c', 'customerAddress', 'Dirección', b?.customerAddress)}
+                ${UI.inputHTML('c', 'customerAddress', 'Dirección Exacta', b?.customerAddress)}
                 <hr class="my-4 border-gray-100">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="mb-4">
                         <label class="form-label">Equipo</label>
-                        <select id="c-itemId" data-key="itemId" class="form-select" onchange="App.updateBookingDates(this.value)">
+                        <select id="c-itemId" data-key="itemId" class="form-select" onchange="window.calculateBookingPriceGlobal()">
                             <option value="">Seleccionar Equipo...</option>
                             ${items.map(i => `<option value="${i.id}" ${i.id === b?.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
                         </select>
                     </div>
                     ${UI.selectHTML('c', 'status', 'Estado', statuses, b?.status || 'Confirmado')}
                 </div>
-                <div class="grid grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="mb-4">
                         <label class="form-label">Desde</label>
                         <input type="text" id="c-startDate" data-key="startDate" class="form-input bg-white cursor-pointer" value="${b?.startDate||''}" placeholder="Fecha...">
@@ -1824,47 +1833,84 @@ const App = {
                         <label class="form-label">Hasta</label>
                         <input type="text" id="c-endDate" data-key="endDate" class="form-input bg-white cursor-pointer" value="${b?.endDate||''}" placeholder="Fecha...">
                     </div>
-                    ${UI.inputHTML('c', 'totalPrice', 'Total ($)', b?.totalPrice, 'number')}
+                    <div class="mb-4">
+                        <label class="form-label">Total ($)</label>
+                        <input type="number" id="c-totalPrice" data-key="totalPrice" class="form-input font-bold bg-gray-50" value="${b?.totalPrice||'0'}" readonly>
+                        <div id="tax-detail" class="text-[10px] text-gray-500 mt-1 hidden text-right"></div>
+                    </div>
                 </div>
              `;
 
-             // 3. Inicializar Flatpickr para Reservas
              setTimeout(() => {
                  const startInput = document.getElementById('c-startDate');
                  const endInput = document.getElementById('c-endDate');
-                 const itemSelect = document.getElementById('c-itemId');
                  
-                 // Función para obtener bloqueos (excluyendo el bloqueo actual de esta reserva si existe)
                  const getDisabledDates = (itemId) => {
                      if(!itemId) return [];
                      const blocks = AppState.data.BlockedDates || [];
-                     // Ignoramos el bloqueo que tenga el mismo bookingId que estamos editando
-                     return blocks
-                        .filter(blk => blk.itemId === itemId && blk.bookingId !== id) 
-                        .map(blk => ({ from: blk.startDate, to: blk.endDate }));
+                     return blocks.filter(blk => blk.itemId === itemId && blk.bookingId !== id) 
+                                  .map(blk => ({ from: blk.startDate, to: blk.endDate }));
                  };
 
-                 const config = {
-                     locale: 'es', dateFormat: "Y-m-d", minDate: "today"
+                 // --- FUNCIÓN DE CÁLCULO ROBUSTA ---
+                 window.calculateBookingPriceGlobal = () => {
+                     const itemSelect = document.getElementById('c-itemId');
+                     const sVal = document.getElementById('c-startDate').value;
+                     const eVal = document.getElementById('c-endDate').value;
+                     const totalInput = document.getElementById('c-totalPrice');
+                     const taxDiv = document.getElementById('tax-detail');
+
+                     if (sVal && eVal && itemSelect.value) {
+                         const sDate = new Date(sVal);
+                         const eDate = new Date(eVal);
+                         
+                         const diffTime = Math.abs(eDate - sDate);
+                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+
+                         const item = AppState.data.RentalItems.find(i => i.id === itemSelect.value);
+                         
+                         if (item && diffDays > 0) {
+                             const basePrice = parseFloat(item.pricePerDay) || 0;
+                             const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
+                             
+                             let subtotal = basePrice * diffDays;
+                             let total = subtotal;
+                             
+                             if (hasTax) {
+                                 const tax = subtotal * 0.13;
+                                 total = subtotal + tax;
+                                 taxDiv.innerHTML = `Subtotal (${diffDays} días): $${subtotal.toFixed(2)}<br>+ IVA (13%): $${tax.toFixed(2)}`;
+                                 taxDiv.classList.remove('hidden');
+                             } else {
+                                 taxDiv.innerHTML = `${diffDays} días x $${basePrice}`;
+                                 taxDiv.classList.remove('hidden');
+                             }
+                             totalInput.value = total.toFixed(2);
+                             
+                             // Actualizar bloqueos del calendario según nuevo equipo
+                             const disabled = getDisabledDates(itemSelect.value);
+                             if(fpStart) fpStart.set('disable', disabled);
+                             if(fpEnd) fpEnd.set('disable', disabled);
+                         }
+                     }
                  };
 
+                 const config = { locale: 'es', dateFormat: "Y-m-d", minDate: "today" };
+                 
                  const fpStart = flatpickr(startInput, { 
                      ...config, 
-                     onChange: (d) => fpEnd.set('minDate', d[0]),
+                     onChange: (d) => { 
+                        if(fpEnd) fpEnd.set('minDate', d[0]); 
+                        window.calculateBookingPriceGlobal(); 
+                     },
                      disable: getDisabledDates(b?.itemId) 
                  });
+                 
                  const fpEnd = flatpickr(endInput, { 
                      ...config,
+                     onChange: () => window.calculateBookingPriceGlobal(),
                      disable: getDisabledDates(b?.itemId)
                  });
-
-                 // Al cambiar equipo, actualizar bloqueos
-                 App.updateBookingDates = (newItemId) => {
-                     const disabled = getDisabledDates(newItemId);
-                     fpStart.set('disable', disabled);
-                     fpEnd.set('disable', disabled);
-                     fpStart.clear(); fpEnd.clear();
-                 };
              }, 100);
         // --- FIN CÓDIGO NUEVO ---
 
@@ -2764,10 +2810,21 @@ const App = {
         const item = AppState.data[sheet]?.find(x => x[key] === id);
         let name = item?.title || item?.name || 'Registro';
 
-        // Lógica Especial para obtener nombre en Bloqueos
+        // --- LÓGICA ESPECIAL: Bloqueo -> Reserva ---
         if (sheet === 'BlockedDates') {
-            const rentalItem = (AppState.data.RentalItems || []).find(r => r.id === item?.itemId);
-            name = rentalItem ? rentalItem.name : 'Desconocido';
+            const blockItem = AppState.data.BlockedDates?.find(b => b.blockId === id);
+            
+            // Si el bloqueo tiene ID de reserva, es automático
+            if (blockItem && blockItem.bookingId && String(blockItem.bookingId) !== "undefined") {
+                UI.showToast('🔒 Este bloqueo es parte de una Reserva. Abriendo la reserva...', 'info');
+                
+                // Redirigir al modal de la Reserva (donde ahora hay un botón ELIMINAR)
+                setTimeout(() => {
+                    App.handleEditCrudItem('Bookings', blockItem.bookingId);
+                }, 500);
+                
+                return; // IMPORTANTE: Detener el borrado directo del bloqueo
+            }
         }
         
         const typeLabel = sheet === 'Projects' ? 'Proyecto' : 
@@ -3002,6 +3059,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
