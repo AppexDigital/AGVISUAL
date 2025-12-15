@@ -787,7 +787,7 @@ const UI = {
             
         } else if (view === 'rentals') { 
              // 1. EQUIPOS (Con Portada Real)
-             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
+            document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
                 .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
                 .map(i => {
                     const images = data.RentalItemImages || [];
@@ -796,12 +796,12 @@ const UI = {
                     const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
                     const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
                     
-                    // --- CÁLCULO SACA DEL HTML (CORRECTO) ---
+                    // --- CÁLCULOS MATEMÁTICOS (FUERA DEL HTML) ---
                     const basePrice = parseFloat(i.pricePerDay) || 0;
                     const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
                     const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
                     const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
-                    // ----------------------------------------
+                    // ---------------------------------------------
 
                     return `<tr class="border-b hover:bg-gray-50">
                         <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
@@ -2452,6 +2452,12 @@ const App = {
         // 1. Calcular nombres y etiquetas
         const item = AppState.data[sheet]?.find(x => x[key] === id);
         const name = item?.title || item?.name || 'Registro';
+
+        // Lógica Especial para Bloqueos
+        if (sheet === 'BlockedDates') {
+            const rentalItem = (AppState.data.RentalItems || []).find(r => r.id === item?.itemId);
+            name = rentalItem ? rentalItem.name : 'Desconocido';
+        }
         
         const typeLabel = sheet === 'Projects' ? 'Proyecto' : 
                          (sheet === 'Services' ? 'Servicio' : 
@@ -2687,6 +2693,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
