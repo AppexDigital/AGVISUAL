@@ -1,28 +1,28 @@
 // functions/scheduled-refresh.js
-// V50.0 - LÓGICA COMPLETA EN MODO HÍBRIDO (CommonJS + Dynamic Import)
+// V51.0 - SOPORTE TOTAL PARA SHARED DRIVES (Corpora allDrives)
 
 const { schedule } = require('@netlify/functions');
 
 const myHandler = async (event, context) => {
-    // 1. Cronómetro de Seguridad (8.5 segundos para no llegar al límite de 10s)
+    // Cronómetro de seguridad
     const TIME_LIMIT = 8500;
     const startTime = Date.now();
     let logs = [];
     
-    console.log(">>> ROBOT INICIADO: Mantenimiento de Links...");
+    console.log(">>> ROBOT INICIADO: Mantenimiento de Links (Shared Drive Mode)...");
 
     try {
-        // --- CARGA DINÁMICA DE LIBRERÍAS (El secreto del éxito) ---
+        // Carga Dinámica
         const { GoogleSpreadsheet } = await import('google-spreadsheet');
         const { JWT } = await import('google-auth-library');
         const { google } = await import('googleapis');
 
-        // 2. Verificación de Credenciales
+        // Credenciales
         if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
             throw new Error("Faltan credenciales de entorno.");
         }
 
-        // 3. Autenticación (Sintaxis V5 Moderna)
+        // Autenticación
         const auth = new JWT({
             email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
             key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -35,7 +35,7 @@ const myHandler = async (event, context) => {
         await doc.loadInfo();
         logs.push("Conexión Sheets OK.");
 
-        // 4. Barrido Rápido de Drive (Lote Seguro de 200)
+        // --- BARRIDO DRIVE (CORREGIDO PARA SHARED DRIVES) ---
         const freshLinksMap = new Map();
         let pageToken = null;
         
@@ -45,15 +45,18 @@ const myHandler = async (event, context) => {
 
                 const res = await drive.files.list({
                     q: "trashed = false and mimeType contains 'image/'",
+                    // ESTA ES LA CLAVE PARA SHARED DRIVES:
+                    corpora: 'allDrives', 
+                    // ------------------------------------
                     fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)',
                     pageSize: 200, 
                     pageToken: pageToken,
-                    supportsAllDrives: true, includeItemsFromAllDrives: true
+                    supportsAllDrives: true, 
+                    includeItemsFromAllDrives: true
                 });
                 
                 if (res.data.files) {
                     res.data.files.forEach(f => {
-                        // Generar Link Robusto =s0 (Tamaño original / Descarga)
                         let link = f.webContentLink;
                         if (!link && f.thumbnailLink) {
                             link = f.thumbnailLink.split('=')[0] + '=s0';
@@ -65,27 +68,24 @@ const myHandler = async (event, context) => {
                 }
                 pageToken = res.data.nextPageToken;
             } while (pageToken);
-            logs.push(`Drive: ${freshLinksMap.size} archivos escaneados.`);
+            logs.push(`Drive: ${freshLinksMap.size} archivos escaneados (Modo Shared).`);
         } catch (e) {
             logs.push(`Advertencia Drive: ${e.message}`);
         }
 
-        // 5. Actualización en Sheets
+        // Actualización en Sheets (Igual que antes)
         const targetSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
         let changes = 0;
 
         for (const title of targetSheets) {
             if (Date.now() - startTime > TIME_LIMIT) break;
-
             const sheet = doc.sheetsByTitle[title];
             if (!sheet) continue;
 
-            // Carga optimizada V5
             await sheet.loadHeaderRow();
             const rows = await sheet.getRows();
             const headers = sheet.headerValues;
             
-            // Detectar columnas
             const keyId = headers.includes('fileId') ? 'fileId' : null;
             const keyUrl = headers.includes('imageUrl') ? 'imageUrl' : (headers.includes('logoUrl') ? 'logoUrl' : null);
 
@@ -94,13 +94,11 @@ const myHandler = async (event, context) => {
             let sheetChanges = 0;
             for (const row of rows) {
                 if (Date.now() - startTime > TIME_LIMIT) break;
-
                 const fileId = row.get(keyId);
                 const currentUrl = row.get(keyUrl);
 
                 if (fileId && freshLinksMap.has(fileId.trim())) {
                     const newLink = freshLinksMap.get(fileId.trim());
-                    // Solo gastamos tiempo guardando si es diferente
                     if (currentUrl !== newLink) {
                         row.set(keyUrl, newLink);
                         await row.save();
@@ -114,18 +112,12 @@ const myHandler = async (event, context) => {
 
         const finalMsg = `MANTENIMIENTO FINALIZADO. Cambios: ${changes}. Logs: ${logs.join(' | ')}`;
         console.log(finalMsg);
-
-        return {
-            statusCode: 200,
-            body: finalMsg
-        };
+        return { statusCode: 200, body: finalMsg };
 
     } catch (error) {
-        console.error("Error Crítico:", error);
+        console.error("Error:", error);
         return { statusCode: 500, body: error.message };
     }
 };
 
-// Exportamos con el Programador
-// 00:00 y 12:00 (Aprox Costa Rica)
 module.exports.handler = schedule("0 6,18 * * *", myHandler);
