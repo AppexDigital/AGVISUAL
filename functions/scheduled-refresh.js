@@ -1,5 +1,5 @@
 // functions/scheduled-refresh.js
-// V51.0 - SOPORTE TOTAL PARA SHARED DRIVES (Corpora allDrives)
+// V52.0 - FORMATO VISUAL ESTRICTO (=s0)
 
 const { schedule } = require('@netlify/functions');
 
@@ -9,7 +9,7 @@ const myHandler = async (event, context) => {
     const startTime = Date.now();
     let logs = [];
     
-    console.log(">>> ROBOT INICIADO: Mantenimiento de Links (Shared Drive Mode)...");
+    console.log(">>> ROBOT INICIADO: Mantenimiento de Links (Formato Visual)...");
 
     try {
         // Carga Dinámica
@@ -35,7 +35,7 @@ const myHandler = async (event, context) => {
         await doc.loadInfo();
         logs.push("Conexión Sheets OK.");
 
-        // --- BARRIDO DRIVE (CORREGIDO PARA SHARED DRIVES) ---
+        // --- BARRIDO DRIVE ---
         const freshLinksMap = new Map();
         let pageToken = null;
         
@@ -45,10 +45,8 @@ const myHandler = async (event, context) => {
 
                 const res = await drive.files.list({
                     q: "trashed = false and mimeType contains 'image/'",
-                    // ESTA ES LA CLAVE PARA SHARED DRIVES:
-                    corpora: 'allDrives', 
-                    // ------------------------------------
-                    fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)',
+                    corpora: 'allDrives', // Soporte Shared Drive
+                    fields: 'nextPageToken, files(id, thumbnailLink)', // Solo pedimos thumbnailLink
                     pageSize: 200, 
                     pageToken: pageToken,
                     supportsAllDrives: true, 
@@ -57,23 +55,24 @@ const myHandler = async (event, context) => {
                 
                 if (res.data.files) {
                     res.data.files.forEach(f => {
-                        let link = f.webContentLink;
-                        if (!link && f.thumbnailLink) {
-                            link = f.thumbnailLink.split('=')[0] + '=s0';
-                        }
-                        if (link) {
-                            freshLinksMap.set(f.id, link.replace(/^http:\/\//i, 'https://'));
+                        // --- CORRECCIÓN DE FORMATO ---
+                        // Ignoramos webContentLink. Usamos estrictamente thumbnailLink.
+                        // Quitamos el tamaño por defecto y ponemos =s0 (Original Size)
+                        if (f.thumbnailLink) {
+                            const visualLink = f.thumbnailLink.split('=')[0] + '=s0';
+                            // Forzamos HTTPS y guardamos
+                            freshLinksMap.set(f.id, visualLink.replace(/^http:\/\//i, 'https://'));
                         }
                     });
                 }
                 pageToken = res.data.nextPageToken;
             } while (pageToken);
-            logs.push(`Drive: ${freshLinksMap.size} archivos escaneados (Modo Shared).`);
+            logs.push(`Drive: ${freshLinksMap.size} archivos visuales escaneados.`);
         } catch (e) {
             logs.push(`Advertencia Drive: ${e.message}`);
         }
 
-        // Actualización en Sheets (Igual que antes)
+        // Actualización en Sheets
         const targetSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
         let changes = 0;
 
@@ -99,6 +98,7 @@ const myHandler = async (event, context) => {
 
                 if (fileId && freshLinksMap.has(fileId.trim())) {
                     const newLink = freshLinksMap.get(fileId.trim());
+                    // Actualizamos si es diferente
                     if (currentUrl !== newLink) {
                         row.set(keyUrl, newLink);
                         await row.save();
