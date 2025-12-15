@@ -2807,7 +2807,12 @@ const App = {
                     batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: linkedBlock.blockId } });
                 }
 
-                await API.batchUpdate(batch);
+                // AJUSTE CLAVE: Definir mensaje y pasarlo a la función
+                const cleanMsg = `Eliminando Reserva de ${bookingItem?.customerName || 'Cliente'}`;
+                
+                // Pasamos cleanMsg como segundo parámetro para ocultar el contador
+                await API.batchUpdate(batch, cleanMsg); 
+
                 await App.ensureDataForView(AppState.view, true);
                 UI.renderView(AppState.view);
                 UI.showToast('Proceso completado correctamente');
@@ -3069,6 +3074,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
