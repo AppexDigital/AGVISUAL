@@ -1,12 +1,13 @@
 [build]
-  # Si tu index.html está en la raíz, usa "."
-  # Si está en una carpeta 'public', usa "public/"
-  publish = "." 
+  # Publicar la raíz (donde está tu html)
+  publish = "."
+  # ESTA ES LA CLAVE: Decirle explícitamente dónde están las funciones aquí
+  functions = "functions"
 
 [functions]
-  directory = "functions/"
-  node_bundler = "esbuild" # Recomendado para mejor rendimiento
+  # Aquí solo dejamos la configuración de empaquetado
+  node_bundler = "esbuild"
 
-# Cron Job: Se ejecuta a las 00:00 y 12:00 todos los días
+# Cron Job (Tu configuración de horario)
 [functions.scheduled-refresh]
-  schedule = "0 */12 * * *"
+  schedule = "0 6,18 * * *"
