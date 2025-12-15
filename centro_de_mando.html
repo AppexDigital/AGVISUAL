@@ -662,29 +662,35 @@ const UI = {
                 </div>
              `).join('');
         } else if (view === 'projects') {
-            document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
-                // ... (lógica de portada y conteo igual que antes) ...
-                const cover = (data.ProjectImages||[]).find(i => {
-                    const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
-                    const isCov = String(getVal(i, 'isCover')).toLowerCase().trim();
-                    return pid === p.id && (isCov === 'si' || isCov === 'yes');
-                });
-                const imageCount = (data.ProjectImages || []).filter(i => {
-                     const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
-                     return pid === p.id;
-                }).length;
+            // 1. EQUIPOS (Con Portada Real)
+         document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
+            .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
+            .map(i => {
+                const images = data.RentalItemImages || [];
+                const coverObj = images.find(im => im.itemId === i.id && String(im.isCover).toLowerCase() === 'si');
+                const firstObj = images.find(im => im.itemId === i.id);
+                const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
+                const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
+                
+                // --- CÁLCULO JS FUERA DEL HTML ---
+                const basePrice = parseFloat(i.pricePerDay) || 0;
+                const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
+                const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
+                const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
+                // ---------------------------------
 
                 return `<tr class="border-b hover:bg-gray-50">
-                    <td class="p-4 font-mono text-xs text-center">${p.order||99}</td> 
-                    <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" ></td>
-                    <td class="p-4 font-bold text-sm">${p.title}</td>
-                    <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
-                    <td class="p-4 align-middle">
-                        <div class="flex items-center justify-center gap-3">
-                            <button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button>
-                            <button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button>
-                        </div>
+                    <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
+                    <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
+                    <td class="p-4 font-bold text-sm">${i.name}</td>
+                    <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
+                    <td class="p-4 font-mono text-sm font-bold text-right text-gray-700">
+                        $${finalPrice.toFixed(2)} ${taxBadge}
+                    </td>
+                    <td class="p-4 flex gap-3 justify-center">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
+                        <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
+                        <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
                     </td>
                 </tr>`;
             }).join('');
@@ -1518,7 +1524,9 @@ const App = {
 
         } else if(sheet === 'Services'){
              const s = isNew ? {} : AppState.data.Services.find(x => x.id === id);
-             modalTitle = isNew ? 'Nuevo Servicio' : `Editar ${s.title}`;
+             
+             // 1. Título Ajustado
+             modalTitle = isNew ? 'Nuevo Servicio' : `Editar Servicio ${s.title}`;
              
              let nextOrder = 1;
              if (isNew && AppState.data.Services && AppState.data.Services.length > 0) {
@@ -1526,7 +1534,7 @@ const App = {
                  nextOrder = maxOrder + 1;
              }
 
-             // AJUSTE 4: Lista de Iconos Ampliada (+100 iconos curados)
+             // Lista de Iconos
              const iconList = [
                  'fas fa-camera', 'fas fa-camera-retro', 'fas fa-video', 'fas fa-film', 'fas fa-photo-video',
                  'fas fa-ring', 'fas fa-heart', 'fas fa-dove', 'fas fa-glass-cheers', 'fas fa-church',
@@ -1547,7 +1555,7 @@ const App = {
              const currentIcon = s?.iconClass || 'fas fa-camera';
 
              let iconsHtml = `<div class="mb-4"><label class="form-label">Selecciona un Icono</label>`;
-             iconsHtml += `<div class="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-2 border rounded bg-gray-50">`; // Grid más denso
+             iconsHtml += `<div class="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-2 border rounded bg-gray-50">`; 
              iconsHtml += `<input type="hidden" id="c-iconClass" data-key="iconClass" value="${currentIcon}">`;
              
              iconList.forEach(icon => {
@@ -1566,8 +1574,8 @@ const App = {
                  document.getElementById('c-iconClass').value = iconClass;
              };
 
+            // Inicializar Editor Quill
             setTimeout(() => {
-                 // Configuración de Quill
                  activeQuillEditor = new Quill('#editor-intro', {
                      theme: 'snow',
                      modules: { 
@@ -1579,24 +1587,12 @@ const App = {
                          ] 
                      }
                  });
-                 
-                 // AJUSTE: Inyección segura del contenido HTML guardado
-                 // Usamos pasteHTML si existe para mantener formato, o innerHTML directo
                  if (s && s.introText) {
                     activeQuillEditor.root.innerHTML = s.introText;
                  }
              }, 100);
-            
-        } else if(sheet === 'Services'){
-             const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
-             
-             // 1. Título Ajustado
-             modalTitle = isNew ? 'Nuevo Servicio' : `Editar Servicio ${s.title}`;
-             
-             // (Mantenemos tu HTML de inputs actual)
-             html=`${UI.inputHTML('c','order','Orden',s?.order||99,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${UI.inputHTML('c','iconClass','Icono (FontAwesome)',s?.iconClass)} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
-        
-             // 2. Botones de Izquierda (Solo al editar)
+
+             // 2. Botones de Izquierda (Corrección aplicada)
              if (!isNew) {
                  leftButtons = `
                     <button class="btn btn-danger h-10 px-3 mr-1" onclick="UI.closeModal(); App.handleDelete('Services', '${id}')" title="Eliminar Servicio">
@@ -1609,9 +1605,7 @@ const App = {
                         <i class="fas fa-layer-group"></i>
                     </button>
                  `;
-             }
-        
-        } else if(sheet === 'RentalItems'){
+         } else if(sheet === 'RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
              
@@ -1623,28 +1617,32 @@ const App = {
                  const maxOrder = Math.max(...AppState.data.RentalItems.map(it => parseInt(it.order) || 0));
                  nextOrder = maxOrder + 1;
              }
-        
-             // 2. Checkbox de Impuesto (Lógica Visual)
-             // Verificamos si en el sheet dice 'TRUE'
+
+             // 2. Checkbox de Impuesto y Calculadora
              const hasTaxChecked = String(i?.hasTax).toUpperCase() === 'TRUE' ? 'checked' : '';
              
              const taxHtml = `
-                <div class="mb-4 flex items-center p-2 border rounded bg-gray-50">
-                    <input type="checkbox" id="c-hasTax" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" ${hasTaxChecked}>
-                    <label for="c-hasTax" class="ml-2 text-sm font-bold text-gray-700 select-none cursor-pointer">El precio incluye Impuesto de Venta (13%)</label>
+                <div class="mb-4 bg-gray-50 p-3 rounded border">
+                    <div class="flex items-center mb-2">
+                        <input type="checkbox" id="c-hasTax" class="w-4 h-4 text-blue-600 rounded cursor-pointer" ${hasTaxChecked}>
+                        <label for="c-hasTax" class="ml-2 text-sm font-bold text-gray-700 cursor-pointer select-none">Aplicar Impuesto de Venta (13%)</label>
+                    </div>
+                    <div id="tax-calc-display" class="hidden mt-2 pt-2 border-t border-gray-200">
+                        <label class="text-xs font-bold text-gray-500 uppercase">Precio Final al Cliente</label>
+                        <div class="text-xl font-mono font-bold text-blue-700" id="tax-calc-result">$0.00</div>
+                    </div>
                 </div>
              `;
-        
-             // Inyectamos el taxHtml justo después del precio
+
              html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||nextOrder, 'number')} 
                      ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} 
                      ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} 
-                     ${UI.inputHTML('c', 'pricePerDay', 'Precio Base ($)', i?.pricePerDay, 'number')} 
+                     ${UI.inputHTML('c', 'pricePerDay', 'Precio Base (Sin Impuesto)', i?.pricePerDay, 'number')} 
                      ${taxHtml} 
                      ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} 
                      ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
              
-             // 3. Botones Estandarizados (Iguales a Proyectos y Servicios)
+             // 3. Botones Estandarizados
              if (!isNew) {
                  leftButtons = `
                     <button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('RentalItems', '${id}')" title="Eliminar Equipo">
@@ -1656,22 +1654,8 @@ const App = {
                  `;
              }
 
-            // 4. RENDERIZAR Y ACTIVAR CALCULADORA
-             // Definimos el footer
-             const footer = `
-                <div class="flex justify-between items-center w-full">
-                    <div class="flex items-center">${leftButtons}</div>
-                    <div class="flex items-center gap-2">
-                        <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
-                        <button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>
-                    </div>
-                </div>
-            `;
-
-            UI.showModal(modalTitle, `<form id="crud-form">${html}</form>`, footer);
-
-            // --- LÓGICA DE CÁLCULO EN VIVO (ESTO ES LO CLAVE) ---
-            setTimeout(() => {
+             // 4. LÓGICA DE CÁLCULO EN VIVO
+             setTimeout(() => {
                 const priceInput = document.getElementById('c-pricePerDay');
                 const taxCheck = document.getElementById('c-hasTax');
                 const displayDiv = document.getElementById('tax-calc-display');
@@ -1691,10 +1675,9 @@ const App = {
                 // Escuchar cambios
                 priceInput.addEventListener('input', calculate);
                 taxCheck.addEventListener('change', calculate);
-                
                 // Ejecutar una vez al abrir
                 calculate();
-            }, 50)
+            }, 50);
         
         } else if(sheet === 'RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
@@ -2593,6 +2576,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
