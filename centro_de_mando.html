@@ -929,11 +929,21 @@ const UI = {
 
             filtered.sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
 
-            // --- Inyectar Controles (Sin botón duplicado) ---
+            // --- Inyectar Controles con Título ---
             const viewContainer = document.getElementById('view-bookings');
+            
+            // 1. LIMPIEZA: Eliminar controles viejos si existen (al recargar vista)
             const oldControls = document.getElementById('booking-controls');
             if (oldControls) oldControls.remove();
+
+            // 2. LIMPIEZA: Eliminar el encabezado estático original del HTML (El duplicado de abajo)
+            // Buscamos cualquier div que tenga un H1 dentro y NO sea nuestros controles
+            const staticHeader = Array.from(viewContainer.children).find(el => 
+                el.querySelector('h1') && el.id !== 'booking-controls'
+            );
+            if (staticHeader) staticHeader.remove();
             
+            // 3. Inyectar Nuevos Controles (El título principal)
             const controlsHTML = `
                 <div id="booking-controls" class="mb-6">
                     <div class="flex justify-between items-center mb-4">
@@ -3059,6 +3069,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
