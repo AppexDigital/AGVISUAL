@@ -663,37 +663,39 @@ const UI = {
              `).join('');
         } else if (view === 'projects') {
             // 1. EQUIPOS (Con Portada Real)
-         document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
-            .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
-            .map(i => {
-                const images = data.RentalItemImages || [];
-                const coverObj = images.find(im => im.itemId === i.id && String(im.isCover).toLowerCase() === 'si');
-                const firstObj = images.find(im => im.itemId === i.id);
-                const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
-                const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
-                
-                // --- CÁLCULO JS FUERA DEL HTML ---
-                const basePrice = parseFloat(i.pricePerDay) || 0;
-                const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
-                const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
-                const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
-                // ---------------------------------
+             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
+                .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
+                .map(i => {
+                    const images = data.RentalItemImages || [];
+                    const coverObj = images.find(im => im.itemId === i.id && String(im.isCover).toLowerCase() === 'si');
+                    const firstObj = images.find(im => im.itemId === i.id);
+                    const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
+                    const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
+                    
+                    // --- CÁLCULO MATEMÁTICO (FUERA DEL HTML) ---
+                    const basePrice = parseFloat(i.pricePerDay) || 0;
+                    const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
+                    const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
+                    const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
+                    // ------------------------------------------
 
-                return `<tr class="border-b hover:bg-gray-50">
-                    <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
-                    <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
-                    <td class="p-4 font-bold text-sm">${i.name}</td>
-                    <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
-                    <td class="p-4 font-mono text-sm font-bold text-right text-gray-700">
-                        $${finalPrice.toFixed(2)} ${taxBadge}
-                    </td>
-                    <td class="p-4 flex gap-3 justify-center">
-                        <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
-                        <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
-                        <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`;
-            }).join('');
+                    return `<tr class="border-b hover:bg-gray-50">
+                        <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
+                        <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
+                        <td class="p-4 font-bold text-sm">${i.name}</td>
+                        <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
+                        
+                        <td class="p-4 font-mono text-sm font-bold text-right text-gray-700">
+                            $${finalPrice.toFixed(2)} ${taxBadge}
+                        </td>
+
+                        <td class="p-4 flex gap-3 justify-center">
+                            <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
+                            <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+                }).join('');
             const thead = document.querySelector('#view-projects thead tr');
             if(thead) {
                 thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4 text-center">Fotos</th><th class="p-4 text-center">Acciones</th>';
@@ -2576,6 +2578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
