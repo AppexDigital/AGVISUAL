@@ -1,19 +1,18 @@
 // functions/scheduled-refresh.js
-// V26.0 - MODO ESM NATIVO (MODERNO)
+// PRUEBA DE VIDA - CON PROGRAMACIÓN EN CÓDIGO (ESM)
 
-// Usamos la sintaxis moderna que tus librerías v5 exigen
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
-import { google } from 'googleapis';
+import { schedule } from '@netlify/functions';
 
-// Exportación moderna
-export const handler = async (event, context) => {
-    console.log(">>> LOG: ROBOT INICIADO (Modo ESM)");
-
-    // PRUEBA DE VIDA INICIAL
-    // Si ves este texto, significa que el conflicto de versiones se arregló.
+// 1. Definimos la función simple
+const myHandler = async (event, context) => {
+    console.log(">>> LOG: La función programada (Vía Código) se ejecutó correctamente.");
+    
     return {
         statusCode: 200,
-        body: "¡ESTOY VIVO! El sistema Scheduled funciona en modo ESM Moderno."
+        body: "¡ESTOY VIVO! Funcionando con schedule() dentro del código."
     };
 };
+
+// 2. Exportamos la función envuelta en el horario
+// "0 6,18 * * *" = 6:00 AM y 6:00 PM UTC
+export const handler = schedule("0 6,18 * * *", myHandler);
