@@ -662,40 +662,36 @@ const UI = {
                 </div>
              `).join('');
         } else if (view === 'projects') {
-            // 1. EQUIPOS (Con Portada Real)
-             document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
-                .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
-                .map(i => {
-                    const images = data.RentalItemImages || [];
-                    const coverObj = images.find(im => im.itemId === i.id && String(im.isCover).toLowerCase() === 'si');
-                    const firstObj = images.find(im => im.itemId === i.id);
-                    const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
-                    const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
-                    
-                    // --- CÁLCULO MATEMÁTICO (FUERA DEL HTML) ---
-                    const basePrice = parseFloat(i.pricePerDay) || 0;
-                    const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
-                    const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
-                    const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
-                    // ------------------------------------------
 
-                    return `<tr class="border-b hover:bg-gray-50">
-                        <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
-                        <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
-                        <td class="p-4 font-bold text-sm">${i.name}</td>
-                        <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
-                        
-                        <td class="p-4 font-mono text-sm font-bold text-right text-gray-700">
-                            $${finalPrice.toFixed(2)} ${taxBadge}
-                        </td>
+            document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
+                
+                // Lógica de Portada
+                const cover = (data.ProjectImages||[]).find(i => {
+                    const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
+                    const isCov = String(getVal(i, 'isCover')).toLowerCase().trim();
+                    return pid === p.id && (isCov === 'si' || isCov === 'yes');
+                });
+                
+                // Conteo de fotos
+                const imageCount = (data.ProjectImages || []).filter(i => {
+                     const pid = getVal(i, 'projectId') || getVal(i, 'projectID');
+                     return pid === p.id;
+                }).length;
 
-                        <td class="p-4 flex gap-3 justify-center">
-                            <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
-                            <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
-                            <button class="text-red-600 hover:text-red-800" onclick="App.handleDelete('RentalItems', '${i.id}')"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>`;
-                }).join('');
+                return `<tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 font-mono text-xs text-center">${p.order||99}</td> 
+                    <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" ></td>
+                    <td class="p-4 font-bold text-sm">${p.title}</td>
+                    <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
+                    <td class="p-4 align-middle">
+                        <div class="flex items-center justify-center gap-3">
+                            <button class="text-blue-600" onclick="App.handleEditCrudItem('Projects','${p.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="text-green-600" onclick="App.handleProjectImages('${p.id}','${p.title.replace(/'/g,"")}')"><i class="fas fa-images"></i></button>
+                            <button class="text-red-600" onclick="App.handleDelete('Projects','${p.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
             const thead = document.querySelector('#view-projects thead tr');
             if(thead) {
                 thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4 text-center">Fotos</th><th class="p-4 text-center">Acciones</th>';
@@ -1588,17 +1584,17 @@ const App = {
                  }
              }, 100);
 
-             // 2. Botones de Izquierda (Corrección aplicada)
+            // 2. Botones de Izquierda (Con Texto Visible)
              if (!isNew) {
                  leftButtons = `
                     <button class="btn btn-danger h-10 px-3 mr-1" onclick="UI.closeModal(); App.handleDelete('Services', '${id}')" title="Eliminar Servicio">
                         <i class="fas fa-trash"></i>
                     </button>
-                    <button class="btn btn-secondary h-10 px-3 mr-1" onclick="App.handleServiceImages('${id}', '${s.title.replace(/'/g,"")}')" title="Galería">
-                        <i class="fas fa-images"></i>
+                    <button class="btn btn-secondary h-10 px-3 mr-1" onclick="App.handleServiceImages('${id}', '${s.title.replace(/'/g,"")}')">
+                        <i class="fas fa-images mr-2"></i> Galería
                     </button>
-                    <button class="btn btn-secondary h-10 px-3" onclick="App.handleServiceContent('${id}', '${s.title.replace(/'/g,"")}')" title="Contenido">
-                        <i class="fas fa-layer-group"></i>
+                    <button class="btn btn-secondary h-10 px-3" onclick="App.handleServiceContent('${id}', '${s.title.replace(/'/g,"")}')">
+                        <i class="fas fa-layer-group mr-2"></i> Contenido
                     </button>
                  `;
              }
@@ -2573,6 +2569,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
