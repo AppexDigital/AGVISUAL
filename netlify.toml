@@ -1,11 +1,7 @@
 [build]
-  # Publicar la raíz (donde está tu html)
   publish = "."
-  # ESTA ES LA CLAVE: Decirle explícitamente dónde están las funciones aquí
   functions = "functions"
 
+[functions]
+  node_bundler = "esbuild"
 
-
-# Cron Job (Tu configuración de horario)
-[functions.scheduled-refresh]
-  schedule = "0 6,18 * * *"
