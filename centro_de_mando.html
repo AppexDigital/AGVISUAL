@@ -2451,7 +2451,7 @@ const App = {
 
         // 1. Calcular nombres y etiquetas
         const item = AppState.data[sheet]?.find(x => x[key] === id);
-        const name = item?.title || item?.name || 'Registro';
+        let name = item?.title || item?.name || 'Registro';
 
         // Lógica Especial para Bloqueos
         if (sheet === 'BlockedDates') {
@@ -2693,6 +2693,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
