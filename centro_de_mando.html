@@ -791,38 +791,32 @@ const UI = {
             
         } else if (view === 'rentals') { 
              // 1. EQUIPOS (Con Portada Real)
-             // Ordenamos por 'order' y buscamos la imagen marcada como 'isCover'
              document.getElementById('rental-items-table-body').innerHTML = (data.RentalItems || [])
                 .sort((a,b) => (parseInt(a.order)||99)-(parseInt(b.order)||99))
                 .map(i => {
                     const images = data.RentalItemImages || [];
-                    // Lógica de Portada: buscar isCover='Si', si no hay, usar la primera
                     const coverObj = images.find(im => im.itemId === i.id && String(im.isCover).toLowerCase() === 'si');
                     const firstObj = images.find(im => im.itemId === i.id);
                     const displayUrl = coverObj ? coverObj.imageUrl : (firstObj ? firstObj.imageUrl : 'https://placehold.co/50?text=No+Img');
-
                     const catName = (data.RentalCategories || []).find(c => c.id === i.categoryId)?.name || 'Sin Categoría';
+                    
+                    // --- CÁLCULO SACA DEL HTML (CORRECTO) ---
+                    const basePrice = parseFloat(i.pricePerDay) || 0;
+                    const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
+                    const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
+                    const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
+                    // ----------------------------------------
+
                     return `<tr class="border-b hover:bg-gray-50">
                         <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
                         <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
                         <td class="p-4 font-bold text-sm">${i.name}</td>
                         <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
                         
-                        // LÓGICA DE IMPUESTO PARA LA TABLA
-                        const basePrice = parseFloat(i.pricePerDay) || 0;
-                        const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
-                        
-                        // Calculamos el total solo para mostrarlo
-                        const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
-                        
-                        // Badge visual
-                        const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
-                
-                        // HTML DE LA CELDA
                         <td class="p-4 font-mono text-sm font-bold text-right text-gray-700">
                             $${finalPrice.toFixed(2)} ${taxBadge}
                         </td>
-                        // ...
+
                         <td class="p-4 flex gap-3 justify-center">
                             <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
                             <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
@@ -1607,6 +1601,7 @@ const App = {
                         <i class="fas fa-layer-group"></i>
                     </button>
                  `;
+             }
          } else if(sheet === 'RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
@@ -2578,6 +2573,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
