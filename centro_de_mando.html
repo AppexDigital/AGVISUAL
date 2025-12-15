@@ -799,7 +799,22 @@ const UI = {
                         <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
                         <td class="p-4 font-bold text-sm">${i.name}</td>
                         <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
-                        <td class="p-4 font-mono text-sm">$${i.pricePerDay}</td>
+                        
+                        // LÓGICA DE IMPUESTO PARA LA TABLA
+                        const basePrice = parseFloat(i.pricePerDay) || 0;
+                        const hasTax = String(i.hasTax).toUpperCase() === 'TRUE';
+                        
+                        // Calculamos el total solo para mostrarlo
+                        const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
+                        
+                        // Badge visual
+                        const taxBadge = hasTax ? '<span class="ml-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 rounded">+IVI</span>' : '';
+                
+                        // HTML DE LA CELDA
+                        <td class="p-4 font-mono text-sm font-bold text-right text-gray-700">
+                            $${finalPrice.toFixed(2)} ${taxBadge}
+                        </td>
+                        // ...
                         <td class="p-4 flex gap-3 justify-center">
                             <button class="text-blue-600 hover:text-blue-800" onclick="App.handleEditCrudItem('RentalItems', '${i.id}')"><i class="fas fa-edit"></i></button>
                             <button class="text-green-600 hover:text-green-800" onclick="App.handleRentalImages('${i.id}', '${i.name.replace(/'/g, "\\'")}')"><i class="fas fa-images"></i></button>
@@ -1503,10 +1518,6 @@ const App = {
 
         } else if(sheet === 'Services'){
              const s = isNew ? {} : AppState.data.Services.find(x => x.id === id);
-
-
-
-            
              modalTitle = isNew ? 'Nuevo Servicio' : `Editar ${s.title}`;
              
              let nextOrder = 1;
@@ -1578,30 +1589,113 @@ const App = {
             
         } else if(sheet === 'Services'){
              const s=isNew?{}:AppState.data.Services.find(x=>x.id===id);
-             modalTitle = isNew ? 'Nuevo Servicio' : `Editar ${s.title}`;
+             
+             // 1. Título Ajustado
+             modalTitle = isNew ? 'Nuevo Servicio' : `Editar Servicio ${s.title}`;
+             
+             // (Mantenemos tu HTML de inputs actual)
              html=`${UI.inputHTML('c','order','Orden',s?.order||99,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${UI.inputHTML('c','iconClass','Icono (FontAwesome)',s?.iconClass)} ${UI.textareaHTML('c','introText','Intro',s?.introText)}`;
+        
+             // 2. Botones de Izquierda (Solo al editar)
+             if (!isNew) {
+                 leftButtons = `
+                    <button class="btn btn-danger h-10 px-3 mr-1" onclick="UI.closeModal(); App.handleDelete('Services', '${id}')" title="Eliminar Servicio">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-secondary h-10 px-3 mr-1" onclick="App.handleServiceImages('${id}', '${s.title.replace(/'/g,"")}')" title="Galería">
+                        <i class="fas fa-images"></i>
+                    </button>
+                    <button class="btn btn-secondary h-10 px-3" onclick="App.handleServiceContent('${id}', '${s.title.replace(/'/g,"")}')" title="Contenido">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                 `;
+             }
         
         } else if(sheet === 'RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
-             modalTitle = isNew ? 'Nuevo Equipo' : `Editar ${i.name}`;
              
-             // Autocalcular Orden
+             // 1. Título Ajustado
+             modalTitle = isNew ? 'Nuevo Equipo' : `Editar Equipo ${i.name}`;
+             
              let nextOrder = 1;
              if (isNew && AppState.data.RentalItems && AppState.data.RentalItems.length > 0) {
                  const maxOrder = Math.max(...AppState.data.RentalItems.map(it => parseInt(it.order) || 0));
                  nextOrder = maxOrder + 1;
              }
-
-             html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} ${UI.inputHTML('c', 'pricePerDay', 'Precio/Día', i?.pricePerDay, 'number')} ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
+        
+             // 2. Checkbox de Impuesto (Lógica Visual)
+             // Verificamos si en el sheet dice 'TRUE'
+             const hasTaxChecked = String(i?.hasTax).toUpperCase() === 'TRUE' ? 'checked' : '';
              
+             const taxHtml = `
+                <div class="mb-4 flex items-center p-2 border rounded bg-gray-50">
+                    <input type="checkbox" id="c-hasTax" class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" ${hasTaxChecked}>
+                    <label for="c-hasTax" class="ml-2 text-sm font-bold text-gray-700 select-none cursor-pointer">El precio incluye Impuesto de Venta (13%)</label>
+                </div>
+             `;
+        
+             // Inyectamos el taxHtml justo después del precio
+             html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||nextOrder, 'number')} 
+                     ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} 
+                     ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} 
+                     ${UI.inputHTML('c', 'pricePerDay', 'Precio Base ($)', i?.pricePerDay, 'number')} 
+                     ${taxHtml} 
+                     ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} 
+                     ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
+             
+             // 3. Botones Estandarizados (Iguales a Proyectos y Servicios)
              if (!isNew) {
                  leftButtons = `
-                    <button class="btn btn-danger mr-2" onclick="UI.closeModal(); App.handleDelete('RentalItems', '${id}')"><i class="fas fa-trash"></i></button>
-                    <button class="btn btn-success" onclick="App.handleRentalImages('${id}', '${i.name.replace(/'/g,"")}')"><i class="fas fa-images mr-2"></i> Fotos</button>
+                    <button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('RentalItems', '${id}')" title="Eliminar Equipo">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-secondary h-10 px-3" onclick="App.handleRentalImages('${id}', '${i.name.replace(/'/g,"")}')" title="Galería">
+                        <i class="fas fa-images mr-2"></i> Galería
+                    </button>
                  `;
              }
 
+            // 4. RENDERIZAR Y ACTIVAR CALCULADORA
+             // Definimos el footer
+             const footer = `
+                <div class="flex justify-between items-center w-full">
+                    <div class="flex items-center">${leftButtons}</div>
+                    <div class="flex items-center gap-2">
+                        <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>
+                    </div>
+                </div>
+            `;
+
+            UI.showModal(modalTitle, `<form id="crud-form">${html}</form>`, footer);
+
+            // --- LÓGICA DE CÁLCULO EN VIVO (ESTO ES LO CLAVE) ---
+            setTimeout(() => {
+                const priceInput = document.getElementById('c-pricePerDay');
+                const taxCheck = document.getElementById('c-hasTax');
+                const displayDiv = document.getElementById('tax-calc-display');
+                const resultText = document.getElementById('tax-calc-result');
+        
+                const calculate = () => {
+                    const base = parseFloat(priceInput.value) || 0;
+                    if (taxCheck.checked) {
+                        displayDiv.classList.remove('hidden');
+                        const total = base * 1.13;
+                        resultText.innerText = `$${total.toFixed(2)}`;
+                    } else {
+                        displayDiv.classList.add('hidden');
+                    }
+                };
+        
+                // Escuchar cambios
+                priceInput.addEventListener('input', calculate);
+                taxCheck.addEventListener('change', calculate);
+                
+                // Ejecutar una vez al abrir
+                calculate();
+            }, 50)
+        
         } else if(sheet === 'RentalCategories'){
              const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
              modalTitle = isNew ? 'Nueva Categoría' : 'Editar Categoría';
@@ -2078,6 +2172,13 @@ const App = {
             } else if (sheet === 'RentalItems' || sheet === 'RentalCategories') {
                 // --- LÓGICA UNIFICADA PARA ALQUILER (Equipos y Categorías) ---
                 const isCat = sheet === 'RentalCategories';
+                // Si es un Equipo (RentalItems), capturamos el checkbox
+                if (!isCat) {
+                    const taxCheckbox = document.getElementById('c-hasTax');
+                    // Si la caja existe y está marcada, guardamos 'TRUE', sino 'FALSE'
+                    data.hasTax = (taxCheckbox && taxCheckbox.checked) ? 'TRUE' : 'FALSE';
+                }
+                // ▲▲▲ FIN DEL BLOQUE NUEVO ▲▲▲
                 const listName = isCat ? 'RentalCategories' : 'RentalItems';
                 const nameField = isCat ? 'name' : 'name'; // Ambos usan 'name' en este caso
                 
@@ -2492,6 +2593,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
