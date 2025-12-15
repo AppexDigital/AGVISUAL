@@ -15,4 +15,4 @@ const myHandler = async (event, context) => {
 
 // 2. Exportamos la función envuelta en el horario
 // "0 6,18 * * *" = 6:00 AM y 6:00 PM UTC
-export const handler = schedule("0 6,18 * * *", myHandler);
+// export const handler = schedule("0 6,18 * * *", myHandler);
