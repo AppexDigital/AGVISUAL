@@ -3,28 +3,37 @@ const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
 
 exports.handler = async (event, context) => {
-    console.log("Iniciando Mantenimiento de Links...");
+    console.log("Iniciando Mantenimiento Seguro...");
+    let logBuffer = []; // Para acumular el reporte
 
     try {
+        // 1. Verificación de Seguridad de la Llave
+        if (!process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+            throw new Error("Faltan las credenciales en las variables de entorno.");
+        }
+
         const auth = new JWT({
             email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
             key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
             scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly'],
         });
+        
         const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
         const drive = google.drive({ version: 'v3', auth });
 
         await doc.loadInfo();
+        logBuffer.push("Conexión con Sheets exitosa.");
 
-        // 1. Obtener catálogo fresco de Drive
+        // 2. Barrido Rápido de Drive (Solo obtenemos IDs y Links)
         const freshLinksMap = new Map();
         let pageToken = null;
+        let driveCount = 0;
         
         try {
             do {
                 const res = await drive.files.list({
-                    q: "trashed = false",
-                    fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)', 
+                    q: "trashed = false", // Sin filtros complejos para velocidad
+                    fields: 'nextPageToken, files(id, thumbnailLink, webContentLink)',
                     pageSize: 1000,
                     pageToken: pageToken,
                     supportsAllDrives: true, includeItemsFromAllDrives: true
@@ -32,81 +41,90 @@ exports.handler = async (event, context) => {
                 
                 if (res.data.files) {
                     res.data.files.forEach(f => {
-                        let link = null;
-                        if (f.webContentLink) link = f.webContentLink;
-                        else if (f.thumbnailLink) link = f.thumbnailLink.split('=')[0] + '=s0';
-
+                        let link = f.webContentLink; // Prioridad descarga
+                        if (!link && f.thumbnailLink) {
+                            // Fallback a imagen original
+                            link = f.thumbnailLink.split('=')[0] + '=s0';
+                        }
                         if (link) {
                             link = link.replace(/^http:\/\//i, 'https://');
                             freshLinksMap.set(f.id, link);
                         }
                     });
+                    driveCount += res.data.files.length;
                 }
                 pageToken = res.data.nextPageToken;
             } while (pageToken);
-        } catch (driveError) {
-            return { statusCode: 500, body: `Error conectando con Drive: ${driveError.message}` };
+            logBuffer.push(`Drive escaneado: ${driveCount} archivos encontrados.`);
+        } catch (e) {
+            throw new Error(`Fallo leyendo Drive: ${e.message}`);
         }
 
-        // 2. Actualizar Excel (Lógica de Rejilla Segura)
+        // 3. Actualización Quirúrgica (Fila por Fila)
         const targetSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
-        let logReport = "";
+        let totalUpdates = 0;
+        const MAX_UPDATES_PER_RUN = 40; // Límite de seguridad para evitar Timeout (Netlify 10s)
 
         for (const title of targetSheets) {
+            if (totalUpdates >= MAX_UPDATES_PER_RUN) {
+                logBuffer.push(`Límite de seguridad alcanzado. Pausando resto de actualizaciones para la próxima ejecución.`);
+                break;
+            }
+
             const sheet = doc.sheetsByTitle[title];
             if (!sheet) continue;
 
-            try {
-                await sheet.loadHeaderRow(); 
-                await sheet.loadCells(); // Carga toda la hoja en memoria
-                
-                const headers = sheet.headerValues;
-                const colIdIndex = headers.indexOf('fileId'); 
-                const colUrlIndex = headers.indexOf(title === 'ClientLogos' ? 'logoUrl' : 'imageUrl');
+            await sheet.loadHeaderRow(); 
+            const rows = await sheet.getRows(); // Carga ligera (objetos)
+            
+            // Detectar nombres de columnas reales
+            const h = sheet.headerValues;
+            const keyId = h.includes('fileId') ? 'fileId' : null;
+            const keyUrl = h.includes('imageUrl') ? 'imageUrl' : (h.includes('logoUrl') ? 'logoUrl' : null);
 
-                if (colIdIndex === -1 || colUrlIndex === -1) {
-                    logReport += `[${title}] Saltado: Falta columna fileId o URL.\n`;
-                    continue;
-                }
+            if (!keyId || !keyUrl) {
+                logBuffer.push(`[${title}] Omitido: No se encontraron columnas 'fileId' o URL.`);
+                continue;
+            }
 
-                let updates = 0;
-                // Recorremos por índice de fila real (rowCount)
-                // Empezamos en 1 para saltar el encabezado (fila 0)
-                for (let r = 1; r < sheet.rowCount; r++) {
-                    const cellId = sheet.getCell(r, colIdIndex);
-                    const fileId = cellId.value;
+            let sheetUpdates = 0;
 
-                    if (fileId && typeof fileId === 'string') {
-                        const cleanId = fileId.trim();
-                        if (freshLinksMap.has(cleanId)) {
-                            const newLink = freshLinksMap.get(cleanId);
-                            const cellUrl = sheet.getCell(r, colUrlIndex);
-                            
-                            if (cellUrl.value !== newLink) {
-                                cellUrl.value = newLink;
-                                updates++;
-                            }
+            // Recorremos filas
+            for (const row of rows) {
+                // Si alcanzamos el límite global, paramos de inmediato
+                if (totalUpdates >= MAX_UPDATES_PER_RUN) break;
+
+                const fileId = row.get(keyId);
+                const currentUrl = row.get(keyUrl);
+
+                if (fileId && typeof fileId === 'string') {
+                    const cleanId = fileId.trim();
+                    if (freshLinksMap.has(cleanId)) {
+                        const freshUrl = freshLinksMap.get(cleanId);
+                        
+                        // Solo "gastamos tiempo" guardando si el link es diferente
+                        if (currentUrl !== freshUrl) {
+                            row.set(keyUrl, freshUrl);
+                            await row.save(); // Guardado individual seguro
+                            sheetUpdates++;
+                            totalUpdates++;
                         }
                     }
                 }
-                
-                if (updates > 0) {
-                    await sheet.saveUpdatedCells();
-                    logReport += `[${title}] Éxito: ${updates} links actualizados.\n`;
-                } else {
-                    logReport += `[${title}] Al día: No hubo cambios necesarios.\n`;
-                }
-
-            } catch (sheetError) {
-                console.error(`Error en hoja ${title}:`, sheetError);
-                logReport += `[${title}] ERROR CRÍTICO: ${sheetError.message}\n`;
             }
+            if (sheetUpdates > 0) logBuffer.push(`[${title}] ${sheetUpdates} filas corregidas.`);
         }
 
-        return { statusCode: 200, body: `Mantenimiento Completado.\n\nReporte:\n${logReport}` };
+        return { 
+            statusCode: 200, 
+            body: `Mantenimiento Finalizado.\n\nLOGS:\n${logBuffer.join('\n')}` 
+        };
 
     } catch (error) {
-        console.error("Error General:", error);
-        return { statusCode: 500, body: `Error General del Sistema: ${error.message}` };
+        console.error("Fatal Error:", error);
+        return { 
+            statusCode: 500, 
+            body: `ERROR FATAL:\n${error.message}\n\nLOGS PARCIALES:\n${logBuffer.join('\n')}` 
+        };
     }
 };
