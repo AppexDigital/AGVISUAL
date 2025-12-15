@@ -1,9 +1,8 @@
-// NO AGREGUES NINGÚN REQUIRE AQUÍ ARRIBA
-// Si pones require, y la librería falta, falla.
-
-exports.handler = async (event, context) => {
+exports.handler = async function(event, context) {
+    console.log("LOG DE PRUEBA: La función se ejecutó.");
+    
     return {
         statusCode: 200,
-        body: "SISTEMA OPERATIVO: Netlify está ejecutando código."
+        body: "¡ESTOY VIVO! El servidor funciona."
     };
 };
