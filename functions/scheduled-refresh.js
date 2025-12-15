@@ -1,9 +1,9 @@
-// functions/scheduled-refresh.js
-// PRUEBA DE VIDA - SIN DEPENDENCIAS
+// NO AGREGUES NINGÚN REQUIRE AQUÍ ARRIBA
+// Si pones require, y la librería falta, falla.
 
 exports.handler = async (event, context) => {
     return {
         statusCode: 200,
-        body: "¡ESTOY VIVO! El problema son las librerías."
+        body: "SISTEMA OPERATIVO: Netlify está ejecutando código."
     };
 };
