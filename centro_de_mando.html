@@ -11,9 +11,9 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
 
     
     <style>
@@ -1720,10 +1720,100 @@ const App = {
 
             
         } else if(sheet === 'BlockedDates'){
-             const items = AppState.data.RentalItems || [];
+             // 1. Obtener Datos para Edición
+             // Buscamos por 'blockId' que es la llave única de esta hoja
+             const b = isNew ? {} : AppState.data.BlockedDates.find(x => x.blockId === id);
+             const items = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
+             
+             // Obtener nombre del equipo actual (si editamos) o el primero de la lista (si es nuevo)
+             const currentItemId = b?.itemId || items[0]?.id;
+             const currentItemName = items.find(i => i.id === currentItemId)?.name || 'Equipo';
 
-            
-             html = `${UI.selectHTML('c', 'itemId', 'Equipo', items)} ${UI.inputHTML('c', 'reason', 'Motivo')} ${UI.inputHTML('c', 'startDate', 'Desde', '', 'date')} ${UI.inputHTML('c', 'endDate', 'Hasta', '', 'date')}`;
+             // 2. Título Dinámico Inicial
+             modalTitle = isNew ? 'Nuevo Bloqueo' : `Editar Bloqueo de Equipo ${currentItemName}`;
+
+             // 3. HTML (Usamos inputs de texto normales para que Flatpickr tome el control)
+             // Agregamos un ID especial al select para escuchar cambios
+             html = `
+                <div class="mb-4">
+                    <label class="form-label">Equipo a Bloquear</label>
+                    <select id="c-itemId" data-key="itemId" class="form-select" onchange="App.updateBlockModalTitle(this)">
+                        ${items.map(i => `<option value="${i.id}" ${i.id === (b?.itemId||'') ? 'selected' : ''}>${i.name}</option>`).join('')}
+                    </select>
+                </div>
+                ${UI.inputHTML('c', 'reason', 'Motivo del Bloqueo', b?.reason)}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label class="form-label">Desde</label>
+                        <input type="text" id="c-startDate" data-key="startDate" class="form-input bg-white cursor-pointer" value="${b?.startDate||''}" placeholder="Seleccionar...">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Hasta</label>
+                        <input type="text" id="c-endDate" data-key="endDate" class="form-input bg-white cursor-pointer" value="${b?.endDate||''}" placeholder="Seleccionar...">
+                    </div>
+                </div>
+             `;
+
+             // 4. INICIALIZACIÓN DEL CALENDARIO INTELIGENTE (Flatpickr)
+             // Esto se ejecuta un poco después para que el HTML ya exista en el DOM
+             setTimeout(() => {
+                 const startInput = document.getElementById('c-startDate');
+                 const endInput = document.getElementById('c-endDate');
+                 const itemSelect = document.getElementById('c-itemId');
+
+                 // Función para calcular fechas deshabilitadas
+                 const getDisabledDates = (selectedItemId) => {
+                     const allBlocks = AppState.data.BlockedDates || [];
+                     // Filtramos bloqueos de ESTE equipo, EXCLUYENDO el que estamos editando (si existe)
+                     const relevantBlocks = allBlocks.filter(blk => blk.itemId === selectedItemId && blk.blockId !== id);
+                     
+                     return relevantBlocks.map(blk => ({
+                         from: blk.startDate,
+                         to: blk.endDate
+                     }));
+                 };
+
+                 // Configuración base de Flatpickr
+                 const config = {
+                     locale: 'es',
+                     dateFormat: "Y-m-d",
+                     disable: getDisabledDates(itemSelect.value), // Bloqueo inicial
+                     minDate: "today" // No permitir bloquear el pasado (opcional)
+                 };
+
+                 // Iniciar instancias
+                 const fpStart = flatpickr(startInput, { ...config, onChange: (d) => fpEnd.set('minDate', d[0]) });
+                 const fpEnd = flatpickr(endInput, config);
+
+                 // Escuchar cambios en el SELECT de equipo para actualizar los días bloqueados
+                 itemSelect.addEventListener('change', (e) => {
+                     const newItemId = e.target.value;
+                     const newDisabled = getDisabledDates(newItemId);
+                     
+                     // Actualizar calendarios con los bloqueos del nuevo equipo
+                     fpStart.set('disable', newDisabled);
+                     fpEnd.set('disable', newDisabled);
+                     
+                     // Limpiar fechas si cambias de equipo para evitar conflictos
+                     fpStart.clear();
+                     fpEnd.clear();
+                 });
+
+                 // Helper global para actualizar título (Punto 4 dinámico)
+                 App.updateBlockModalTitle = (select) => {
+                     const text = select.options[select.selectedIndex].text;
+                     const titleEl = document.querySelector('#modal-container h2');
+                     if(titleEl) {
+                         // Detectamos si es nuevo o edición basado en si hay ID
+                         const prefix = id ? 'Editar Bloqueo de Equipo' : 'Nuevo Bloqueo de Equipo'; 
+                         // Si es nuevo, el usuario pidió solo "Nuevo Bloqueo", pero si selecciona equipo es util ver cual
+                         // Ajustemos a la petición exacta:
+                         if (!id) titleEl.innerText = 'Nuevo Bloqueo'; // Título fijo para nuevo según solicitud
+                         else titleEl.innerText = `Editar Bloqueo de Equipo ${text}`;
+                     }
+                 };
+
+             }, 100);
         }
 
         // 3. Footer Estratégico (Izquierda: Acciones / Derecha: Guardar)
@@ -2299,7 +2389,34 @@ const App = {
                 await API.batchUpdate(batch, loadingMsg);
                 AppState.data.Videos = allVideos;
             
-            
+            } else if (sheet === 'BlockedDates') {
+                const errors = [];
+                if (!data.itemId) errors.push("Equipo");
+                if (!data.reason) errors.push("Motivo");
+                if (!data.startDate || !data.endDate) errors.push("Fechas");
+
+                if (errors.length > 0) {
+                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
+                    return;
+                }
+
+                // Obtener nombre del equipo para el mensaje personalizado
+                const item = (AppState.data.RentalItems || []).find(i => i.id === data.itemId);
+                const itemName = item ? item.name : 'Equipo';
+                
+                // Mensaje Personalizado
+                const loadingMsg = isNew 
+                    ? `Guardando Bloqueo del Equipo ${itemName}` 
+                    : `Editando Bloqueo de Equipo ${itemName}`;
+                
+                UI.showLoading(`${loadingMsg}...`);
+
+                // Enviar a la base de datos
+                await API.call('/.netlify/functions/update-sheet-data', { 
+                    method: 'POST', 
+                    body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } 
+                });
+            // ▲▲▲ FIN DEL BLOQUE NUEVO ▲▲▲
             } else {
                 // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS (Rentals, Videos, etc.) ---
                 await API.call('/.netlify/functions/update-sheet-data', { 
@@ -2340,9 +2457,10 @@ const App = {
                          (sheet === 'Services' ? 'Servicio' : 
                          (sheet === 'RentalItems' ? 'Equipo' : 
                          (sheet === 'RentalCategories' ? 'Categoría' : // Nueva etiqueta
+                         (sheet === 'BlockedDates' ? 'Bloqueo del Equipo' : // <--- ETIQUETA NUEVA
                          (sheet === 'Videos' ? 'Video' : 'Registro'))));
 
-        const titleText = `¿Desea eliminar ${typeLabel === 'Categoría' ? 'la' : 'el'} ${typeLabel} ${name}?`;
+        const titleText = `¿Desea eliminar ${sheet === 'BlockedDates' ? 'el' : (typeLabel === 'Categoría' ? 'la' : 'el')} ${typeLabel} ${name}?`;
         const msgText = "Esta acción eliminará también las carpetas y archivos asociados.";
 
         UI.showConfirm(titleText, msgText, async ()=>{ 
@@ -2569,6 +2687,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
