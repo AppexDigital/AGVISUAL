@@ -1595,8 +1595,7 @@ const App = {
                         <i class="fas fa-layer-group mr-2"></i> Contenido
                     </button>
                  `;
-             }
-         }   
+             } 
          } else if(sheet === 'RentalItems'){
              const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
              const cats = AppState.data.RentalCategories || [];
@@ -2692,6 +2691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
