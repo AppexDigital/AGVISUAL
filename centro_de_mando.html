@@ -809,7 +809,7 @@ const UI = {
                         <td class="p-4 font-bold text-sm">${i.name}</td>
                         <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
                         
-                        <td class="p-4 font-mono text-sm font-bold text-right text-gray-700">
+                        <td class="p-4 font-mono text-sm font-bold text-center text-gray-700">
                             $${finalPrice.toFixed(2)} ${taxBadge}
                         </td>
 
@@ -823,7 +823,7 @@ const UI = {
             
             // Actualizar Encabezado Equipos (Cambiamos Img por PORTADA y centramos acciones)
             const theadItems = document.querySelector('#tab-rental-items thead tr');
-            if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Portada</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4">Precio</th><th class="p-4 text-center">Acciones</th>';
+            if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Portada</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4 text-center">Precio</th><th class="p-4 text-center">Acciones</th>';
 
             // 2. CATEGORÍAS (Encabezados Centrados)
             document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || [])
@@ -2569,6 +2569,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
