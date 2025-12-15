@@ -4,9 +4,7 @@
   # ESTA ES LA CLAVE: Decirle explícitamente dónde están las funciones aquí
   functions = "functions"
 
-[functions]
-  # Aquí solo dejamos la configuración de empaquetado
-  node_bundler = "esbuild"
+
 
 # Cron Job (Tu configuración de horario)
 [functions.scheduled-refresh]
