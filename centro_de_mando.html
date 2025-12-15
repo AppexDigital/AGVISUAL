@@ -486,6 +486,7 @@ const API = {
                     await new Promise(resolve => setTimeout(resolve, 10000));
                 }
             } catch (e) {
+                const batchNum = Math.floor(i / BATCH_SIZE) + 1; // Definir la variable
                 console.error(`Error en lote ${batchNum}:`, e);
                 throw new Error(`Fallo al guardar el lote ${batchNum}. Intenta de nuevo.`);
             }
@@ -2690,6 +2691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
