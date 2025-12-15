@@ -2462,7 +2462,7 @@ const App = {
                          (sheet === 'RentalItems' ? 'Equipo' : 
                          (sheet === 'RentalCategories' ? 'Categoría' : // Nueva etiqueta
                          (sheet === 'BlockedDates' ? 'Bloqueo del Equipo' : // <--- ETIQUETA NUEVA
-                         (sheet === 'Videos' ? 'Video' : 'Registro'))));
+                         (sheet === 'Videos' ? 'Video' : 'Registro')))));
 
         const titleText = `¿Desea eliminar ${sheet === 'BlockedDates' ? 'el' : (typeLabel === 'Categoría' ? 'la' : 'el')} ${typeLabel} ${name}?`;
         const msgText = "Esta acción eliminará también las carpetas y archivos asociados.";
@@ -2691,6 +2691,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
