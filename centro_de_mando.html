@@ -906,7 +906,7 @@ const UI = {
                 const textMatch = !searchTerm || 
                     (b.customerName||'').toLowerCase().includes(searchTerm) ||
                     (b.customerEmail||'').toLowerCase().includes(searchTerm) ||
-                    (b.customerCedula||'').toLowerCase().includes(searchTerm) || // Buscar por cédula también
+                    (b.customerCedula||'').toLowerCase().includes(searchTerm) || // Busca en nueva columna
                     (b.id||'').toLowerCase().includes(searchTerm);
                 if (!textMatch) return false;
 
@@ -924,14 +924,10 @@ const UI = {
 
             // --- Inyectar Controles con Título ---
             const viewContainer = document.getElementById('view-bookings');
-            // Limpiamos header viejo si existe para redibujarlo bien con el título
             const oldControls = document.getElementById('booking-controls');
             if (oldControls) oldControls.remove();
             
-            // Eliminamos el header original estático si aun existe para que no se duplique
-            const staticHeader = viewContainer.querySelector('.flex.justify-between.items-center.mb-6');
-            if(staticHeader) staticHeader.remove();
-
+            // IMPORTANTE: Título "Reservas" y Filtros
             const controlsHTML = `
                 <div id="booking-controls" class="mb-6">
                     <div class="flex justify-between items-center mb-4">
@@ -962,7 +958,7 @@ const UI = {
                 UI.renderView('bookings');
             };
 
-            // --- Renderizar Tabla (Columnas Nuevas) ---
+            // --- Renderizar Tabla (Con nuevas columnas y estilo) ---
             document.getElementById('bookings-list-body').innerHTML = filtered.map(b => `
                 <tr class="border-b hover:bg-gray-50 align-top">
                     <td class="p-4 whitespace-nowrap">
@@ -994,6 +990,7 @@ const UI = {
                 </tr>
             `).join('');
             
+            // Actualizar Encabezado de Tabla
             const thead = document.querySelector('#view-bookings thead tr');
             if(thead) thead.innerHTML = '<th class="p-4">Fechas</th><th class="p-4">Cliente</th><th class="p-4">Dirección</th><th class="p-4">Equipo</th><th class="p-4 text-right">Total</th><th class="p-4">Estado</th><th class="p-4 text-center">Acciones</th>';
         }
@@ -1873,16 +1870,19 @@ const App = {
 
             
         } else if(sheet === 'BlockedDates'){
+             // 1. Obtener Datos para Edición
              const b = isNew ? {} : AppState.data.BlockedDates.find(x => x.blockId === id);
              
-             // --- REDIRECCIÓN SEGURA ---
-             // Verificamos si existe b.bookingId y no es vacío/null
-             if (b && b.bookingId && String(b.bookingId) !== "undefined") {
-                 UI.showToast('Redirigiendo a la Reserva original...', 'info');
+             // --- NUEVO: DETECCIÓN DE VÍNCULO (Redirección a Reserva) ---
+             // Si la columna bookingId tiene datos, es un bloqueo automático
+             if (b && b.bookingId && String(b.bookingId) !== "undefined" && String(b.bookingId).trim() !== "") {
+                 UI.showToast('🔒 Este bloqueo pertenece a una Reserva. Redirigiendo a la reserva...', 'info');
+                 
+                 // Cerrar este intento de modal y abrir la reserva dueña
                  setTimeout(() => {
-                     App.handleEditCrudItem('Bookings', b.bookingId); // Abrir modal de reserva
-                 }, 300);
-                 return; // Detener apertura de modal de bloqueo
+                     App.handleEditCrudItem('Bookings', b.bookingId); 
+                 }, 500); 
+                 return; // Detener apertura del modal de bloqueo
              }
              // -----------------------------------------------------------
 
@@ -2611,33 +2611,92 @@ const App = {
                 await API.batchUpdate(batch, loadingMsg);
                 AppState.data.Videos = allVideos;
             
-            } else if (sheet === 'BlockedDates') {
+} else if (sheet === 'Bookings') {
                 const errors = [];
+                if (!data.customerName) errors.push("Cliente");
                 if (!data.itemId) errors.push("Equipo");
-                if (!data.reason) errors.push("Motivo");
                 if (!data.startDate || !data.endDate) errors.push("Fechas");
-
+                
                 if (errors.length > 0) {
                     UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
                     return;
                 }
-
-                // Obtener nombre del equipo para el mensaje personalizado
+                
+                // Datos complementarios
                 const item = (AppState.data.RentalItems || []).find(i => i.id === data.itemId);
-                const itemName = item ? item.name : 'Equipo';
+                if(item) data.itemName = item.name;
                 
-                // Mensaje Personalizado
-                const loadingMsg = isNew 
-                    ? `Guardando Bloqueo del Equipo ${itemName}` 
-                    : `Editando Bloqueo de Equipo ${itemName}`;
-                
-                UI.showLoading(`${loadingMsg}...`);
+                // Generar ID si es nuevo (Vital para el vínculo)
+                if(isNew) {
+                    data.id = `booking_${Date.now()}`; // Forzamos la creación del ID aquí para usarlo abajo
+                    data.bookingTimestamp = new Date().toISOString();
+                }
 
-                // Enviar a la base de datos
-                await API.call('/.netlify/functions/update-sheet-data', { 
-                    method: 'POST', 
-                    body: { sheet, action: isNew ? 'add' : 'update', criteria: isNew ? null : {[idField]:id}, data } 
+                // Mensaje Personalizado
+                const msg = isNew ? `Creando Reserva para ${data.customerName}` : `Editando Reserva de ${data.customerName}`;
+                UI.showLoading(`${msg}...`);
+
+                // --- PREPARAR BATCH (LOTE DE OPERACIONES) ---
+                const batch = [];
+
+                // 1. Operación Reserva (Guardamos Dirección, Cédula, etc.)
+                batch.push({
+                    sheet: 'Bookings',
+                    action: isNew ? 'add' : 'update',
+                    criteria: isNew ? null : { id: id },
+                    data: data
                 });
+
+                // 2. Operación Bloqueo Automático (El Espejo)
+                // Si la reserva NO está cancelada, debe tener bloqueo
+                if (data.status !== 'Cancelado') {
+                    // Buscar si ya existe un bloqueo para ESTA reserva (usando la columna bookingId)
+                    const existingBlock = !isNew ? (AppState.data.BlockedDates || []).find(blk => blk.bookingId === id) : null;
+                    
+                    const blockData = {
+                        itemId: data.itemId,
+                        startDate: data.startDate,
+                        endDate: data.endDate,
+                        reason: `Reserva: ${data.customerName} (ID: ${data.customerCedula || 'N/A'})`,
+                        bookingId: isNew ? data.id : id // <--- AQUÍ SE LLENA LA COLUMNA CLAVE
+                    };
+
+                    if (existingBlock) {
+                        // Actualizar bloqueo existente
+                        batch.push({
+                            sheet: 'BlockedDates',
+                            action: 'update',
+                            criteria: { blockId: existingBlock.blockId },
+                            data: blockData
+                        });
+                    } else {
+                        // Crear nuevo bloqueo vinculado
+                        blockData.blockId = `blk_auto_${Date.now()}`;
+                        batch.push({
+                            sheet: 'BlockedDates',
+                            action: 'add',
+                            data: blockData
+                        });
+                    }
+                } else {
+                    // SI SE CANCELA LA RESERVA, BORRAR EL BLOQUEO
+                    if (!isNew) {
+                        const existingBlock = (AppState.data.BlockedDates || []).find(blk => blk.bookingId === id);
+                        if (existingBlock) {
+                            batch.push({
+                                sheet: 'BlockedDates',
+                                action: 'delete',
+                                criteria: { blockId: existingBlock.blockId }
+                            });
+                        }
+                    }
+                }
+
+                // Ejecutar todo junto
+                await API.batchUpdate(batch, msg);
+                });
+
+                
             // ▲▲▲ FIN DEL BLOQUE NUEVO ▲▲▲
             } else {
                 // --- LÓGICA ESTÁNDAR PARA OTRAS HOJAS (Rentals, Videos, etc.) ---
@@ -2661,14 +2720,36 @@ const App = {
     },
     
     async handleDelete(sheet, id, key='id') { 
-        // AJUSTE 5: Verificación de Dependencias (Categorías)
-        if (sheet === 'RentalCategories') {
-            const hasChildren = (AppState.data.RentalItems || []).some(item => item.categoryId === id);
-            if (hasChildren) {
-                UI.showToast('No se puede eliminar: Esta categoría tiene equipos asociados.', 'error');
-                return; 
-            }
+        // --- LÓGICA DE CASCADA PARA RESERVAS ---
+        if (sheet === 'Bookings') {
+            const bookingItem = AppState.data.Bookings?.find(b => b.id === id);
+            // Buscar bloqueo asociado usando la columna bookingId
+            // Convertimos a String para evitar errores de tipo
+            const linkedBlock = (AppState.data.BlockedDates || []).find(b => String(b.bookingId) === String(id));
+            
+            // Mensaje informativo advirtiendo que se borra el bloqueo también
+            const confirmMsg = linkedBlock 
+                ? "Al eliminar esta reserva, se liberarán automáticamente las fechas en el calendario (se borrará el bloqueo asociado)." 
+                : "Se eliminará el registro de la reserva.";
+
+            UI.showConfirm(`¿Eliminar Reserva de ${bookingItem?.customerName}?`, confirmMsg, async () => {
+                UI.showLoading(`Eliminando Reserva y liberando fechas...`);
+                
+                const batch = [{ sheet: 'Bookings', action: 'delete', criteria: { id: id } }];
+                
+                if (linkedBlock) {
+                    batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: linkedBlock.blockId } });
+                }
+
+                await API.batchUpdate(batch);
+                await App.ensureDataForView(AppState.view, true);
+                UI.renderView(AppState.view);
+                UI.showToast('Proceso completado correctamente');
+                UI.hideLoading();
+            });
+            return; // DETENER PROCESO AQUÍ (No ejecutar el delete genérico de abajo)
         }
+        // ---------------------------------------
 
         // --- NUEVO: Lógica Cascada para Reservas ---
         if (sheet === 'Bookings') {
@@ -2942,6 +3023,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
