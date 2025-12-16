@@ -2540,7 +2540,7 @@ const App = {
             // --- LOGICA ESPECIAL PARA PROYECTOS (Reordenamiento Inteligente) ---
             if (sheet === 'Projects') {
                 // 1. Obtenemos la lista actual (excluyendo el que estamos editando si ya existe)
-                let allProjects = [...(AppState.data.Projects || [])].filter(p => String(p.id) !== String(id);
+                let allProjects = [...(AppState.data.Projects || [])].filter(p => String(p.id) !== String(id));
                 
                 // 2. Preparamos el objeto del proyecto actual
                 const currentProject = { ...data, id: isNew ? data[idField] : id };
@@ -3434,6 +3434,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
