@@ -19,7 +19,8 @@ exports.handler = async (event, context) => {
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
     await doc.loadInfo();
 
-    let requestedSheets = event.queryStringParameters.sheets ? event.queryStringParameters.sheets.split(',') : ['Projects', 'ProjectImages', 'Bookings'];
+    // AJUSTE: Se añaden las nuevas hojas al default para pruebas o cargas completas
+    let requestedSheets = event.queryStringParameters.sheets ? event.queryStringParameters.sheets.split(',') : ['Projects', 'ProjectImages', 'Bookings', 'Identidad', 'About', 'LogosClientes', 'ImagenesIdentidad'];
     const adminData = {};
 
     const promises = requestedSheets.map(async (title) => {
