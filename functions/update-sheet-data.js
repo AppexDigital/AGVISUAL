@@ -73,7 +73,7 @@ exports.handler = async (event, context) => {
     const { doc, drive } = await getServices();
 
     /* --- INICIO AJUSTE: INTERCEPTOR DE BORRADO --- */
-    // Este bloque permite borrar archivos de Drive sin necesidad de encontrar una fila en Sheets
+    // Este bloque permite borrar la foto VIEJA cuando guardas una NUEVA.
     for (const op of operations) {
         if (op.action === 'delete_file_only' && op.data && op.data.fileId) {
             try {
