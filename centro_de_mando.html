@@ -1644,7 +1644,7 @@ const App = {
         // --- LÓGICA POR TIPO DE HOJA ---
         
         if(sheet === 'Projects'){
-             const p = isNew ? {} : AppState.data.Projects.find(x => x.id === id);
+             const p = isNew ? {} : AppState.data.Projects.find(x => String(x.id) === String(id));
              
              // 1. Título Dinámico
              modalTitle = isNew ? 'Nuevo Proyecto' : `Editar Proyecto ${p.title}`;
@@ -1672,7 +1672,7 @@ const App = {
 
             // --- INICIO BLOQUE RESTAURADO DE VIDEOS ---
         } else if(sheet === 'Videos'){
-             const v = isNew ? {} : AppState.data.Videos.find(x => x.id === id);
+             const v = isNew ? {} : AppState.data.Videos.find(x => String(x.id) === String(id));
              modalTitle = isNew ? 'Nuevo Video' : 'Editar Video';
              
              // Autocalcular siguiente orden
@@ -1688,7 +1688,7 @@ const App = {
         // --- FIN BLOQUE RESTAURADO DE VIDEOS ---
 
         } else if(sheet === 'Services'){
-             const s = isNew ? {} : AppState.data.Services.find(x => x.id === id);
+             const s = isNew ? {} : AppState.data.Services.find(x => String(x.id) === String(id));
              
              // 1. Título Ajustado
              modalTitle = isNew ? 'Nuevo Servicio' : `Editar Servicio ${s.title}`;
@@ -1772,7 +1772,7 @@ const App = {
                  `;
              } 
          } else if(sheet === 'RentalItems'){
-             const i = isNew ? {} : AppState.data.RentalItems.find(x => x.id === id);
+             const i = isNew ? {} : AppState.data.RentalItems.find(x => String(x.id) === String(id));
              const cats = AppState.data.RentalCategories || [];
              
              // 1. Título Ajustado
@@ -1845,7 +1845,7 @@ const App = {
                 calculate();
             }, 50);
         } else if(sheet === 'RentalCategories'){
-             const c = isNew ? {} : AppState.data.RentalCategories.find(x => x.id === id);
+             const c = isNew ? {} : AppState.data.RentalCategories.find(x => String(x.id) === String(id));
              modalTitle = isNew ? 'Nueva Categoría' : 'Editar Categoría';
              
              // Autocalcular Orden
@@ -1865,7 +1865,7 @@ const App = {
                  UI.hideLoading();
              }
              
-             const b = isNew ? {} : AppState.data.Bookings.find(x => x.id === id);
+             const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
              const items = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
              const statuses = ['Pendiente', 'Confirmado', 'Pagado', 'Cancelado'].map(s => ({id:s, name:s}));
              
@@ -2101,7 +2101,7 @@ const App = {
             // Resetear variable de basura al abrir
             App.tempUploadedFileId = null;
 
-            const l = isNew ? {} : AppState.data.LogosClientes.find(x => x.id === id);
+            const l = isNew ? {} : AppState.data.LogosClientes.find(x => String(x.id) === String(id));
             
             // PUNTO 5: Título Específico
             modalTitle = isNew ? 'Nuevo Logo' : `Editar Logo de ${l.clientName}`;
@@ -2429,11 +2429,13 @@ const App = {
                         
                         // BORRADO DEL VIEJO (Si es edición y estamos reemplazando)
                         if (!isNew) {
+                            // CORRECCIÓN: Convertimos ambos a String() para garantizar que lo encuentre
                             const oldItem = AppState.data.LogosClientes.find(x => String(x.id) === String(id));
-                            if (oldItem && oldItem.fileId) {
-                                console.log("Borrando logo anterior:", oldItem.fileId);
-                                App.deleteFileDirectly(oldItem.fileId); // Fuego y olvido
-                        } else {
+                            
+                            if (oldItem && oldItem.fileId && oldItem.fileId !== App.tempUploadedFileId) {
+                                console.log(">> Guardando edición. Borrando logo antiguo:", oldItem.fileId);
+                                App.deleteFileDirectly(oldItem.fileId);
+                            } else {
                                 console.warn("No se encontró imagen anterior para borrar (o ID no coincide).");
                             }
                         }
@@ -2538,7 +2540,7 @@ const App = {
             // --- LOGICA ESPECIAL PARA PROYECTOS (Reordenamiento Inteligente) ---
             if (sheet === 'Projects') {
                 // 1. Obtenemos la lista actual (excluyendo el que estamos editando si ya existe)
-                let allProjects = [...(AppState.data.Projects || [])].filter(p => p.id !== id);
+                let allProjects = [...(AppState.data.Projects || [])].filter(p => String(p.id) !== String(id);
                 
                 // 2. Preparamos el objeto del proyecto actual
                 const currentProject = { ...data, id: isNew ? data[idField] : id };
@@ -2621,7 +2623,7 @@ const App = {
                 }
 
                 // 3. REORDENAMIENTO INTELIGENTE
-                let allServices = [...(AppState.data.Services || [])].filter(s => s.id !== id);
+                let allServices = [...(AppState.data.Services || [])].filter(s => String(s.id) !== String(id));
                 const currentService = { ...data, id: isNew ? data[idField] : id };
                 
                 allServices.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
@@ -2693,7 +2695,7 @@ const App = {
                 }
 
                 // Reordenamiento Inteligente
-                let allItems = [...(AppState.data[listName] || [])].filter(x => x.id !== id);
+                let allItems = [...(AppState.data[listName] || [])].filter(x => String(x.id) !== String(id));
                 const currentItem = { ...data, id: isNew ? data[idField] : id };
                 
                 allItems.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
@@ -2709,13 +2711,13 @@ const App = {
                 const batch = [];
                 allItems.forEach((item, index) => {
                     const newOrder = index + 1;
-                    if (parseInt(item.order) !== newOrder || item.id === currentItem.id) {
+                    if (parseInt(item.order) !== newOrder || String(item.id) === String(currentItem.id)) {
                         item.order = newOrder;
-                        const dataToSave = (item.id === currentItem.id) ? currentItem : { order: newOrder };
+                        const dataToSave = (String(item.id) === String(currentItem.id)) ? currentItem : { order: newOrder };
                         batch.push({
                             sheet: sheet,
-                            action: (item.id === currentItem.id && isNew) ? 'add' : 'update',
-                            criteria: (item.id === currentItem.id && isNew) ? null : { id: item.id },
+                            action: (String(item.id) === String(currentItem.id) && isNew) ? 'add' : 'update',
+                            criteria: (String(item.id) === String(currentItem.id) && isNew) ? null : { id: item.id },
                             data: dataToSave
                         });
                     }
@@ -2835,7 +2837,7 @@ const App = {
                 }
 
                 // 2. Reordenamiento Inteligente
-                let allVideos = [...(AppState.data.Videos || [])].filter(v => v.id !== id);
+                let allVideos = [...(AppState.data.Videos || [])].filter(v => String(v.id) !== String(id));
                 const currentVideo = { ...data, id: isNew ? data[idField] : id };
                 
                 // Ordenar existentes
@@ -3432,6 +3434,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
