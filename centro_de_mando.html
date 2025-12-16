@@ -2133,7 +2133,7 @@ const App = {
         }
         // 3. Footer Estratégico
         // Detectamos si estamos en Logos para cambiar la acción de Cancelar
-        const cancelAction = (sheet === 'LogosClientes') ? "App.cancelLogoModal()" : "UI.closeModal()";
+        const cancelFn = (sheet === 'LogosClientes') ? "App.cancelLogoModal()" : "UI.closeModal()";
 
         const footer = `
             <div class="flex justify-between items-center w-full">
@@ -2141,7 +2141,7 @@ const App = {
                     ${leftButtons}
                 </div>
                 <div class="flex items-center gap-2">
-                    <button class="btn btn-secondary" onclick="${cancelAction}">Cancelar</button>
+                    <button class="btn btn-secondary" onclick="${cancelFn}">Cancelar</button>
                     <button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>
                 </div>
             </div>
@@ -2396,83 +2396,60 @@ const App = {
                 if (!data.order || isNaN(data.order)) {
                     UI.showToast('El orden debe ser un número.', 'error'); return;
                 }
-
-                // Validación Nombre Único (evitar duplicados de cliente)
                 const exists = (AppState.data.LogosClientes || []).some(l => 
                     l.clientName.trim().toLowerCase() === data.clientName.trim().toLowerCase() && l.id !== id
                 );
-                if (exists) {
-                    UI.showToast(`El cliente "${data.clientName}" ya existe.`, 'error'); return;
-                }
+                if (exists) { UI.showToast(`El cliente ya existe.`, 'error'); return; }
 
-                // --- DETECCIÓN DE REEMPLAZO (Swap) ---
+                // --- GESTIÓN DE ARCHIVOS (Soluciona Punto 3) ---
                 if (!isNew) {
                     const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
                     
-                    // Condición: Existe item viejo, tiene archivo, y el archivo nuevo (data.fileId) es DIFERENTE al viejo
-                    // Nota: data.fileId viene del input hidden que llenamos al subir
-                    if (oldItem && oldItem.fileId && data.fileId && oldItem.fileId !== data.fileId) {
+                    // Si el usuario subió una imagen nueva (App.tempUploadedFileId existe y coincide con lo que vamos a guardar)
+                    // Y había una imagen vieja: BORRAMOS LA VIEJA.
+                    if (App.tempUploadedFileId && oldItem && oldItem.fileId && oldItem.fileId !== App.tempUploadedFileId) {
+                        console.log("Guardando cambios. Borrando imagen antigua:", oldItem.fileId);
                         
-                        console.log(`Reemplazando logo. Viejo: ${oldItem.fileId}, Nuevo: ${data.fileId}`);
-                        
-                        // Mandar a borrar el viejo en segundo plano
+                        // Borrado en background
                         API.call('/.netlify/functions/update-sheet-data', { 
                             method: 'POST', 
                             body: { 
                                 sheet: 'LogosClientes', 
                                 action: 'delete', 
-                                // Usamos el ID real para que el backend no se queje si busca la fila,
-                                // AUNQUE la acción sea delete, si el backend está bien hecho, 
-                                // borrará el archivo de Drive indicado en 'data.fileId'.
-                                // Si tu backend borra la fila al recibir 'delete', esto sería un problema.
-                                // ASUMO QUE TU BACKEND SOLO BORRA EL ARCHIVO SI 'data.fileId' ESTÁ PRESENTE
-                                // Y LUEGO INTENTA BORRAR LA FILA.
-                                // Para evitar borrar la fila activa (porque la queremos actualizar, no borrar),
-                                // usaremos un ID dummy pero confiamos en que el backend no falle catastróficamente.
-                                criteria: { id: 'swap_cleanup_ignore_error' }, 
-                                data: { fileId: oldItem.fileId }  
+                                criteria: { id: 'save_swap_cleanup' }, 
+                                data: { fileId: oldItem.fileId } 
                             } 
-                        }).catch(e => console.warn("Error no crítico limpiando logo viejo:", e));
+                        }).catch(e => console.warn("Error borrando imagen vieja:", e));
                     }
                 }
                 
-                // Confirmamos que el archivo nuevo YA NO ES BASURA
-                App.tempUploadedFileId = null;
-                // -------------------------------------
-                
+                // IMPORTANTE: La imagen nueva ya es oficial, dejamos de rastrearla como basura
+                App.tempUploadedFileId = null; 
+                // ---------------------------------------------
+
                 // 2. Preparar datos
                 const currentId = isNew ? `logo_${Date.now()}` : id;
                 const currentItem = { ...data, id: currentId };
                 
-                // PUNTO 1: Mensaje de carga personalizado
                 UI.showLoading(`Guardando Logo de ${data.clientName}...`);
 
-                // 3. Lógica de Reordenamiento (PUNTO 7)
-                // Obtener lista excluyendo el actual
+                // 3. Lógica de Reordenamiento (Igual que antes)
                 let allItems = [...(AppState.data.LogosClientes || [])].filter(x => x.id !== id);
-                
-                // Ordenar existentes
                 allItems.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
 
-                // Calcular posición de inserción
                 let targetOrder = parseInt(data.order) || 1;
                 let targetIndex = targetOrder - 1;
                 if (targetIndex < 0) targetIndex = 0;
                 if (targetIndex > allItems.length) targetIndex = allItems.length;
 
-                // Insertar
                 allItems.splice(targetIndex, 0, currentItem);
 
-                // 4. Preparar Batch y Renumerar
                 const batch = [];
                 allItems.forEach((item, index) => {
                     const newOrder = index + 1;
-                    // Si el orden cambia O es el ítem actual
                     if (parseInt(item.order) !== newOrder || item.id === currentItem.id) {
-                        item.order = newOrder; // Actualizar memoria local
-                        
+                        item.order = newOrder; 
                         const dataToSave = (item.id === currentItem.id) ? currentItem : { order: newOrder };
-                        
                         batch.push({
                             sheet: 'LogosClientes',
                             action: (item.id === currentItem.id && isNew) ? 'add' : 'update',
@@ -2482,17 +2459,9 @@ const App = {
                     }
                 });
 
-                // 5. Ejecutar Batch (Pasando mensaje personalizado para evitar contador)
                 await API.batchUpdate(batch, `Guardando Logo de ${data.clientName}`);
                 
-                // --- NUEVO: Confirmar que el archivo ya no es basura ---
-                App.tempUploadedFileId = null; 
-                // ------------------------------------------------------
-
-                // Actualizar estado global
                 AppState.data.LogosClientes = allItems;
-                
-                // Finalizar
                 UI.closeModal();
                 UI.renderView('client-logos');
                 UI.showToast('Guardado correctamente');
@@ -3169,19 +3138,27 @@ const App = {
         const file = input.files[0];
         if(!file) return;
 
-        // LIMPIEZA INTERMEDIA: Si ya subió una foto en este mismo modal y la está cambiando de nuevo
+        // 1. LIMPIEZA EN CALIENTE (Soluciona Punto 4)
+        // Si el usuario ya subió una imagen en esta sesión del modal y la está cambiando otra vez:
         if (App.tempUploadedFileId) {
-            const trashId = App.tempUploadedFileId;
-            console.log("Reemplazo en caliente. Borrando anterior:", trashId);
-            // Ejecutar borrado sin bloquear UI
+            console.log("Detectado reemplazo rápido. Eliminando basura anterior:", App.tempUploadedFileId);
+            
+            // Disparamos borrado en segundo plano (sin await para no frenar la UI)
             API.call('/.netlify/functions/update-sheet-data', { 
                 method: 'POST', 
-                body: { sheet: 'LogosClientes', action: 'delete', criteria: { id: 'temp_swap' }, data: { fileId: trashId } } 
-            }).catch(e => console.warn("Error limpieza intermedia:", e));
+                body: { 
+                    sheet: 'LogosClientes', 
+                    action: 'delete', 
+                    criteria: { id: 'temp_hot_swap' }, // ID dummy
+                    data: { fileId: App.tempUploadedFileId } 
+                } 
+            }).catch(e => console.warn("Error limpieza background:", e));
+            
+            // Limpiamos la variable para recibir el nuevo ID
+            App.tempUploadedFileId = null;
         }
 
-        UI.showLoading(`Subiendo ${file.name}...`); // Feedback específico
-        
+        UI.showLoading(`Subiendo ${file.name}...`);
         try {
             const compressed = await new Promise((resolve, reject) => { 
                 new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
@@ -3194,15 +3171,14 @@ const App = {
             
             const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
             
-            // Actualizar Variable Global de Basura
+            // 2. REGISTRAR NUEVA BASURA POTENCIAL
             App.tempUploadedFileId = res.fileId;
 
-            // Actualizar UI
             document.getElementById('modal-logo-preview').src = res.imageUrl;
             document.getElementById('c-logoUrl').value = res.imageUrl;
             document.getElementById('c-fileId').value = res.fileId;
             
-            UI.showToast('Logo listo.'); // Mensaje corto
+            UI.showToast('Logo cargado. Listo para guardar.');
         } catch (e) {
             console.error(e);
             UI.showToast('Error: ' + e.message, 'error');
@@ -3314,34 +3290,26 @@ const App = {
     tempUploadedFileId: null, // Variable de estado para rastrear basura
 
     // Función inteligente para cancelar el modal de Logos
-    async cancelLogoModal() {
-        // 1. UX INMEDIATA: Cerrar modal al instante
+    cancelLogoModal() {
+        // 1. ACCIÓN INMEDIATA PARA EL USUARIO
         UI.closeModal();
-        
-        // 2. PROCESO EN SEGUNDO PLANO (Fire & Forget)
+
+        // 2. LIMPIEZA EN SEGUNDO PLANO (Soluciona Puntos 1 y 2)
         if (App.tempUploadedFileId) {
-            const fileIdToDelete = App.tempUploadedFileId; // Capturar valor
-            App.tempUploadedFileId = null; // Resetear inmediatamente para evitar duplicados
+            const fileIdToDelete = App.tempUploadedFileId;
+            App.tempUploadedFileId = null; // Resetear ya
             
-            console.log("Iniciando limpieza silenciosa de:", fileIdToDelete);
+            console.log("Usuario canceló. Borrando basura:", fileIdToDelete);
             
-            // No usamos 'await' para no bloquear, pero capturamos el error
             API.call('/.netlify/functions/update-sheet-data', { 
                 method: 'POST', 
                 body: { 
                     sheet: 'LogosClientes', 
-                    // Usamos una acción que el backend entienda. Si 'delete' requiere ID de fila,
-                    // y aquí solo queremos borrar archivo de Drive, asegúrate que tu backend
-                    // no falle si no encuentra la fila 'temp_cleanup'.
                     action: 'delete', 
-                    criteria: { id: 'temp_cleanup' }, 
+                    criteria: { id: 'temp_cancel_cleanup' }, 
                     data: { fileId: fileIdToDelete } 
                 } 
-            }).then(() => {
-                console.log("Basura limpiada correctamente en Drive.");
-            }).catch(e => {
-                console.warn("No se pudo limpiar el archivo temporal (revisar logs):", e);
-            });
+            }).catch(e => console.warn("Error limpieza cancelar:", e));
         }
     },
 
@@ -3498,6 +3466,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
