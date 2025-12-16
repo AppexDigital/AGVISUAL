@@ -73,16 +73,21 @@ exports.handler = async (event, context) => {
     const { doc, drive } = await getServices();
 
     /* --- INICIO AJUSTE: INTERCEPTOR DE BORRADO --- */
-    // Este bloque permite borrar la foto VIEJA cuando guardas una NUEVA.
+    // Este bloque permite enviar a la PAPELERA la foto VIEJA cuando guardas una NUEVA.
     for (const op of operations) {
         if (op.action === 'delete_file_only' && op.data && op.data.fileId) {
             try {
-                console.log(`[Drive] Borrado directo solicitado: ${op.data.fileId}`);
-                await drive.files.delete({ fileId: op.data.fileId, supportsAllDrives: true });
+                console.log(`[Drive] Moviendo a papelera (Soft Delete): ${op.data.fileId}`);
+                // CAMBIO: Usamos 'update' para marcar como 'trashed' en vez de destruir
+                await drive.files.update({ 
+                    fileId: op.data.fileId, 
+                    requestBody: { trashed: true },
+                    supportsAllDrives: true 
+                });
             } catch (e) {
-                console.warn(`[Drive Warning] No se pudo borrar ${op.data.fileId} (quizás ya no existe):`, e.message);
+                console.warn(`[Drive Warning] No se pudo mover a papelera ${op.data.fileId}:`, e.message);
             }
-            // Marcamos como procesada para que el bucle de abajo la ignore
+            // Marcamos como procesada para que no intente buscar una fila en Excel
             op._processed = true; 
         }
     }
