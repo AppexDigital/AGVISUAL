@@ -1108,6 +1108,11 @@ const UI = {
   
 // --- LOGICA PRINCIPAL (App) ---
 const App = {
+
+    // --- ESTADO DE LIMPIEZA ---
+    tempUploadedFileId: null, 
+    // --------------------------
+    
     async switchView(viewId) {
         UI.showLoading('Cargando...');
         try {
@@ -2396,44 +2401,46 @@ const App = {
                 if (!data.order || isNaN(data.order)) {
                     UI.showToast('El orden debe ser un número.', 'error'); return;
                 }
+
+                // Validación duplicados
                 const exists = (AppState.data.LogosClientes || []).some(l => 
                     l.clientName.trim().toLowerCase() === data.clientName.trim().toLowerCase() && l.id !== id
                 );
                 if (exists) { UI.showToast(`El cliente ya existe.`, 'error'); return; }
 
-                // --- GESTIÓN DE ARCHIVOS (Soluciona Punto 3) ---
-                if (!isNew) {
+                // --- 2. GESTIÓN DE LIMPIEZA DE ARCHIVOS ANTIGUOS ---
+                // Si NO es nuevo (es edición) Y tenemos un archivo temporal cargado (significa que cambió la foto)
+                if (!isNew && App.tempUploadedFileId) {
                     const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
                     
-                    // Si el usuario subió una imagen nueva (App.tempUploadedFileId existe y coincide con lo que vamos a guardar)
-                    // Y había una imagen vieja: BORRAMOS LA VIEJA.
-                    if (App.tempUploadedFileId && oldItem && oldItem.fileId && oldItem.fileId !== App.tempUploadedFileId) {
-                        console.log("Guardando cambios. Borrando imagen antigua:", oldItem.fileId);
+                    // Si el ítem tenía un archivo viejo, hay que borrarlo
+                    if (oldItem && oldItem.fileId) {
+                        console.log("Guardando edición. Borrando logo antiguo:", oldItem.fileId);
                         
-                        // Borrado en background
                         API.call('/.netlify/functions/update-sheet-data', { 
                             method: 'POST', 
                             body: { 
                                 sheet: 'LogosClientes', 
                                 action: 'delete', 
                                 criteria: { id: 'save_swap_cleanup' }, 
-                                data: { fileId: oldItem.fileId } 
+                                data: { fileId: oldItem.fileId } // Borra el viejo de Drive
                             } 
-                        }).catch(e => console.warn("Error borrando imagen vieja:", e));
+                        }).catch(e => console.warn("Error borrando logo antiguo:", e));
                     }
                 }
                 
-                // IMPORTANTE: La imagen nueva ya es oficial, dejamos de rastrearla como basura
-                App.tempUploadedFileId = null; 
-                // ---------------------------------------------
+                // IMPORTANTE: Como vamos a guardar, el temporal se vuelve oficial.
+                // Limpiamos la variable global para que 'cancelLogoModal' no intente borrarlo después por error.
+                App.tempUploadedFileId = null;
+                // ----------------------------------------------------
 
-                // 2. Preparar datos
+                // 3. Preparar datos
                 const currentId = isNew ? `logo_${Date.now()}` : id;
                 const currentItem = { ...data, id: currentId };
                 
                 UI.showLoading(`Guardando Logo de ${data.clientName}...`);
 
-                // 3. Lógica de Reordenamiento (Igual que antes)
+                // 4. Lógica de Reordenamiento
                 let allItems = [...(AppState.data.LogosClientes || [])].filter(x => x.id !== id);
                 allItems.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
 
@@ -3133,32 +3140,32 @@ const App = {
     async handleSaveSettings() { const data={}; document.querySelectorAll('#settings-form-container input').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'Settings',action:'update',criteria:{key:k},data:{value:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
 
-    // A. Subida Unitaria para el Modal de Logos (Genera FileId)
+    // A. Subida Unitaria para el Modal de Logos
     async uploadSingleLogo(input) {
         const file = input.files[0];
         if(!file) return;
 
-        // 1. LIMPIEZA EN CALIENTE (Soluciona Punto 4)
-        // Si el usuario ya subió una imagen en esta sesión del modal y la está cambiando otra vez:
+        // 1. LIMPIEZA EN CALIENTE (Hot Swap)
+        // Si el usuario ya había subido una foto en este mismo modal (tempUploadedFileId tiene valor),
+        // esa foto anterior es basura y debe borrarse YA.
         if (App.tempUploadedFileId) {
-            console.log("Detectado reemplazo rápido. Eliminando basura anterior:", App.tempUploadedFileId);
+            const trashId = App.tempUploadedFileId;
+            console.log("Reemplazo detectado. Eliminando anterior:", trashId);
             
-            // Disparamos borrado en segundo plano (sin await para no frenar la UI)
+            // Borrar la anterior en background
             API.call('/.netlify/functions/update-sheet-data', { 
                 method: 'POST', 
                 body: { 
                     sheet: 'LogosClientes', 
                     action: 'delete', 
-                    criteria: { id: 'temp_hot_swap' }, // ID dummy
-                    data: { fileId: App.tempUploadedFileId } 
+                    criteria: { id: 'temp_hot_swap' }, 
+                    data: { fileId: trashId } 
                 } 
-            }).catch(e => console.warn("Error limpieza background:", e));
-            
-            // Limpiamos la variable para recibir el nuevo ID
-            App.tempUploadedFileId = null;
+            }).catch(e => console.warn("Error borrando temp anterior:", e));
         }
 
         UI.showLoading(`Subiendo ${file.name}...`);
+        
         try {
             const compressed = await new Promise((resolve, reject) => { 
                 new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
@@ -3171,17 +3178,19 @@ const App = {
             
             const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
             
-            // 2. REGISTRAR NUEVA BASURA POTENCIAL
+            // 2. REGISTRAR LA NUEVA IMAGEN COMO TEMPORAL
+            // Es vital usar 'App.' para que sea global
             App.tempUploadedFileId = res.fileId;
 
+            // Actualizar vista
             document.getElementById('modal-logo-preview').src = res.imageUrl;
-            document.getElementById('c-logoUrl').value = res.imageUrl;
-            document.getElementById('c-fileId').value = res.fileId;
+            document.getElementById('c-logoUrl').value = res.imageUrl; 
+            document.getElementById('c-fileId').value = res.fileId;    
             
-            UI.showToast('Logo cargado. Listo para guardar.');
+            UI.showToast('Logo listo. Guardar para confirmar.');
         } catch (e) {
             console.error(e);
-            UI.showToast('Error: ' + e.message, 'error');
+            UI.showToast('Error al subir: ' + e.message, 'error');
         } finally {
             UI.hideLoading();
         }
@@ -3286,21 +3295,21 @@ const App = {
         }
     },
 
-    // --- LÓGICA DE LIMPIEZA DE BASURA (Rollback) ---
-    tempUploadedFileId: null, // Variable de estado para rastrear basura
-
     // Función inteligente para cancelar el modal de Logos
     cancelLogoModal() {
-        // 1. ACCIÓN INMEDIATA PARA EL USUARIO
+        // 1. UX INMEDIATA: Cerrar modal primero para que se sienta instantáneo
         UI.closeModal();
 
-        // 2. LIMPIEZA EN SEGUNDO PLANO (Soluciona Puntos 1 y 2)
+        // 2. LIMPIEZA EN SEGUNDO PLANO
+        // Usamos 'App.tempUploadedFileId' explícitamente
         if (App.tempUploadedFileId) {
             const fileIdToDelete = App.tempUploadedFileId;
-            App.tempUploadedFileId = null; // Resetear ya
-            
             console.log("Usuario canceló. Borrando basura:", fileIdToDelete);
             
+            // Resetear variable INMEDIATAMENTE para evitar conflictos
+            App.tempUploadedFileId = null; 
+            
+            // Llamada a la API sin await (Fire & Forget)
             API.call('/.netlify/functions/update-sheet-data', { 
                 method: 'POST', 
                 body: { 
@@ -3309,7 +3318,7 @@ const App = {
                     criteria: { id: 'temp_cancel_cleanup' }, 
                     data: { fileId: fileIdToDelete } 
                 } 
-            }).catch(e => console.warn("Error limpieza cancelar:", e));
+            }).catch(e => console.warn("Error en limpieza silenciosa:", e));
         }
     },
 
@@ -3466,6 +3475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
