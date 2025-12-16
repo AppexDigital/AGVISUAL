@@ -1111,23 +1111,20 @@ const App = {
     // Estado para rastrear basura temporal
     tempUploadedFileId: null, 
 
-    // NUEVO HELPER: Borra solo el archivo de Drive, sin tocar la fila en Sheets
-    async deleteFileSilently(fileId) {
+    // NUEVA FUNCIÓN: Borrar archivo directo (Usa el interceptor del backend)
+    async deleteFileDirectly(fileId) {
         if (!fileId) return;
-        console.log("Limpiando archivo basura:", fileId);
-        
-        // Usamos un ID ficticio ('cleanup_task') para que el backend no borre ninguna fila real
-        // pero sí procese el borrado del archivo adjunto en 'data.fileId'.
-        return API.call('/.netlify/functions/update-sheet-data', { 
+        console.log(">> Borrando archivo basura:", fileId);
+        // Llamada silenciosa (sin await)
+        API.call('/.netlify/functions/update-sheet-data', { 
             method: 'POST', 
             body: { 
-                sheet: 'LogosClientes', 
-                action: 'delete', 
-                criteria: { id: `cleanup_${Date.now()}` }, 
+                sheet: 'LogosClientes', // Nombre irrelevante para esta acción
+                action: 'delete_file_only', // La acción mágica
                 data: { fileId: fileId } 
             } 
-        }).catch(e => console.warn("Nota: Limpieza background (posible 404 de fila ignorado):", e));
-    },
+        }).catch(e => console.warn("Error en limpieza background:", e));
+    }
     
     async switchView(viewId) {
         UI.showLoading('Cargando...');
@@ -2414,17 +2411,16 @@ const App = {
                 // 1. Validaciones
                 if (!data.clientName || !data.logoUrl) { UI.showToast('Datos incompletos.', 'error'); return; }
                 if (!data.order || isNaN(data.order)) { UI.showToast('Orden inválido.', 'error'); return; }
-
-                // 2. GESTIÓN DE ARCHIVOS (Swap Seguro)
-                // Si estamos editando y hay un archivo nuevo temporal (significa que el usuario cambió la foto)
+                // 2. GESTIÓN DE REEMPLAZO (Borrar logo viejo de Drive)
+                // Si es edición (!isNew) Y subimos foto nueva (tempUploadedFileId existe)
                 if (!isNew && App.tempUploadedFileId) {
                     const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
                     
-                    // Si el registro tenía una imagen vieja diferente a la nueva
+                    // Si el registro tenía un archivo viejo diferente al nuevo
                     if (oldItem && oldItem.fileId && oldItem.fileId !== App.tempUploadedFileId) {
-                        console.log("Guardando edición. Eliminando imagen antigua:", oldItem.fileId);
-                        // Usamos el helper SEGURO que no borra la fila
-                        App.deleteFileSilently(oldItem.fileId);
+                        console.log(">> Guardando edición. Borrando logo antiguo:", oldItem.fileId);
+                        // Usamos el helper directo para no tocar la fila en Sheets
+                        App.deleteFileDirectly(oldItem.fileId);
                     }
                 }
 
@@ -3145,11 +3141,11 @@ const App = {
         const file = input.files[0];
         if(!file) return;
 
-        // 1. LIMPIEZA AUTOMÁTICA DE PRECARGAS ANTERIORES
-        // Si ya había una foto temporal en este modal, la borramos antes de subir la nueva.
+        // 1. LIMPIEZA AUTOMÁTICA: Si ya había una foto subida en este modal, bórrala.
         if (App.tempUploadedFileId) {
-            await App.deleteFileSilently(App.tempUploadedFileId);
-            App.tempUploadedFileId = null; // Limpiar referencia
+            const trashId = App.tempUploadedFileId;
+            App.tempUploadedFileId = null; 
+            App.deleteFileDirectly(trashId); // Borrar la anterior
         }
 
         UI.showLoading(`Subiendo ${file.name}...`);
@@ -3284,13 +3280,14 @@ const App = {
 
     // Función inteligente para cancelar el modal de Logos
     cancelLogoModal() {
-        // 1. Cerrar Inmediatamente (UX Rápida)
+        // 1. Cerrar UI Inmediatamente
         UI.closeModal();
 
-        // 2. Limpiar basura si existe
+        // 2. Limpiar basura si existe usando el nuevo helper directo
         if (App.tempUploadedFileId) {
-            App.deleteFileSilently(App.tempUploadedFileId);
-            App.tempUploadedFileId = null;
+            const trashId = App.tempUploadedFileId;
+            App.tempUploadedFileId = null; // Reset inmediato
+            App.deleteFileDirectly(trashId);
         }
     },
     
@@ -3445,6 +3442,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
