@@ -69,7 +69,8 @@ const myHandler = async (event, context) => {
         }
 
         // --- ESCRITURA EN BLOQUE (EL CAMBIO CLAVE) ---
-        const targetSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'ClientLogos'];
+        // AJUSTE: Agregamos 'LogosClientes' y 'ImagenesIdentidad' para que sus links se refresquen
+        const targetSheets = ['ProjectImages', 'RentalItemImages', 'ServiceImages', 'LogosClientes', 'ImagenesIdentidad'];
         let totalChanges = 0;
 
         for (const title of targetSheets) {
