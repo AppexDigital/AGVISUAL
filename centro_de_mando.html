@@ -357,7 +357,7 @@
                          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p>
-                                <div class="h-24 bg-gray-50 border rounded flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-logo_black').click()">
+                                <div class="h-24 bg-gray-50 border flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-logo_black').click()">
                                     <img id="prev-logo_black" src="https://placehold.co/100x50?text=Vacio" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer">
                                     <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-upload"></i></div>
                                 </div>
@@ -365,7 +365,7 @@
                             </div>
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p>
-                                <div class="h-24 bg-gray-900 border rounded flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-logo_white').click()">
+                                <div class="h-24 bg-gray-900 border flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-logo_white').click()">
                                     <img id="prev-logo_white" src="https://placehold.co/100x50?text=Vacio" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer">
                                     <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-upload"></i></div>
                                 </div>
@@ -373,7 +373,7 @@
                             </div>
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Favicon</p>
-                                <div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-favicon').click()">
+                                <div class="h-24 bg-white border flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-favicon').click()">
                                     <img id="prev-favicon" src="https://placehold.co/32?text=ICO" class="w-8 h-8 object-contain" referrerpolicy="no-referrer">
                                     <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-upload"></i></div>
                                 </div>
@@ -392,7 +392,7 @@
                             <div class="flex-shrink-0 text-center md:text-left">
                                 <p class="text-xs font-bold text-gray-500 mb-2 uppercase">Foto de Perfil</p>
                                 <div class="relative group w-48 h-48 mx-auto md:mx-0 cursor-pointer" onclick="document.getElementById('upl-profile_pic').click()">
-                                    <img id="prev-profile_pic" src="https://placehold.co/200" class="w-full h-full rounded-lg object-cover border shadow-sm" referrerpolicy="no-referrer">
+                                    <img id="prev-profile_pic" src="https://placehold.co/200" class="w-full h-full object-cover border shadow-sm" referrerpolicy="no-referrer">
                                     <div class="absolute inset-0 bg-black/50 rounded-lg hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-camera text-2xl"></i></div>
                                 </div>
                                 <input type="file" id="upl-profile_pic" class="hidden" accept="image/*" onchange="App.uploadSystemImage(this, 'profile_pic')">
@@ -672,20 +672,22 @@ const UI = {
             `).join('');
         
         } else if (view === 'identity') {
-            // 1. Textos
             const ident = (data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
             const about = (data.About || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
-            
-            // 2. Imágenes (Desde ImagenesIdentidad)
             const sysImages = (data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         
-            // Visualizar
             if(sysImages.logo_black) document.getElementById('prev-logo_black').src = sysImages.logo_black;
             if(sysImages.logo_white) document.getElementById('prev-logo_white').src = sysImages.logo_white;
             if(sysImages.favicon) document.getElementById('prev-favicon').src = sysImages.favicon;
             if(sysImages.profile_pic) document.getElementById('prev-profile_pic').src = sysImages.profile_pic;
         
-            // Formulario Identidad
+            // 1. Ajuste Contenedores Cuadrados (Quitamos 'rounded')
+            document.querySelectorAll('#tab-id-general .h-24, #tab-id-whoami .w-48').forEach(el => {
+                el.classList.remove('rounded', 'rounded-lg');
+            });
+            document.querySelectorAll('#tab-id-whoami img').forEach(el => el.classList.remove('rounded-lg'));
+
+            // 2. Formulario Identidad (Sin LinkedIn, Botón simple)
             document.getElementById('identity-form-container').innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     ${UI.inputHTML('id', 'contact_email', 'Email Contacto', ident.contact_email, 'email')}
@@ -695,24 +697,26 @@ const UI = {
                 <h4 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-4">Redes Sociales</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     ${UI.inputHTML('id', 'social_instagram', 'Instagram', ident.social_instagram)}
-                    ${UI.inputHTML('id', 'social_linkedin', 'LinkedIn', ident.social_linkedin)}
                     ${UI.inputHTML('id', 'social_facebook', 'Facebook', ident.social_facebook)}
                     ${UI.inputHTML('id', 'social_youtube', 'YouTube', ident.social_youtube)}
                     ${UI.inputHTML('id', 'social_whatsapp', 'WhatsApp', ident.social_whatsapp)}
                 </div>
-                <div class="mt-6 flex justify-end"><button class="btn btn-primary" onclick="App.handleSaveIdentityText('general')">Guardar Textos</button></div>
+                <div class="mt-6 flex justify-end">
+                    <button class="btn btn-primary" onclick="App.handleSaveIdentityText('general')">Guardar</button>
+                </div>
             `;
         
-            // Formulario Quién Soy
+            // 3. Formulario Quién Soy (Campos Reducidos, Botón simple)
             document.getElementById('whoami-form-container').innerHTML = `
-                ${UI.inputHTML('ab', 'fullname', 'Nombre Completo', about.fullname)}
-                ${UI.inputHTML('ab', 'job_title', 'Título Profesional', about.job_title)}
                 <div class="mb-4">
                     <label class="form-label">Frase Introductoria</label>
                     <input type="text" id="ab-intro_phrase" data-key="intro_phrase" class="form-input" value="${about.intro_phrase||''}" placeholder="Ej: Transformando ideas en realidad...">
                 </div>
-                ${UI.textareaHTML('ab', 'bio', 'Mi Filosofía (Bio)', about.bio)}
+                ${UI.textareaHTML('ab', 'bio', 'Mi Filosofía', about.bio)}
                 ${UI.textareaHTML('ab', 'process', 'Mi Proceso', about.process)}
+                <div class="mt-4">
+                    <button class="btn btn-primary w-full md:w-auto" onclick="App.handleSaveIdentityText('whoami')">Guardar</button>
+                </div>
             `;
             
         } else if (view === 'projects') {
@@ -3198,7 +3202,21 @@ const App = {
         const file = input.files[0];
         if(!file) return;
 
-        UI.showLoading('Actualizando imagen...');
+        // 1. Mensajes Personalizados
+        const labels = {
+            'logo_black': 'Logo Negro',
+            'logo_white': 'Logo Blanco',
+            'favicon': 'Favicon',
+            'profile_pic': 'Foto de Perfil'
+        };
+        const label = labels[keyName] || 'Imagen';
+        
+        // Verificamos si ya existe para saber si es "Creando" o "Actualizando"
+        const existing = (AppState.data.ImagenesIdentidad || []).find(i => i.key === keyName);
+        const actionVerb = existing ? 'Actualizando' : 'Creando';
+        
+        UI.showLoading(`${actionVerb} ${label}...`);
+
         try {
             const compressed = await new Promise((resolve, reject) => { 
                 new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
@@ -3210,8 +3228,14 @@ const App = {
             
             const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
 
-            // Lógica de Guardado Específica para 'ImagenesIdentidad'
-            const existing = (AppState.data.ImagenesIdentidad || []).find(i => i.key === keyName);
+            // 2. LIMPIEZA DE BASURA (El ajuste crítico)
+            if (existing && existing.fileId) {
+                console.log(`Eliminando ${label} anterior:`, existing.fileId);
+                // Usamos la función que ya creamos y probamos con éxito
+                App.deleteFileDirectly(existing.fileId);
+            }
+
+            // 3. Guardado en Sheets
             const action = existing ? 'update' : 'add';
             const criteria = existing ? { id: existing.id } : null;
             
@@ -3219,7 +3243,7 @@ const App = {
                 id: existing ? existing.id : `sys_${Date.now()}`,
                 key: keyName,
                 imageUrl: res.imageUrl,
-                fileId: res.fileId // El robot usará esto para mantener el link vivo
+                fileId: res.fileId
             };
 
             await API.call('/.netlify/functions/update-sheet-data', { 
@@ -3231,12 +3255,16 @@ const App = {
             const previewEl = document.getElementById(`prev-${keyName}`) || document.getElementById(`preview-${keyName}`);
             if(previewEl) previewEl.src = res.imageUrl;
             
-            // Actualizar Memoria Local
+            // Actualizar Memoria
             if(!AppState.data.ImagenesIdentidad) AppState.data.ImagenesIdentidad = [];
-            if(existing) Object.assign(existing, newData);
-            else AppState.data.ImagenesIdentidad.push(newData);
+            
+            if(existing) {
+                Object.assign(existing, newData);
+            } else {
+                AppState.data.ImagenesIdentidad.push(newData);
+            }
 
-            UI.showToast('Imagen actualizada.');
+            UI.showToast(`${label} guardado.`);
         } catch (e) {
             console.error(e);
             UI.showToast('Error: ' + e.message, 'error');
@@ -3254,7 +3282,7 @@ const App = {
         
         const inputs = document.querySelectorAll(`#${containerId} input, #${containerId} textarea`);
         
-        UI.showLoading('Guardando información...');
+        UI.showLoading('Guardando Cambios...');
         try {
             const batch = [];
             const currentData = AppState.data[sheetName] || [];
@@ -3449,6 +3477,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
