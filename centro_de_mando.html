@@ -1108,22 +1108,16 @@ const UI = {
   
 // --- LOGICA PRINCIPAL (App) ---
 const App = {
-    // Estado para rastrear basura temporal
-    tempUploadedFileId: null, 
+    /// NUEVO ESTADO: Guardamos el archivo pendiente en memoria, NO en Drive
+    pendingLogoFile: null,
 
-    // NUEVA FUNCIÓN: Borrar archivo directo (Usa el interceptor del backend)
+    // Función auxiliar para borrar archivos viejos al reemplazar (Usa tu backend actual)
     async deleteFileDirectly(fileId) {
         if (!fileId) return;
-        console.log(">> Borrando archivo basura:", fileId);
-        // Llamada silenciosa (sin await)
         API.call('/.netlify/functions/update-sheet-data', { 
             method: 'POST', 
-            body: { 
-                sheet: 'LogosClientes', // Nombre irrelevante para esta acción
-                action: 'delete_file_only', // La acción mágica
-                data: { fileId: fileId } 
-            } 
-        }).catch(e => console.warn("Error en limpieza background:", e));
+            body: { sheet: 'LogosClientes', action: 'delete_file_only', data: { fileId: fileId } } 
+        }).catch(e => console.warn("Limpieza background:", e));
     },
     
     async switchView(viewId) {
@@ -2138,11 +2132,12 @@ const App = {
                             <img id="modal-logo-preview" src="${l?.logoUrl || 'https://placehold.co/100?text=Logo'}" class="max-w-full max-h-full object-contain">
                         </div>
                         <div>
-                            <input type="file" id="modal-logo-upload" class="hidden" accept="image/*" onchange="App.uploadSingleLogo(this)">
+                            <input type="file" id="modal-logo-upload" class="hidden" accept="image/*" onchange="App.previewSingleLogo(this)">
+                            
                             <button type="button" class="btn btn-secondary text-xs" onclick="document.getElementById('modal-logo-upload').click()">
                                 <i class="fas fa-upload mr-2"></i> Subir / Cambiar
                             </button>
-                            </div>
+                        </div>
                     </div>
                     <input type="hidden" id="c-logoUrl" value="${l?.logoUrl||''}">
                     <input type="hidden" id="c-fileId" value="${l?.fileId||''}">
@@ -2408,32 +2403,59 @@ const App = {
 
             // --- BLOQUE CORREGIDO LOGOS CLIENTES ---
             if (sheet === 'LogosClientes') {
-                // 1. Validaciones
-                if (!data.clientName || !data.logoUrl) { UI.showToast('Datos incompletos.', 'error'); return; }
-                if (!data.order || isNaN(data.order)) { UI.showToast('Orden inválido.', 'error'); return; }
-                // 2. GESTIÓN DE REEMPLAZO (Borrar logo viejo de Drive)
-                // Si es edición (!isNew) Y subimos foto nueva (tempUploadedFileId existe)
-                if (!isNew && App.tempUploadedFileId) {
-                    const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
-                    
-                    // Si el registro tenía un archivo viejo diferente al nuevo
-                    if (oldItem && oldItem.fileId && oldItem.fileId !== App.tempUploadedFileId) {
-                        console.log(">> Guardando edición. Borrando logo antiguo:", oldItem.fileId);
-                        // Usamos el helper directo para no tocar la fila en Sheets
-                        App.deleteFileDirectly(oldItem.fileId);
+                // 1. Validaciones Básicas
+                // Nota: Si es nuevo, validamos que haya archivo pendiente. Si es edición, que tenga nombre.
+                if (!data.clientName) { UI.showToast('El nombre es requerido.', 'error'); return; }
+                if (isNew && !App.pendingLogoFile) { UI.showToast('Debe seleccionar un logo.', 'error'); return; }
+                if (!data.order) { UI.showToast('Orden inválido.', 'error'); return; }
+
+                UI.showLoading(`Procesando ${data.clientName}...`);
+
+                // 2. LÓGICA DE SUBIDA DIFERIDA
+                // Si el usuario seleccionó un archivo nuevo, lo subimos AHORA.
+                if (App.pendingLogoFile) {
+                    try {
+                        console.log("Subiendo archivo a Drive...");
+                        const compressed = await new Promise((resolve, reject) => { 
+                            new Compressor(App.pendingLogoFile, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
+                        });
+                        const fd = new FormData(); 
+                        fd.append('file', compressed, App.pendingLogoFile.name); 
+                        fd.append('targetSubfolder', 'Logos'); 
+                        fd.append('parentFolderName', 'Clientes');
+                        
+                        // SUBIDA REAL
+                        const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+                        
+                        // BORRADO DEL VIEJO (Si es edición y estamos reemplazando)
+                        if (!isNew) {
+                            const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
+                            if (oldItem && oldItem.fileId) {
+                                console.log("Borrando logo anterior:", oldItem.fileId);
+                                App.deleteFileDirectly(oldItem.fileId); // Fuego y olvido
+                            }
+                        }
+
+                        // ACTUALIZAR DATOS CON LO NUEVO
+                        data.logoUrl = res.imageUrl;
+                        data.fileId = res.fileId;
+                        
+                    } catch (uploadError) {
+                        console.error(uploadError);
+                        UI.hideLoading();
+                        UI.showToast("Error subiendo la imagen al servidor.", "error");
+                        return; // Detener todo si falla la subida
                     }
-                }
+                } 
+                // Si no hay archivo pendiente, 'data' conserva los valores de los inputs hidden (URL y ID viejos)
 
-                // El archivo nuevo (si existe) ya es oficial. Dejamos de rastrearlo como basura.
-                App.tempUploadedFileId = null;
+                // 3. LIMPIEZA DE MEMORIA
+                App.pendingLogoFile = null;
 
-                // 3. PREPARAR ACTUALIZACIÓN DE DATOS (Update/Add)
-                UI.showLoading(`Guardando ${data.clientName}...`);
-                
+                // 4. GUARDADO EN SHEETS (Igual que antes: Reordenamiento)
                 const currentId = isNew ? `logo_${Date.now()}` : id;
                 const currentItem = { ...data, id: currentId };
 
-                // ... (Lógica de reordenamiento se mantiene igual) ...
                 let allItems = [...(AppState.data.LogosClientes || [])].filter(x => x.id !== id);
                 allItems.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
 
@@ -2448,20 +2470,19 @@ const App = {
                 allItems.forEach((item, index) => {
                     const newOrder = index + 1;
                     if (parseInt(item.order) !== newOrder || item.id === currentItem.id) {
-                        item.order = newOrder; 
+                        item.order = newOrder;
                         const dataToSave = (item.id === currentItem.id) ? currentItem : { order: newOrder };
                         
                         batch.push({
                             sheet: 'LogosClientes',
-                            // AQUÍ SIEMPRE ES UPDATE O ADD, NUNCA DELETE
                             action: (item.id === currentItem.id && isNew) ? 'add' : 'update',
                             criteria: (item.id === currentItem.id && isNew) ? null : { id: item.id },
                             data: dataToSave
                         });
                     }
                 });
-
-                await API.batchUpdate(batch, `Guardando Logo de ${data.clientName}`);
+                
+                await API.batchUpdate(batch, `Guardando datos de ${data.clientName}`);
                 
                 AppState.data.LogosClientes = allItems;
                 UI.closeModal();
@@ -3136,47 +3157,20 @@ const App = {
     async handleSaveSettings() { const data={}; document.querySelectorAll('#settings-form-container input').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'Settings',action:'update',criteria:{key:k},data:{value:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
 
-    // A. Subida Unitaria para el Modal de Logos
-    async uploadSingleLogo(input) {
+    // A. Previsualización Local (Sin subir a Drive todavía)
+    previewSingleLogo(input) {
         const file = input.files[0];
-        if(!file) return;
+        if (!file) return;
 
-        // 1. LIMPIEZA AUTOMÁTICA: Si ya había una foto subida en este modal, bórrala.
-        if (App.tempUploadedFileId) {
-            const trashId = App.tempUploadedFileId;
-            App.tempUploadedFileId = null; 
-            App.deleteFileDirectly(trashId); // Borrar la anterior
-        }
+        // 1. Guardamos el archivo en memoria para subirlo DESPUÉS (al dar Guardar)
+        App.pendingLogoFile = file;
 
-        UI.showLoading(`Subiendo ${file.name}...`);
-        
-        try {
-            const compressed = await new Promise((resolve, reject) => { 
-                new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
-            });
-            
-            const fd = new FormData(); 
-            fd.append('file', compressed, file.name); 
-            fd.append('targetSubfolder', 'Logos'); 
-            fd.append('parentFolderName', 'Clientes');
-            
-            const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
-            
-            // 2. REGISTRAR NUEVA BASURA POTENCIAL
-            App.tempUploadedFileId = res.fileId;
-
-            // Actualizar vista
-            document.getElementById('modal-logo-preview').src = res.imageUrl;
-            document.getElementById('c-logoUrl').value = res.imageUrl;
-            document.getElementById('c-fileId').value = res.fileId;
-            
-            UI.showToast('Logo listo. Guardar para confirmar.');
-        } catch (e) {
-            console.error(e);
-            UI.showToast('Error al subir: ' + e.message, 'error');
-        } finally {
-            UI.hideLoading();
-        }
+        // 2. Generamos una vista previa local inmediata
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('modal-logo-preview').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     },
 
     // B. Subida de Imágenes de Sistema (Identidad/Perfil) a Hoja 'ImagenesIdentidad'
@@ -3278,17 +3272,10 @@ const App = {
         }
     },
 
-    // Función inteligente para cancelar el modal de Logos
+    // Cancelar ahora es simple: Solo limpia la memoria local
     cancelLogoModal() {
-        // 1. Cerrar UI Inmediatamente
-        UI.closeModal();
-
-        // 2. Limpiar basura si existe usando el nuevo helper directo
-        if (App.tempUploadedFileId) {
-            const trashId = App.tempUploadedFileId;
-            App.tempUploadedFileId = null; // Reset inmediato
-            App.deleteFileDirectly(trashId);
-        }
+        App.pendingLogoFile = null; // Olvidamos el archivo
+        UI.closeModal();            // Cerramos y listo. Nada pasó en el servidor.
     },
     
     // --- INICIO CÓDIGO NUEVO (Punto 2) ---
@@ -3442,6 +3429,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
