@@ -2426,6 +2426,13 @@ const App = {
                         
                         // SUBIDA REAL
                         const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+
+
+                        console.log("--- DEBUG SAVE ---");
+                        console.log("ID actual:", id);
+                        console.log("Es nuevo?", isNew);
+                        console.log("Pending File?", App.pendingLogoFile);
+
                         
                         // BORRADO DEL VIEJO (Si es edición y estamos reemplazando)
                         if (!isNew) {
@@ -3434,6 +3441,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
