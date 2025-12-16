@@ -2429,10 +2429,12 @@ const App = {
                         
                         // BORRADO DEL VIEJO (Si es edición y estamos reemplazando)
                         if (!isNew) {
-                            const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
+                            const oldItem = AppState.data.LogosClientes.find(x => String(x.id) === String(id));
                             if (oldItem && oldItem.fileId) {
                                 console.log("Borrando logo anterior:", oldItem.fileId);
                                 App.deleteFileDirectly(oldItem.fileId); // Fuego y olvido
+                        } else {
+                                console.warn("No se encontró imagen anterior para borrar (o ID no coincide).");
                             }
                         }
 
@@ -2456,7 +2458,7 @@ const App = {
                 const currentId = isNew ? `logo_${Date.now()}` : id;
                 const currentItem = { ...data, id: currentId };
 
-                let allItems = [...(AppState.data.LogosClientes || [])].filter(x => x.id !== id);
+                let allItems = [...(AppState.data.LogosClientes || [])].filter(x => String(x.id) !== String(id));
                 allItems.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
 
                 let targetOrder = parseInt(data.order) || 1;
@@ -2469,14 +2471,15 @@ const App = {
                 const batch = [];
                 allItems.forEach((item, index) => {
                     const newOrder = index + 1;
-                    if (parseInt(item.order) !== newOrder || item.id === currentItem.id) {
+                    if (parseInt(item.order) !== newOrder || String(item.id) === String(currentItem.id)) {
                         item.order = newOrder;
-                        const dataToSave = (item.id === currentItem.id) ? currentItem : { order: newOrder };
+                        const isTarget = String(item.id) === String(currentItem.id);
+                        const dataToSave = isTarget ? currentItem : { order: newOrder };
                         
                         batch.push({
                             sheet: 'LogosClientes',
-                            action: (item.id === currentItem.id && isNew) ? 'add' : 'update',
-                            criteria: (item.id === currentItem.id && isNew) ? null : { id: item.id },
+                            action: (isTarget && isNew) ? 'add' : 'update',
+                            criteria: (isTarget && isNew) ? null : { id: item.id },
                             data: dataToSave
                         });
                     }
@@ -3429,6 +3432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
