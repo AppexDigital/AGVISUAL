@@ -69,12 +69,28 @@ exports.handler = async (event, context) => {
         body = JSON.parse(event.body);
         if (typeof body === 'string') body = JSON.parse(body);
     } catch (e) { throw new Error('JSON inválido.'); }
-
     const operations = Array.isArray(body) ? body : [body];
     const { doc, drive } = await getServices();
 
+    /* --- INICIO AJUSTE: INTERCEPTOR DE BORRADO --- */
+    // Este bloque permite borrar archivos de Drive sin necesidad de encontrar una fila en Sheets
+    for (const op of operations) {
+        if (op.action === 'delete_file_only' && op.data && op.data.fileId) {
+            try {
+                console.log(`[Drive] Borrado directo solicitado: ${op.data.fileId}`);
+                await drive.files.delete({ fileId: op.data.fileId, supportsAllDrives: true });
+            } catch (e) {
+                console.warn(`[Drive Warning] No se pudo borrar ${op.data.fileId} (quizás ya no existe):`, e.message);
+            }
+            // Marcamos como procesada para que el bucle de abajo la ignore
+            op._processed = true; 
+        }
+    }
+    /* --- FIN AJUSTE --- */
+
     const opsBySheet = {};
     operations.forEach(op => {
+        if (op._processed) return; // Saltamos las que el interceptor ya manejó
         if (!opsBySheet[op.sheet]) opsBySheet[op.sheet] = [];
         opsBySheet[op.sheet].push(op);
     });
