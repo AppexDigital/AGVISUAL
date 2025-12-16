@@ -17,6 +17,8 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
 
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
     
     <style>
         /* Estilos para que el editor se vea profesional y limpio */
@@ -2406,10 +2408,16 @@ const App = {
                 // 1. Validaciones Básicas
                 // Nota: Si es nuevo, validamos que haya archivo pendiente. Si es edición, que tenga nombre.
                 if (!data.clientName) { UI.showToast('El nombre es requerido.', 'error'); return; }
+               
                 if (isNew && !App.pendingLogoFile) { UI.showToast('Debe seleccionar un logo.', 'error'); return; }
                 if (!data.order) { UI.showToast('Orden inválido.', 'error'); return; }
 
-                UI.showLoading(`Procesando ${data.clientName}...`);
+                // AJUSTE: Mensaje dinámico según si es Creación o Edición
+                const loadingMsg = isNew 
+                    ? `Creando Logo de ${data.clientName}...` 
+                    : `Editando Logo de ${data.clientName}...`;
+                
+                UI.showLoading(loadingMsg);
 
                 // 2. LÓGICA DE SUBIDA DIFERIDA
                 // Si el usuario seleccionó un archivo nuevo, lo subimos AHORA.
@@ -3441,6 +3449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
