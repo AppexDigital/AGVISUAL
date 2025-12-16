@@ -3142,7 +3142,6 @@ const App = {
             document.getElementById('modal-logo-preview').src = res.imageUrl;
             document.getElementById('c-logoUrl').value = res.imageUrl; // URL para visualización inmediata
             document.getElementById('c-fileId').value = res.fileId;    // ID para el Robot Scheduled
-            document.getElementById('display-fileId').innerText = res.fileId;
             
             UI.showToast('Logo subido correctamente. Recuerda guardar el registro.');
         } catch (e) {
@@ -3403,6 +3402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
