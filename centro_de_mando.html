@@ -649,14 +649,17 @@ const UI = {
             });
             
         } else if (view === 'client-logos') {
-            // Renderizado Tabla Logos Clientes
             const list = (data.LogosClientes || []).sort((a,b) => (parseInt(a.order)||99) - (parseInt(b.order)||99));
+            
+            // Ajustar encabezados dinámicamente para quitar ID si existe en HTML estático
+            const tableHead = document.querySelector('#view-client-logos thead tr');
+            if(tableHead) tableHead.innerHTML = '<th class="p-4 text-center w-16">Orden</th><th class="p-4 text-center w-24">Logo</th><th class="p-4">Cliente</th><th class="p-4 text-center">Acciones</th>';
+        
             document.getElementById('client-logos-table-body').innerHTML = list.map(l => `
                 <tr class="border-b hover:bg-gray-50">
                     <td class="p-4 text-center font-mono text-xs text-gray-500">${l.order||99}</td>
                     <td class="p-4 text-center"><img src="${l.logoUrl}" class="h-10 w-auto object-contain mx-auto bg-gray-100 rounded p-1" referrerpolicy="no-referrer"></td>
                     <td class="p-4 font-bold text-sm text-gray-800">${l.clientName}</td>
-                    <td class="p-4 text-center font-mono text-xs text-gray-400">${l.fileId || '-'}</td>
                     <td class="p-4 text-center">
                         <div class="flex items-center justify-center gap-2">
                             <button class="text-blue-600 hover:text-blue-800 p-1" onclick="App.handleEditCrudItem('LogosClientes', '${l.id}')"><i class="fas fa-edit"></i></button>
@@ -2083,17 +2086,25 @@ const App = {
              }, 100);
             
         } else if (sheet === 'LogosClientes') {
-            // Lógica específica para Logos de Clientes
             const l = isNew ? {} : AppState.data.LogosClientes.find(x => x.id === id);
-            modalTitle = isNew ? 'Nuevo Logo de Cliente' : `Editar ${l.clientName}`;
+            // PUNTO 5: Título Específico
+            modalTitle = isNew ? 'Nuevo Logo' : `Editar Logo de ${l.clientName}`;
 
-            // Autocalcular orden
             let nextOrder = 1;
             if (isNew && AppState.data.LogosClientes?.length > 0) {
                 nextOrder = Math.max(...AppState.data.LogosClientes.map(i => parseInt(i.order)||0)) + 1;
             }
 
-            // HTML del Formulario con Subida Unitaria y FileID
+            // PUNTO 4: Botón Eliminar a la izquierda si es edición
+            if (!isNew) {
+                leftButtons = `
+                    <button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('LogosClientes', '${id}')">
+                        <i class="fas fa-trash mr-2"></i> Eliminar
+                    </button>
+                `;
+            }
+
+            // PUNTO 3: HTML sin etiqueta FileID visible
             html = `
                 ${UI.inputHTML('c', 'order', 'Orden', l?.order || nextOrder, 'number')}
                 ${UI.inputHTML('c', 'clientName', 'Nombre del Cliente', l?.clientName)}
@@ -2106,17 +2117,11 @@ const App = {
                         </div>
                         <div>
                             <input type="file" id="modal-logo-upload" class="hidden" accept="image/*" onchange="App.uploadSingleLogo(this)">
-                            
-                            <button type="button" class="btn btn-secondary text-xs mb-1" onclick="document.getElementById('modal-logo-upload').click()">
+                            <button type="button" class="btn btn-secondary text-xs" onclick="document.getElementById('modal-logo-upload').click()">
                                 <i class="fas fa-upload mr-2"></i> Subir / Cambiar
                             </button>
-                            
-                            <div class="text-[10px] text-gray-400 font-mono">
-                                File ID: <span id="display-fileId">${l?.fileId || '---'}</span>
                             </div>
-                        </div>
                     </div>
-                    
                     <input type="hidden" id="c-logoUrl" value="${l?.logoUrl||''}">
                     <input type="hidden" id="c-fileId" value="${l?.fileId||''}">
                 </div>
@@ -2376,21 +2381,78 @@ const App = {
                 data[el.id.replace('c-', '')] = el.value;
             });
 
-            /* --- INICIO CÓDIGO NUEVO: LOGOS CLIENTES --- */
             if (sheet === 'LogosClientes') {
-                // 1. Validación estricta
+                // 1. Validaciones
                 if (!data.clientName || !data.logoUrl) {
-                    UI.showToast('El nombre del cliente y el logo son obligatorios.', 'error');
-                    return; // Detiene el guardado si falta info
+                    UI.showToast('Nombre y Logo requeridos.', 'error'); return;
                 }
-                
-                // 2. Generación de ID específico si es nuevo
-                if (isNew) data.id = `logo_${Date.now()}`;
+                if (!data.order || isNaN(data.order)) {
+                    UI.showToast('El orden debe ser un número.', 'error'); return;
+                }
 
-                // Nota: data.fileId y data.logoUrl ya se capturaron en el bucle de arriba
-                // gracias a los inputs hidden 'c-fileId' y 'c-logoUrl' del modal.
+                // Validación Nombre Único (evitar duplicados de cliente)
+                const exists = (AppState.data.LogosClientes || []).some(l => 
+                    l.clientName.trim().toLowerCase() === data.clientName.trim().toLowerCase() && l.id !== id
+                );
+                if (exists) {
+                    UI.showToast(`El cliente "${data.clientName}" ya existe.`, 'error'); return;
+                }
+
+                // 2. Preparar datos
+                const currentId = isNew ? `logo_${Date.now()}` : id;
+                const currentItem = { ...data, id: currentId };
+                
+                // PUNTO 1: Mensaje de carga personalizado
+                UI.showLoading(`Guardando Logo de ${data.clientName}...`);
+
+                // 3. Lógica de Reordenamiento (PUNTO 7)
+                // Obtener lista excluyendo el actual
+                let allItems = [...(AppState.data.LogosClientes || [])].filter(x => x.id !== id);
+                
+                // Ordenar existentes
+                allItems.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+
+                // Calcular posición de inserción
+                let targetOrder = parseInt(data.order) || 1;
+                let targetIndex = targetOrder - 1;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex > allItems.length) targetIndex = allItems.length;
+
+                // Insertar
+                allItems.splice(targetIndex, 0, currentItem);
+
+                // 4. Preparar Batch y Renumerar
+                const batch = [];
+                allItems.forEach((item, index) => {
+                    const newOrder = index + 1;
+                    // Si el orden cambia O es el ítem actual
+                    if (parseInt(item.order) !== newOrder || item.id === currentItem.id) {
+                        item.order = newOrder; // Actualizar memoria local
+                        
+                        const dataToSave = (item.id === currentItem.id) ? currentItem : { order: newOrder };
+                        
+                        batch.push({
+                            sheet: 'LogosClientes',
+                            action: (item.id === currentItem.id && isNew) ? 'add' : 'update',
+                            criteria: (item.id === currentItem.id && isNew) ? null : { id: item.id },
+                            data: dataToSave
+                        });
+                    }
+                });
+
+                // 5. Ejecutar Batch (Pasando mensaje personalizado para evitar contador)
+                await API.batchUpdate(batch, `Guardando Logo de ${data.clientName}`);
+                
+                // Actualizar estado global
+                AppState.data.LogosClientes = allItems;
+                
+                // Finalizar
+                UI.closeModal();
+                UI.renderView('client-logos');
+                UI.showToast('Guardado correctamente');
+                UI.hideLoading();
+                return; // IMPORTANTE: Salir para no ejecutar el guardado genérico de abajo
             }
-            /* --- FIN CÓDIGO NUEVO --- */
             // Detectamos si es 'Projects' para aplicar reglas estrictas
             if (sheet === 'Projects') {
                 const errors = [];
@@ -2887,6 +2949,39 @@ const App = {
             }
         }
 
+        // PUNTO 6: Mensaje de eliminación personalizado para Logos
+        if (sheet === 'LogosClientes') {
+            const logo = AppState.data.LogosClientes?.find(l => l.id === id);
+            const clientName = logo?.clientName || 'Cliente';
+            
+            UI.showConfirm(`¿Eliminar Logo?`, `Se eliminará permanentemente el logo de ${clientName}.`, async () => {
+                // Mensaje personalizado SIN contador
+                UI.showLoading(`Eliminando Logo de ${clientName}`);
+                
+                try {
+                    // Borrar registro y archivo asociado
+                    const batch = [{
+                        sheet: 'LogosClientes',
+                        action: 'delete',
+                        criteria: { id: id },
+                        data: { fileId: logo?.fileId } // Para borrar de Drive también
+                    }];
+                    
+                    await API.batchUpdate(batch, `Eliminando Logo de ${clientName}`);
+                    
+                    // Actualizar UI
+                    AppState.data.LogosClientes = AppState.data.LogosClientes.filter(l => l.id !== id);
+                    UI.renderView('client-logos');
+                    UI.showToast('Logo eliminado');
+                } catch (e) {
+                    UI.showToast("Error: " + e.message, "error");
+                } finally {
+                    UI.hideLoading();
+                }
+            });
+            return; // Detener flujo estándar
+        }
+        
         // 2. Lógica Especial de Cascada para RESERVAS
         if (sheet === 'Bookings') {
             // Usamos 'bookingItem' para evitar conflicto con la variable 'item' de abajo
@@ -3308,6 +3403,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
