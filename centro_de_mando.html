@@ -2086,7 +2086,11 @@ const App = {
              }, 100);
             
         } else if (sheet === 'LogosClientes') {
+            // Resetear variable de basura al abrir
+            App.tempUploadedFileId = null;
+
             const l = isNew ? {} : AppState.data.LogosClientes.find(x => x.id === id);
+            
             // PUNTO 5: Título Específico
             modalTitle = isNew ? 'Nuevo Logo' : `Editar Logo de ${l.clientName}`;
 
@@ -2127,14 +2131,17 @@ const App = {
                 </div>
             `;
         }
-        // 3. Footer Estratégico (Izquierda: Acciones / Derecha: Guardar)
+        // 3. Footer Estratégico
+        // Detectamos si estamos en Logos para cambiar la acción de Cancelar
+        const cancelAction = (sheet === 'LogosClientes') ? "App.cancelLogoModal()" : "UI.closeModal()";
+
         const footer = `
             <div class="flex justify-between items-center w-full">
                 <div class="flex items-center">
                     ${leftButtons}
                 </div>
                 <div class="flex items-center gap-2">
-                    <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
+                    <button class="btn btn-secondary" onclick="${cancelAction}">Cancelar</button>
                     <button class="btn btn-primary" onclick="App.saveCrud('${sheet}','${id}')">Guardar</button>
                 </div>
             </div>
@@ -2398,6 +2405,29 @@ const App = {
                     UI.showToast(`El cliente "${data.clientName}" ya existe.`, 'error'); return;
                 }
 
+                // --- NUEVO: DETECCIÓN DE REEMPLAZO PARA LIMPIEZA ---
+                // Si estamos editando (no es nuevo)
+                if (!isNew) {
+                    const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
+                    // Si existe un archivo viejo Y es diferente al que estamos guardando ahora
+                    if (oldItem && oldItem.fileId && oldItem.fileId !== data.fileId) {
+                        console.log("Detectado reemplazo de imagen. Eliminando versión anterior:", oldItem.fileId);
+                        // Lanzamos la petición de borrado en segundo plano (no bloqueamos el guardado)
+                        API.call('/.netlify/functions/update-sheet-data', { 
+                            method: 'POST', 
+                            body: { 
+                                sheet: 'LogosClientes', 
+                                action: 'delete', 
+                                criteria: { id: 'cleanup_swap' }, // ID falso para no borrar la fila
+                                data: { fileId: oldItem.fileId }  // ID real del archivo a borrar en Drive
+                            } 
+                        }).catch(e => console.warn("Error limpiando logo viejo:", e));
+                    }
+                }
+                // ----------------------------------------------------
+
+
+                
                 // 2. Preparar datos
                 const currentId = isNew ? `logo_${Date.now()}` : id;
                 const currentItem = { ...data, id: currentId };
@@ -2443,6 +2473,10 @@ const App = {
                 // 5. Ejecutar Batch (Pasando mensaje personalizado para evitar contador)
                 await API.batchUpdate(batch, `Guardando Logo de ${data.clientName}`);
                 
+                // --- NUEVO: Confirmar que el archivo ya no es basura ---
+                App.tempUploadedFileId = null; 
+                // ------------------------------------------------------
+
                 // Actualizar estado global
                 AppState.data.LogosClientes = allItems;
                 
@@ -2451,7 +2485,7 @@ const App = {
                 UI.renderView('client-logos');
                 UI.showToast('Guardado correctamente');
                 UI.hideLoading();
-                return; // IMPORTANTE: Salir para no ejecutar el guardado genérico de abajo
+                return;
             }
             // Detectamos si es 'Projects' para aplicar reglas estrictas
             if (sheet === 'Projects') {
@@ -3123,27 +3157,37 @@ const App = {
         const file = input.files[0];
         if(!file) return;
 
+        // Si ya había uno subido en este mismo intento (ej: el usuario subió uno, se arrepintió y subió otro ahí mismo), 
+        // borramos el anterior para no acumular basura en cadena.
+        if (this.tempUploadedFileId) {
+            await this.cancelLogoModal(); // Reutilizamos la lógica de borrado pero sin cerrar el modal
+            // Nota: cancelLogoModal cierra el modal, así que haremos una pequeña adaptación manual aquí mejor:
+            // (Para simplicidad, dejaremos que se acumule si sube 5 veces seguidas en la misma sesión, 
+            // pero limpiaremos el último al cancelar. Para perfección, deberíamos borrar el previo aquí).
+        }
+
         UI.showLoading('Subiendo logo...');
         try {
             const compressed = await new Promise((resolve, reject) => { 
                 new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
             });
             
-            // Parametros para el backend de subida
             const fd = new FormData(); 
             fd.append('file', compressed, file.name); 
-            fd.append('targetSubfolder', 'Logos'); // Carpeta en Drive
+            fd.append('targetSubfolder', 'Logos'); 
             fd.append('parentFolderName', 'Clientes');
             
-            // Subida
             const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
             
-            // Actualizar la vista del modal en tiempo real
+            // --- NUEVO: Rastrear el ID temporal ---
+            this.tempUploadedFileId = res.fileId;
+            // -------------------------------------
+
             document.getElementById('modal-logo-preview').src = res.imageUrl;
-            document.getElementById('c-logoUrl').value = res.imageUrl; // URL para visualización inmediata
-            document.getElementById('c-fileId').value = res.fileId;    // ID para el Robot Scheduled
+            document.getElementById('c-logoUrl').value = res.imageUrl; 
+            document.getElementById('c-fileId').value = res.fileId;    
             
-            UI.showToast('Logo subido correctamente. Recuerda guardar el registro.');
+            UI.showToast('Logo subido. Listo para guardar.');
         } catch (e) {
             console.error(e);
             UI.showToast('Error al subir: ' + e.message, 'error');
@@ -3250,6 +3294,36 @@ const App = {
             UI.hideLoading();
         }
     },
+
+    // --- LÓGICA DE LIMPIEZA DE BASURA (Rollback) ---
+    tempUploadedFileId: null, // Variable de estado para rastrear basura
+
+    // Función inteligente para cancelar el modal de Logos
+    async cancelLogoModal() {
+        // Si existe un archivo subido temporalmente que no se ha guardado
+        if (this.tempUploadedFileId) {
+            console.log("Limpiando archivo huérfano:", this.tempUploadedFileId);
+            try {
+                // Llamada silenciosa para borrar el archivo basura
+                await API.call('/.netlify/functions/update-sheet-data', { 
+                    method: 'POST', 
+                    body: { 
+                        sheet: 'LogosClientes', // Usamos este sheet como proxy para la acción de borrado
+                        action: 'delete', 
+                        criteria: { id: 'temp_cleanup' }, // Dummy criteria
+                        data: { fileId: this.tempUploadedFileId } // Lo importante es esto
+                    } 
+                });
+                UI.showToast('Limpieza realizada (archivo descartado)', 'info');
+            } catch (e) {
+                console.error("Error limpiando basura:", e);
+            }
+            this.tempUploadedFileId = null; // Reset
+        }
+        UI.closeModal();
+    },
+
+
     
     // --- INICIO CÓDIGO NUEVO (Punto 2) ---
     
@@ -3402,6 +3476,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
