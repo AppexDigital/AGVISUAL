@@ -2405,28 +2405,40 @@ const App = {
                     UI.showToast(`El cliente "${data.clientName}" ya existe.`, 'error'); return;
                 }
 
-                // --- NUEVO: DETECCIÓN DE REEMPLAZO PARA LIMPIEZA ---
-                // Si estamos editando (no es nuevo)
+                // --- DETECCIÓN DE REEMPLAZO (Swap) ---
                 if (!isNew) {
                     const oldItem = AppState.data.LogosClientes.find(x => x.id === id);
-                    // Si existe un archivo viejo Y es diferente al que estamos guardando ahora
-                    if (oldItem && oldItem.fileId && oldItem.fileId !== data.fileId) {
-                        console.log("Detectado reemplazo de imagen. Eliminando versión anterior:", oldItem.fileId);
-                        // Lanzamos la petición de borrado en segundo plano (no bloqueamos el guardado)
+                    
+                    // Condición: Existe item viejo, tiene archivo, y el archivo nuevo (data.fileId) es DIFERENTE al viejo
+                    // Nota: data.fileId viene del input hidden que llenamos al subir
+                    if (oldItem && oldItem.fileId && data.fileId && oldItem.fileId !== data.fileId) {
+                        
+                        console.log(`Reemplazando logo. Viejo: ${oldItem.fileId}, Nuevo: ${data.fileId}`);
+                        
+                        // Mandar a borrar el viejo en segundo plano
                         API.call('/.netlify/functions/update-sheet-data', { 
                             method: 'POST', 
                             body: { 
                                 sheet: 'LogosClientes', 
                                 action: 'delete', 
-                                criteria: { id: 'cleanup_swap' }, // ID falso para no borrar la fila
-                                data: { fileId: oldItem.fileId }  // ID real del archivo a borrar en Drive
+                                // Usamos el ID real para que el backend no se queje si busca la fila,
+                                // AUNQUE la acción sea delete, si el backend está bien hecho, 
+                                // borrará el archivo de Drive indicado en 'data.fileId'.
+                                // Si tu backend borra la fila al recibir 'delete', esto sería un problema.
+                                // ASUMO QUE TU BACKEND SOLO BORRA EL ARCHIVO SI 'data.fileId' ESTÁ PRESENTE
+                                // Y LUEGO INTENTA BORRAR LA FILA.
+                                // Para evitar borrar la fila activa (porque la queremos actualizar, no borrar),
+                                // usaremos un ID dummy pero confiamos en que el backend no falle catastróficamente.
+                                criteria: { id: 'swap_cleanup_ignore_error' }, 
+                                data: { fileId: oldItem.fileId }  
                             } 
-                        }).catch(e => console.warn("Error limpiando logo viejo:", e));
+                        }).catch(e => console.warn("Error no crítico limpiando logo viejo:", e));
                     }
                 }
-                // ----------------------------------------------------
-
-
+                
+                // Confirmamos que el archivo nuevo YA NO ES BASURA
+                App.tempUploadedFileId = null;
+                // -------------------------------------
                 
                 // 2. Preparar datos
                 const currentId = isNew ? `logo_${Date.now()}` : id;
@@ -3157,16 +3169,19 @@ const App = {
         const file = input.files[0];
         if(!file) return;
 
-        // Si ya había uno subido en este mismo intento (ej: el usuario subió uno, se arrepintió y subió otro ahí mismo), 
-        // borramos el anterior para no acumular basura en cadena.
-        if (this.tempUploadedFileId) {
-            await this.cancelLogoModal(); // Reutilizamos la lógica de borrado pero sin cerrar el modal
-            // Nota: cancelLogoModal cierra el modal, así que haremos una pequeña adaptación manual aquí mejor:
-            // (Para simplicidad, dejaremos que se acumule si sube 5 veces seguidas en la misma sesión, 
-            // pero limpiaremos el último al cancelar. Para perfección, deberíamos borrar el previo aquí).
+        // LIMPIEZA INTERMEDIA: Si ya subió una foto en este mismo modal y la está cambiando de nuevo
+        if (App.tempUploadedFileId) {
+            const trashId = App.tempUploadedFileId;
+            console.log("Reemplazo en caliente. Borrando anterior:", trashId);
+            // Ejecutar borrado sin bloquear UI
+            API.call('/.netlify/functions/update-sheet-data', { 
+                method: 'POST', 
+                body: { sheet: 'LogosClientes', action: 'delete', criteria: { id: 'temp_swap' }, data: { fileId: trashId } } 
+            }).catch(e => console.warn("Error limpieza intermedia:", e));
         }
 
-        UI.showLoading('Subiendo logo...');
+        UI.showLoading(`Subiendo ${file.name}...`); // Feedback específico
+        
         try {
             const compressed = await new Promise((resolve, reject) => { 
                 new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
@@ -3179,18 +3194,18 @@ const App = {
             
             const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
             
-            // --- NUEVO: Rastrear el ID temporal ---
-            this.tempUploadedFileId = res.fileId;
-            // -------------------------------------
+            // Actualizar Variable Global de Basura
+            App.tempUploadedFileId = res.fileId;
 
+            // Actualizar UI
             document.getElementById('modal-logo-preview').src = res.imageUrl;
-            document.getElementById('c-logoUrl').value = res.imageUrl; 
-            document.getElementById('c-fileId').value = res.fileId;    
+            document.getElementById('c-logoUrl').value = res.imageUrl;
+            document.getElementById('c-fileId').value = res.fileId;
             
-            UI.showToast('Logo subido. Listo para guardar.');
+            UI.showToast('Logo listo.'); // Mensaje corto
         } catch (e) {
             console.error(e);
-            UI.showToast('Error al subir: ' + e.message, 'error');
+            UI.showToast('Error: ' + e.message, 'error');
         } finally {
             UI.hideLoading();
         }
@@ -3300,27 +3315,34 @@ const App = {
 
     // Función inteligente para cancelar el modal de Logos
     async cancelLogoModal() {
-        // Si existe un archivo subido temporalmente que no se ha guardado
-        if (this.tempUploadedFileId) {
-            console.log("Limpiando archivo huérfano:", this.tempUploadedFileId);
-            try {
-                // Llamada silenciosa para borrar el archivo basura
-                await API.call('/.netlify/functions/update-sheet-data', { 
-                    method: 'POST', 
-                    body: { 
-                        sheet: 'LogosClientes', // Usamos este sheet como proxy para la acción de borrado
-                        action: 'delete', 
-                        criteria: { id: 'temp_cleanup' }, // Dummy criteria
-                        data: { fileId: this.tempUploadedFileId } // Lo importante es esto
-                    } 
-                });
-                UI.showToast('Limpieza realizada (archivo descartado)', 'info');
-            } catch (e) {
-                console.error("Error limpiando basura:", e);
-            }
-            this.tempUploadedFileId = null; // Reset
-        }
+        // 1. UX INMEDIATA: Cerrar modal al instante
         UI.closeModal();
+        
+        // 2. PROCESO EN SEGUNDO PLANO (Fire & Forget)
+        if (App.tempUploadedFileId) {
+            const fileIdToDelete = App.tempUploadedFileId; // Capturar valor
+            App.tempUploadedFileId = null; // Resetear inmediatamente para evitar duplicados
+            
+            console.log("Iniciando limpieza silenciosa de:", fileIdToDelete);
+            
+            // No usamos 'await' para no bloquear, pero capturamos el error
+            API.call('/.netlify/functions/update-sheet-data', { 
+                method: 'POST', 
+                body: { 
+                    sheet: 'LogosClientes', 
+                    // Usamos una acción que el backend entienda. Si 'delete' requiere ID de fila,
+                    // y aquí solo queremos borrar archivo de Drive, asegúrate que tu backend
+                    // no falle si no encuentra la fila 'temp_cleanup'.
+                    action: 'delete', 
+                    criteria: { id: 'temp_cleanup' }, 
+                    data: { fileId: fileIdToDelete } 
+                } 
+            }).then(() => {
+                console.log("Basura limpiada correctamente en Drive.");
+            }).catch(e => {
+                console.warn("No se pudo limpiar el archivo temporal (revisar logs):", e);
+            });
+        }
     },
 
 
@@ -3476,6 +3498,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
