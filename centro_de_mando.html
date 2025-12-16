@@ -122,7 +122,8 @@
                 <a href="#" class="sidebar-link" data-view="videos"><i class="fas fa-video"></i>Videos</a>
                 <a href="#" class="sidebar-link" data-view="rentals"><i class="fas fa-box"></i>Alquiler</a>
                 <a href="#" class="sidebar-link" data-view="bookings"><i class="fas fa-calendar-check"></i>Reservas</a>
-                <a href="#" class="sidebar-link" data-view="settings"><i class="fas fa-cog"></i>Configuración</a>
+                <a href="#" class="sidebar-link" data-view="client-logos"><i class="fas fa-star"></i>Logos Clientes</a>
+                <a href="#" class="sidebar-link" data-view="identity"><i class="fas fa-fingerprint"></i>Identidad</a>
             </nav>
             <div class="p-4 border-t border-gray-100">
                 <button id="logout-btn" class="w-full text-left px-4 py-2 text-text-muted hover:text-red-600 transition-colors text-xs font-bold uppercase"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button>
@@ -303,10 +304,6 @@
                     </div>
                 </div>
             </div>
-
-
-            
-
             <div id="view-bookings" class="view">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-display font-bold">Reservas</h1>
@@ -322,83 +319,88 @@
                     </table>
                 </div>
             </div>
-
-            <div id="view-settings" class="view">
-                <h1 class="text-3xl font-display font-bold mb-6">Configuración</h1>
+            <div id="view-client-logos" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-display font-bold">Logos de Clientes</h1>
+                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('LogosClientes', null)">
+                        <i class="fas fa-plus"></i> Nuevo Logo
+                    </button>
+                </div>
+                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
+                            <tr>
+                                <th class="p-4 text-center w-16">Orden</th>
+                                <th class="p-4 text-center w-24">Logo</th>
+                                <th class="p-4">Cliente</th>
+                                <th class="p-4 text-center">ID Archivo</th> <th class="p-4 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="client-logos-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="view-identity" class="view">
+                <h1 class="text-3xl font-display font-bold mb-6">Identidad</h1>
+                
                 <div class="tab-nav">
-                    <button class="tab-btn active" onclick="UI.switchTab('settings-gen')">Identidad & Redes</button>
-                    <button class="tab-btn" onclick="UI.switchTab('settings-about')">Bio (Sobre Mí)</button>
-                    <button class="tab-btn" onclick="UI.switchTab('settings-clients')">Logos Clientes</button>
+                    <button class="tab-btn active" onclick="UI.switchTab('id-general')">Identidad y Redes</button>
+                    <button class="tab-btn" onclick="UI.switchTab('id-whoami')">Quién Soy</button>
                 </div>
                 
-                <div id="tab-settings-gen" class="tab-content active space-y-8">
+                <div id="tab-id-general" class="tab-content active space-y-8">
                      <div class="bg-white p-6 rounded border border-gray-200">
-                         <h3 class="font-bold text-lg mb-4 border-b pb-2">Identidad de Marca</h3>
+                         <h3 class="font-bold text-lg mb-4 border-b pb-2">Activos de Marca</h3>
                          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Logo Negro</p>
-                                <div class="h-24 bg-gray-100 border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-logo_black" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer" >
-                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_black').click()">
-                                        <i class="fas fa-camera text-white"></i>
-                                    </div>
+                                <div class="h-24 bg-gray-50 border rounded flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-logo_black').click()">
+                                    <img id="prev-logo_black" src="https://placehold.co/100x50?text=Vacio" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-upload"></i></div>
                                 </div>
-                                <input type="file" id="upload-logo_black" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_black', 'Marca', 'SettingImage')">
+                                <input type="file" id="upl-logo_black" class="hidden" accept="image/*" onchange="App.uploadSystemImage(this, 'logo_black')">
                             </div>
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Logo Blanco</p>
-                                <div class="h-24 bg-gray-800 border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-logo_white" src="https://placehold.co/100x50/transparent/png" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer" >
-                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-logo_white').click()">
-                                        <i class="fas fa-camera text-white"></i>
-                                    </div>
+                                <div class="h-24 bg-gray-900 border rounded flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-logo_white').click()">
+                                    <img id="prev-logo_white" src="https://placehold.co/100x50?text=Vacio" class="max-h-20 max-w-full object-contain" referrerpolicy="no-referrer">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-upload"></i></div>
                                 </div>
-                                <input type="file" id="upload-logo_white" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'logo_white', 'Marca', 'SettingImage')">
+                                <input type="file" id="upl-logo_white" class="hidden" accept="image/*" onchange="App.uploadSystemImage(this, 'logo_white')">
                             </div>
                              <div class="text-center">
                                 <p class="text-xs font-bold text-gray-500 mb-2">Favicon</p>
-                                <div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group">
-                                    <img id="preview-favicon" src="https://placehold.co/32" class="w-8 h-8 object-contain" referrerpolicy="no-referrer" >
-                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded cursor-pointer" onclick="document.getElementById('upload-favicon').click()">
-                                        <i class="fas fa-camera text-white"></i>
-                                    </div>
+                                <div class="h-24 bg-white border rounded flex items-center justify-center mb-2 relative group cursor-pointer" onclick="document.getElementById('upl-favicon').click()">
+                                    <img id="prev-favicon" src="https://placehold.co/32?text=ICO" class="w-8 h-8 object-contain" referrerpolicy="no-referrer">
+                                    <div class="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-upload"></i></div>
                                 </div>
-                                <input type="file" id="upload-favicon" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'favicon', 'Marca', 'SettingImage')">
+                                <input type="file" id="upl-favicon" class="hidden" accept="image/*" onchange="App.uploadSystemImage(this, 'favicon')">
                             </div>
                          </div>
                      </div>
-                     <div id="settings-form-container" class="bg-white p-6 rounded border border-gray-200"></div>
+                     
+                     <div id="identity-form-container" class="bg-white p-6 rounded border border-gray-200">
+                         </div>
                 </div>
-
-                <div id="tab-settings-about" class="tab-content">
-                    <div class="bg-white p-6 rounded border border-gray-200 max-w-3xl">
-                        <div class="mb-6 flex items-center gap-6">
-                            <div class="relative group w-32 h-32 flex-shrink-0">
-                                <img id="about-profile-preview" src="https://placehold.co/128" class="w-full h-full rounded-full object-cover border shadow-sm" referrerpolicy="no-referrer" >
-                                <div class="absolute inset-0 bg-black/50 rounded-full hidden group-hover:flex items-center justify-center cursor-pointer" onclick="document.getElementById('upload-profile-pic').click()">
-                                    <i class="fas fa-camera text-white text-2xl"></i>
+            
+                <div id="tab-id-whoami" class="tab-content">
+                    <div class="bg-white p-6 rounded border border-gray-200 max-w-4xl">
+                        <div class="flex flex-col md:flex-row gap-8 mb-6">
+                            <div class="flex-shrink-0 text-center md:text-left">
+                                <p class="text-xs font-bold text-gray-500 mb-2 uppercase">Foto de Perfil</p>
+                                <div class="relative group w-48 h-48 mx-auto md:mx-0 cursor-pointer" onclick="document.getElementById('upl-profile_pic').click()">
+                                    <img id="prev-profile_pic" src="https://placehold.co/200" class="w-full h-full rounded-lg object-cover border shadow-sm" referrerpolicy="no-referrer">
+                                    <div class="absolute inset-0 bg-black/50 rounded-lg hidden group-hover:flex items-center justify-center text-white rounded"><i class="fas fa-camera text-2xl"></i></div>
                                 </div>
-                                <input type="file" id="upload-profile-pic" class="hidden" accept="image/*" onchange="App.uploadImages(this, 'profile_image', 'Perfil', 'AboutProfile')">
+                                <input type="file" id="upl-profile_pic" class="hidden" accept="image/*" onchange="App.uploadSystemImage(this, 'profile_pic')">
                             </div>
-                            <div class="flex-1">
-                                <h3 class="font-display text-xl font-bold">Foto de Perfil</h3>
-                                <p class="text-sm text-gray-500">Aparece en la sección "Quién Soy".</p>
-                            </div>
+                            
+                            <div class="flex-1 space-y-4" id="whoami-form-container">
+                                </div>
                         </div>
-                        <div id="about-form-container" class="space-y-4"></div>
-                        <button class="btn btn-primary mt-4" onclick="App.handleSaveAbout()">Guardar Bio</button>
+                        <button class="btn btn-primary w-full md:w-auto" onclick="App.handleSaveIdentityText('whoami')">Guardar Perfil</button>
                     </div>
-                </div>
-                
-                <div id="tab-settings-clients" class="tab-content">
-                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold">Logos de Clientes</h3>
-                        <div class="flex gap-2">
-                             <button class="btn btn-secondary" onclick="App.saveGalleryChanges(null, 'ClientLogos')"><i class="fas fa-save mr-2"></i>Guardar Orden</button>
-                             <button class="btn btn-primary" onclick="App.handleClientLogos()">+ Subir Logos</button>
-                        </div>
-                    </div>
-                     <div id="clientlogos-grid" class="grid grid-cols-2 md:grid-cols-6 gap-4 bg-white p-4 rounded border"></div>
                 </div>
             </div>
         </main>
@@ -645,25 +647,69 @@ const UI = {
                     }
                 }
             });
-        } else if (view === 'settings') {
-             const s = (data.Settings || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
-             const a = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
-             if(s.logo_black) document.getElementById('preview-logo_black').src = s.logo_black;
-             if(s.logo_white) document.getElementById('preview-logo_white').src = s.logo_white;
-             if(s.favicon) document.getElementById('preview-favicon').src = s.favicon;
-             document.getElementById('settings-form-container').innerHTML = `${UI.inputHTML('settings', 'contact_email', 'Email Contacto', s.contact_email)} ${UI.inputHTML('settings', 'contact_phone', 'Teléfono', s.contact_phone)} ${UI.inputHTML('settings', 'social_instagram', 'Instagram URL', s.social_instagram)} ${UI.inputHTML('settings', 'social_whatsapp', 'WhatsApp Link', s.social_whatsapp)} ${UI.inputHTML('settings', 'social_youtube', 'YouTube URL', s.social_youtube)} ${UI.inputHTML('settings', 'social_facebook', 'Facebook URL', s.social_facebook)} <button class="btn btn-primary mt-2" onclick="App.handleSaveSettings()">Guardar Ajustes</button>`;
-             document.getElementById('about-form-container').innerHTML = `${UI.textareaHTML('about', 'filosofia', 'Mi Filosofía', a.filosofia)} ${UI.textareaHTML('about', 'proceso', 'Mi Proceso Creativo', a.proceso)}`;
-             if(a.profile_image) document.getElementById('about-profile-preview').src = a.profile_image;
-             
-             // Client Logos (Usamos memoria local si se edita en batch)
-             const logos = currentModalImages.length > 0 ? currentModalImages : (data.ClientLogos || []);
-             document.getElementById('clientlogos-grid').innerHTML = logos.sort((a,b)=>(a.order||99)-(b.order||99)).map(i => `
-                <div class="relative group border rounded p-2 bg-white flex items-center justify-center aspect-square">
-                    <img src="${i.logoUrl}" class="max-w-full max-h-full object-contain" referrerpolicy="no-referrer" >
-                    <button class="absolute top-1 right-1 text-red-500 bg-white/90 rounded-full p-1 shadow hover:bg-red-50" onclick="App.handleDeleteImageLocal('${i.id}', 'ClientLogos')"><i class="fas fa-trash"></i></button>
-                    <input type="number" class="absolute bottom-1 left-1 w-10 text-xs border text-center opacity-0 group-hover:opacity-100 transition" value="${i.order||99}" onchange="App.updateLocalImage('${i.id}', 'order', this.value, 'ClientLogos')">
+            
+        } else if (view === 'client-logos') {
+            // Renderizado Tabla Logos Clientes
+            const list = (data.LogosClientes || []).sort((a,b) => (parseInt(a.order)||99) - (parseInt(b.order)||99));
+            document.getElementById('client-logos-table-body').innerHTML = list.map(l => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 text-center font-mono text-xs text-gray-500">${l.order||99}</td>
+                    <td class="p-4 text-center"><img src="${l.logoUrl}" class="h-10 w-auto object-contain mx-auto bg-gray-100 rounded p-1" referrerpolicy="no-referrer"></td>
+                    <td class="p-4 font-bold text-sm text-gray-800">${l.clientName}</td>
+                    <td class="p-4 text-center font-mono text-xs text-gray-400">${l.fileId || '-'}</td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button class="text-blue-600 hover:text-blue-800 p-1" onclick="App.handleEditCrudItem('LogosClientes', '${l.id}')"><i class="fas fa-edit"></i></button>
+                            <button class="text-red-600 hover:text-red-800 p-1" onclick="App.handleDelete('LogosClientes', '${l.id}')"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        
+        } else if (view === 'identity') {
+            // 1. Textos
+            const ident = (data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+            const about = (data.About || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+            
+            // 2. Imágenes (Desde ImagenesIdentidad)
+            const sysImages = (data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
+        
+            // Visualizar
+            if(sysImages.logo_black) document.getElementById('prev-logo_black').src = sysImages.logo_black;
+            if(sysImages.logo_white) document.getElementById('prev-logo_white').src = sysImages.logo_white;
+            if(sysImages.favicon) document.getElementById('prev-favicon').src = sysImages.favicon;
+            if(sysImages.profile_pic) document.getElementById('prev-profile_pic').src = sysImages.profile_pic;
+        
+            // Formulario Identidad
+            document.getElementById('identity-form-container').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    ${UI.inputHTML('id', 'contact_email', 'Email Contacto', ident.contact_email, 'email')}
+                    ${UI.inputHTML('id', 'contact_phone', 'Teléfono', ident.contact_phone)}
                 </div>
-             `).join('');
+                <hr class="my-6 border-gray-100">
+                <h4 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-4">Redes Sociales</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${UI.inputHTML('id', 'social_instagram', 'Instagram', ident.social_instagram)}
+                    ${UI.inputHTML('id', 'social_linkedin', 'LinkedIn', ident.social_linkedin)}
+                    ${UI.inputHTML('id', 'social_facebook', 'Facebook', ident.social_facebook)}
+                    ${UI.inputHTML('id', 'social_youtube', 'YouTube', ident.social_youtube)}
+                    ${UI.inputHTML('id', 'social_whatsapp', 'WhatsApp', ident.social_whatsapp)}
+                </div>
+                <div class="mt-6 flex justify-end"><button class="btn btn-primary" onclick="App.handleSaveIdentityText('general')">Guardar Textos</button></div>
+            `;
+        
+            // Formulario Quién Soy
+            document.getElementById('whoami-form-container').innerHTML = `
+                ${UI.inputHTML('ab', 'fullname', 'Nombre Completo', about.fullname)}
+                ${UI.inputHTML('ab', 'job_title', 'Título Profesional', about.job_title)}
+                <div class="mb-4">
+                    <label class="form-label">Frase Introductoria</label>
+                    <input type="text" id="ab-intro_phrase" data-key="intro_phrase" class="form-input" value="${about.intro_phrase||''}" placeholder="Ej: Transformando ideas en realidad...">
+                </div>
+                ${UI.textareaHTML('ab', 'bio', 'Mi Filosofía (Bio)', about.bio)}
+                ${UI.textareaHTML('ab', 'process', 'Mi Proceso', about.process)}
+            `;
+            
         } else if (view === 'projects') {
 
             document.getElementById('projects-table-body').innerHTML = (data.Projects||[]).sort((a,b)=>(a.order||99)-(b.order||99)).map(p => {
@@ -747,9 +793,8 @@ const UI = {
                     <span class="portfolio-badge absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-mono">#${i.portfolioOrder||99}</span>
                 </div>
             `).join('') : '<p class="col-span-full text-center text-gray-500 py-10 w-full">No hay imágenes marcadas para el portafolio.</p>';
-        } 
         
-        else if (view === 'videos') {
+        } else if (view === 'videos') {
             document.getElementById('videos-table-body').innerHTML = (data.Videos || []).sort((a,b) => (a.order||99)-(b.order||99)).map(v => `
                 <tr class="border-b hover:bg-gray-50"><td class="p-4 font-mono text-xs">${v.order||99}</td><td class="p-4 font-bold text-sm">${v.title}</td><td class="p-4 text-xs text-blue-500 truncate max-w-xs"><a href="${v.embedUrl}" target="_blank">${v.embedUrl}</a></td><td class="p-4 flex gap-3"><button class="text-blue-600" onclick="App.handleEditCrudItem('Videos', '${v.id}')"><i class="fas fa-edit"></i></button><button class="text-red-600" onclick="App.handleDelete('Videos', '${v.id}')"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
@@ -1089,8 +1134,13 @@ const App = {
         else if (view === 'services') { if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); }
         else if (view === 'videos') { if(need('Videos')) sheets.push('Videos'); }
         else if (view === 'bookings') { if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); }
-        else if (view === 'settings') { if(need('Settings')) sheets.push('Settings','About','ClientLogos'); }
-        
+        // Reemplaza la línea anterior con estas dos líneas:
+        else if (view === 'client-logos') { if(need('LogosClientes')) sheets.push('LogosClientes'); }
+        else if (view === 'identity') { 
+            if(need('Identidad')) sheets.push('Identidad'); 
+            if(need('About')) sheets.push('About'); 
+            if(need('ImagenesIdentidad')) sheets.push('ImagenesIdentidad'); 
+        }
         if (sheets.length > 0) { 
             sheets = [...new Set(sheets)];
             const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets.join(',')}`); 
@@ -1922,9 +1972,7 @@ const App = {
                      disable: getDisabledDates(b?.itemId)
                  });
              }, 100);
-        // --- FIN CÓDIGO NUEVO ---
-
-            
+        // --- FIN CÓDIGO NUEVO ---      
         } else if(sheet === 'BlockedDates'){
              // 1. Obtener Datos para Edición
              const b = isNew ? {} : AppState.data.BlockedDates.find(x => x.blockId === id);
@@ -2033,8 +2081,47 @@ const App = {
                  };
 
              }, 100);
-        }
+            
+        } else if (sheet === 'LogosClientes') {
+            // Lógica específica para Logos de Clientes
+            const l = isNew ? {} : AppState.data.LogosClientes.find(x => x.id === id);
+            modalTitle = isNew ? 'Nuevo Logo de Cliente' : `Editar ${l.clientName}`;
 
+            // Autocalcular orden
+            let nextOrder = 1;
+            if (isNew && AppState.data.LogosClientes?.length > 0) {
+                nextOrder = Math.max(...AppState.data.LogosClientes.map(i => parseInt(i.order)||0)) + 1;
+            }
+
+            // HTML del Formulario con Subida Unitaria y FileID
+            html = `
+                ${UI.inputHTML('c', 'order', 'Orden', l?.order || nextOrder, 'number')}
+                ${UI.inputHTML('c', 'clientName', 'Nombre del Cliente', l?.clientName)}
+                
+                <div class="mb-4">
+                    <label class="form-label">Logo</label>
+                    <div class="flex items-center gap-4 bg-gray-50 p-3 rounded border border-gray-200">
+                        <div class="w-16 h-16 bg-white border rounded flex items-center justify-center overflow-hidden">
+                            <img id="modal-logo-preview" src="${l?.logoUrl || 'https://placehold.co/100?text=Logo'}" class="max-w-full max-h-full object-contain">
+                        </div>
+                        <div>
+                            <input type="file" id="modal-logo-upload" class="hidden" accept="image/*" onchange="App.uploadSingleLogo(this)">
+                            
+                            <button type="button" class="btn btn-secondary text-xs mb-1" onclick="document.getElementById('modal-logo-upload').click()">
+                                <i class="fas fa-upload mr-2"></i> Subir / Cambiar
+                            </button>
+                            
+                            <div class="text-[10px] text-gray-400 font-mono">
+                                File ID: <span id="display-fileId">${l?.fileId || '---'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="c-logoUrl" value="${l?.logoUrl||''}">
+                    <input type="hidden" id="c-fileId" value="${l?.fileId||''}">
+                </div>
+            `;
+        }
         // 3. Footer Estratégico (Izquierda: Acciones / Derecha: Guardar)
         const footer = `
             <div class="flex justify-between items-center w-full">
@@ -2289,6 +2376,21 @@ const App = {
                 data[el.id.replace('c-', '')] = el.value;
             });
 
+            /* --- INICIO CÓDIGO NUEVO: LOGOS CLIENTES --- */
+            if (sheet === 'LogosClientes') {
+                // 1. Validación estricta
+                if (!data.clientName || !data.logoUrl) {
+                    UI.showToast('El nombre del cliente y el logo son obligatorios.', 'error');
+                    return; // Detiene el guardado si falta info
+                }
+                
+                // 2. Generación de ID específico si es nuevo
+                if (isNew) data.id = `logo_${Date.now()}`;
+
+                // Nota: data.fileId y data.logoUrl ya se capturaron en el bucle de arriba
+                // gracias a los inputs hidden 'c-fileId' y 'c-logoUrl' del modal.
+            }
+            /* --- FIN CÓDIGO NUEVO --- */
             // Detectamos si es 'Projects' para aplicar reglas estrictas
             if (sheet === 'Projects') {
                 const errors = [];
@@ -2921,7 +3023,139 @@ const App = {
     async handleSaveSettings() { const data={}; document.querySelectorAll('#settings-form-container input').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'Settings',action:'update',criteria:{key:k},data:{value:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
     async handleSaveAbout() { const data={}; document.querySelectorAll('#about-form-container textarea').forEach(e=>data[e.dataset.key]=e.value); UI.showLoading('Guardando...'); try{ for(const [k,v] of Object.entries(data)) await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet:'About',action:'update',criteria:{section:k},data:{content:v}}}); UI.showToast('Listo'); }catch(e){alert(e.message);} finally{UI.hideLoading();} },
 
+    // A. Subida Unitaria para el Modal de Logos (Genera FileId)
+    async uploadSingleLogo(input) {
+        const file = input.files[0];
+        if(!file) return;
 
+        UI.showLoading('Subiendo logo...');
+        try {
+            const compressed = await new Promise((resolve, reject) => { 
+                new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
+            });
+            
+            // Parametros para el backend de subida
+            const fd = new FormData(); 
+            fd.append('file', compressed, file.name); 
+            fd.append('targetSubfolder', 'Logos'); // Carpeta en Drive
+            fd.append('parentFolderName', 'Clientes');
+            
+            // Subida
+            const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+            
+            // Actualizar la vista del modal en tiempo real
+            document.getElementById('modal-logo-preview').src = res.imageUrl;
+            document.getElementById('c-logoUrl').value = res.imageUrl; // URL para visualización inmediata
+            document.getElementById('c-fileId').value = res.fileId;    // ID para el Robot Scheduled
+            document.getElementById('display-fileId').innerText = res.fileId;
+            
+            UI.showToast('Logo subido correctamente. Recuerda guardar el registro.');
+        } catch (e) {
+            console.error(e);
+            UI.showToast('Error al subir: ' + e.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    // B. Subida de Imágenes de Sistema (Identidad/Perfil) a Hoja 'ImagenesIdentidad'
+    async uploadSystemImage(input, keyName) {
+        const file = input.files[0];
+        if(!file) return;
+
+        UI.showLoading('Actualizando imagen...');
+        try {
+            const compressed = await new Promise((resolve, reject) => { 
+                new Compressor(file, { quality: 0.8, maxWidth: 800, success: resolve, error: reject }); 
+            });
+            const fd = new FormData(); 
+            fd.append('file', compressed, file.name); 
+            fd.append('targetSubfolder', 'Identidad'); 
+            fd.append('parentFolderName', 'Sistema');
+            
+            const res = await API.call('/.netlify/functions/upload-image', { method: 'POST', body: fd });
+
+            // Lógica de Guardado Específica para 'ImagenesIdentidad'
+            const existing = (AppState.data.ImagenesIdentidad || []).find(i => i.key === keyName);
+            const action = existing ? 'update' : 'add';
+            const criteria = existing ? { id: existing.id } : null;
+            
+            const newData = {
+                id: existing ? existing.id : `sys_${Date.now()}`,
+                key: keyName,
+                imageUrl: res.imageUrl,
+                fileId: res.fileId // El robot usará esto para mantener el link vivo
+            };
+
+            await API.call('/.netlify/functions/update-sheet-data', { 
+                method: 'POST', 
+                body: { sheet: 'ImagenesIdentidad', action, criteria, data: newData } 
+            });
+            
+            // Actualizar UI
+            const previewEl = document.getElementById(`prev-${keyName}`) || document.getElementById(`preview-${keyName}`);
+            if(previewEl) previewEl.src = res.imageUrl;
+            
+            // Actualizar Memoria Local
+            if(!AppState.data.ImagenesIdentidad) AppState.data.ImagenesIdentidad = [];
+            if(existing) Object.assign(existing, newData);
+            else AppState.data.ImagenesIdentidad.push(newData);
+
+            UI.showToast('Imagen actualizada.');
+        } catch (e) {
+            console.error(e);
+            UI.showToast('Error: ' + e.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    // C. Guardar Textos de Identidad/Perfil (Hojas 'Identidad' y 'About')
+    async handleSaveIdentityText(section) {
+        // Determinar contexto
+        const isGeneral = section === 'general';
+        const containerId = isGeneral ? 'identity-form-container' : 'whoami-form-container';
+        const sheetName = isGeneral ? 'Identidad' : 'About';
+        
+        const inputs = document.querySelectorAll(`#${containerId} input, #${containerId} textarea`);
+        
+        UI.showLoading('Guardando información...');
+        try {
+            const batch = [];
+            const currentData = AppState.data[sheetName] || [];
+
+            inputs.forEach(el => {
+                // Obtenemos la 'key' del atributo data-key o limpiando el ID
+                const key = el.dataset.key || el.id.replace('id-', '').replace('ab-', '');
+                const val = el.value;
+                
+                if (key) {
+                    const exists = currentData.some(i => i.key === key);
+                    if (exists) {
+                        batch.push({ sheet: sheetName, action: 'update', criteria: { key }, data: { value: val } });
+                    } else if (val) { // Solo crear si tiene valor
+                        batch.push({ sheet: sheetName, action: 'add', data: { key, value: val } });
+                    }
+                }
+            });
+
+            if(batch.length > 0) {
+                await API.batchUpdate(batch, "Sincronizando datos...");
+                
+                // Recargar datos para confirmar
+                await App.ensureDataForView('identity', true);
+                UI.renderView('identity'); // Refrescar vista
+                UI.showToast('Información guardada correctamente');
+            } else {
+                UI.showToast('No se detectaron cambios', 'info');
+            }
+        } catch(e) {
+            console.error(e);
+            UI.showToast('Error al guardar: ' + e.message, 'error');
+        } finally {
+            UI.hideLoading();
+        }
+    },
     
     // --- INICIO CÓDIGO NUEVO (Punto 2) ---
     
@@ -3074,6 +3308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
