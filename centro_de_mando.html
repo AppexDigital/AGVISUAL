@@ -2227,26 +2227,64 @@ const App = {
              setTimeout(() => {
                  const startInput = document.getElementById('c-startDate');
                  const endInput = document.getElementById('c-endDate');
+                 const itemSelect = document.getElementById('c-itemId');
                  
+                 // 1. Función para obtener fechas prohibidas (Bloqueos + Reservas de ese equipo)
                  const getDisabledDates = (itemId) => {
                      if(!itemId) return [];
                      const blocks = AppState.data.BlockedDates || [];
-                     return blocks.filter(blk => blk.itemId === itemId && blk.bookingId !== id) 
-                                  .map(blk => ({ from: blk.startDate, to: blk.endDate }));
+                     // Filtramos bloqueos de ESTE equipo, EXCLUYENDO el bloqueo de la reserva actual (si estamos editando)
+                     return blocks
+                        .filter(blk => blk.itemId === itemId && blk.bookingId !== id) 
+                        .map(blk => ({ from: blk.startDate, to: blk.endDate }));
                  };
 
-                 // --- FUNCIÓN DE CÁLCULO ROBUSTA ---
+                 // 2. Configuración Base
+                 const config = { 
+                     locale: 'es', 
+                     dateFormat: "Y-m-d", 
+                     minDate: "today",
+                     // Cargar bloqueos iniciales del equipo seleccionado actualmente
+                     disable: getDisabledDates(itemSelect.value)
+                 };
+                 
+                 // 3. Iniciar Calendarios
+                 const fpStart = flatpickr(startInput, { 
+                     ...config, 
+                     onChange: (d) => { 
+                        if(fpEnd) fpEnd.set('minDate', d[0]); 
+                        window.calculateBookingPriceGlobal(); 
+                     }
+                 });
+                 
+                 const fpEnd = flatpickr(endInput, { 
+                     ...config,
+                     onChange: () => window.calculateBookingPriceGlobal()
+                 });
+
+                 // 4. ESCUCHAR CAMBIO DE EQUIPO (La clave para que se pongan grises)
+                 itemSelect.addEventListener('change', () => {
+                     const newItemId = itemSelect.value;
+                     const newDisabled = getDisabledDates(newItemId);
+                     
+                     // Inyectar las nuevas fechas bloqueadas a los calendarios
+                     fpStart.set('disable', newDisabled);
+                     fpEnd.set('disable', newDisabled);
+                     
+                     // Recalcular precio
+                     window.calculateBookingPriceGlobal();
+                 });
+
+                 // 5. Función de Cálculo de Precio (Global)
                  window.calculateBookingPriceGlobal = () => {
-                     const itemSelect = document.getElementById('c-itemId');
-                     const sVal = document.getElementById('c-startDate').value;
-                     const eVal = document.getElementById('c-endDate').value;
+                     const sVal = startInput.value;
+                     const eVal = endInput.value;
                      const totalInput = document.getElementById('c-totalPrice');
                      const taxDiv = document.getElementById('tax-detail');
 
                      if (sVal && eVal && itemSelect.value) {
                          const sDate = new Date(sVal);
                          const eDate = new Date(eVal);
-                         
                          const diffTime = Math.abs(eDate - sDate);
                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
 
@@ -2255,7 +2293,6 @@ const App = {
                          if (item && diffDays > 0) {
                              const basePrice = parseFloat(item.pricePerDay) || 0;
                              const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                             
                              let subtotal = basePrice * diffDays;
                              let total = subtotal;
                              
@@ -2269,31 +2306,9 @@ const App = {
                                  taxDiv.classList.remove('hidden');
                              }
                              totalInput.value = total.toFixed(2);
-                             
-                             // Actualizar bloqueos del calendario según nuevo equipo
-                             const disabled = getDisabledDates(itemSelect.value);
-                             if(fpStart) fpStart.set('disable', disabled);
-                             if(fpEnd) fpEnd.set('disable', disabled);
                          }
                      }
                  };
-
-                 const config = { locale: 'es', dateFormat: "Y-m-d", minDate: "today" };
-                 
-                 const fpStart = flatpickr(startInput, { 
-                     ...config, 
-                     onChange: (d) => { 
-                        if(fpEnd) fpEnd.set('minDate', d[0]); 
-                        window.calculateBookingPriceGlobal(); 
-                     },
-                     disable: getDisabledDates(b?.itemId) 
-                 });
-                 
-                 const fpEnd = flatpickr(endInput, { 
-                     ...config,
-                     onChange: () => window.calculateBookingPriceGlobal(),
-                     disable: getDisabledDates(b?.itemId)
-                 });
              }, 100);
         // --- FIN CÓDIGO NUEVO ---      
         } else if(sheet === 'BlockedDates'){
@@ -3805,6 +3820,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
