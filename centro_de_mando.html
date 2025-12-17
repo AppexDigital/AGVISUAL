@@ -142,11 +142,11 @@
                     <div>
                         <h1 class="text-4xl font-display font-bold text-gray-900 tracking-tight">Centro de Control</h1>
                         <p class="text-gray-500 text-sm mt-1 flex items-center gap-2">
-                            <span class="w-2 h-2 bg-green-500 animate-pulse"></span> Sistema Operativo en Línea
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Sistema Operativo en Línea
                         </p>
                     </div>
                     
-                    <div class="bg-white p-2 border border-gray-200 flex flex-wrap items-center gap-2 w-full xl:w-auto shadow-sm">
+                    <div class="bg-white p-2 rounded-lg shadow-sm border border-gray-200 flex flex-wrap items-center gap-2 w-full xl:w-auto">
                         
                         <div class="flex gap-2 border-r border-gray-200 pr-3 mr-1">
                             <button onclick="App.handleManualBooking()" class="btn btn-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border-none shadow-none font-bold" title="Nueva Reserva">
@@ -156,16 +156,16 @@
 
                         <div class="flex items-center gap-2">
                             <i class="fas fa-filter text-gray-400 text-xs ml-1"></i>
-                            <select id="dash-time-filter" class="form-select text-sm py-1.5 pl-2 pr-8 border-gray-300 bg-gray-50 focus:bg-white transition w-40" onchange="App.toggleCustomDate()">
-                                <optgroup label="Histórico (Cerrado)">
+                            <select id="dash-time-filter" class="form-select text-sm py-1.5 pl-2 pr-8 rounded border-gray-300 bg-gray-50 focus:bg-white transition w-40" onchange="App.toggleCustomDate()">
+                                <optgroup label="Histórico">
                                     <option value="current_month" selected>Este Mes</option>
                                     <option value="3">Últimos 3 Meses</option>
                                     <option value="6">Últimos 6 Meses</option>
                                     <option value="12">Último Año</option>
                                     <option value="all">Todo el Histórico</option>
                                 </optgroup>
-                                <optgroup label="Futuro">
-                                    <option value="future">Proyección (Futuro)</option>
+                                <optgroup label="Proyección">
+                                    <option value="future">Futuro (Proyección)</option>
                                 </optgroup>
                                 <optgroup label="Específico">
                                     <option value="custom">Rango Personalizado</option>
@@ -188,31 +188,31 @@
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-gradient-to-br from-white to-gray-50 p-5 border border-gray-200 shadow-sm relative overflow-hidden group">
+                        <div class="bg-gradient-to-br from-white to-gray-50 p-5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group">
                             <div class="flex justify-between items-start mb-2">
                                 <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Generado</p>
-                                <div class="p-1.5 bg-gray-200 text-gray-600 text-xs"><i class="fas fa-dollar-sign"></i></div>
+                                <div class="p-1.5 bg-gray-200 rounded text-gray-600 text-xs"><i class="fas fa-dollar-sign"></i></div>
                             </div>
                             <h3 class="text-3xl font-bold text-gray-900 tracking-tight" id="kpi-rev-total">$0.00</h3>
                             <div class="mt-3 flex items-center gap-2 text-[10px] font-medium text-gray-500">
-                                <span class="px-1.5 py-0.5 bg-green-100 text-green-700">Pagado: <span id="kpi-rev-paid">$0</span></span>
-                                <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700">Por Cobrar: <span id="kpi-rev-confirmed">$0</span></span>
+                                <span class="px-1.5 py-0.5 rounded bg-green-100 text-green-700">Pagado: <span id="kpi-rev-paid">$0</span></span>
+                                <span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Por Cobrar: <span id="kpi-rev-confirmed">$0</span></span>
                             </div>
                         </div>
 
-                        <div class="bg-white p-5 border border-yellow-100 shadow-sm relative overflow-hidden">
-                            <div class="absolute right-0 top-0 w-16 h-16 bg-yellow-50 -mr-4 -mt-4 z-0"></div>
+                        <div class="bg-white p-5 rounded-xl border border-yellow-100 shadow-sm relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-16 h-16 bg-yellow-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
                             <div class="relative z-10">
                                 <div class="flex justify-between items-start mb-2">
                                     <p class="text-[10px] font-bold text-yellow-600 uppercase tracking-wider">Oportunidad (Pendientes)</p>
                                     <i class="fas fa-hourglass-half text-yellow-400"></i>
                                 </div>
                                 <h3 class="text-3xl font-bold text-gray-800 tracking-tight" id="kpi-rev-pending">$0.00</h3>
-                                <p class="text-[10px] text-gray-400 mt-1">Potencial en este periodo</p>
+                                <p class="text-[10px] text-gray-400 mt-1">Ingresos potenciales en este periodo</p>
                             </div>
                         </div>
 
-                        <div class="bg-white p-5 border border-red-50 shadow-sm relative overflow-hidden">
+                        <div class="bg-white p-5 rounded-xl border border-red-50 shadow-sm relative overflow-hidden">
                             <div class="flex justify-between items-start mb-2">
                                 <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider">No Concretado</p>
                                 <i class="fas fa-ban text-red-200"></i>
@@ -221,18 +221,18 @@
                             <p class="text-[10px] text-gray-400 mt-1">Reservas canceladas</p>
                         </div>
 
-                        <div class="bg-white p-5 border border-gray-200 shadow-sm flex flex-col justify-center items-center text-center">
+                        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center items-center text-center">
                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Volumen de Rentas</p>
                             <h3 class="text-4xl font-bold text-gray-800 tracking-tight" id="kpi-count-total">0</h3>
-                            <p class="text-[10px] text-gray-400">Transacciones</p>
+                            <p class="text-[10px] text-gray-400">Transacciones en periodo</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                        <div class="lg:col-span-2 bg-white p-6 shadow-sm border border-gray-200 flex flex-col h-96">
+                        <div class="lg:col-span-2 bg-white p-6 shadow-sm border border-gray-200 rounded-xl flex flex-col h-96">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-bold text-gray-800 text-sm">Tendencia de Ingresos</h3>
-                                <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 uppercase font-bold" id="chart-label-period">Vista Dinámica</span>
+                                <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-full uppercase font-bold" id="chart-label-period">Vista Dinámica</span>
                             </div>
                             <div class="relative flex-1 w-full min-h-0">
                                 <canvas id="revenueChart"></canvas>
@@ -240,15 +240,15 @@
                         </div>
 
                         <div class="flex flex-col gap-6 h-96">
-                            <div class="bg-white p-4 shadow-sm border border-gray-200 flex-1 flex flex-col relative">
+                            <div class="bg-white p-4 shadow-sm border border-gray-200 rounded-xl flex-1 flex flex-col relative">
                                 <h3 class="font-bold text-gray-800 text-xs text-center mb-2">Distribución por Estado</h3>
                                 <div class="relative flex-1 w-full">
                                     <canvas id="statusChart"></canvas>
                                 </div>
                             </div>
                             
-                            <div class="bg-white p-4 shadow-sm border border-gray-200 flex-1 flex flex-col relative z-0">
-                                <h3 class="font-bold text-gray-800 text-xs text-center mb-2">Top Equipos (Periodo)</h3>
+                            <div class="bg-white p-4 shadow-sm border border-gray-200 rounded-xl flex-1 flex flex-col relative">
+                                <h3 class="font-bold text-gray-800 text-xs text-center mb-2">Top Equipos (En este periodo)</h3>
                                 <div class="relative flex-1 w-full">
                                     <canvas id="productsChart"></canvas>
                                 </div>
@@ -261,7 +261,7 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                     
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[28rem]">
+                    <div class="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[28rem]">
                         <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-white flex justify-between items-center shrink-0">
                             <h3 class="font-bold text-blue-900 text-sm flex items-center gap-2">
                                 <i class="fas fa-calendar-day text-blue-500"></i> Próximas Entregas
@@ -272,112 +272,79 @@
                             </div>
                     </div>
 
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[28rem] relative">
+                    <div class="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[28rem] relative">
                         <div class="absolute top-0 left-0 w-1 h-full bg-yellow-400 z-10"></div>
                         <div class="p-4 border-b bg-white flex justify-between items-center shrink-0 pl-6">
                             <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
                                 <i class="fas fa-inbox text-yellow-500"></i> Solicitudes Recientes
                             </h3>
-                            <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5" id="kpi-pending-badge">0</span>
+                            <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full" id="kpi-pending-badge">0</span>
                         </div>
                         <div class="flex-1 overflow-y-auto p-3 space-y-2" id="dashboard-pending-list">
                              </div>
                     </div>
 
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden flex flex-col h-auto">
+                    <div class="bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden flex flex-col h-[28rem]">
                         <div class="p-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
                             <h3 class="font-bold text-gray-800 text-sm">Resumen del Sistema</h3>
                             <i class="fas fa-network-wired text-gray-300"></i>
                         </div>
-                        <div class="p-4 grid grid-cols-2 xl:grid-cols-2 gap-3 text-xs">
+                        <div class="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-3 text-xs content-start">
                             
-                            <div onclick="App.switchView('projects')" class="p-3 bg-white border border-gray-100 hover:border-purple-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-camera text-purple-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-projects">0</span>
-                                </div>
-                                <span class="text-gray-500 block text-left">Proyectos</span>
+                            <div onclick="App.switchView('projects')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-purple-200 hover:shadow-sm cursor-pointer transition text-center group">
+                                <i class="fas fa-camera text-purple-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-projects">0</span>
+                                <span class="text-gray-500">Proyectos</span>
+                            </div>
+                            <div onclick="App.switchView('portfolio-manager')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-pink-200 hover:shadow-sm cursor-pointer transition text-center group">
+                                <i class="fas fa-images text-pink-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-portfolio">0</span>
+                                <span class="text-gray-500">Portafolio</span>
+                            </div>
+                            <div onclick="App.switchView('services')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 hover:shadow-sm cursor-pointer transition text-center group relative overflow-hidden">
+                                <i class="fas fa-concierge-bell text-blue-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-services">0</span>
+                                <span class="text-gray-500">Servicios</span>
+                                <div class="absolute bottom-0 left-0 w-full bg-blue-50 text-[9px] text-blue-600 py-0.5" id="stat-services-img">0 Fotos</div>
+                            </div>
+                            <div onclick="App.switchView('videos')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-red-200 hover:shadow-sm cursor-pointer transition text-center group">
+                                <i class="fas fa-video text-red-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-videos">0</span>
+                                <span class="text-gray-500">Videos</span>
                             </div>
 
-                            <div onclick="App.switchView('portfolio-manager')" class="p-3 bg-white border border-gray-100 hover:border-pink-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-images text-pink-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-portfolio">0</span>
-                                </div>
-                                <span class="text-gray-500 block text-left">Portafolio</span>
+                            <div onclick="App.switchView('rentals'); UI.switchTab('rental-items')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm cursor-pointer transition text-center group relative overflow-hidden">
+                                <i class="fas fa-box text-gray-600 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-items">0</span>
+                                <span class="text-gray-500">Equipos</span>
+                                <div class="absolute bottom-0 left-0 w-full bg-gray-100 text-[9px] text-gray-600 py-0.5" id="stat-items-img">0 Fotos</div>
                             </div>
-
-                            <div onclick="App.switchView('services')" class="p-3 bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-concierge-bell text-blue-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-services">0</span>
-                                </div>
-                                <div class="flex justify-between items-end">
-                                    <span class="text-gray-500">Servicios</span>
-                                    <span class="text-[9px] text-blue-400 bg-blue-50 px-1" id="stat-services-img">0 Ft</span>
-                                </div>
+                            <div onclick="App.switchView('rentals'); UI.switchTab('rental-cats')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-gray-300 hover:shadow-sm cursor-pointer transition text-center group">
+                                <i class="fas fa-tags text-gray-400 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-cats">0</span>
+                                <span class="text-gray-500">Categorías</span>
                             </div>
-
-                            <div onclick="App.switchView('videos')" class="p-3 bg-white border border-gray-100 hover:border-red-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-video text-red-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-videos">0</span>
-                                </div>
-                                <span class="text-gray-500 block text-left">Videos</span>
+                            <div onclick="App.switchView('bookings')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-green-200 hover:shadow-sm cursor-pointer transition text-center group">
+                                <i class="fas fa-calendar-check text-green-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-bookings">0</span>
+                                <span class="text-gray-500">Reservas</span>
                             </div>
-
-                            <div onclick="App.switchView('rentals'); UI.switchTab('rental-items')" class="p-3 bg-white border border-gray-100 hover:border-gray-300 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-box text-gray-600 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-items">0</span>
-                                </div>
-                                <div class="flex justify-between items-end">
-                                    <span class="text-gray-500">Equipos</span>
-                                    <span class="text-[9px] text-gray-400 bg-gray-50 px-1" id="stat-items-img">0 Ft</span>
-                                </div>
-                            </div>
-
-                            <div onclick="App.switchView('rentals'); UI.switchTab('rental-cats')" class="p-3 bg-white border border-gray-100 hover:border-gray-300 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-tags text-gray-400 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-cats">0</span>
-                                </div>
-                                <span class="text-gray-500 block text-left">Categorías</span>
-                            </div>
-
-                            <div onclick="App.switchView('bookings')" class="p-3 bg-white border border-gray-100 hover:border-green-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-calendar-check text-green-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-bookings">0</span>
-                                </div>
-                                <span class="text-gray-500 block text-left">Reservas</span>
-                            </div>
-
-                            <div onclick="App.switchView('rentals'); UI.switchTab('blocked-dates')" class="p-3 bg-white border border-gray-100 hover:border-orange-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-ban text-orange-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-blocked">0</span>
-                                </div>
-                                <span class="text-gray-500 block text-left">Bloqueos</span>
+                            <div onclick="App.switchView('rentals'); UI.switchTab('blocked-dates')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-orange-200 hover:shadow-sm cursor-pointer transition text-center group">
+                                <i class="fas fa-ban text-orange-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-blocked">0</span>
+                                <span class="text-gray-500">Bloqueos</span>
                             </div>
                             
-                            <div onclick="App.switchView('client-logos')" class="p-3 bg-white border border-gray-100 hover:border-yellow-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-star text-yellow-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-logos">0</span>
-                                </div>
-                                <span class="text-gray-500 block text-left">Clientes</span>
+                            <div onclick="App.switchView('client-logos')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-yellow-200 hover:shadow-sm cursor-pointer transition text-center group">
+                                <i class="fas fa-star text-yellow-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-logos">0</span>
+                                <span class="text-gray-500">Clientes</span>
                             </div>
-
-                            <div onclick="App.switchView('identity')" class="p-3 bg-white border border-gray-100 hover:border-teal-200 hover:shadow-sm cursor-pointer transition text-center group">
-                                <div class="flex justify-between items-center mb-1">
-                                    <i class="fas fa-id-card text-teal-500 text-lg"></i>
-                                    <span class="font-bold text-gray-800 text-lg" id="stat-identity">1</span>
-                                </div>
-                                <div class="flex justify-between items-end">
-                                    <span class="text-gray-500">Identidad</span>
-                                    <span class="text-[9px] text-teal-600 bg-teal-50 px-1" id="stat-identity-img">0 Ft</span>
-                                </div>
+                            <div onclick="App.switchView('identity')" class="p-3 bg-white border border-gray-100 rounded-lg hover:border-teal-200 hover:shadow-sm cursor-pointer transition text-center group relative overflow-hidden">
+                                <i class="fas fa-id-card text-teal-500 mb-2 text-xl group-hover:scale-110 transition-transform block"></i>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-identity">1</span>
+                                <span class="text-gray-500">Identidad</span>
+                                <div class="absolute bottom-0 left-0 w-full bg-teal-50 text-[9px] text-teal-600 py-0.5" id="stat-identity-img">0 Fotos</div>
                             </div>
 
                         </div>
@@ -755,110 +722,89 @@ const UI = {
             const bookings = data.Bookings || [];
             const items = data.RentalItems || [];
             
-            // 1. LOGICA DE FILTRADO TEMPORAL ESTRICTA
+            // 1. LOGICA DE FILTRADO TEMPORAL AVANZADA
             const filterEl = document.getElementById('dash-time-filter');
             const filterVal = filterEl ? filterEl.value : 'current_month';
             
             let filteredBookings = [];
             let chartLabels = [];
-            
+            let dateMode = 'month'; // 'month' o 'day' para granularidad del gráfico
+
             const now = new Date();
-            // Normalizar "Hoy" al inicio del día para comparaciones limpias
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const todayStr = today.toISOString().split('T')[0];
+            const todayStr = now.toISOString().split('T')[0];
             const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
-            // Helper: Convertir string YYYY-MM-DD a objeto Date (sin hora)
-            const parseDate = (str) => {
-                const parts = str.split('-');
-                return new Date(parts[0], parts[1]-1, parts[2]);
+            // Helper para obtener reservas en rango
+            const getBookingsInRange = (start, end) => {
+                return bookings.filter(b => b.startDate >= start && b.startDate <= end);
             };
 
+            // Lógica del Switch
             if (filterVal === 'future') {
-                // FUTURO: Desde MAÑANA en adelante (Opcional: Desde Hoy)
-                // Aquí tomamos "todo lo que sea >= Hoy"
-                filteredBookings = bookings.filter(b => b.startDate >= todayStr && b.status !== 'Cancelado');
+                // Proyección: Próximos 6 meses
+                filteredBookings = bookings.filter(b => b.startDate >= todayStr && b.status !== 'Cancelado'); // Asumimos futuro activo
                 document.getElementById('chart-label-period').innerText = "Proyección Futura";
                 
-                // Labels: Próximos 6 meses
+                // Generar labels futuros
                 for(let i=0; i<6; i++) {
                     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-                    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                    chartLabels.push({ label: d.toLocaleString('es-ES', { month: 'short' }), key: key, mode: 'month' });
+                    chartLabels.push({ 
+                        label: d.toLocaleString('es-ES', { month: 'short' }), 
+                        key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` 
+                    });
                 }
 
             } else if (filterVal === 'current_month') {
-                // MES ACTUAL
                 filteredBookings = bookings.filter(b => b.startDate && b.startDate.startsWith(currentMonthPrefix));
                 document.getElementById('chart-label-period').innerText = "Mes Actual";
                 
+                // Gráfico diario para el mes actual
+                dateMode = 'day';
                 const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
                 for(let i=1; i<=daysInMonth; i++) {
                     const dayStr = String(i).padStart(2,'0');
-                    chartLabels.push({ label: i, key: `${currentMonthPrefix}-${dayStr}`, mode: 'day' });
+                    chartLabels.push({ label: i, key: `${currentMonthPrefix}-${dayStr}` });
                 }
 
             } else if (filterVal === 'custom') {
-                // RANGO PERSONALIZADO
+                // Rango Personalizado
                 const sVal = document.getElementById('dash-date-start')?.value;
                 const eVal = document.getElementById('dash-date-end')?.value;
                 
                 if (sVal && eVal) {
-                    filteredBookings = bookings.filter(b => b.startDate >= sVal && b.startDate <= eVal);
+                    filteredBookings = getBookingsInRange(sVal, eVal);
                     document.getElementById('chart-label-period').innerText = `${sVal} a ${eVal}`;
-                    
-                    // Generar etiquetas dinámicas para el gráfico
-                    // Si el rango es <= 31 días, mostramos días. Si es mayor, meses.
-                    const dStart = parseDate(sVal);
-                    const dEnd = parseDate(eVal);
-                    const diffTime = Math.abs(dEnd - dStart);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                    if (diffDays <= 35) {
-                        // Modo Diario
-                        for (let d = new Date(dStart); d <= dEnd; d.setDate(d.getDate() + 1)) {
-                            const iso = d.toISOString().split('T')[0];
-                            chartLabels.push({ label: d.getDate(), key: iso, mode: 'day' });
-                        }
-                    } else {
-                        // Modo Mensual (Simplificado)
-                        let d = new Date(dStart);
-                        d.setDate(1); // Forzar inicio de mes para iterar
-                        while (d <= dEnd) {
-                            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                            chartLabels.push({ label: d.toLocaleString('es-ES', { month: 'short' }), key: key, mode: 'month' });
-                            d.setMonth(d.getMonth() + 1);
-                        }
-                    }
-
+                    // Simplificación: Una sola barra para el rango total si es custom (o lógica compleja de días)
+                    // Para mantenerlo simple y funcional: Agrupamos por mes si el rango es grande, o días si es pequeño
+                    // Por ahora: Mostramos totales agregados en KPIs y gráfico simple de barras de estado
+                    chartLabels = [{label: 'Periodo', key: 'custom'}]; 
                 } else {
+                    // Fallback si no hay fechas
+                    filteredBookings = [];
                     document.getElementById('chart-label-period').innerText = "Seleccione fechas";
                 }
 
             } else {
-                // HISTÓRICO (3, 6, 12, all)
-                // REGLA FUNDAMENTAL: start_date < Today (Estrictamente pasado)
+                // Histórico (3, 6, 12, all)
                 const monthsBack = filterVal === 'all' ? 24 : parseInt(filterVal);
                 document.getElementById('chart-label-period').innerText = `Últimos ${monthsBack} Meses`;
                 
-                // Generar meses hacia atrás
+                // Generar labels hacia atrás
                 for (let i = monthsBack - 1; i >= 0; i--) {
                     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
                     chartLabels.push({ 
                         label: d.toLocaleString('es-ES', { month: 'short' }), 
-                        key: key,
-                        mode: 'month'
+                        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` 
                     });
                 }
                 
-                // Filtro: Debe estar dentro del rango de meses Y ser anterior a "mañana" (para no incluir futuro lejano si se cuela)
+                // Filtrar reservas que encajen en estos meses
                 const startKey = chartLabels[0]?.key || '9999';
-                filteredBookings = bookings.filter(b => b.startDate >= startKey + '-01' && b.startDate < todayStr); // <--- CORRECCIÓN CLAVE
+                filteredBookings = bookings.filter(b => b.startDate >= startKey + '-01');
             }
 
 
-            // 2. CÁLCULO DE KPIs FINANCIEROS (CONECTADOS AL FILTRO)
+            // --- 2. CÁLCULO DE KPIs FINANCIEROS (CONECTADOS AL FILTRO) ---
             const sumMoney = (list) => list.reduce((s, b) => s + (parseFloat(b.totalPrice) || 0), 0);
             
             const kpiConfirmed = sumMoney(filteredBookings.filter(b => b.status === 'Confirmado'));
@@ -876,7 +822,7 @@ const UI = {
             document.getElementById('kpi-count-total').innerText = filteredBookings.length;
 
 
-            // 3. PANELES OPERATIVOS (SIEMPRE ACTIVOS)
+            // --- 3. PANELES OPERATIVOS (SIEMPRE ACTIVOS / NO FILTRADOS POR FECHA) ---
             // A. Agenda Futura (Desde Hoy)
             const agenda = bookings
                 .filter(b => b.startDate >= todayStr && (b.status === 'Confirmado' || b.status === 'Pagado'))
@@ -903,7 +849,7 @@ const UI = {
                             </div>
                         </div>
                         <div class="text-right">
-                            <span class="text-[10px] font-bold px-2 py-0.5 ${b.status==='Pagado'?'bg-blue-100 text-blue-700':'bg-green-100 text-green-700'}">${b.status}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${b.status==='Pagado'?'bg-blue-100 text-blue-700':'bg-green-100 text-green-700'}">${b.status}</span>
                         </div>
                     </div>`;
                 }).join('');
@@ -918,7 +864,7 @@ const UI = {
                 pendingContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-xs"><i class="fas fa-check-circle text-green-500 text-2xl mb-2 opacity-50"></i>Todo al día.</div>';
             } else {
                 pendingContainer.innerHTML = pending.map(b => `
-                    <div class="p-3 border border-yellow-100 bg-yellow-50 hover:bg-yellow-100 transition cursor-pointer flex justify-between items-center group shadow-sm mb-2" onclick="App.handleEditCrudItem('Bookings', '${b.id}')">
+                    <div class="p-3 border border-yellow-100 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition cursor-pointer flex justify-between items-center group shadow-sm mb-2" onclick="App.handleEditCrudItem('Bookings', '${b.id}')">
                         <div>
                             <h4 class="font-bold text-sm text-gray-900 group-hover:text-yellow-800">${b.customerName}</h4>
                             <p class="text-xs text-gray-600 flex items-center gap-1"><i class="fas fa-question-circle text-yellow-400"></i> ${b.itemName}</p>
@@ -929,46 +875,41 @@ const UI = {
             }
 
 
-            // 4. RESUMEN ECOSISTEMA (CONTADORES REALES)
+            // --- 4. RESUMEN ECOSISTEMA ---
             document.getElementById('stat-projects').innerText = (data.Projects||[]).length;
             document.getElementById('stat-portfolio').innerText = countPortfolio;
-            
             document.getElementById('stat-services').innerText = (data.Services||[]).length;
-            document.getElementById('stat-services-img').innerText = (data.ServiceImages||[]).length + ' Ft';
-            
+            document.getElementById('stat-services-img').innerText = (data.ServiceImages||[]).length + ' Fotos';
             document.getElementById('stat-videos').innerText = (data.Videos||[]).length;
-            
             document.getElementById('stat-items').innerText = items.length;
-            document.getElementById('stat-items-img').innerText = (data.RentalItemImages||[]).length + ' Ft';
-            
+            document.getElementById('stat-items-img').innerText = (data.RentalItemImages||[]).length + ' Fotos';
             document.getElementById('stat-cats').innerText = (data.RentalCategories||[]).length;
             document.getElementById('stat-bookings').innerText = bookings.length;
             document.getElementById('stat-blocked').innerText = (data.BlockedDates||[]).length;
             document.getElementById('stat-logos').innerText = (data.LogosClientes||[]).length;
             const idImagesCount = (data.ImagenesIdentidad||[]).length;
-            document.getElementById('stat-identity-img').innerText = idImagesCount + ' Ft';
+            document.getElementById('stat-identity-img').innerText = idImagesCount + ' Fotos';
 
 
-            // 5. GRÁFICOS
+            // --- 5. GRÁFICOS (DINÁMICOS Y CONECTADOS) ---
             if (UI.charts) { UI.charts.forEach(c => c.destroy()); }
             UI.charts = [];
             Chart.defaults.font.family = "'Montserrat', sans-serif";
 
             // A. Datos del Gráfico de Línea
             const chartDataValues = chartLabels.map(lbl => {
+                // Si es custom o futuro, filtramos por la llave generada
+                if (filterVal === 'custom') return kpiConfirmed + kpiPaid; // Total plano
+                
+                // Filtramos por coincidencia de fecha (Mes o Día)
                 return filteredBookings
-                    .filter(b => {
-                        // Coincidencia Inteligente (Día o Mes)
-                        if (lbl.mode === 'day') return b.startDate === lbl.key;
-                        return b.startDate && b.startDate.startsWith(lbl.key);
-                    })
-                    .filter(b => b.status === 'Pagado' || b.status === 'Confirmado')
-                    .reduce((s, b) => s + (parseFloat(b.totalPrice) || 0), 0);
+                    .filter(b => b.startDate && b.startDate.startsWith(lbl.key) && (b.status==='Pagado'||b.status==='Confirmado'))
+                    .reduce((s,b)=>s+(parseFloat(b.totalPrice)||0),0);
             });
 
             const ctxRev = document.getElementById('revenueChart').getContext('2d');
             const gradRev = ctxRev.createLinearGradient(0, 0, 0, 400);
-            gradRev.addColorStop(0, 'rgba(16, 185, 129, 0.2)'); 
+            gradRev.addColorStop(0, 'rgba(16, 185, 129, 0.2)'); // Verde suave
             gradRev.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
             UI.charts.push(new Chart(ctxRev, {
@@ -980,7 +921,7 @@ const UI = {
                         data: chartDataValues,
                         borderColor: '#10b981',
                         backgroundColor: gradRev,
-                        tension: 0.4, fill: true, pointRadius: 5
+                        tension: 0.4, fill: true, pointRadius: 5, pointHoverRadius: 7
                     }]
                 },
                 plugins: [ChartDataLabels],
@@ -998,7 +939,7 @@ const UI = {
                 }
             }));
 
-            // B. Datos Gráfico Estado
+            // B. Datos Gráfico Estado (Sobre los FILTRADOS)
             const stCounts = { 'Pendiente': 0, 'Confirmado': 0, 'Pagado': 0, 'Cancelado': 0 };
             filteredBookings.forEach(b => { if(stCounts[b.status]!==undefined) stCounts[b.status]++; });
 
@@ -1022,7 +963,7 @@ const UI = {
                 }
             }));
 
-            // C. Datos Gráfico Productos
+            // C. Datos Gráfico Productos (Sobre los FILTRADOS)
             const prodCounts = {};
             filteredBookings.forEach(b => { 
                 const n = b.itemName||'Otros'; 
@@ -1570,11 +1511,7 @@ const App = {
     },
     
     async loadData(mode = 'all') { 
-        // CAMBIO: Pedimos todas las hojas de metadatos al inicio para tener los contadores reales
-        // Esto es liviano porque es solo texto JSON, no imágenes binarias
-        const allSheets = 'Projects,Bookings,ProjectImages,Services,ServiceImages,Videos,RentalItems,RentalItemImages,RentalCategories,BlockedDates,LogosClientes,ImagenesIdentidad';
-        const p = mode === 'dashboard' ? `?sheets=${allSheets}` : ''; 
-        
+        const p = mode === 'dashboard' ? '?sheets=Projects,Bookings,ProjectImages' : ''; 
         const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); 
         AppState.data = { ...AppState.data, ...nd }; 
     },
@@ -3904,8 +3841,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
-
-
 
 
 
