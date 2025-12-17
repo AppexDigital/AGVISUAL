@@ -212,7 +212,7 @@
                     </div>
 
                     <div class="bg-white p-5 border border-gray-200 shadow-sm flex flex-col justify-center items-center text-center">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Transacciones</p>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Reservas</p>
                         <h3 class="text-4xl font-bold text-gray-800 tracking-tight" id="kpi-count-total">0</h3>
                         <p class="text-[10px] text-gray-400">En periodo seleccionado</p>
                     </div>
@@ -272,10 +272,11 @@
                         </div>
                         <div class="p-4 grid grid-cols-2 gap-3 text-xs h-full">
                             
-                            <div onclick="App.switchView('projects')" class="p-3 bg-white border border-gray-100 hover:border-purple-200 hover:bg-purple-50 cursor-pointer transition text-center group">
-                                <i class="fas fa-camera text-purple-500 text-xl mb-2 block"></i>
-                                <span class="font-bold block text-gray-800 text-lg" id="stat-projects">0</span>
-                                <span class="text-gray-500">Proyectos</span>
+                            <div onclick="App.switchView('projects')" class="p-2 bg-white border border-gray-100 hover:border-purple-200 hover:bg-purple-50 cursor-pointer transition text-center group relative">
+                                <i class="fas fa-camera text-purple-500 text-lg mb-1 block"></i>
+                                <span class="font-bold block text-gray-700" id="stat-projects">0</span>
+                                <span class="text-gray-400 text-[10px]">Proyectos</span>
+                                <div class="absolute top-1 right-1 text-[8px] bg-purple-100 text-purple-600 px-1" id="stat-projects-img">0 Fotos</div>
                             </div>
 
                             <div onclick="App.switchView('portfolio-manager')" class="p-3 bg-white border border-gray-100 hover:border-pink-200 hover:bg-pink-50 cursor-pointer transition text-center group">
@@ -297,14 +298,14 @@
                                 <span class="text-gray-500">Videos</span>
                             </div>
 
-                            <div onclick="App.switchView('rentals'); UI.switchTab('rental-items')" class="p-3 bg-white border border-gray-100 hover:border-gray-300 hover:bg-gray-50 cursor-pointer transition text-center group relative">
+                            <div onclick="App.switchView('rentals').then(() => UI.switchTab('rental-items'))" class="p-3 bg-white border border-gray-100 hover:border-gray-300 hover:bg-gray-50 cursor-pointer transition text-center group relative">
                                 <i class="fas fa-box text-gray-600 text-xl mb-2 block"></i>
                                 <span class="font-bold block text-gray-800 text-lg" id="stat-items">0</span>
                                 <span class="text-gray-500">Equipos</span>
                                 <div class="absolute top-1 right-1 text-[9px] bg-gray-200 text-gray-600 px-1.5" id="stat-items-img">0 Fotos</div>
                             </div>
 
-                            <div onclick="App.switchView('rentals'); UI.switchTab('rental-cats')" class="p-3 bg-white border border-gray-100 hover:border-gray-300 hover:bg-gray-50 cursor-pointer transition text-center group">
+                            <div onclick="App.switchView('rentals').then(() => UI.switchTab('rental-cats'))" class="p-3 bg-white border border-gray-100 hover:border-gray-300 hover:bg-gray-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-tags text-gray-400 text-xl mb-2 block"></i>
                                 <span class="font-bold block text-gray-800 text-lg" id="stat-cats">0</span>
                                 <span class="text-gray-500">Categorías</span>
@@ -316,7 +317,7 @@
                                 <span class="text-gray-500">Reservas</span>
                             </div>
 
-                            <div onclick="App.switchView('rentals'); UI.switchTab('blocked-dates')" class="p-3 bg-white border border-gray-100 hover:border-orange-200 hover:bg-orange-50 cursor-pointer transition text-center group">
+                            <div onclick="App.switchView('rentals').then(() => UI.switchTab('blocked-dates'))" class="p-3 bg-white border border-gray-100 hover:border-orange-200 hover:bg-orange-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-ban text-orange-500 text-xl mb-2 block"></i>
                                 <span class="font-bold block text-gray-800 text-lg" id="stat-blocked">0</span>
                                 <span class="text-gray-500">Bloqueos</span>
@@ -874,6 +875,7 @@ const UI = {
 
             // 4. RESUMEN
             document.getElementById('stat-projects').innerText = (data.Projects||[]).length;
+            document.getElementById('stat-projects-img').innerText = (data.ProjectImages||[]).length + ' Fotos';
             document.getElementById('stat-portfolio').innerText = countPortfolio;
             document.getElementById('stat-services').innerText = (data.Services||[]).length;
             document.getElementById('stat-services-img').innerText = (data.ServiceImages||[]).length + ' Fotos';
@@ -3801,6 +3803,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
