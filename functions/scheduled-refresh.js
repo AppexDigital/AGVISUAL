@@ -133,7 +133,5 @@ const myHandler = async (event, context) => {
     }
 };
 
-// PRUEBA MANUAL: 9:XX (Ajusta esto a tu hora actual + 2 min para probar)
-// OJO: Recuerda cambiar esto a "0 6,18 * * *" para producción.
-// Hora actual aprox CR: 9:15 -> UTC: 15:15
-module.exports.handler = schedule("8 17 * * *", myHandler);
+// AJUSTE DE FRECUENCIA: Se ejecuta cada 8 horas (00:00, 08:00, 16:00)
+module.exports.handler = schedule("0 */8 * * *", myHandler);
