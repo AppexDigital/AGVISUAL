@@ -95,18 +95,13 @@
         .status-Cancelado { background: var(--status-canceled); }
 
         /* --- ESTILOS SISTEMA RESERVAS V8 (CONSOLIDADO) --- */
-        .font-total-final {
-            font-family: 'Inter', sans-serif; /* Plana */
-            letter-spacing: -0.05em;
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-        }
+        .font-total { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
         /* 1. Estilos Generales del Modal Oscuro */
         select.dark-select { background-color: #1f2937; color: white; border-color: #374151; }
         select.dark-select option { background-color: #1f2937; color: white; }
         
         /* 2. Inputs invisibles para la grilla */
-        .grid-input { background: transparent; border: none; border-bottom: 1px solid #4b5563; color: white; font-size: 0.85rem; width: 100%; outline: none; transition: border-color 0.2s; }
+        .grid-input { background: transparent; border: none; border-bottom: 1px solid #4b5563; color: white; width: 100%; outline: none; transition: border-color 0.2s; }
         .grid-input:focus { border-color: #B8860B !important; }
         .no-resize { resize: none; }
         
@@ -116,7 +111,7 @@
         /* 4. Scrollbars Personalizados (Sutiles para modo oscuro) */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #B8860B; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #B8860B; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -133,30 +128,37 @@
             display: grid; 
             grid-template-columns: repeat(12, minmax(0, 1fr)); 
         }
+
+        /* 1. Eliminar curvas en TODO el modal (Estilo Industrial/Plano) */
+        #reservation-modal-content, 
+        #reservation-modal-content * {
+            border-radius: 0 !important;
+        }
+        
         
         /* 6. Pantalla Completa Real (Forzando al navegador) */
         /* 1. Ajuste del Overlay para permitir expansión total */
         .modal-overlay:has(.is-fullscreen) { 
             padding: 0 !important; 
-            display: flex !important; 
             align-items: flex-start !important;
         }
-        /* 2. Clase Fullscreen aplicada al PADRE (.modal-content) */
+        /* 2. Fullscreen Real aplicado al PADRE (.modal-content) */
         .modal-content.is-fullscreen {
-            width: 100vw !important; 
-            height: 100vh !important; 
-            max-width: none !important; 
-            max-height: none !important; 
-            border-radius: 0 !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
             margin: 0 !important;
-            transform: none !important;
-            background-color: #0a0a0a !important; /* Fondo negro sólido */
+            transform: none !important; /* Vital para que no se mueva */
             border: none !important;
             z-index: 9999 !important;
-        } 
+            background-color: #0a0a0a !important;
+        }
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -632,8 +634,9 @@
 
 
     <template id="reservation-modal-template">
-        <div id="reservation-modal-content" class="flex flex-col h-[85vh] relative bg-[#0a0a0a] text-white overflow-hidden p-0">   
-            <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0 z-20">
+        <div id="reservation-modal-content" class="flex flex-col h-full relative bg-[#0a0a0a] text-white overflow-hidden p-0">
+            
+            <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0">
                 <div>
                     <h2 class="modal-title font-display text-2xl text-accent-gold text-white">Gestión de Reserva</h2>
                     <div class="flex items-center gap-2 mt-1">
@@ -643,21 +646,21 @@
                 </div>
                 
                 <div class="flex items-center gap-3">
-                    <button type="button" onclick="App.toggleFullscreenModal()" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10" title="Pantalla Completa">
+                    <button type="button" onclick="App.toggleFullscreenModal()" class="text-gray-400 hover:text-white transition p-2 hover:bg-white/10" title="Pantalla Completa">
                         <i id="fullscreen-icon" class="fas fa-expand fa-lg"></i>
                     </button>
-                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10" title="Cerrar">
+                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 hover:bg-white/10" title="Cerrar">
                         <i class="fas fa-times fa-lg"></i>
                     </button>
                 </div>
             </div>
     
-            <form id="reservation-form" onsubmit="App.handleSaveBooking(event)" class="flex flex-col flex-grow overflow-hidden min-h-0 relative">
+            <form id="reservation-form" onsubmit="App.handleSaveBooking(event)" class="flex flex-col flex-grow overflow-hidden">
                 <input type="hidden" name="id" id="input-reserva-id">
                 
                 <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
                     
-                    <div class="bg-white/5 p-4 rounded-lg border border-white/10">
+                    <div class="bg-white/5 p-4 border border-white/10">
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                             <div class="md:col-span-4">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Cliente</label>
@@ -665,7 +668,7 @@
                             </div>
                             <div class="md:col-span-2">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Estado</label>
-                                <select id="c-status" class="dark-select w-full p-1 rounded border border-gray-700 text-xs font-bold bg-[#1f2937] text-white">
+                                <select id="c-status" class="dark-select w-full p-1 border border-gray-700 text-xs font-bold bg-[#1f2937] text-white">
                                     <option value="Pendiente">Pendiente</option>
                                     <option value="Confirmado">Confirmado</option>
                                     <option value="Pagado">Pagado</option>
@@ -687,7 +690,7 @@
                         </div>
                     </div>
     
-                    <div class="border border-gray-800 rounded-lg bg-[#0f0f0f] overflow-hidden">
+                    <div class="border border-gray-800 bg-[#0f0f0f] overflow-hidden">
                         <div class="grid grid-cols-12 gap-2 bg-[#1a1a1a] p-2 booking-grid-header border-b border-gray-800 pr-4">
                             <div class="col-span-4">Artículo / Nota</div>
                             <div class="col-span-3">Vigencia</div>
@@ -697,13 +700,13 @@
                         </div>
                         <div id="lines-container" class="p-2 space-y-1"></div>
                         <div class="p-3 border-t border-gray-800 bg-[#141414] text-center">
-                            <button type="button" id="btn-add-line" class="text-white hover:text-[#B8860B] text-xs font-bold border border-white/20 rounded px-6 py-2 transition-all hover:bg-white/10 hover:border-[#B8860B]">
+                            <button type="button" id="btn-add-line" class="text-white hover:text-[#B8860B] text-xs font-bold border border-white/20 px-6 py-2 transition-all hover:bg-white/10 hover:border-[#B8860B]">
                                 <i class="fas fa-plus mr-1"></i> AGREGAR ARTÍCULO
                             </button>
                         </div>
                     </div>
     
-                    <div class="bg-[#121212] border border-gray-800 rounded-lg flex flex-col md:flex-row overflow-hidden mb-2">
+                    <div class="bg-[#121212] border border-gray-800 flex flex-col md:flex-row overflow-hidden">
                         <div class="w-full md:w-1/2 border-r border-gray-800 p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-[10px] uppercase font-bold text-gray-500">Notas Generales</label>
@@ -714,7 +717,7 @@
                         <div class="w-full md:w-1/2 p-4 bg-[#161616] space-y-2">
                             <div class="flex justify-between items-center mb-3">
                                 <label class="text-[10px] uppercase font-bold text-gray-500">Desc. Global</label>
-                                <div class="flex rounded bg-gray-800 border border-gray-700 w-32 h-7">
+                                <div class="flex bg-gray-800 border border-gray-700 w-32 h-7">
                                     <select id="c-globalDiscType" class="dark-select text-[10px] px-1 border-r border-gray-600 outline-none h-full bg-transparent text-white">
                                         <option value="percent">%</option>
                                         <option value="money">$</option>
@@ -738,12 +741,12 @@
                     </div>
                 </div>
     
-                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-gray-800 gap-3 flex-shrink-0 z-20">
+                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-gray-800 gap-3 flex-shrink-0 z-10">
                     <button type="button" id="btn-delete-booking" class="text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider mr-auto hidden px-2 transition-colors">
                         <i class="fas fa-trash-alt mr-1"></i> Eliminar
                     </button>
-                    <button type="button" class="px-6 py-2 rounded text-sm font-bold text-gray-400 hover:text-white transition-colors" onclick="UI.closeModal()">Cancelar</button>
-                    <button type="submit" class="bg-white text-black font-bold py-2 px-8 rounded shadow hover:bg-gray-200 transition-all text-sm uppercase tracking-wide">Guardar Cambios</button>
+                    <button type="button" class="px-6 py-2 text-sm font-bold text-gray-400 hover:text-white transition-colors" onclick="UI.closeModal()">Cancelar</button>
+                    <button type="submit" class="bg-white text-black font-bold py-2 px-8 shadow hover:bg-gray-200 transition-all text-sm uppercase tracking-wide">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -2399,7 +2402,6 @@ const App = {
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
             // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
         } else if(sheet === 'Bookings'){
-            // 1. Carga Dependencias
             if (!AppState.data.RentalItems || !AppState.data.BlockedDates || !AppState.data.BookingsDetails) {
                 UI.showLoading('Cargando sistema...');
                 const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems,BlockedDates,BookingsDetails');
@@ -2407,7 +2409,6 @@ const App = {
                 UI.hideLoading();
             }
         
-            // 2. Preparar Datos
             const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
             let currentLines = [];
             if (!isNew && AppState.data.BookingsDetails) {
@@ -2431,36 +2432,21 @@ const App = {
                 note: l.lineNote || ''
             }));
         
-        // --- FUNCIÓN FULLSCREEN ROBUSTA V9 ---
+            // --- FUNCIÓN FULLSCREEN CORREGIDA V9 ---
             App.toggleFullscreenModal = function() {
-                // Buscamos nuestro contenedor interno
-                const internalContainer = document.getElementById('reservation-modal-content');
-                if(!internalContainer) return;
+                const modalContainer = document.querySelector('.modal-content'); 
+                if(!modalContainer) return;
                 
-                // Alternamos la clase en el contenedor interno
-                internalContainer.classList.toggle('is-fullscreen');
-                const isFull = internalContainer.classList.contains('is-fullscreen');
+                modalContainer.classList.toggle('is-fullscreen');
+                const isFull = modalContainer.classList.contains('is-fullscreen');
                 
-                // Ajustes dinámicos
-                if (isFull) {
-                    internalContainer.style.maxHeight = '100vh';
-                    internalContainer.style.height = '100vh';
-                    internalContainer.style.borderRadius = '0';
-                } else {
-                    internalContainer.style.maxHeight = '85vh'; // Volver al límite normal
-                    internalContainer.style.height = 'auto';
-                    internalContainer.style.borderRadius = '0.75rem';
-                }
-        
                 const icon = document.querySelector('.fa-expand');
-                if(icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
-                else { 
-                    const i2 = document.querySelector('.fa-compress'); 
-                    if(i2){ i2.classList.remove('fa-compress'); i2.classList.add('fa-expand'); } 
+                if(icon) { 
+                    if (isFull) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
+                    else { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
                 }
             };
         
-            // 3. Renderizar Modal
             const tpl = document.getElementById('reservation-modal-template');
             const clone = tpl.content.cloneNode(true);
             const divTemp = document.createElement('div');
@@ -2471,41 +2457,40 @@ const App = {
             htmlContent = htmlContent.replace('id="display-reserva-id">---', `id="display-reserva-id">${displayId}`);
             htmlContent = htmlContent.replace('id="input-reserva-id">', `id="input-reserva-id" value="${id||''}">`);
         
-            // Inyectar HTML (Footer vacío para usar el nuestro)
             UI.showModal('', htmlContent, ''); 
             
-            // 4. LÓGICA DE LIMPIEZA POST-RENDER (CRÍTICO)
+            // --- LÓGICA DE INICIALIZACIÓN DE DIMENSIONES (FIX PUNTO 1) ---
             setTimeout(() => {
-                // Buscamos el contenedor 'padre' que crea UI.showModal (clase .modal-content)
-                // y lo hacemos transparente para que SOLO se vea nuestro diseño oscuro
                 const parentModal = document.querySelector('.modal-content');
                 if(parentModal) {
-                    // Eliminar estilos por defecto que causan bordes blancos o padding extra
+                    // 1. Limpieza de estilos base
                     parentModal.style.backgroundColor = 'transparent';
                     parentModal.style.boxShadow = 'none';
                     parentModal.style.border = 'none';
                     parentModal.style.padding = '0';
-                    parentModal.style.maxWidth = 'none'; // Dejar que nuestro contenedor controle el ancho
-                    parentModal.style.width = 'auto'; // Ajuste automático al hijo
                     
-                    // Ocultar header/footer genéricos si existen
+                    // 2. FIJAR TAMAÑO NORMAL ESTRICTO
+                    // Esto evita que se expanda hacia los lados o que falle al minimizar
+                    parentModal.style.width = '95%'; 
+                    parentModal.style.maxWidth = '1300px'; 
+                    parentModal.style.height = '85vh';
+                    parentModal.style.maxHeight = '85vh';
+                    
+                    // 3. Limpieza de hijos no deseados
                     const header = parentModal.querySelector('.border-b'); 
                     const footer = parentModal.querySelector('.bg-gray-50.border-t');
-                    // Solo ocultar si NO son los nuestros (los nuestros están dentro de #reservation-modal-content)
                     if(header && !header.closest('#reservation-modal-content')) header.style.display = 'none';
                     if(footer && !footer.closest('#reservation-modal-content')) footer.style.display = 'none';
                     
-                    // Resetear body genérico
                     const body = parentModal.querySelector('.p-6.flex-1');
                     if(body) { 
                         body.style.padding = '0'; 
-                        body.style.flex = 'none'; // Quitar flex grow para que no estire raro
-                        body.style.display = 'contents'; // Hacer que el body sea transparente al layout
+                        body.style.flex = 'none'; 
+                        body.style.display = 'contents'; 
                     }
                 }
             }, 10);
         
-            // 4. LÓGICA
             setTimeout(() => {
                 const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v||''; };
                 if (!isNew) {
@@ -2553,7 +2538,6 @@ const App = {
                         if(row) {
                             if(document.activeElement !== row.querySelector('.line-total-input')) row.querySelector('.line-total-input').value = net.toFixed(2);
                             const info = row.querySelector('.line-info');
-                            // FIX COLOR: Gris para el +IVA en lugar de azul
                             const taxLabel = hasTax ? '<span class="text-gray-400 font-bold ml-1">+IVA</span>' : '';
                             info.innerHTML = `${d}d x $${bp}${taxLabel} ${line.manualAdj>0 ? `(Aj:${line.manualAdj})` : ''}`;
                         }
@@ -2575,22 +2559,21 @@ const App = {
                 const renderRow = (line) => {
                     const div = document.createElement('div');
                     div.id = `row-${line.uuid}`;
-                    // FIX LAYOUT: line-row-grid para mantener alineación
-                    div.className = "line-row-grid gap-2 items-start bg-[#161616] p-2 rounded border border-gray-800 text-xs shadow-sm mb-1 group hover:border-gray-600 transition-colors";
+                    div.className = "line-row-grid gap-2 items-start bg-gray-800 p-2 border border-gray-700 text-xs shadow-sm mb-1 group hover:border-gray-600 transition-colors";
                     div.innerHTML = `
                         <div class="col-span-4">
-                            <select class="dark-select w-full text-xs p-1 rounded border border-gray-700 mb-1 line-item-select bg-[#222]">
+                            <select class="dark-select w-full text-xs p-1 border border-gray-700 mb-1 line-item-select bg-[#222]">
                                 <option value="">Equipo...</option>
                                 ${itemsList.map(i => `<option value="${i.id}" ${i.id === line.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
                             </select>
                             <textarea class="form-input w-full text-[10px] p-1 border-none bg-transparent line-note text-gray-400 focus:text-white placeholder-gray-600 resize-none subtle-scrollbar leading-tight" placeholder="Nota..." rows="1" style="min-height: 22px;">${line.note}</textarea>
                         </div>
                         <div class="col-span-3 flex flex-col gap-1">
-                            <input type="text" class="grid-input bg-[#222] rounded border border-gray-700 p-1 line-start text-center cursor-pointer" placeholder="Inicio" value="${line.startDate||''}">
-                            <input type="text" class="grid-input bg-[#222] rounded border border-gray-700 p-1 line-end text-center cursor-pointer" placeholder="Fin" value="${line.endDate||''}">
+                            <input type="text" class="grid-input bg-[#222] border border-gray-700 p-1 line-start text-center cursor-pointer" placeholder="Inicio" value="${line.startDate||''}">
+                            <input type="text" class="grid-input bg-[#222] border border-gray-700 p-1 line-end text-center cursor-pointer" placeholder="Fin" value="${line.endDate||''}">
                         </div>
                         <div class="col-span-3">
-                            <div class="flex items-center border border-gray-700 rounded bg-[#222]">
+                            <div class="flex items-center border border-gray-700 bg-[#222]">
                                 <select class="dark-select text-[10px] p-1 border-r border-gray-600 line-disc-type outline-none bg-transparent"><option value="percent" ${line.discountType==='percent'?'selected':''}>%</option><option value="money" ${line.discountType==='money'?'selected':''}>$</option></select>
                                 <input type="number" class="bg-transparent text-white text-right text-xs p-1 w-full outline-none line-disc-val" value="${line.discountVal}">
                             </div>
@@ -2622,8 +2605,6 @@ const App = {
                     div.querySelector('.line-note').addEventListener('input', function(e) { line.note = this.value; this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
                     div.querySelector('.line-disc-type').addEventListener('change', e => { line.discountType=e.target.value; line.manualAdj=0; window.recalcBooking(); });
                     div.querySelector('.line-disc-val').addEventListener('input', e => { line.discountVal=parseFloat(e.target.value)||0; line.manualAdj=0; window.recalcBooking(); });
-                    
-                    // Reversa con Focus Gold (No Blue)
                     div.querySelector('.line-total-input').addEventListener('input', e => {
                         const userVal = parseFloat(e.target.value)||0;
                         const item = itemsList.find(i=>i.id===line.itemId);
@@ -4330,6 +4311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
