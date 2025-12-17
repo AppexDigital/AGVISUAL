@@ -2215,151 +2215,305 @@ const App = {
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
             // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
         } else if(sheet === 'Bookings'){
-             if (!AppState.data.RentalItems || !AppState.data.BlockedDates) {
-                 UI.showLoading('Cargando datos...');
-                 const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems,BlockedDates');
-                 AppState.data = { ...AppState.data, ...d };
-                 UI.hideLoading();
-             }
-             
-             const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
-             const items = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
-             const statuses = ['Pendiente', 'Confirmado', 'Pagado', 'Cancelado'].map(s => ({id:s, name:s}));
-             
-             modalTitle = isNew ? 'Nueva Reserva' : `Editar Reserva de ${b.customerName}`;
-             
-             // --- Botón de Borrar en el Modal (Izquierda) ---
-             if (!isNew) {
-                 leftButtons = `
-                    <button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('Bookings', '${id}')">
-                        <i class="fas fa-trash mr-2"></i> Eliminar Reserva
-                    </button>
-                 `;
-             }
-
-             html = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            // 1. Carga de Dependencias
+            if (!AppState.data.RentalItems || !AppState.data.BlockedDates) {
+                UI.showLoading('Cargando inventario...');
+                const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems,BlockedDates,BookingsDetails');
+                AppState.data = { ...AppState.data, ...d };
+                UI.hideLoading();
+            }
+        
+            // 2. Preparar Datos (Cabecera y Líneas)
+            const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
+            
+            // Si es edición, buscamos sus líneas en BookingsDetails. Si es nuevo, array vacío.
+            // NOTA: Si vienes de la versión vieja (sin detalles), creamos una línea dummy con los datos viejos.
+            let currentLines = [];
+            if (!isNew) {
+                if (AppState.data.BookingsDetails) {
+                    currentLines = AppState.data.BookingsDetails.filter(d => d.bookingId === id);
+                }
+                // Migración en caliente: Si no hay detalles pero hay datos en cabecera (sistema viejo)
+                if (currentLines.length === 0 && b.itemId) {
+                    currentLines.push({
+                        uuid: 'legacy_' + Date.now(),
+                        itemId: b.itemId,
+                        itemName: b.itemName,
+                        startDate: b.startDate,
+                        endDate: b.endDate,
+                        basePrice: 0, // Se recalculará
+                        lineDiscountType: 'percent', lineDiscountVal: 0, manualAdjustment: 0, lineNote: ''
+                    });
+                }
+            }
+        
+            // Guardamos en variable global temporal para manipulación
+            window.tempBookingLines = currentLines.map(l => ({
+                uuid: l.uuid || `line_${Math.random().toString(36).substr(2,9)}`,
+                itemId: l.itemId,
+                startDate: l.startDate,
+                endDate: l.endDate,
+                basePrice: parseFloat(l.basePrice) || 0,
+                discountType: l.lineDiscountType || 'percent',
+                discountVal: parseFloat(l.lineDiscountVal) || 0,
+                manualAdj: parseFloat(l.manualAdjustment) || 0,
+                note: l.lineNote || ''
+            }));
+        
+            modalTitle = isNew ? 'Nueva Reserva (Multi-Item)' : `Editar Reserva: ${b.id || 'Sin ID'}`;
+        
+            if (!isNew) {
+                leftButtons = `<button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('Bookings', '${id}')"><i class="fas fa-trash mr-2"></i> Eliminar Reserva</button>`;
+            }
+        
+            // 3. Estructura HTML (Grid + Globales)
+            html = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     ${UI.inputHTML('c', 'customerName', 'Cliente', b?.customerName)}
-                    ${UI.inputHTML('c', 'customerCedula', 'Cédula / ID', b?.customerCedula)}
+                    ${UI.inputHTML('c', 'customerCedula', 'ID / Cédula', b?.customerCedula)}
                     ${UI.inputHTML('c', 'customerEmail', 'Email', b?.customerEmail, 'email')}
-                    ${UI.inputHTML('c', 'customerPhone', 'Teléfono', b?.customerPhone)}
                 </div>
-                ${UI.inputHTML('c', 'customerAddress', 'Dirección Exacta', b?.customerAddress)}
-                <hr class="my-4 border-gray-100">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="mb-4">
-                        <label class="form-label">Equipo</label>
-                        <select id="c-itemId" data-key="itemId" class="form-select" onchange="window.calculateBookingPriceGlobal()">
-                            <option value="">Seleccionar Equipo...</option>
-                            ${items.map(i => `<option value="${i.id}" ${i.id === b?.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
-                        </select>
-                    </div>
-                    ${UI.selectHTML('c', 'status', 'Estado', statuses, b?.status || 'Confirmado')}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    ${UI.inputHTML('c', 'customerAddress', 'Dirección', b?.customerAddress)}
+                    ${UI.inputHTML('c', 'globalNotes', 'Notas Globales', b?.globalNotes || b?.notes)} 
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="mb-4">
-                        <label class="form-label">Desde</label>
-                        <input type="text" id="c-startDate" data-key="startDate" class="form-input bg-white cursor-pointer" value="${b?.startDate||''}" placeholder="Fecha...">
+        
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="text-xs font-bold text-gray-500 uppercase">Detalle de Artículos</h4>
+                        <button type="button" class="btn btn-sm btn-secondary" id="btn-add-line-dom"><i class="fas fa-plus mr-1"></i> Agregar Ítem</button>
                     </div>
-                    <div class="mb-4">
-                        <label class="form-label">Hasta</label>
-                        <input type="text" id="c-endDate" data-key="endDate" class="form-input bg-white cursor-pointer" value="${b?.endDate||''}" placeholder="Fecha...">
+                    
+                    <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-gray-400 uppercase mb-2 px-2">
+                        <div class="col-span-3">Artículo / Nota</div>
+                        <div class="col-span-3">Fechas (Independientes)</div>
+                        <div class="col-span-3">Desc. Línea</div>
+                        <div class="col-span-2 text-right">Total</div>
+                        <div class="col-span-1 text-center"></div>
                     </div>
-                    <div class="mb-4">
-                        <label class="form-label">Total ($)</label>
-                        <input type="number" id="c-totalPrice" data-key="totalPrice" class="form-input font-bold bg-gray-50" value="${b?.totalPrice||'0'}" readonly>
-                        <div id="tax-detail" class="text-[10px] text-gray-500 mt-1 hidden text-right"></div>
+        
+                    <div id="booking-lines-container" class="space-y-1 max-h-60 overflow-y-auto pr-1"></div>
+                </div>
+        
+                <div class="bg-gray-900 text-white p-4 rounded-lg flex flex-col md:flex-row justify-between items-end">
+                    <div class="w-full md:w-1/3 mb-4 md:mb-0">
+                        <label class="text-[10px] text-gray-400 uppercase block mb-1">Descuento Global</label>
+                        <div class="flex bg-gray-800 rounded border border-gray-700">
+                            <select id="c-globalDiscType" class="bg-transparent text-white text-xs p-2 border-r border-gray-600 outline-none">
+                                <option value="percent" ${b?.globalDiscountType === 'percent' ? 'selected':''}>%</option>
+                                <option value="money" ${b?.globalDiscountType === 'money' ? 'selected':''}>$</option>
+                            </select>
+                            <input type="number" id="c-globalDiscVal" class="bg-transparent text-white text-right text-sm p-2 w-full outline-none" value="${b?.globalDiscountVal || 0}">
+                        </div>
+                        <div class="mt-2">
+                            <label class="text-[10px] text-gray-400 uppercase block mb-1">Estado</label>
+                            <select id="c-status" class="bg-gray-800 text-white text-xs p-2 rounded w-full border border-gray-700">
+                                <option value="Pendiente" ${b?.status==='Pendiente'?'selected':''}>Pendiente</option>
+                                <option value="Confirmado" ${b?.status==='Confirmado'?'selected':''}>Confirmado</option>
+                                <option value="Pagado" ${b?.status==='Pagado'?'selected':''}>Pagado</option>
+                                <option value="Cancelado" ${b?.status==='Cancelado'?'selected':''}>Cancelado</option>
+                            </select>
+                        </div>
+                    </div>
+        
+                    <div class="text-right space-y-1">
+                        <div class="text-xs text-gray-400">Subtotal: <span id="disp-subtotal" class="text-white font-mono">$0.00</span></div>
+                        <div class="text-xs text-green-400">Desc. Global: <span id="disp-discount" class="font-mono">-$0.00</span></div>
+                        <div class="text-xs text-gray-400">IVA (13%): <span id="disp-tax" class="text-white font-mono">$0.00</span></div>
+                        <div class="text-xl font-bold text-accent-primary mt-2">Total: <span id="disp-total">$0.00</span></div>
+                        <div class="text-[10px] text-gray-500 mt-1">Rango: <span id="disp-date-range">-- a --</span></div>
                     </div>
                 </div>
-             `;
-
-             setTimeout(() => {
-                 const startInput = document.getElementById('c-startDate');
-                 const endInput = document.getElementById('c-endDate');
-                 const itemSelect = document.getElementById('c-itemId');
-                 
-                 // 1. Función para obtener fechas prohibidas (Bloqueos + Reservas de ese equipo)
-                 const getDisabledDates = (itemId) => {
-                     if(!itemId) return [];
-                     const blocks = AppState.data.BlockedDates || [];
-                     // Filtramos bloqueos de ESTE equipo, EXCLUYENDO el bloqueo de la reserva actual (si estamos editando)
-                     return blocks
-                        .filter(blk => blk.itemId === itemId && blk.bookingId !== id) 
-                        .map(blk => ({ from: blk.startDate, to: blk.endDate }));
-                 };
-
-                 // 2. Configuración Base
-                 const config = { 
-                     locale: 'es', 
-                     dateFormat: "Y-m-d", 
-                     minDate: "today",
-                     // Cargar bloqueos iniciales del equipo seleccionado actualmente
-                     disable: getDisabledDates(itemSelect.value)
-                 };
-                 
-                 // 3. Iniciar Calendarios
-                 const fpStart = flatpickr(startInput, { 
-                     ...config, 
-                     onChange: (d) => { 
-                        if(fpEnd) fpEnd.set('minDate', d[0]); 
-                        window.calculateBookingPriceGlobal(); 
-                     }
-                 });
-                 
-                 const fpEnd = flatpickr(endInput, { 
-                     ...config,
-                     onChange: () => window.calculateBookingPriceGlobal()
-                 });
-
-                 // 4. ESCUCHAR CAMBIO DE EQUIPO (La clave para que se pongan grises)
-                 itemSelect.addEventListener('change', () => {
-                     const newItemId = itemSelect.value;
-                     const newDisabled = getDisabledDates(newItemId);
-                     
-                     // Inyectar las nuevas fechas bloqueadas a los calendarios
-                     fpStart.set('disable', newDisabled);
-                     fpEnd.set('disable', newDisabled);
-                     
-                     // Recalcular precio
-                     window.calculateBookingPriceGlobal();
-                 });
-
-                 // 5. Función de Cálculo de Precio (Global)
-                 window.calculateBookingPriceGlobal = () => {
-                     const sVal = startInput.value;
-                     const eVal = endInput.value;
-                     const totalInput = document.getElementById('c-totalPrice');
-                     const taxDiv = document.getElementById('tax-detail');
-
-                     if (sVal && eVal && itemSelect.value) {
-                         const sDate = new Date(sVal);
-                         const eDate = new Date(eVal);
-                         const diffTime = Math.abs(eDate - sDate);
-                         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
-
-                         const item = AppState.data.RentalItems.find(i => i.id === itemSelect.value);
-                         
-                         if (item && diffDays > 0) {
-                             const basePrice = parseFloat(item.pricePerDay) || 0;
-                             const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                             let subtotal = basePrice * diffDays;
-                             let total = subtotal;
-                             
-                             if (hasTax) {
-                                 const tax = subtotal * 0.13;
-                                 total = subtotal + tax;
-                                 taxDiv.innerHTML = `Subtotal (${diffDays} días): $${subtotal.toFixed(2)}<br>+ IVA (13%): $${tax.toFixed(2)}`;
-                                 taxDiv.classList.remove('hidden');
-                             } else {
-                                 taxDiv.innerHTML = `${diffDays} días x $${basePrice}`;
-                                 taxDiv.classList.remove('hidden');
-                             }
-                             totalInput.value = total.toFixed(2);
-                         }
-                     }
-                 };
-             }, 100);
-        // --- FIN CÓDIGO NUEVO ---      
+            `;
+        
+            // 4. LÓGICA DE RENDERIZADO Y CÁLCULO (Inyectada post-render)
+            setTimeout(() => {
+                const container = document.getElementById('booking-lines-container');
+                const btnAdd = document.getElementById('btn-add-line-dom');
+                const itemsList = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
+        
+                // Función Maestra de Cálculo (Global)
+                window.recalcBooking = () => {
+                    let globalSub = 0;
+                    let minDate = null;
+                    let maxDate = null;
+        
+                    // Recorrer líneas
+                    window.tempBookingLines.forEach(line => {
+                        // Fechas
+                        if (line.startDate) {
+                            if(!minDate || line.startDate < minDate) minDate = line.startDate;
+                        }
+                        if (line.endDate) {
+                            if(!maxDate || line.endDate > maxDate) maxDate = line.endDate;
+                        }
+        
+                        // Precios
+                        const itemData = itemsList.find(i => i.id === line.itemId);
+                        const basePrice = itemData ? parseFloat(itemData.pricePerDay) : 0;
+                        line.basePrice = basePrice; // Actualizar ref
+        
+                        // Días
+                        let days = 0;
+                        if (line.startDate && line.endDate) {
+                            const s = new Date(line.startDate);
+                            const e = new Date(line.endDate);
+                            days = Math.max(1, Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1);
+                        }
+                        
+                        const gross = basePrice * days;
+                        
+                        // Descuento Linea
+                        let discAmount = 0;
+                        if (line.discountType === 'money') discAmount = line.discountVal;
+                        else discAmount = gross * (line.discountVal / 100);
+        
+                        // Total Línea
+                        const net = Math.max(0, gross - discAmount + line.manualAdj);
+                        line.computedNet = net; // Guardar
+        
+                        globalSub += net;
+        
+                        // Actualizar DOM Fila
+                        const row = document.getElementById(`row-${line.uuid}`);
+                        if(row) {
+                            // Update visual inputs if not focused
+                            const totalInput = row.querySelector('.line-total-input');
+                            if(document.activeElement !== totalInput) totalInput.value = net.toFixed(2);
+                            
+                            // Update etiquetas
+                            const infoDiv = row.querySelector('.line-info');
+                            infoDiv.innerHTML = `${days}d x $${basePrice} ${line.manualAdj!=0 ? `<span class='text-blue-500 font-bold'>(Ajuste: ${line.manualAdj})</span>` : ''}`;
+                        }
+                    });
+        
+                    // Globales
+                    const gDiscType = document.getElementById('c-globalDiscType').value;
+                    const gDiscVal = parseFloat(document.getElementById('c-globalDiscVal').value) || 0;
+                    
+                    let gDiscAmount = 0;
+                    if (gDiscType === 'money') gDiscAmount = gDiscVal;
+                    else gDiscAmount = globalSub * (gDiscVal / 100);
+        
+                    const subAfterDisc = Math.max(0, globalSub - gDiscAmount);
+                    const tax = subAfterDisc * 0.13;
+                    const final = subAfterDisc + tax;
+        
+                    // Render Globales
+                    document.getElementById('disp-subtotal').innerText = `$${globalSub.toFixed(2)}`;
+                    document.getElementById('disp-discount').innerText = `-$${gDiscAmount.toFixed(2)}`;
+                    document.getElementById('disp-tax').innerText = `$${tax.toFixed(2)}`;
+                    document.getElementById('disp-total').innerText = `$${final.toFixed(2)}`;
+                    document.getElementById('disp-date-range').innerText = `${minDate || '?'} a ${maxDate || '?'}`;
+                };
+        
+                // Función Render Fila
+                const renderRow = (line) => {
+                    const div = document.createElement('div');
+                    div.id = `row-${line.uuid}`;
+                    div.className = "grid grid-cols-12 gap-2 items-start bg-white p-2 rounded border border-gray-200 text-xs shadow-sm";
+                    div.innerHTML = `
+                        <div class="col-span-3">
+                            <select class="form-select w-full text-xs p-1 line-item-select mb-1">
+                                <option value="">Elegir...</option>
+                                ${itemsList.map(i => `<option value="${i.id}" ${i.id === line.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
+                            </select>
+                            <input type="text" class="form-input w-full text-[10px] p-1 border-none bg-gray-50 line-note" placeholder="Nota..." value="${line.note}">
+                        </div>
+                        <div class="col-span-3 flex flex-col gap-1">
+                            <input type="date" class="form-input text-xs p-1 line-start" value="${line.startDate || ''}">
+                            <input type="date" class="form-input text-xs p-1 line-end" value="${line.endDate || ''}">
+                        </div>
+                        <div class="col-span-3">
+                            <div class="flex items-center border rounded">
+                                <select class="bg-gray-100 text-[10px] p-1 border-r line-disc-type">
+                                    <option value="percent" ${line.discountType==='percent'?'selected':''}>%</option>
+                                    <option value="money" ${line.discountType==='money'?'selected':''}>$</option>
+                                </select>
+                                <input type="number" class="w-full text-right text-xs p-1 border-none outline-none line-disc-val" value="${line.discountVal}">
+                            </div>
+                        </div>
+                        <div class="col-span-2 text-right">
+                            <input type="number" class="w-full text-right font-bold text-xs border-b border-gray-300 focus:border-blue-500 outline-none line-total-input" value="0">
+                            <div class="line-info text-[9px] text-gray-400 mt-1"></div>
+                        </div>
+                        <div class="col-span-1 text-center pt-1">
+                            <button type="button" class="text-red-400 hover:text-red-600 line-delete"><i class="fas fa-times"></i></button>
+                        </div>
+                    `;
+        
+                    // Listeners Fila
+                    div.querySelector('.line-item-select').addEventListener('change', (e) => { line.itemId = e.target.value; window.recalcBooking(); });
+                    div.querySelector('.line-note').addEventListener('input', (e) => { line.note = e.target.value; });
+                    div.querySelector('.line-start').addEventListener('change', (e) => { line.startDate = e.target.value; window.recalcBooking(); });
+                    div.querySelector('.line-end').addEventListener('change', (e) => { line.endDate = e.target.value; window.recalcBooking(); });
+                    
+                    const discType = div.querySelector('.line-disc-type');
+                    const discVal = div.querySelector('.line-disc-val');
+                    discType.addEventListener('change', (e) => { line.discountType = e.target.value; line.manualAdj = 0; window.recalcBooking(); });
+                    discVal.addEventListener('input', (e) => { line.discountVal = parseFloat(e.target.value)||0; line.manualAdj = 0; window.recalcBooking(); });
+        
+                    // LOGICA INVERSA (Total Manual)
+                    div.querySelector('.line-total-input').addEventListener('input', (e) => {
+                        const userTotal = parseFloat(e.target.value) || 0;
+                        // Calcular teórico
+                        // Necesitamos el precio base y días frescos
+                        const itemData = itemsList.find(i => i.id === line.itemId);
+                        const basePrice = itemData ? parseFloat(itemData.pricePerDay) : 0;
+                        let days = 0;
+                        if (line.startDate && line.endDate) {
+                            const s = new Date(line.startDate);
+                            const e = new Date(line.endDate);
+                            days = Math.max(1, Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1);
+                        }
+                        const gross = basePrice * days;
+                        
+                        const diff = gross - userTotal;
+                        
+                        if (diff > 0) { // Descuento
+                            line.manualAdj = 0;
+                            if(line.discountType === 'money') line.discountVal = diff;
+                            else line.discountVal = gross > 0 ? (diff/gross)*100 : 0;
+                        } else { // Incremento
+                            line.discountVal = 0;
+                            line.manualAdj = Math.abs(diff);
+                        }
+                        // Actualizar visuales de descuento sin ciclo infinito
+                        discVal.value = line.discountVal.toFixed(2);
+                        window.recalcBooking(); // Para totales globales
+                    });
+        
+                    div.querySelector('.line-delete').addEventListener('click', () => {
+                        window.tempBookingLines = window.tempBookingLines.filter(l => l.uuid !== line.uuid);
+                        div.remove();
+                        window.recalcBooking();
+                    });
+        
+                    container.appendChild(div);
+                };
+        
+                // Renderizar Inicial
+                if (window.tempBookingLines.length === 0) {
+                    // Agregar una línea vacía por defecto
+                    const newLine = { uuid: `line_${Date.now()}`, itemId: '', basePrice: 0, discountType: 'percent', discountVal: 0, manualAdj: 0, startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] };
+                    window.tempBookingLines.push(newLine);
+                }
+                window.tempBookingLines.forEach(l => renderRow(l));
+                window.recalcBooking();
+        
+                // Listeners Globales
+                btnAdd.addEventListener('click', () => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const newLine = { uuid: `line_${Date.now()}`, itemId: '', basePrice: 0, discountType: 'percent', discountVal: 0, manualAdj: 0, startDate: today, endDate: today };
+                    window.tempBookingLines.push(newLine);
+                    renderRow(newLine);
+                    window.recalcBooking();
+                });
+        
+                document.getElementById('c-globalDiscType').addEventListener('change', window.recalcBooking);
+                document.getElementById('c-globalDiscVal').addEventListener('input', window.recalcBooking);
+        
+            }, 150);
         } else if(sheet === 'BlockedDates'){
              // 1. Obtener Datos para Edición
              const b = isNew ? {} : AppState.data.BlockedDates.find(x => x.blockId === id);
@@ -3140,88 +3294,135 @@ const App = {
                 
                 await API.batchUpdate(batch, loadingMsg);
                 AppState.data[listName] = allItems;
-
+                
                 // --- INICIO CÓDIGO NUEVO (GUARDADO RESERVAS) ---
             } else if (sheet === 'Bookings') {
-                const errors = [];
-                if (!data.customerName) errors.push("Cliente");
-                if (!data.itemId) errors.push("Equipo");
-                if (!data.startDate || !data.endDate) errors.push("Fechas");
+                // 1. Validaciones
+                if (!data.customerName) { UI.showToast("Falta nombre de cliente", "error"); return; }
+                if (!window.tempBookingLines || window.tempBookingLines.length === 0) { UI.showToast("Debe haber al menos 1 artículo", "error"); return; }
                 
-                if (errors.length > 0) {
-                    UI.showToast(`Faltan campos: ${errors.join(', ')}`, 'error');
-                    return;
-                }
+                // Validar que todas las líneas tengan item y fechas
+                const invalidLine = window.tempBookingLines.find(l => !l.itemId || !l.startDate || !l.endDate);
+                if(invalidLine) { UI.showToast("Hay líneas incompletas (falta equipo o fechas)", "error"); return; }
+            
+                UI.showLoading(isNew ? "Creando Reserva..." : "Actualizando Reserva...");
+            
+                // 2. Preparar Datos Calculados para Cabecera (Compatibilidad Dashboard)
+                // Calcular fechas globales
+                const starts = window.tempBookingLines.map(l => new Date(l.start || l.startDate)); // Compatibilidad nombres
+                const ends = window.tempBookingLines.map(l => new Date(l.end || l.endDate));
+                const minDate = new Date(Math.min(...starts)).toISOString().split('T')[0];
+                const maxDate = new Date(Math.max(...ends)).toISOString().split('T')[0];
                 
-                // Datos complementarios
-                const item = (AppState.data.RentalItems || []).find(i => i.id === data.itemId);
-                if(item) data.itemName = item.name;
-                if(isNew) data.bookingTimestamp = new Date().toISOString();
-
-                // Mensaje Personalizado
-                const msg = isNew ? `Creando Reserva para ${data.customerName}` : `Editando Reserva de ${data.customerName}`;
-                UI.showLoading(`${msg}...`);
-
-                // PREPARAR BATCH (LOTE DE OPERACIONES)
+                // Calcular resumen de items para el Dashboard
+                const itemsList = AppState.data.RentalItems || [];
+                const itemNames = window.tempBookingLines.map(l => {
+                    const it = itemsList.find(i => i.id === l.itemId);
+                    return it ? it.name : 'Item';
+                });
+                // Ej: "Cámara Sony + 2 más"
+                const summaryItemName = itemNames.length > 1 
+                    ? `${itemNames[0]} + ${itemNames.length - 1} más` 
+                    : itemNames[0];
+            
+                // Total Final (Lo tomamos del DOM calculado o recalculamos)
+                const finalTotal = parseFloat(document.getElementById('disp-total').innerText.replace('$','')) || 0;
+            
+                // 3. ID de Reserva
+                if(isNew) data.id = `RES-${Date.now().toString().slice(-6)}`;
+                
+                // 4. PREPARAR BATCH
                 const batch = [];
-
-                // 1. Operación Reserva
+            
+                // A. Actualizar Cabecera 'Bookings'
+                const headerData = {
+                    ...data,
+                    startDate: minDate, // Dashboard usa esto
+                    endDate: maxDate,
+                    totalPrice: finalTotal, // Dashboard usa esto
+                    itemName: summaryItemName, // Dashboard usa esto
+                    bookingTimestamp: isNew ? new Date().toISOString() : undefined,
+                    // Campos nuevos
+                    globalDiscountType: document.getElementById('c-globalDiscType').value,
+                    globalDiscountVal: document.getElementById('c-globalDiscVal').value,
+                    globalNotes: document.getElementById('c-globalNotes')?.value || ''
+                };
+                
                 batch.push({
                     sheet: 'Bookings',
                     action: isNew ? 'add' : 'update',
                     criteria: isNew ? null : { id: id },
-                    data: data
+                    data: headerData
                 });
-
-                // 2. Operación Bloqueo Automático (Sincronización)
-                // Si la reserva NO está cancelada, debe tener bloqueo
-                if (data.status !== 'Cancelado') {
-                    // Buscar bloqueo existente para esta reserva
-                    const existingBlock = !isNew ? (AppState.data.BlockedDates || []).find(blk => blk.bookingId === id) : null;
+            
+                // B. Manejo de Detalles (Estrategia: Borrar viejos del ID -> Insertar nuevos)
+                if (!isNew) {
+                    // Borrar lineas anteriores de esta reserva en BookingsDetails
+                    // Nota: Esto requiere que el backend soporte borrar por criterio (bookingId)
+                    // Como 'update-sheet-data' suele borrar por ID de fila, usamos un truco:
+                    // Buscamos las filas en memoria y mandamos delete para cada una.
+                    const oldLines = (AppState.data.BookingsDetails || []).filter(d => d.bookingId === id);
+                    oldLines.forEach(oldL => {
+                         // Asumiendo que BookingsDetails tiene columna 'id' única, si no, hay que usar row number o filtro compuesto.
+                         // Si tu backend soporta delete_many_by_filter mejor. Si no, iteramos.
+                         // Para seguridad, asumamos que BookingsDetails tiene un id único tipo 'bd_xxx'.
+                         if(oldL.id) batch.push({ sheet: 'BookingsDetails', action: 'delete', criteria: { id: oldL.id } });
+                    });
                     
-                    const blockData = {
-                        itemId: data.itemId,
-                        startDate: data.startDate,
-                        endDate: data.endDate,
-                        reason: `Reserva: ${data.customerName} (ID: ${data.customerCedula || 'N/A'})`,
-                        bookingId: isNew ? data.id : id // Vinculación clave
-                    };
-
-                    if (existingBlock) {
-                        // Actualizar bloqueo existente
-                        batch.push({
-                            sheet: 'BlockedDates',
-                            action: 'update',
-                            criteria: { blockId: existingBlock.blockId },
-                            data: blockData
-                        });
-                    } else {
-                        // Crear nuevo bloqueo
-                        blockData.blockId = `blk_auto_${Date.now()}`;
+                    // Borrar bloqueos viejos asociados
+                    const oldBlocks = (AppState.data.BlockedDates || []).filter(b => b.bookingId === id);
+                    oldBlocks.forEach(oblk => {
+                        batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: oblk.blockId } });
+                    });
+                }
+            
+                // C. Insertar Nuevas Líneas y Nuevos Bloqueos
+                window.tempBookingLines.forEach(line => {
+                    const detailId = `bd_${Date.now()}_${Math.random().toString(36).substr(2,5)}`;
+                    
+                    // Detalle Contable
+                    batch.push({
+                        sheet: 'BookingsDetails',
+                        action: 'add',
+                        data: {
+                            id: detailId,
+                            bookingId: data.id, // Enlace FK
+                            itemId: line.itemId,
+                            itemName: itemsList.find(i=>i.id===line.itemId)?.name,
+                            startDate: line.startDate,
+                            endDate: line.endDate,
+                            basePrice: line.basePrice,
+                            lineDiscountType: line.discountType,
+                            lineDiscountVal: line.discountVal,
+                            manualAdjustment: line.manualAdj,
+                            lineTotal: line.computedNet,
+                            lineNote: line.note
+                        }
+                    });
+            
+                    // Bloqueo de Calendario (Si no cancelada)
+                    if (data.status !== 'Cancelado') {
                         batch.push({
                             sheet: 'BlockedDates',
                             action: 'add',
-                            data: blockData
+                            data: {
+                                blockId: `blk_${detailId}`, // Vinculado al detalle
+                                bookingId: data.id,       // Vinculado a la reserva
+                                itemId: line.itemId,
+                                startDate: line.startDate,
+                                endDate: line.endDate,
+                                reason: `Reserva: ${data.customerName}`
+                            }
                         });
                     }
-                } else {
-                    // SI SE CANCELA, BORRAR EL BLOQUEO SI EXISTE
-                    if (!isNew) {
-                        const existingBlock = (AppState.data.BlockedDates || []).find(blk => blk.bookingId === id);
-                        if (existingBlock) {
-                            batch.push({
-                                sheet: 'BlockedDates',
-                                action: 'delete',
-                                criteria: { blockId: existingBlock.blockId }
-                            });
-                        }
-                    }
-                }
-
-                // Ejecutar todo junto
-                await API.batchUpdate(batch, msg);
-
-
+                });
+            
+                // 5. ENVIAR BATCH
+                await API.batchUpdate(batch, "Procesando Reserva Multi-Item...");
+                
+                // Limpieza
+                delete window.tempBookingLines;
+                window.recalcBooking = null;
                 
             // --- FIN CÓDIGO NUEVO ---
             
@@ -3439,38 +3640,36 @@ const App = {
         
         // 2. Lógica Especial de Cascada para RESERVAS
         if (sheet === 'Bookings') {
-            // Usamos 'bookingItem' para evitar conflicto con la variable 'item' de abajo
             const bookingItem = AppState.data.Bookings?.find(b => b.id === id);
             
-            // Buscar bloqueo asociado (convertir a String para seguridad)
-            const linkedBlock = (AppState.data.BlockedDates || []).find(b => String(b.bookingId) === String(id));
-            
-            // Mensaje informativo
-            const confirmMsg = linkedBlock 
-                ? "Al eliminar esta reserva, se liberarán automáticamente las fechas en el calendario (se borrará el bloqueo asociado)." 
-                : "Se eliminará el registro de la reserva.";
-
-            UI.showConfirm(`¿Eliminar Reserva de ${bookingItem?.customerName}?`, confirmMsg, async () => {
-                UI.showLoading(`Eliminando Reserva y liberando fechas...`);
+            UI.showConfirm(`¿Eliminar Reserva ${id}?`, `Se borrarán el historial, los detalles contables y se liberarán todos los bloqueos de calendario asociados.`, async () => {
+                UI.showLoading('Eliminando en cascada...');
                 
-                const batch = [{ sheet: 'Bookings', action: 'delete', criteria: { id: id } }];
+                const batch = [];
                 
-                if (linkedBlock) {
-                    batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: linkedBlock.blockId } });
-                }
-
-                // AJUSTE CLAVE: Definir mensaje y pasarlo a la función
-                const cleanMsg = `Eliminando Reserva de ${bookingItem?.customerName || 'Cliente'}`;
+                // 1. Borrar Cabecera
+                batch.push({ sheet: 'Bookings', action: 'delete', criteria: { id: id } });
+        
+                // 2. Borrar Detalles (Iterar memoria actual)
+                const details = (AppState.data.BookingsDetails || []).filter(d => d.bookingId === id);
+                details.forEach(d => {
+                    batch.push({ sheet: 'BookingsDetails', action: 'delete', criteria: { id: d.id } });
+                });
+        
+                // 3. Borrar Bloqueos
+                const blocks = (AppState.data.BlockedDates || []).filter(b => b.bookingId === id);
+                blocks.forEach(b => {
+                    batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: b.blockId } });
+                });
+        
+                await API.batchUpdate(batch, "Eliminando Reserva Completa");
                 
-                // Pasamos cleanMsg como segundo parámetro para ocultar el contador
-                await API.batchUpdate(batch, cleanMsg); 
-
                 await App.ensureDataForView(AppState.view, true);
                 UI.renderView(AppState.view);
-                UI.showToast('Proceso completado correctamente');
+                UI.showToast('Reserva eliminada correctamente');
                 UI.hideLoading();
             });
-            return; // DETENER PROCESO AQUÍ (Importante)
+            return;
         }
 
         // 3. Lógica General para el resto (Proyectos, Servicios, etc.)
@@ -3869,6 +4068,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
