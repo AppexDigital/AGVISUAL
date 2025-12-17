@@ -218,9 +218,9 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 items-stretch">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     
-                    <div class="lg:col-span-2 bg-white p-6 shadow-sm border border-gray-200 flex flex-col h-[26rem]">
+                    <div class="lg:col-span-2 bg-white p-6 shadow-sm border border-gray-200 flex flex-col h-[28rem]">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-gray-800 text-sm">Tendencia de Ingresos</h3>
                             <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 uppercase font-bold" id="chart-label-period">Vista Dinámica</span>
@@ -230,9 +230,9 @@
                         </div>
                     </div>
 
-                    <div class="bg-white p-0 shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[26rem]">
+                    <div class="bg-white p-0 shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[28rem]">
                         <div class="p-4 border-b bg-gray-50 flex-shrink-0"><h3 class="font-bold text-gray-800 text-sm">Ecosistema Web</h3></div>
-                        <div class="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2 text-xs content-start">
+                        <div class="flex-1 p-3 grid grid-cols-2 gap-2 text-xs content-start overflow-y-auto">
                             
                             <div onclick="App.switchView('projects')" class="p-2 bg-white border border-gray-100 hover:border-purple-200 hover:bg-purple-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-camera text-purple-500 text-lg mb-1 block"></i>
@@ -248,7 +248,7 @@
                                 <i class="fas fa-concierge-bell text-blue-500 text-lg mb-1 block"></i>
                                 <span class="font-bold block text-gray-700" id="stat-services">0</span>
                                 <span class="text-gray-400 text-[10px]">Servicios</span>
-                                <div class="absolute top-1 right-1 text-[8px] bg-blue-100 text-blue-600 px-1" id="stat-services-img">0</div>
+                                <div class="absolute top-1 right-1 text-[8px] bg-blue-100 text-blue-600 px-1" id="stat-services-img">0 Fotos</div>
                             </div>
                             <div onclick="App.switchView('videos')" class="p-2 bg-white border border-gray-100 hover:border-red-200 hover:bg-red-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-video text-red-500 text-lg mb-1 block"></i>
@@ -260,7 +260,7 @@
                                 <i class="fas fa-box text-gray-600 text-lg mb-1 block"></i>
                                 <span class="font-bold block text-gray-700" id="stat-items">0</span>
                                 <span class="text-gray-400 text-[10px]">Equipos</span>
-                                <div class="absolute top-1 right-1 text-[8px] bg-gray-200 text-gray-600 px-1" id="stat-items-img">0</div>
+                                <div class="absolute top-1 right-1 text-[8px] bg-gray-200 text-gray-600 px-1" id="stat-items-img">0 Fotos</div>
                             </div>
                             <div onclick="App.switchView('rentals'); UI.switchTab('rental-cats')" class="p-2 bg-white border border-gray-100 hover:border-gray-400 hover:bg-gray-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-tags text-gray-400 text-lg mb-1 block"></i>
@@ -269,63 +269,66 @@
                             </div>
                             <div onclick="App.switchView('bookings')" class="p-2 bg-white border border-gray-100 hover:border-green-200 hover:bg-green-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-calendar-check text-green-500 text-lg mb-1 block"></i>
-                                <span class="font-bold block text-gray-700" id="stat-bookings">0</span>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-bookings">0</span>
                                 <span class="text-gray-400 text-[10px]">Reservas</span>
                             </div>
                             <div onclick="App.switchView('rentals'); UI.switchTab('blocked-dates')" class="p-2 bg-white border border-gray-100 hover:border-orange-200 hover:bg-orange-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-ban text-orange-500 text-lg mb-1 block"></i>
-                                <span class="font-bold block text-gray-700" id="stat-blocked">0</span>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-blocked">0</span>
                                 <span class="text-gray-400 text-[10px]">Bloqueos</span>
                             </div>
                             
                             <div onclick="App.switchView('client-logos')" class="p-2 bg-white border border-gray-100 hover:border-yellow-200 hover:bg-yellow-50 cursor-pointer transition text-center group">
                                 <i class="fas fa-star text-yellow-500 text-lg mb-1 block"></i>
-                                <span class="font-bold block text-gray-700" id="stat-logos">0</span>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-logos">0</span>
                                 <span class="text-gray-400 text-[10px]">Clientes</span>
                             </div>
                             <div onclick="App.switchView('identity')" class="p-2 bg-white border border-gray-100 hover:border-teal-200 hover:bg-teal-50 cursor-pointer transition text-center group relative">
                                 <i class="fas fa-id-card text-teal-500 text-lg mb-1 block"></i>
-                                <span class="font-bold block text-gray-700" id="stat-identity">1</span>
+                                <span class="font-bold block text-gray-800 text-lg" id="stat-identity">1</span>
                                 <span class="text-gray-400 text-[10px]">Identidad</span>
-                                <div class="absolute top-1 right-1 text-[8px] bg-teal-100 text-teal-600 px-1" id="stat-identity-img">0</div>
+                                <div class="absolute top-1 right-1 text-[8px] bg-teal-100 text-teal-600 px-1" id="stat-identity-img">0 Fotos</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <hr class="border-gray-200 my-8 border-dashed">
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
                     
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden flex flex-col h-72">
-                        <div class="p-3 border-b bg-gray-50 flex justify-between items-center shrink-0">
-                            <h3 class="font-bold text-gray-800 text-xs flex items-center gap-2">
+                    <div class="bg-white shadow-sm border border-gray-200 flex flex-col h-full min-h-[24rem]">
+                        <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-white flex justify-between items-center shrink-0">
+                            <h3 class="font-bold text-blue-900 text-sm flex items-center gap-2">
                                 <i class="fas fa-calendar-day text-blue-500"></i> Próximas Entregas
                             </h3>
+                            <span class="text-[10px] font-bold text-blue-400 uppercase">Confirmadas</span>
                         </div>
-                        <div class="flex-1 overflow-y-auto p-2 space-y-2" id="dashboard-agenda-list">
+                        <div class="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50/30" id="dashboard-agenda-list">
                             </div>
                     </div>
 
-                    <div class="bg-white shadow-sm border border-gray-200 overflow-hidden flex flex-col h-72 relative">
+                    <div class="bg-white shadow-sm border border-gray-200 flex flex-col h-full min-h-[24rem] relative">
                         <div class="absolute top-0 left-0 w-1 h-full bg-yellow-400 z-10"></div>
-                        <div class="p-3 border-b bg-white flex justify-between items-center shrink-0 pl-4">
-                            <h3 class="font-bold text-gray-800 text-xs flex items-center gap-2">
-                                <i class="fas fa-inbox text-yellow-500"></i> Solicitudes
+                        <div class="p-4 border-b bg-white flex justify-between items-center shrink-0 pl-6">
+                            <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                <i class="fas fa-inbox text-yellow-500"></i> Solicitudes Recientes
                             </h3>
-                            <span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-0.5" id="kpi-pending-badge">0</span>
+                            <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5" id="kpi-pending-badge">0</span>
                         </div>
-                        <div class="flex-1 overflow-y-auto p-2 space-y-2" id="dashboard-pending-list">
+                        <div class="flex-1 overflow-y-auto p-3 space-y-2" id="dashboard-pending-list">
                              </div>
                     </div>
 
-                    <div class="flex flex-col gap-4 h-72">
-                        <div class="bg-white p-2 shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden relative">
-                            <h3 class="font-bold text-gray-400 text-[10px] text-center mb-1 uppercase">Estado</h3>
+                    <div class="flex flex-col gap-4 h-full min-h-[24rem]">
+                        <div class="bg-white p-3 shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden relative">
+                            <h3 class="font-bold text-gray-400 text-[10px] text-center mb-1 uppercase">Estado de Reservas</h3>
                             <div class="relative flex-1 w-full">
                                 <canvas id="statusChart"></canvas>
                             </div>
                         </div>
                         
-                        <div class="bg-white p-2 shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden relative">
+                        <div class="bg-white p-3 shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden relative">
                             <h3 class="font-bold text-gray-400 text-[10px] text-center mb-1 uppercase">Top Equipos</h3>
                             <div class="relative flex-1 w-full">
                                 <canvas id="productsChart"></canvas>
@@ -734,7 +737,7 @@ const UI = {
             const bookings = data.Bookings || [];
             const items = data.RentalItems || [];
             
-            // 1. LOGICA DE FILTRADO TEMPORAL (CORREGIDA AL 100%)
+            // 1. LOGICA DE FILTRADO TEMPORAL (Idéntica a la versión funcional anterior)
             const filterEl = document.getElementById('dash-time-filter');
             const filterVal = filterEl ? filterEl.value : 'current_month';
             
@@ -745,8 +748,6 @@ const UI = {
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const todayStr = today.toISOString().split('T')[0];
             const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-            
-            // Límite superior para históricos: Fin de mes actual
             const endOfMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
             const endOfMonthStr = endOfMonthDate.toISOString().split('T')[0];
 
@@ -756,18 +757,14 @@ const UI = {
             };
 
             if (filterVal === 'future') {
-                // FUTURO: Desde MAÑANA (o hoy) en adelante
                 filteredBookings = bookings.filter(b => b.startDate >= todayStr && b.status !== 'Cancelado');
                 document.getElementById('chart-label-period').innerText = "Proyección Futura";
-                
                 for(let i=0; i<6; i++) {
                     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
                     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
                     chartLabels.push({ label: d.toLocaleString('es-ES', { month: 'short' }), key: key, mode: 'month' });
                 }
-
             } else if (filterVal === 'current_month') {
-                // MES ACTUAL
                 filteredBookings = bookings.filter(b => b.startDate && b.startDate.startsWith(currentMonthPrefix));
                 document.getElementById('chart-label-period').innerText = "Mes Actual";
                 const daysInMonth = endOfMonthDate.getDate();
@@ -775,27 +772,18 @@ const UI = {
                     const dayStr = String(i).padStart(2,'0');
                     chartLabels.push({ label: i, key: `${currentMonthPrefix}-${dayStr}`, mode: 'day' });
                 }
-
             } else if (filterVal === 'custom') {
-                // RANGO PERSONALIZADO (ARREGLADO)
                 const sVal = document.getElementById('dash-date-start')?.value;
                 const eVal = document.getElementById('dash-date-end')?.value;
-                
                 if (sVal && eVal) {
                     filteredBookings = bookings.filter(b => b.startDate >= sVal && b.startDate <= eVal);
                     document.getElementById('chart-label-period').innerText = `${sVal} a ${eVal}`;
-                    
-                    const dStart = parseDate(sVal);
-                    const dEnd = parseDate(eVal);
+                    const dStart = parseDate(sVal); const dEnd = parseDate(eVal);
                     const diffDays = Math.ceil((dEnd - dStart) / (1000 * 60 * 60 * 24));
-
                     let dCursor = new Date(dStart);
-                    
-                    // Generamos puntos para que el gráfico no se rompa
                     if (diffDays <= 45) { 
                         while (dCursor <= dEnd) {
-                            const iso = dCursor.toISOString().split('T')[0];
-                            chartLabels.push({ label: dCursor.getDate(), key: iso, mode: 'day' });
+                            chartLabels.push({ label: dCursor.getDate(), key: dCursor.toISOString().split('T')[0], mode: 'day' });
                             dCursor.setDate(dCursor.getDate() + 1);
                         }
                     } else {
@@ -809,25 +797,19 @@ const UI = {
                 } else {
                     document.getElementById('chart-label-period').innerText = "Seleccione fechas";
                 }
-
             } else {
-                // HISTÓRICO (CORREGIDO: TOPE FIN DE MES ACTUAL)
                 const monthsBack = filterVal === 'all' ? 24 : parseInt(filterVal);
                 document.getElementById('chart-label-period').innerText = `Últimos ${monthsBack} Meses`;
-                
                 for (let i = monthsBack - 1; i >= 0; i--) {
                     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
                     chartLabels.push({ label: d.toLocaleString('es-ES', { month: 'short' }), key: key, mode: 'month' });
                 }
-                
                 const startKey = chartLabels[0]?.key || '1999-01';
-                // FILTRO ESTRICTO: Mayor al inicio, MENOR O IGUAL al fin de este mes.
-                // Esto excluye Mayo del próximo año.
                 filteredBookings = bookings.filter(b => b.startDate >= startKey + '-01' && b.startDate <= endOfMonthStr);
             }
 
-            // 2. CÁLCULO DE KPIs
+            // 2. KPIs
             const sumMoney = (list) => list.reduce((s, b) => s + (parseFloat(b.totalPrice) || 0), 0);
             const kpiConfirmed = sumMoney(filteredBookings.filter(b => b.status === 'Confirmado'));
             const kpiPaid = sumMoney(filteredBookings.filter(b => b.status === 'Pagado'));
@@ -842,7 +824,7 @@ const UI = {
             document.getElementById('kpi-rev-lost').innerText = fmt.format(kpiLost);
             document.getElementById('kpi-count-total').innerText = filteredBookings.length;
 
-            // 3. PANELES OPERATIVOS (Siempre Globales)
+            // 3. OPERATIVA
             const agenda = bookings
                 .filter(b => b.startDate >= todayStr && (b.status === 'Confirmado' || b.status === 'Pagado'))
                 .sort((a,b) => new Date(a.startDate) - new Date(b.startDate)); 
@@ -889,19 +871,20 @@ const UI = {
                 `).join('');
             }
 
-            // 4. RESUMEN ECOSISTEMA
+            // 4. RESUMEN
             document.getElementById('stat-projects').innerText = (data.Projects||[]).length;
             document.getElementById('stat-portfolio').innerText = countPortfolio;
             document.getElementById('stat-services').innerText = (data.Services||[]).length;
-            document.getElementById('stat-services-img').innerText = (data.ServiceImages||[]).length;
+            document.getElementById('stat-services-img').innerText = (data.ServiceImages||[]).length + ' Fotos';
             document.getElementById('stat-videos').innerText = (data.Videos||[]).length;
             document.getElementById('stat-items').innerText = items.length;
-            document.getElementById('stat-items-img').innerText = (data.RentalItemImages||[]).length;
+            document.getElementById('stat-items-img').innerText = (data.RentalItemImages||[]).length + ' Fotos';
             document.getElementById('stat-cats').innerText = (data.RentalCategories||[]).length;
             document.getElementById('stat-bookings').innerText = bookings.length;
             document.getElementById('stat-blocked').innerText = (data.BlockedDates||[]).length;
             document.getElementById('stat-logos').innerText = (data.LogosClientes||[]).length;
-            document.getElementById('stat-identity-img').innerText = (data.ImagenesIdentidad||[]).length;
+            const idImagesCount = (data.ImagenesIdentidad||[]).length;
+            document.getElementById('stat-identity-img').innerText = idImagesCount + ' Fotos';
 
             // 5. GRÁFICOS
             if (UI.charts) { UI.charts.forEach(c => c.destroy()); }
@@ -927,9 +910,7 @@ const UI = {
                 type: 'line',
                 data: {
                     labels: chartLabels.map(l => l.label),
-                    datasets: [{
-                        label: 'Ingresos', data: chartDataValues, borderColor: '#10b981', backgroundColor: gradRev, tension: 0.4, fill: true, pointRadius: 4
-                    }]
+                    datasets: [{ label: 'Ingresos', data: chartDataValues, borderColor: '#10b981', backgroundColor: gradRev, tension: 0.4, fill: true, pointRadius: 5 }]
                 },
                 plugins: [ChartDataLabels],
                 options: {
@@ -956,7 +937,7 @@ const UI = {
                 }
             }));
 
-            // C. Productos (CORREGIDO PADDING)
+            // C. Productos
             const prodCounts = {};
             filteredBookings.forEach(b => { const n = b.itemName||'Otros'; if(b.status !== 'Cancelado') prodCounts[n]=(prodCounts[n]||0)+1; });
             const sortedProd = Object.entries(prodCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
@@ -970,7 +951,7 @@ const UI = {
                 plugins: [ChartDataLabels],
                 options: {
                     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    layout: { padding: { right: 30, left: 0 } }, // PADDING EXTRA DERECHA
+                    layout: { padding: { right: 30, left: 0 } }, 
                     plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'start', color: '#fff', font: { weight: 'bold' } } },
                     scales: { x: { display: false }, y: { grid: { display: false } } }
                 }
@@ -3839,6 +3820,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
