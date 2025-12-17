@@ -147,9 +147,7 @@
                         <button onclick="App.handleManualBooking()" class="btn btn-sm bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 shadow-sm" title="Nueva Reserva">
                             <i class="fas fa-calendar-plus text-blue-600"></i>
                         </button>
-                        <button onclick="App.handleEditCrudItem('Projects', null)" class="btn btn-sm bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 shadow-sm" title="Nuevo Proyecto">
-                            <i class="fas fa-camera text-purple-600"></i>
-                        </button>
+                        
                         <select id="dash-time-filter" class="form-select text-sm py-1 pl-3 pr-8 rounded border-gray-300 shadow-sm bg-white cursor-pointer" onchange="UI.renderView('dashboard')">
                             <option value="6">Últimos 6 Meses</option>
                             <option value="12">Último Año</option>
@@ -158,7 +156,7 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-white p-4 rounded-lg border border-green-200 shadow-sm relative overflow-hidden">
                         <div class="flex justify-between items-start">
                             <div>
@@ -195,17 +193,6 @@
                         </div>
                         <p class="text-[10px] text-gray-400 mt-2">Ingreso no realizado</p>
                     </div>
-                    
-                    <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden">
-                         <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Valor Inventario (Activos)</p>
-                                <h3 class="text-2xl font-bold text-gray-800" id="kpi-inventory-count">0</h3>
-                            </div>
-                            <div class="p-2 bg-gray-50 rounded text-gray-600"><i class="fas fa-boxes"></i></div>
-                        </div>
-                         <p class="text-[10px] text-gray-400 mt-2">Equipos listos para renta</p>
-                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -240,6 +227,7 @@
 
                     <div class="bg-white p-0 shadow-sm border border-gray-200 rounded-xl overflow-hidden flex flex-col">
                         <div class="p-4 border-b bg-gray-50"><h3 class="font-bold text-gray-800 text-sm">Ecosistema Web</h3></div>
+                        
                         <div class="flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-2 text-xs">
                             <div onclick="App.switchView('projects')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
                                 <i class="fas fa-camera text-purple-500 mb-1 text-lg block"></i>
@@ -249,19 +237,37 @@
                                 <i class="fas fa-images text-pink-500 mb-1 text-lg block"></i>
                                 <span class="font-bold block text-gray-700" id="stat-portfolio">0</span> Portafolio
                             </div>
-                            <div onclick="App.switchView('services')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
+                            
+                            <div onclick="App.switchView('services')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center relative">
                                 <i class="fas fa-concierge-bell text-blue-500 mb-1 text-lg block"></i>
                                 <span class="font-bold block text-gray-700" id="stat-services">0</span> Servicios
+                                <span class="text-[9px] text-gray-400 block mt-1" id="stat-services-img">0 Fotos</span>
                             </div>
                             <div onclick="App.switchView('videos')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
                                 <i class="fas fa-video text-red-500 mb-1 text-lg block"></i>
                                 <span class="font-bold block text-gray-700" id="stat-videos">0</span> Videos
                             </div>
+
                             <div onclick="App.switchView('rentals'); UI.switchTab('rental-items')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
                                 <i class="fas fa-box text-gray-600 mb-1 text-lg block"></i>
                                 <span class="font-bold block text-gray-700" id="stat-items">0</span> Equipos
+                                <span class="text-[9px] text-gray-400 block mt-1" id="stat-items-img">0 Fotos</span>
                             </div>
-                            <div onclick="App.switchView('client-logos')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
+                            <div onclick="App.switchView('rentals'); UI.switchTab('rental-cats')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
+                                <i class="fas fa-tags text-gray-400 mb-1 text-lg block"></i>
+                                <span class="font-bold block text-gray-700" id="stat-cats">0</span> Categorías
+                            </div>
+
+                            <div onclick="App.switchView('bookings')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
+                                <i class="fas fa-calendar-check text-green-500 mb-1 text-lg block"></i>
+                                <span class="font-bold block text-gray-700" id="stat-bookings">0</span> Reservas
+                            </div>
+                            <div onclick="App.switchView('rentals'); UI.switchTab('blocked-dates')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center">
+                                <i class="fas fa-ban text-orange-500 mb-1 text-lg block"></i>
+                                <span class="font-bold block text-gray-700" id="stat-blocked">0</span> Bloqueos
+                            </div>
+
+                            <div onclick="App.switchView('client-logos')" class="p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer transition text-center col-span-2">
                                 <i class="fas fa-star text-yellow-500 mb-1 text-lg block"></i>
                                 <span class="font-bold block text-gray-700" id="stat-logos">0</span> Clientes
                             </div>
@@ -283,25 +289,6 @@
                             <canvas id="productsChart"></canvas>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div id="view-projects" class="view">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-3xl font-display font-bold">Proyectos</h1>
-                    <button class="btn btn-primary" onclick="App.handleEditCrudItem('Projects', null)"><i class="fas fa-plus"></i> Nuevo</button>
-                </div>
-                <div class="bg-white shadow-sm border border-gray-200 rounded overflow-hidden">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-50 text-xs uppercase text-text-muted font-bold border-b">
-                            <tr>
-                                <th class="p-4 text-center">Orden</th> <th class="p-4">Portada</th>
-                                <th class="p-4">Título</th>
-                                <th class="p-4 text-center">Fotos</th>
-                                <th class="p-4 text-center">Acciones</th> </tr>
-                        </thead>
-                        <tbody id="projects-table-body" class="divide-y divide-gray-100"></tbody>
-                    </table>
                 </div>
             </div>
 
@@ -675,7 +662,7 @@ const UI = {
             const bookings = data.Bookings || [];
             const items = data.RentalItems || [];
             
-            // --- 1. MATEMÁTICA FINANCIERA (Detalle) ---
+            // --- 1. MATEMÁTICA FINANCIERA (Detalle Completo) ---
             const sumByStatus = (stats) => bookings
                 .filter(b => stats.includes(b.status))
                 .reduce((s, b) => s + (parseFloat(b.totalPrice) || 0), 0);
@@ -687,13 +674,13 @@ const UI = {
             
             const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 });
 
+            // Total Asegurado (Pagado + Confirmado)
             document.getElementById('kpi-rev-total').innerText = fmt.format(revConfirmed + revPaid);
+            // Desglose
             document.getElementById('kpi-rev-paid').innerText = fmt.format(revPaid);
             document.getElementById('kpi-rev-confirmed').innerText = fmt.format(revConfirmed);
             document.getElementById('kpi-rev-pending').innerText = fmt.format(revPending);
             document.getElementById('kpi-rev-lost').innerText = fmt.format(revLost);
-
-            document.getElementById('kpi-inventory-count').innerText = items.length;
 
 
             // --- 2. LISTAS INTELIGENTES (Agenda y Pendientes) ---
@@ -702,13 +689,14 @@ const UI = {
             // A. Agenda Futura (Confirmados/Pagados desde Hoy)
             const agenda = bookings
                 .filter(b => b.startDate >= todayStr && (b.status === 'Confirmado' || b.status === 'Pagado'))
-                .sort((a,b) => new Date(a.startDate) - new Date(b.startDate)); // Ordenar por fecha asc
+                .sort((a,b) => new Date(a.startDate) - new Date(b.startDate)); 
             
             const agendaContainer = document.getElementById('dashboard-agenda-list');
             if (agenda.length === 0) {
                 agendaContainer.innerHTML = '<div class="text-center text-gray-400 text-xs py-10">No hay entregas programadas próximas.</div>';
             } else {
                 agendaContainer.innerHTML = agenda.map(b => {
+                    // Truco para fecha sin desfase
                     const d = new Date(b.startDate + 'T12:00:00');
                     const dateTxt = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
                     const isToday = b.startDate === todayStr;
@@ -754,12 +742,21 @@ const UI = {
             }
 
 
-            // --- 3. CONTEOS DE RESUMEN ---
+            // --- 3. CONTEOS DE RESUMEN (MATRIZ) ---
             document.getElementById('stat-projects').innerText = (data.Projects||[]).length;
             document.getElementById('stat-portfolio').innerText = countPortfolio;
+            
             document.getElementById('stat-services').innerText = (data.Services||[]).length;
+            document.getElementById('stat-services-img').innerText = (data.ServiceImages||[]).length + ' Fotos';
+            
             document.getElementById('stat-videos').innerText = (data.Videos||[]).length;
+            
             document.getElementById('stat-items').innerText = items.length;
+            document.getElementById('stat-items-img').innerText = (data.RentalItemImages||[]).length + ' Fotos';
+            
+            document.getElementById('stat-cats').innerText = (data.RentalCategories||[]).length;
+            document.getElementById('stat-bookings').innerText = bookings.length;
+            document.getElementById('stat-blocked').innerText = (data.BlockedDates||[]).length;
             document.getElementById('stat-logos').innerText = (data.LogosClientes||[]).length;
 
 
@@ -767,10 +764,8 @@ const UI = {
             if (UI.charts) { UI.charts.forEach(c => c.destroy()); }
             UI.charts = [];
             
-            // Configuración Global de Fuente para Gráficos
             Chart.defaults.font.family = "'Montserrat', sans-serif";
             
-            // Datos
             const filterEl = document.getElementById('dash-time-filter');
             const monthsBack = filterEl ? (filterEl.value === 'all' ? 24 : parseInt(filterEl.value)) : 6;
             const monthLabels = [], revenueData = [];
@@ -794,13 +789,6 @@ const UI = {
             bookings.forEach(b => { const n = b.itemName||'Otros'; productCounts[n]=(productCounts[n]||0)+1; });
             const sortedProd = Object.entries(productCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
-            // Plugin Config
-            const datalabelsConfig = {
-                color: '#fff',
-                font: { weight: 'bold', size: 10 },
-                formatter: (value) => value > 0 ? value : '' // Ocultar ceros
-            };
-
             // A. Ingresos
             const ctxRev = document.getElementById('revenueChart').getContext('2d');
             UI.charts.push(new Chart(ctxRev, {
@@ -815,10 +803,10 @@ const UI = {
                         tension: 0.4, fill: true, pointRadius: 4
                     }]
                 },
-                plugins: [ChartDataLabels], // Activar plugin
+                plugins: [ChartDataLabels],
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false, // CLAVE PARA QUE LLENE EL ESPACIO
+                    maintainAspectRatio: false, 
                     plugins: { 
                         legend: { display: false },
                         datalabels: { 
@@ -826,10 +814,7 @@ const UI = {
                             formatter: (v) => v > 0 ? '$'+v : '' 
                         }
                     },
-                    scales: { 
-                        y: { beginAtZero: true, grid: { borderDash: [4, 4] } }, 
-                        x: { grid: { display: false } } 
-                    }
+                    scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }
                 }
             }));
 
@@ -850,12 +835,15 @@ const UI = {
                     maintainAspectRatio: false,
                     plugins: { 
                         legend: { position: 'right', labels: { boxWidth: 10 } },
-                        datalabels: datalabelsConfig 
+                        datalabels: { 
+                            color: '#fff', font: { weight: 'bold' },
+                            formatter: (v) => v > 0 ? v : '' 
+                        }
                     }
                 }
             }));
 
-            // C. Productos
+            // C. Productos (Números Blancos)
             const ctxProd = document.getElementById('productsChart').getContext('2d');
             UI.charts.push(new Chart(ctxProd, {
                 type: 'bar',
@@ -863,7 +851,8 @@ const UI = {
                     labels: sortedProd.map(i => i[0].length>15 ? i[0].substring(0,15)+'...' : i[0]),
                     datasets: [{
                         data: sortedProd.map(i => i[1]),
-                        backgroundColor: '#1f2937', borderRadius: 4
+                        backgroundColor: '#1f2937', 
+                        borderRadius: 4
                     }]
                 },
                 plugins: [ChartDataLabels],
@@ -873,7 +862,13 @@ const UI = {
                     maintainAspectRatio: false,
                     plugins: { 
                         legend: { display: false },
-                        datalabels: { anchor: 'end', align: 'end', color: '#333' }
+                        // CONFIGURACIÓN DE ETIQUETAS BLANCAS
+                        datalabels: { 
+                            anchor: 'end', 
+                            align: 'start', // Dentro, al final
+                            color: '#ffffff', // BLANCO
+                            font: { weight: 'bold' }
+                        }
                     },
                     scales: { x: { display: false }, y: { grid: { display: false } } }
                 }
@@ -3705,6 +3700,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
