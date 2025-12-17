@@ -20,11 +20,16 @@ async function getServices() {
   return { doc, drive: google.drive({ version: 'v3', auth }) };
 }
 
-// Helper Sabueso de Columnas
+// Reemplaza tu función getRealHeader con esta:
 function getRealHeader(sheet, name) {
+    // AJUSTE: Si la hoja no existe o no cargó cabeceras, devuelve undefined sin romper nada
+    if (!sheet || !sheet.headerValues) return undefined;
+    
     const headers = sheet.headerValues;
     const target = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    return headers.find(h => h.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
+    
+    // AJUSTE: Verifica que 'h' exista antes de aplicar toLowerCase
+    return headers.find(h => h && h.toLowerCase().replace(/[^a-z0-9]/g, '') === target);
 }
 
 // Helper Sabueso de Datos (ESTE FALTABA)
@@ -108,53 +113,48 @@ exports.handler = async (event, context) => {
             const bookingsToAddOrUpdate = sheetOps.filter(op => op.action === 'add' || op.action === 'update');
             
             if (bookingsToAddOrUpdate.length > 0) {
-                // 1. Cargar Bloqueos Existentes
                 const blockedSheet = doc.sheetsByTitle['BlockedDates'];
+                
+                // AJUSTE CRÍTICO: Verificamos si blockedSheet existe antes de usarlo
                 if (blockedSheet) {
                     await blockedSheet.loadHeaderRow();
                     const blockedRows = await blockedSheet.getRows();
                     
-                    // Mapear bloqueos a objetos limpios
                     const hStart = getRealHeader(blockedSheet, 'startDate');
                     const hEnd = getRealHeader(blockedSheet, 'endDate');
                     const hItem = getRealHeader(blockedSheet, 'itemId');
                     const hBook = getRealHeader(blockedSheet, 'bookingId');
 
-                    const blocks = blockedRows.map(r => ({
-                        start: new Date(r.get(hStart)),
-                        end: new Date(r.get(hEnd)),
-                        itemId: r.get(hItem),
-                        bookingId: r.get(hBook)
-                    }));
+                    // Solo validamos si encontramos las columnas necesarias
+                    if (hStart && hEnd && hItem) {
+                        const blocks = blockedRows.map(r => ({
+                            start: new Date(r.get(hStart)),
+                            end: new Date(r.get(hEnd)),
+                            itemId: r.get(hItem),
+                            bookingId: hBook ? r.get(hBook) : null
+                        }));
 
-                    // 2. Verificar cada operación
-                    for (const op of bookingsToAddOrUpdate) {
-                        // Si es cancelación, no importa el choque
-                        if (op.data.status === 'Cancelado') continue;
+                        for (const op of bookingsToAddOrUpdate) {
+                            if (op.data.status === 'Cancelado') continue;
 
-                        const reqStart = new Date(op.data.startDate);
-                        const reqEnd = new Date(op.data.endDate);
-                        const reqItem = op.data.itemId;
-                        
-                        // ID de la reserva actual (para excluir sus propios bloqueos al editar)
-                        const currentBookingId = op.criteria ? op.criteria.id : null;
+                            const reqStart = new Date(op.data.startDate);
+                            const reqEnd = new Date(op.data.endDate);
+                            const reqItem = op.data.itemId;
+                            const currentBookingId = op.criteria ? op.criteria.id : null;
 
-                        const conflict = blocks.find(b => {
-                            // Mismo equipo?
-                            if (b.itemId !== reqItem) return false;
-                            
-                            // Si estamos editando, ignorar el bloqueo que pertenece a ESTA reserva
-                            if (currentBookingId && String(b.bookingId) === String(currentBookingId)) return false;
+                            const conflict = blocks.find(b => {
+                                if (b.itemId !== reqItem) return false;
+                                if (currentBookingId && b.bookingId && String(b.bookingId) === String(currentBookingId)) return false;
+                                return reqStart <= b.end && reqEnd >= b.start;
+                            });
 
-                            // Lógica de Solapamiento de Fechas
-                            // (Inicio A <= Fin B) Y (Fin A >= Inicio B)
-                            return reqStart <= b.end && reqEnd >= b.start;
-                        });
-
-                        if (conflict) {
-                            throw new Error(`CONFLICTO: El equipo ya está reservado o bloqueado en esas fechas.`);
+                            if (conflict) {
+                                throw new Error(`CONFLICTO: El equipo ya está reservado o bloqueado en esas fechas.`);
+                            }
                         }
                     }
+                } else {
+                    console.warn("Hoja 'BlockedDates' no encontrada. Saltando validación anti-colisión.");
                 }
             }
         }
