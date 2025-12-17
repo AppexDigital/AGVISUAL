@@ -93,6 +93,22 @@
         .status-Confirmado { background: var(--status-confirmed); }
         .status-Pagado { background: var(--status-paid); }
         .status-Cancelado { background: var(--status-canceled); }
+
+        /* --- ESTILOS SISTEMA RESERVAS V6.0 --- */
+        /* Fix para selects oscuros (letras legibles) */
+        select.dark-select { background-color: #1f2937; color: white; border-color: #374151; }
+        select.dark-select option { background-color: #1f2937; color: white; }
+        
+        /* Tabla y Scrollbar */
+        .booking-grid-header { background-color: rgba(255,255,255,0.05); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; font-weight: 700; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #B8860B; border-radius: 3px; }
+        
+        /* Inputs dentro de la grilla */
+        .grid-input { background: transparent; border: none; border-bottom: 1px solid #4b5563; color: white; font-size: 0.85rem; width: 100%; outline: none; transition: border-color 0.2s; }
+        .grid-input:focus { border-color: #B8860B; }
+        
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -2215,39 +2231,37 @@ const App = {
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
             // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
         } else if(sheet === 'Bookings'){
-            // 1. Carga de Dependencias
-            if (!AppState.data.RentalItems || !AppState.data.BlockedDates) {
-                UI.showLoading('Cargando inventario...');
+            // 1. Carga de Dependencias (Incluyendo BookingsDetails para edición)
+            if (!AppState.data.RentalItems || !AppState.data.BlockedDates || !AppState.data.BookingsDetails) {
+                UI.showLoading('Cargando sistema de reservas...');
                 const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems,BlockedDates,BookingsDetails');
                 AppState.data = { ...AppState.data, ...d };
                 UI.hideLoading();
             }
         
-            // 2. Preparar Datos (Cabecera y Líneas)
+            // 2. Preparar Datos en Memoria (Cabecera y Líneas)
             const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
             
-            // Si es edición, buscamos sus líneas en BookingsDetails. Si es nuevo, array vacío.
-            // NOTA: Si vienes de la versión vieja (sin detalles), creamos una línea dummy con los datos viejos.
+            // Recuperar líneas guardadas o crear array vacío
             let currentLines = [];
-            if (!isNew) {
-                if (AppState.data.BookingsDetails) {
-                    currentLines = AppState.data.BookingsDetails.filter(d => d.bookingId === id);
-                }
-                // Migración en caliente: Si no hay detalles pero hay datos en cabecera (sistema viejo)
-                if (currentLines.length === 0 && b.itemId) {
-                    currentLines.push({
-                        uuid: 'legacy_' + Date.now(),
-                        itemId: b.itemId,
-                        itemName: b.itemName,
-                        startDate: b.startDate,
-                        endDate: b.endDate,
-                        basePrice: 0, // Se recalculará
-                        lineDiscountType: 'percent', lineDiscountVal: 0, manualAdjustment: 0, lineNote: ''
-                    });
-                }
+            if (!isNew && AppState.data.BookingsDetails) {
+                currentLines = AppState.data.BookingsDetails.filter(d => String(d.bookingId) === String(id));
+            }
+            
+            // Migración Legacy: Si la reserva existe pero no tiene detalles en la hoja nueva, usar datos viejos
+            if (!isNew && currentLines.length === 0 && b.itemId) {
+                currentLines.push({
+                    uuid: 'legacy_' + Date.now(),
+                    itemId: b.itemId,
+                    itemName: b.itemName,
+                    startDate: b.startDate,
+                    endDate: b.endDate,
+                    basePrice: 0, // Se recalculará
+                    lineDiscountType: 'percent', lineDiscountVal: 0, manualAdjustment: 0, lineNote: 'Migrado'
+                });
             }
         
-            // Guardamos en variable global temporal para manipulación
+            // Volcar a variable global temporal para manipulación en vivo
             window.tempBookingLines = currentLines.map(l => ({
                 uuid: l.uuid || `line_${Math.random().toString(36).substr(2,9)}`,
                 itemId: l.itemId,
@@ -2260,231 +2274,279 @@ const App = {
                 note: l.lineNote || ''
             }));
         
-            modalTitle = isNew ? 'Nueva Reserva (Multi-Item)' : `Editar Reserva: ${b.id || 'Sin ID'}`;
+            modalTitle = isNew ? 'Nueva Reserva (Multi-Ítem)' : `Editar Reserva: ${b.customerName || 'Cliente'}`;
         
+            // Botones del Modal (Footer se inyecta después, aquí definimos botones extra a la izquierda)
             if (!isNew) {
-                leftButtons = `<button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('Bookings', '${id}')"><i class="fas fa-trash mr-2"></i> Eliminar Reserva</button>`;
+                leftButtons = `<button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('Bookings', '${id}')"><i class="fas fa-trash mr-2"></i> Eliminar</button>`;
             }
         
-            // 3. Estructura HTML (Grid + Globales)
+            // 3. Estructura HTML (Grilla + Panel Totales)
+            // Nota: Usamos clases de Tailwind y estilos inline para el fondo oscuro del modal de reservas
             html = `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    ${UI.inputHTML('c', 'customerName', 'Cliente', b?.customerName)}
-                    ${UI.inputHTML('c', 'customerCedula', 'ID / Cédula', b?.customerCedula)}
-                    ${UI.inputHTML('c', 'customerEmail', 'Email', b?.customerEmail, 'email')}
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    ${UI.inputHTML('c', 'customerAddress', 'Dirección', b?.customerAddress)}
-                    ${UI.inputHTML('c', 'globalNotes', 'Notas Globales', b?.globalNotes || b?.notes)} 
-                </div>
-        
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="text-xs font-bold text-gray-500 uppercase">Detalle de Artículos</h4>
-                        <button type="button" class="btn btn-sm btn-secondary" id="btn-add-line-dom"><i class="fas fa-plus mr-1"></i> Agregar Ítem</button>
-                    </div>
+                <div class="bg-gray-900 text-white -m-6 p-6 h-full flex flex-col">
+                    <input type="hidden" id="input-reserva-id" value="${id || ''}">
                     
-                    <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-gray-400 uppercase mb-2 px-2">
-                        <div class="col-span-3">Artículo / Nota</div>
-                        <div class="col-span-3">Fechas (Independientes)</div>
-                        <div class="col-span-3">Desc. Línea</div>
-                        <div class="col-span-2 text-right">Total</div>
-                        <div class="col-span-1 text-center"></div>
-                    </div>
-        
-                    <div id="booking-lines-container" class="space-y-1 max-h-60 overflow-y-auto pr-1"></div>
-                </div>
-        
-                <div class="bg-gray-900 text-white p-4 rounded-lg flex flex-col md:flex-row justify-between items-end">
-                    <div class="w-full md:w-1/3 mb-4 md:mb-0">
-                        <label class="text-[10px] text-gray-400 uppercase block mb-1">Descuento Global</label>
-                        <div class="flex bg-gray-800 rounded border border-gray-700">
-                            <select id="c-globalDiscType" class="bg-transparent text-white text-xs p-2 border-r border-gray-600 outline-none">
-                                <option value="percent" ${b?.globalDiscountType === 'percent' ? 'selected':''}>%</option>
-                                <option value="money" ${b?.globalDiscountType === 'money' ? 'selected':''}>$</option>
-                            </select>
-                            <input type="number" id="c-globalDiscVal" class="bg-transparent text-white text-right text-sm p-2 w-full outline-none" value="${b?.globalDiscountVal || 0}">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 flex-shrink-0">
+                        <div class="md:col-span-1">
+                            <label class="text-[10px] uppercase font-bold text-gray-500">Cliente</label>
+                            <input type="text" id="c-customerName" class="grid-input font-bold text-lg" value="${b.customerName || ''}" placeholder="Nombre Cliente">
                         </div>
-                        <div class="mt-2">
-                            <label class="text-[10px] text-gray-400 uppercase block mb-1">Estado</label>
-                            <select id="c-status" class="bg-gray-800 text-white text-xs p-2 rounded w-full border border-gray-700">
+                        <div class="md:col-span-1">
+                            <label class="text-[10px] uppercase font-bold text-gray-500">Contacto</label>
+                            <input type="text" id="c-customerPhone" class="grid-input" value="${b.customerPhone || ''}" placeholder="Teléfono / Email">
+                            <input type="hidden" id="c-customerEmail" value="${b.customerEmail || ''}">
+                            <input type="hidden" id="c-customerCedula" value="${b.customerCedula || ''}">
+                            <input type="hidden" id="c-customerAddress" value="${b.customerAddress || ''}">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="text-[10px] uppercase font-bold text-gray-500">Estado</label>
+                            <select id="c-status" class="dark-select w-full p-1 rounded border border-gray-700 text-sm">
                                 <option value="Pendiente" ${b?.status==='Pendiente'?'selected':''}>Pendiente</option>
                                 <option value="Confirmado" ${b?.status==='Confirmado'?'selected':''}>Confirmado</option>
                                 <option value="Pagado" ${b?.status==='Pagado'?'selected':''}>Pagado</option>
                                 <option value="Cancelado" ${b?.status==='Cancelado'?'selected':''}>Cancelado</option>
                             </select>
                         </div>
+                        <div class="md:col-span-1 text-right">
+                            <span class="block text-[10px] text-gray-500 uppercase">ID Reserva</span>
+                            <span class="font-mono text-xl text-accent-primary font-bold" id="display-id">${b.id || 'NUEVA'}</span>
+                        </div>
                     </div>
         
-                    <div class="text-right space-y-1">
-                        <div class="text-xs text-gray-400">Subtotal: <span id="disp-subtotal" class="text-white font-mono">$0.00</span></div>
-                        <div class="text-xs text-green-400">Desc. Global: <span id="disp-discount" class="font-mono">-$0.00</span></div>
-                        <div class="text-xs text-gray-400">IVA (13%): <span id="disp-tax" class="text-white font-mono">$0.00</span></div>
-                        <div class="text-xl font-bold text-accent-primary mt-2">Total: <span id="disp-total">$0.00</span></div>
-                        <div class="text-[10px] text-gray-500 mt-1">Rango: <span id="disp-date-range">-- a --</span></div>
+                    <div class="flex-grow flex flex-col bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden mb-4">
+                        <div class="grid grid-cols-12 gap-2 p-2 booking-grid-header border-b border-gray-700">
+                            <div class="col-span-3">Artículo / Nota</div>
+                            <div class="col-span-3">Vigencia (Inicio - Fin)</div>
+                            <div class="col-span-3">Descuento / Ajuste</div>
+                            <div class="col-span-2 text-right">Total Línea</div>
+                            <div class="col-span-1 text-center"><i class="fas fa-trash"></i></div>
+                        </div>
+                        <div id="booking-lines-container" class="overflow-y-auto flex-grow p-2 space-y-1 custom-scrollbar"></div>
+                        <div class="p-2 border-t border-gray-700 text-center bg-gray-800">
+                            <button type="button" id="btn-add-line-dom" class="text-accent-primary hover:text-white text-xs font-bold border border-accent-primary/30 rounded px-4 py-1 transition-all hover:bg-accent-primary/20">
+                                <i class="fas fa-plus mr-1"></i> AGREGAR ARTÍCULO
+                            </button>
+                        </div>
+                    </div>
+        
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end flex-shrink-0 bg-black/20 p-4 rounded-lg border border-gray-700">
+                        <div>
+                            <label class="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Notas Internas</label>
+                            <textarea id="c-globalNotes" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-xs text-gray-300 h-20 resize-none outline-none focus:border-accent-primary" placeholder="Detalles de entrega, condiciones especiales...">${b.globalNotes || ''}</textarea>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <label class="text-[10px] uppercase font-bold text-gray-400">Descuento Global</label>
+                                <div class="flex rounded bg-gray-800 border border-gray-600 w-32">
+                                    <select id="c-globalDiscType" class="dark-select text-[10px] p-1 border-r border-gray-600 outline-none">
+                                        <option value="percent" ${b.globalDiscountType==='percent'?'selected':''}>%</option>
+                                        <option value="money" ${b.globalDiscountType==='money'?'selected':''}>$</option>
+                                    </select>
+                                    <input type="number" id="c-globalDiscVal" class="bg-transparent text-white text-right text-xs p-1 w-full outline-none" value="${b.globalDiscountVal || 0}">
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-700 my-2"></div>
+        
+                            <div class="flex justify-between text-xs text-gray-400">
+                                <span>Subtotal:</span>
+                                <span id="disp-subtotal" class="font-mono text-white">$0.00</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-green-500">
+                                <span>Descuento:</span>
+                                <span id="disp-discount" class="font-mono">-$0.00</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-400">
+                                <span>IVA (13%):</span>
+                                <span id="disp-tax" class="font-mono text-white">$0.00</span>
+                            </div>
+                            <div class="flex justify-between text-xl font-bold text-white pt-1 border-t border-gray-600 mt-1">
+                                <span>TOTAL:</span>
+                                <span id="disp-total" class="text-accent-primary">$0.00</span>
+                            </div>
+                            <div class="text-[10px] text-gray-600 text-right">
+                                Fechas: <span id="disp-date-range">--</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         
-            // 4. LÓGICA DE RENDERIZADO Y CÁLCULO (Inyectada post-render)
+            // 4. INICIALIZACIÓN LÓGICA (Post-Render)
             setTimeout(() => {
                 const container = document.getElementById('booking-lines-container');
-                const btnAdd = document.getElementById('btn-add-line-dom');
                 const itemsList = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
         
-                // Función Maestra de Cálculo (Global)
+                // --- MOTOR DE CÁLCULO ---
                 window.recalcBooking = () => {
                     let globalSub = 0;
-                    let minDate = null;
-                    let maxDate = null;
+                    let totalTax = 0;
+                    let minD = null, maxD = null;
         
-                    // Recorrer líneas
                     window.tempBookingLines.forEach(line => {
                         // Fechas
-                        if (line.startDate) {
-                            if(!minDate || line.startDate < minDate) minDate = line.startDate;
-                        }
-                        if (line.endDate) {
-                            if(!maxDate || line.endDate > maxDate) maxDate = line.endDate;
-                        }
+                        if(line.startDate) { if(!minD || line.startDate < minD) minD = line.startDate; }
+                        if(line.endDate) { if(!maxD || line.endDate > maxD) maxD = line.endDate; }
         
-                        // Precios
-                        const itemData = itemsList.find(i => i.id === line.itemId);
-                        const basePrice = itemData ? parseFloat(itemData.pricePerDay) : 0;
-                        line.basePrice = basePrice; // Actualizar ref
+                        // Datos Item (Con IVA Condicional)
+                        const item = itemsList.find(i => i.id === line.itemId);
+                        const bp = item ? parseFloat(item.pricePerDay) : 0;
+                        const hasTax = item ? (String(item.hasTax).toUpperCase() === 'TRUE') : false;
+                        line.basePrice = bp;
         
                         // Días
-                        let days = 0;
-                        if (line.startDate && line.endDate) {
-                            const s = new Date(line.startDate);
-                            const e = new Date(line.endDate);
-                            days = Math.max(1, Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1);
+                        let d = 0;
+                        if(line.startDate && line.endDate) {
+                            const diff = new Date(line.endDate) - new Date(line.startDate);
+                            if(!isNaN(diff) && diff >= 0) d = Math.ceil(diff/86400000) + 1;
                         }
-                        
-                        const gross = basePrice * days;
-                        
-                        // Descuento Linea
-                        let discAmount = 0;
-                        if (line.discountType === 'money') discAmount = line.discountVal;
-                        else discAmount = gross * (line.discountVal / 100);
+                        const gross = bp * d;
         
-                        // Total Línea
-                        const net = Math.max(0, gross - discAmount + line.manualAdj);
-                        line.computedNet = net; // Guardar
+                        // Descuento Linea
+                        let disc = (line.discountType==='money') ? line.discountVal : (gross * (line.discountVal/100));
+                        
+                        // Neto Linea (Base - Dto + Ajuste)
+                        const net = Math.max(0, gross - disc + line.manualAdj);
+                        line.computedNet = net;
+        
+                        // Acumular Impuesto (PUNTO 2)
+                        if(hasTax) totalTax += (net * 0.13);
         
                         globalSub += net;
         
                         // Actualizar DOM Fila
                         const row = document.getElementById(`row-${line.uuid}`);
                         if(row) {
-                            // Update visual inputs if not focused
-                            const totalInput = row.querySelector('.line-total-input');
-                            if(document.activeElement !== totalInput) totalInput.value = net.toFixed(2);
+                            const tInput = row.querySelector('.line-total-input');
+                            if(document.activeElement !== tInput) tInput.value = net.toFixed(2);
                             
-                            // Update etiquetas
-                            const infoDiv = row.querySelector('.line-info');
-                            infoDiv.innerHTML = `${days}d x $${basePrice} ${line.manualAdj!=0 ? `<span class='text-blue-500 font-bold'>(Ajuste: ${line.manualAdj})</span>` : ''}`;
+                            const info = row.querySelector('.line-info');
+                            const taxLabel = hasTax ? '<span class="text-blue-400 font-bold ml-1">+IVA</span>' : '';
+                            info.innerHTML = `${d}d x $${bp}${taxLabel} ${line.manualAdj>0 ? `<span class='text-blue-500'>(Aj:${line.manualAdj})</span>` : ''}`;
                         }
                     });
         
                     // Globales
-                    const gDiscType = document.getElementById('c-globalDiscType').value;
-                    const gDiscVal = parseFloat(document.getElementById('c-globalDiscVal').value) || 0;
-                    
-                    let gDiscAmount = 0;
-                    if (gDiscType === 'money') gDiscAmount = gDiscVal;
-                    else gDiscAmount = globalSub * (gDiscVal / 100);
+                    const gType = document.getElementById('c-globalDiscType').value;
+                    const gVal = parseFloat(document.getElementById('c-globalDiscVal').value) || 0;
+                    let gDisc = (gType==='money') ? gVal : (globalSub * (gVal/100));
         
-                    const subAfterDisc = Math.max(0, globalSub - gDiscAmount);
-                    const tax = subAfterDisc * 0.13;
-                    const final = subAfterDisc + tax;
+                    const final = Math.max(0, globalSub - gDisc + totalTax);
         
                     // Render Globales
                     document.getElementById('disp-subtotal').innerText = `$${globalSub.toFixed(2)}`;
-                    document.getElementById('disp-discount').innerText = `-$${gDiscAmount.toFixed(2)}`;
-                    document.getElementById('disp-tax').innerText = `$${tax.toFixed(2)}`;
+                    document.getElementById('disp-discount').innerText = `-$${gDisc.toFixed(2)}`;
+                    document.getElementById('disp-tax').innerText = `$${totalTax.toFixed(2)}`;
                     document.getElementById('disp-total').innerText = `$${final.toFixed(2)}`;
-                    document.getElementById('disp-date-range').innerText = `${minDate || '?'} a ${maxDate || '?'}`;
+                    
+                    const fmt = d => d ? d.split('-').reverse().join('/') : '--';
+                    document.getElementById('disp-date-range').innerText = `${fmt(minD)} a ${fmt(maxD)}`;
                 };
         
-                // Función Render Fila
+                // --- RENDER FILA ---
                 const renderRow = (line) => {
                     const div = document.createElement('div');
                     div.id = `row-${line.uuid}`;
-                    div.className = "grid grid-cols-12 gap-2 items-start bg-white p-2 rounded border border-gray-200 text-xs shadow-sm";
+                    div.className = "grid grid-cols-12 gap-2 items-start bg-gray-800 p-2 rounded border border-gray-700 text-xs shadow-sm mb-1";
                     div.innerHTML = `
                         <div class="col-span-3">
-                            <select class="form-select w-full text-xs p-1 line-item-select mb-1">
-                                <option value="">Elegir...</option>
+                            <select class="dark-select w-full text-xs p-1 rounded border border-gray-600 mb-1 line-item-select">
+                                <option value="">Equipo...</option>
                                 ${itemsList.map(i => `<option value="${i.id}" ${i.id === line.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
                             </select>
-                            <input type="text" class="form-input w-full text-[10px] p-1 border-none bg-gray-50 line-note" placeholder="Nota..." value="${line.note}">
+                            <input type="text" class="grid-input line-note text-gray-400 placeholder-gray-600" placeholder="Nota..." value="${line.note}">
                         </div>
                         <div class="col-span-3 flex flex-col gap-1">
-                            <input type="date" class="form-input text-xs p-1 line-start" value="${line.startDate || ''}">
-                            <input type="date" class="form-input text-xs p-1 line-end" value="${line.endDate || ''}">
+                            <input type="text" class="grid-input bg-gray-700 rounded border border-gray-600 p-1 line-start cursor-pointer text-center" placeholder="Inicio" value="${line.startDate||''}">
+                            <input type="text" class="grid-input bg-gray-700 rounded border border-gray-600 p-1 line-end cursor-pointer text-center" placeholder="Fin" value="${line.endDate||''}">
                         </div>
                         <div class="col-span-3">
-                            <div class="flex items-center border rounded">
-                                <select class="bg-gray-100 text-[10px] p-1 border-r line-disc-type">
+                            <div class="flex items-center border border-gray-600 rounded bg-gray-700">
+                                <select class="dark-select text-[10px] p-1 border-r border-gray-600 line-disc-type outline-none">
                                     <option value="percent" ${line.discountType==='percent'?'selected':''}>%</option>
                                     <option value="money" ${line.discountType==='money'?'selected':''}>$</option>
                                 </select>
-                                <input type="number" class="w-full text-right text-xs p-1 border-none outline-none line-disc-val" value="${line.discountVal}">
+                                <input type="number" class="bg-transparent text-white text-right text-xs p-1 w-full outline-none line-disc-val" value="${line.discountVal}">
                             </div>
                         </div>
                         <div class="col-span-2 text-right">
-                            <input type="number" class="w-full text-right font-bold text-xs border-b border-gray-300 focus:border-blue-500 outline-none line-total-input" value="0">
-                            <div class="line-info text-[9px] text-gray-400 mt-1"></div>
+                            <input type="number" class="grid-input text-right font-bold text-white border-b border-gray-600 line-total-input" value="0">
+                            <div class="line-info text-[9px] text-gray-500 mt-1"></div>
                         </div>
                         <div class="col-span-1 text-center pt-1">
-                            <button type="button" class="text-red-400 hover:text-red-600 line-delete"><i class="fas fa-times"></i></button>
+                            <button type="button" class="text-red-400 hover:text-red-500 line-delete"><i class="fas fa-times"></i></button>
                         </div>
                     `;
         
-                    // Listeners Fila
-                    div.querySelector('.line-item-select').addEventListener('change', (e) => { line.itemId = e.target.value; window.recalcBooking(); });
-                    div.querySelector('.line-note').addEventListener('input', (e) => { line.note = e.target.value; });
-                    div.querySelector('.line-start').addEventListener('change', (e) => { line.startDate = e.target.value; window.recalcBooking(); });
-                    div.querySelector('.line-end').addEventListener('change', (e) => { line.endDate = e.target.value; window.recalcBooking(); });
+                    // PUNTO 1: FLATPICKR CON BLOQUEOS VISUALES
+                    const startIn = div.querySelector('.line-start');
+                    const endIn = div.querySelector('.line-end');
                     
-                    const discType = div.querySelector('.line-disc-type');
-                    const discVal = div.querySelector('.line-disc-val');
-                    discType.addEventListener('change', (e) => { line.discountType = e.target.value; line.manualAdj = 0; window.recalcBooking(); });
-                    discVal.addEventListener('input', (e) => { line.discountVal = parseFloat(e.target.value)||0; line.manualAdj = 0; window.recalcBooking(); });
+                    const getBlocks = (itemId) => {
+                        if(!itemId) return [];
+                        const myId = document.getElementById('input-reserva-id').value;
+                        return (AppState.data.BlockedDates||[])
+                            .filter(b => b.itemId === itemId && b.bookingId !== myId)
+                            .map(b => ({ from: b.startDate, to: b.endDate }));
+                    };
         
-                    // LOGICA INVERSA (Total Manual)
-                    div.querySelector('.line-total-input').addEventListener('input', (e) => {
-                        const userTotal = parseFloat(e.target.value) || 0;
-                        // Calcular teórico
-                        // Necesitamos el precio base y días frescos
-                        const itemData = itemsList.find(i => i.id === line.itemId);
-                        const basePrice = itemData ? parseFloat(itemData.pricePerDay) : 0;
-                        let days = 0;
-                        if (line.startDate && line.endDate) {
-                            const s = new Date(line.startDate);
-                            const e = new Date(line.endDate);
-                            days = Math.max(1, Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1);
+                    const fpCfg = { 
+                        locale: 'es', dateFormat: "Y-m-d", minDate: "today", 
+                        disable: getBlocks(line.itemId) 
+                    };
+                    
+                    const fpS = flatpickr(startIn, { ...fpCfg, onChange: (d,s) => { line.startDate=s; if(fpE) fpE.set('minDate', s); window.recalcBooking(); } });
+                    const fpE = flatpickr(endInput, { ...fpCfg, onChange: (d,s) => { line.endDate=s; window.recalcBooking(); } }); // Corregido typo variable endInput -> endIn
+        
+                    // Corrección de variable flatpickr (fpE usa endIn)
+                    // Re-bind correcto:
+                    fpE.destroy(); 
+                    const fpEndCorrect = flatpickr(endIn, { ...fpCfg, onChange: (d,s) => { line.endDate=s; window.recalcBooking(); } });
+        
+                    // Listener Item
+                    div.querySelector('.line-item-select').addEventListener('change', (e) => {
+                        line.itemId = e.target.value;
+                        const newB = getBlocks(line.itemId);
+                        fpS.set('disable', newB);
+                        fpEndCorrect.set('disable', newB);
+                        fpS.clear(); fpEndCorrect.clear(); line.startDate=''; line.endDate='';
+                        window.recalcBooking();
+                    });
+        
+                    // Listeners Varios
+                    div.querySelector('.line-note').addEventListener('input', e => line.note = e.target.value);
+                    div.querySelector('.line-disc-type').addEventListener('change', e => { line.discountType=e.target.value; line.manualAdj=0; window.recalcBooking(); });
+                    div.querySelector('.line-disc-val').addEventListener('input', e => { line.discountVal=parseFloat(e.target.value)||0; line.manualAdj=0; window.recalcBooking(); });
+        
+                    // Lógica Inversa
+                    div.querySelector('.line-total-input').addEventListener('input', e => {
+                        const userVal = parseFloat(e.target.value)||0;
+                        const item = itemsList.find(i=>i.id===line.itemId);
+                        const bp = item ? parseFloat(item.pricePerDay) : 0;
+                        
+                        let d = 0;
+                        if(line.startDate && line.endDate) {
+                            const diff = new Date(line.endDate) - new Date(line.startDate);
+                            if(diff>=0) d = Math.ceil(diff/86400000)+1;
                         }
-                        const gross = basePrice * days;
-                        
-                        const diff = gross - userTotal;
-                        
-                        if (diff > 0) { // Descuento
-                            line.manualAdj = 0;
-                            if(line.discountType === 'money') line.discountVal = diff;
-                            else line.discountVal = gross > 0 ? (diff/gross)*100 : 0;
-                        } else { // Incremento
-                            line.discountVal = 0;
+                        const gross = bp*d;
+                        const diff = gross - userVal;
+        
+                        if(diff>0) {
+                            line.manualAdj=0;
+                            if(line.discountType==='money') line.discountVal=diff;
+                            else line.discountVal = gross>0 ? (diff/gross)*100 : 0;
+                        } else {
+                            line.discountVal=0;
                             line.manualAdj = Math.abs(diff);
                         }
-                        // Actualizar visuales de descuento sin ciclo infinito
-                        discVal.value = line.discountVal.toFixed(2);
-                        window.recalcBooking(); // Para totales globales
+                        window.recalcBooking();
                     });
         
                     div.querySelector('.line-delete').addEventListener('click', () => {
-                        window.tempBookingLines = window.tempBookingLines.filter(l => l.uuid !== line.uuid);
+                        window.tempBookingLines = window.tempBookingLines.filter(l=>l.uuid!==line.uuid);
                         div.remove();
                         window.recalcBooking();
                     });
@@ -2492,28 +2554,28 @@ const App = {
                     container.appendChild(div);
                 };
         
-                // Renderizar Inicial
-                if (window.tempBookingLines.length === 0) {
-                    // Agregar una línea vacía por defecto
-                    const newLine = { uuid: `line_${Date.now()}`, itemId: '', basePrice: 0, discountType: 'percent', discountVal: 0, manualAdj: 0, startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0] };
-                    window.tempBookingLines.push(newLine);
+                // Render Inicial
+                if(window.tempBookingLines.length === 0) {
+                    const today = new Date().toISOString().split('T')[0];
+                    window.tempBookingLines.push({ uuid: `l_${Date.now()}`, itemId:'', startDate:today, endDate:today, basePrice:0, discountType:'percent', discountVal:0, manualAdj:0, note:'' });
                 }
                 window.tempBookingLines.forEach(l => renderRow(l));
                 window.recalcBooking();
         
-                // Listeners Globales
-                btnAdd.addEventListener('click', () => {
+                // Botón Agregar
+                document.getElementById('btn-add-line-dom').addEventListener('click', () => {
                     const today = new Date().toISOString().split('T')[0];
-                    const newLine = { uuid: `line_${Date.now()}`, itemId: '', basePrice: 0, discountType: 'percent', discountVal: 0, manualAdj: 0, startDate: today, endDate: today };
+                    const newLine = { uuid: `l_${Date.now()}`, itemId:'', startDate:today, endDate:today, basePrice:0, discountType:'percent', discountVal:0, manualAdj:0, note:'' };
                     window.tempBookingLines.push(newLine);
                     renderRow(newLine);
                     window.recalcBooking();
                 });
         
+                // Listeners Globales
                 document.getElementById('c-globalDiscType').addEventListener('change', window.recalcBooking);
                 document.getElementById('c-globalDiscVal').addEventListener('input', window.recalcBooking);
         
-            }, 150);
+            }, 200);
         } else if(sheet === 'BlockedDates'){
              // 1. Obtener Datos para Edición
              const b = isNew ? {} : AppState.data.BlockedDates.find(x => x.blockId === id);
@@ -3487,7 +3549,7 @@ const App = {
                 await API.batchUpdate(batch, loadingMsg);
                 AppState.data.Videos = allVideos;
             
-} else if (sheet === 'Bookings') {
+            } else if (sheet === 'Bookings') {
                 const errors = [];
                 if (!data.customerName) errors.push("Cliente");
                 if (!data.itemId) errors.push("Equipo");
@@ -3758,6 +3820,169 @@ const App = {
         }); 
     },
 
+    // --- NUEVA FUNCIÓN ESPECÍFICA PARA GUARDAR RESERVAS MULTI-ITEM ---
+    async handleSaveBooking(e) {
+        e.preventDefault(); // Detiene el recargo de página
+        
+        // 1. Validaciones de Seguridad
+        if (!window.tempBookingLines || window.tempBookingLines.length === 0) { 
+            UI.showToast("Error: La reserva debe tener al menos un artículo.", "error"); 
+            return; 
+        }
+        
+        // Validar que las líneas tengan datos completos
+        const invalidLine = window.tempBookingLines.find(l => !l.itemId || !l.startDate || !l.endDate);
+        if(invalidLine) { 
+            UI.showToast("Faltan datos (Equipo o Fechas) en alguna línea.", "error"); 
+            return; 
+        }
+
+        const clientSelect = document.getElementById('input-cliente');
+        if (!clientSelect.value) { 
+            UI.showToast("Selecciona un cliente.", "error"); 
+            return; 
+        }
+        const clientName = clientSelect.options[clientSelect.selectedIndex].text;
+
+        // 2. Gestión de IDs
+        const currentId = document.getElementById('input-reserva-id').value;
+        const isNew = !currentId || currentId === "";
+        
+        // Generar ID Profesional si es nuevo (Ej: RES-2508-A9X1)
+        let bookingId = currentId;
+        if (isNew) {
+            const now = new Date();
+            const yy = now.getFullYear().toString().slice(-2);
+            const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+            const rnd = Math.random().toString(36).substr(2, 4).toUpperCase();
+            bookingId = `RES-${yy}${mm}-${rnd}`;
+        }
+
+        UI.showLoading(isNew ? "Creando Reserva..." : "Guardando Cambios...");
+
+        try {
+            // 3. Preparar Datos de Cabecera (Para el Dashboard)
+            const allStarts = window.tempBookingLines.map(l => new Date(l.startDate));
+            const allEnds = window.tempBookingLines.map(l => new Date(l.endDate));
+            // Fechas extremas para el calendario global
+            const globalStart = new Date(Math.min(...allStarts)).toISOString().split('T')[0];
+            const globalEnd = new Date(Math.max(...ends)).toISOString().split('T')[0];
+            
+            // Resumen de texto (ej. "Cámara Sony + 2 más")
+            const itemsRef = AppState.data.RentalItems || [];
+            const firstItemName = itemsRef.find(i => i.id === window.tempBookingLines[0].itemId)?.name || 'Equipo';
+            const summaryName = window.tempBookingLines.length > 1 
+                ? `${firstItemName} + ${window.tempBookingLines.length - 1} más` 
+                : firstItemName;
+
+            const totalFinal = parseFloat(document.getElementById('lbl-global-total').innerText.replace('$','').replace(',','')) || 0;
+
+            // Objeto de la Cabecera
+            const headerData = {
+                id: bookingId,
+                customerName: clientName, 
+                // Datos de contacto (ocultos o derivados del cliente seleccionado si existieran)
+                // En este modelo simplificado asumimos que el cliente ya existe o se selecciona
+                startDate: globalStart,
+                endDate: globalEnd,
+                status: document.getElementById('c-status').value,
+                totalPrice: totalFinal,
+                itemName: summaryName,
+                // Nuevos campos globales
+                globalNotes: document.getElementById('input-notas-globales').value,
+                globalDiscountType: document.getElementById('input-global-disc-type').value,
+                globalDiscountVal: document.getElementById('input-global-disc-val').value,
+                bookingTimestamp: isNew ? new Date().toISOString() : undefined
+            };
+
+            // 4. PREPARAR LOTE DE ACTUALIZACIÓN (BATCH)
+            const batch = [];
+
+            // A. Guardar Cabecera
+            batch.push({
+                sheet: 'Bookings',
+                action: isNew ? 'add' : 'update',
+                criteria: isNew ? null : { id: bookingId },
+                data: headerData
+            });
+
+            // B. Limpieza de Datos Antiguos (Solo si es edición)
+            if (!isNew) {
+                // Borrar detalles anteriores
+                const oldDetails = (AppState.data.BookingsDetails || []).filter(d => String(d.bookingId) === String(bookingId));
+                oldDetails.forEach(d => {
+                     // Usamos un criterio compuesto o ID si existe. Asumimos que update-sheet-data maneja IDs únicos en BookingsDetails
+                     if(d.id) batch.push({ sheet: 'BookingsDetails', action: 'delete', criteria: { id: d.id } });
+                });
+
+                // Borrar bloqueos anteriores
+                const oldBlocks = (AppState.data.BlockedDates || []).filter(b => String(b.bookingId) === String(bookingId));
+                oldBlocks.forEach(b => {
+                    batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: b.blockId } });
+                });
+            }
+
+            // C. Insertar Nuevos Detalles y Bloqueos
+            window.tempBookingLines.forEach((line, idx) => {
+                const detailId = `bd_${Date.now()}_${idx}`;
+                
+                // 1. Guardar Detalle Contable
+                batch.push({
+                    sheet: 'BookingsDetails',
+                    action: 'add',
+                    data: {
+                        id: detailId,
+                        bookingId: bookingId, // Enlace FK
+                        itemId: line.itemId,
+                        itemName: itemsRef.find(i=>i.id===line.itemId)?.name,
+                        startDate: line.startDate,
+                        endDate: line.endDate,
+                        basePrice: line.basePrice,
+                        lineDiscountType: line.discountType,
+                        lineDiscountVal: line.discountVal,
+                        manualAdjustment: line.manualAdj,
+                        lineTotal: line.computedNet,
+                        lineNote: line.note
+                    }
+                });
+
+                // 2. Crear Bloqueo de Calendario (Si no está cancelada)
+                if (headerData.status !== 'Cancelado') {
+                    batch.push({
+                        sheet: 'BlockedDates',
+                        action: 'add',
+                        data: {
+                            blockId: `blk_${detailId}`, // ID único del bloqueo
+                            bookingId: bookingId,       // Enlace a la reserva
+                            itemId: line.itemId,
+                            startDate: line.startDate,
+                            endDate: line.endDate,
+                            reason: `Reserva ${bookingId}: ${clientName}` // Punto 3: ID en motivo
+                        }
+                    });
+                }
+            });
+
+            // 5. ENVIAR AL SERVIDOR
+            await API.batchUpdate(batch, isNew ? "Creando Reserva..." : "Actualizando Reserva...");
+            
+            // 6. ACTUALIZAR ESTADO GLOBAL
+            // Recargamos datos críticos para que el Dashboard y el Calendario reflejen los cambios inmediatamente
+            await App.loadData('dashboard'); 
+            
+            UI.closeModal();
+            UI.renderView('bookings');
+            UI.showToast("Reserva guardada correctamente");
+
+        } catch(err) {
+            console.error(err);
+            UI.showToast("Error crítico al guardar: " + err.message, "error");
+        } finally {
+            UI.hideLoading();
+        }
+    },
+
+    
     async handleDeleteImage(sheet, id, row) { UI.showConfirm("¿Borrar imagen?", async ()=>{ try{ await API.call('/.netlify/functions/update-sheet-data',{method:'POST',body:{sheet,action:'delete',criteria:{id}}}); row.remove(); UI.showToast('Borrada'); }catch(e){alert(e.message);} }); },
 
     async quickUpdate(sheet, id, key, val) { 
@@ -4068,6 +4293,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
