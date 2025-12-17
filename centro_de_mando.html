@@ -934,9 +934,9 @@ const UI = {
                     maintainAspectRatio: false,
                     layout: {
                         padding: {
-                            top: 25, // Espacio extra arriba para evitar cortes
-                            right: 20,
-                            left: 10,
+                            top: 30,   // Altura extra para el pico más alto
+                            right: 35, // AUMENTADO: Aire a la derecha para la última etiqueta
+                            left: 35,  // AUMENTADO: Aire a la izquierda para la primera etiqueta
                             bottom: 0
                         }
                     },
@@ -947,7 +947,7 @@ const UI = {
                             anchor: 'end',
                             color: '#059669',
                             font: { weight: 'bold' },
-                            // Formato inteligente (1k, 1M) para evitar textos gigantes
+                            // Formato inteligente
                             formatter: (v) => {
                                 if (v === 0) return '';
                                 if (v >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
@@ -960,7 +960,7 @@ const UI = {
                         y: {
                             beginAtZero: true,
                             display: false,
-                            // TRUCO: Aumentar el techo del gráfico un 20% más que el valor más alto
+                            // Mantenemos el techo alto (20% extra)
                             suggestedMax: maxVal * 1.2
                         },
                         x: {
@@ -3871,6 +3871,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
