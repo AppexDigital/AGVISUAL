@@ -103,9 +103,66 @@ exports.handler = async (event, context) => {
     for (const sheetName of Object.keys(opsBySheet)) {
         const sheet = doc.sheetsByTitle[sheetName];
         if (!sheet) continue;
-        
+        // --- VALIDACIÓN ANTI-COLISIÓN (SOLO RESERVAS) ---
+        if (sheetName === 'Bookings') {
+            const bookingsToAddOrUpdate = sheetOps.filter(op => op.action === 'add' || op.action === 'update');
+            
+            if (bookingsToAddOrUpdate.length > 0) {
+                // 1. Cargar Bloqueos Existentes
+                const blockedSheet = doc.sheetsByTitle['BlockedDates'];
+                if (blockedSheet) {
+                    await blockedSheet.loadHeaderRow();
+                    const blockedRows = await blockedSheet.getRows();
+                    
+                    // Mapear bloqueos a objetos limpios
+                    const hStart = getRealHeader(blockedSheet, 'startDate');
+                    const hEnd = getRealHeader(blockedSheet, 'endDate');
+                    const hItem = getRealHeader(blockedSheet, 'itemId');
+                    const hBook = getRealHeader(blockedSheet, 'bookingId');
+
+                    const blocks = blockedRows.map(r => ({
+                        start: new Date(r.get(hStart)),
+                        end: new Date(r.get(hEnd)),
+                        itemId: r.get(hItem),
+                        bookingId: r.get(hBook)
+                    }));
+
+                    // 2. Verificar cada operación
+                    for (const op of bookingsToAddOrUpdate) {
+                        // Si es cancelación, no importa el choque
+                        if (op.data.status === 'Cancelado') continue;
+
+                        const reqStart = new Date(op.data.startDate);
+                        const reqEnd = new Date(op.data.endDate);
+                        const reqItem = op.data.itemId;
+                        
+                        // ID de la reserva actual (para excluir sus propios bloqueos al editar)
+                        const currentBookingId = op.criteria ? op.criteria.id : null;
+
+                        const conflict = blocks.find(b => {
+                            // Mismo equipo?
+                            if (b.itemId !== reqItem) return false;
+                            
+                            // Si estamos editando, ignorar el bloqueo que pertenece a ESTA reserva
+                            if (currentBookingId && String(b.bookingId) === String(currentBookingId)) return false;
+
+                            // Lógica de Solapamiento de Fechas
+                            // (Inicio A <= Fin B) Y (Fin A >= Inicio B)
+                            return reqStart <= b.end && reqEnd >= b.start;
+                        });
+
+                        if (conflict) {
+                            throw new Error(`CONFLICTO: El equipo ya está reservado o bloqueado en esas fechas.`);
+                        }
+                    }
+                }
+            }
+        }
+        // --- FIN VALIDACIÓN ---
         await sheet.loadHeaderRow();
         const sheetOps = opsBySheet[sheetName];
+
+      
         const adds = sheetOps.filter(op => op.action === 'add');
         const updates = sheetOps.filter(op => op.action === 'update');
         const deletes = sheetOps.filter(op => op.action === 'delete');
