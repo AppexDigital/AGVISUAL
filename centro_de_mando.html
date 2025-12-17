@@ -99,6 +99,7 @@
             font-family: 'Inter', sans-serif; /* Plana */
             letter-spacing: -0.05em;
             font-weight: 800;
+            font-variant-numeric: tabular-nums;
         }
         /* 1. Estilos Generales del Modal Oscuro */
         select.dark-select { background-color: #1f2937; color: white; border-color: #374151; }
@@ -119,6 +120,9 @@
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 4. Colores Neutros (No Azules) */
+        .focus-gold:focus { border-color: #B8860B !important; }
         
         /* 5. Fix de Layout para la Tabla de Líneas */
         #lines-container { 
@@ -132,9 +136,10 @@
         
         /* 6. Pantalla Completa Real (Forzando al navegador) */
         /* Esto elimina el padding del overlay cuando hay un modal fullscreen dentro */
-        .modal-overlay:has(.is-fullscreen) { padding: 0 !important; display: block !important; }
+        .modal-overlay:has(.is-fullscreen) { padding: 0 !important; display: flex !important; }
         
-        .is-fullscreen { 
+        /* 2. Clase Fullscreen aplicada al PADRE (.modal-content) */
+        .modal-content.is-fullscreen {
             width: 100vw !important; 
             height: 100vh !important; 
             max-width: none !important; 
@@ -144,6 +149,7 @@
             top: 0 !important;
             left: 0 !important;
             margin: 0 !important;
+            transform: none !important;
             background-color: #0a0a0a !important; /* Fondo negro sólido */
             border: none !important;
             z-index: 9999 !important;
@@ -623,7 +629,7 @@
 
 
     <template id="reservation-modal-template">
-        <div id="reservation-modal-content" class="w-full max-w-7xl glass-panel rounded-xl flex flex-col h-[90vh] modal-transition relative bg-[#0a0a0a] text-white overflow-hidden p-0">
+        <div id="reservation-modal-content" class="flex flex-col h-full relative bg-[#0a0a0a] text-white overflow-hidden p-0">
             
             <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0">
                 <div>
@@ -633,11 +639,12 @@
                         <span id="display-reserva-id" class="font-mono text-xs font-bold text-accent-primary tracking-wider">---</span>
                     </div>
                 </div>
+                
                 <div class="flex items-center gap-3">
-                    <button type="button" onclick="App.toggleFullscreenModal()" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10">
-                        <i class="fas fa-expand fa-lg"></i>
+                    <button type="button" onclick="App.toggleFullscreenModal()" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10" title="Pantalla Completa">
+                        <i id="fullscreen-icon" class="fas fa-expand fa-lg"></i>
                     </button>
-                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10">
+                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10" title="Cerrar">
                         <i class="fas fa-times fa-lg"></i>
                     </button>
                 </div>
@@ -652,7 +659,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                             <div class="md:col-span-4">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Cliente</label>
-                                <input type="text" id="c-customerName" class="grid-input font-bold text-base w-full bg-transparent border-b border-gray-600 focus:border-[#B8860B] outline-none py-1" placeholder="Nombre del Cliente" required>
+                                <input type="text" id="c-customerName" class="grid-input font-bold text-base w-full bg-transparent border-b border-gray-600 focus-gold outline-none py-1" placeholder="Nombre del Cliente" required>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Estado</label>
@@ -665,15 +672,15 @@
                             </div>
                             <div class="md:col-span-3">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Teléfono</label>
-                                <input type="text" id="c-customerPhone" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1 focus:border-[#B8860B]" placeholder="---">
+                                <input type="text" id="c-customerPhone" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1 focus-gold" placeholder="---">
                             </div>
                             <div class="md:col-span-3">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Email</label>
-                                <input type="email" id="c-customerEmail" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1 focus:border-[#B8860B]" placeholder="---">
+                                <input type="email" id="c-customerEmail" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1 focus-gold" placeholder="---">
                             </div>
                             <input type="hidden" id="c-customerCedula">
                             <div class="md:col-span-12">
-                                <input type="text" id="c-customerAddress" class="grid-input bg-transparent border-b border-gray-700 w-full text-xs py-1 placeholder-gray-600 focus:border-[#B8860B]" placeholder="Dirección de entrega (Opcional)...">
+                                <input type="text" id="c-customerAddress" class="grid-input bg-transparent border-b border-gray-700 w-full text-xs py-1 placeholder-gray-600 focus-gold" placeholder="Dirección de entrega (Opcional)...">
                             </div>
                         </div>
                     </div>
@@ -722,7 +729,7 @@
                                 <div class="text-[10px] text-gray-600 text-left leading-tight">Rango: <span id="disp-date-range" class="text-gray-500">--</span></div>
                                 <div class="text-right">
                                     <span class="block text-[10px] text-gray-500 uppercase">Total Final</span>
-                                    <span id="lbl-global-total" class="font-total-final text-4xl text-white leading-none tracking-tight">$0.00</span>
+                                    <span id="lbl-global-total" class="font-total text-4xl text-white leading-none tracking-tight">$0.00</span>
                                 </div>
                             </div>
                         </div>
@@ -2422,23 +2429,25 @@ const App = {
                 note: l.lineNote || ''
             }));
         
-            // --- FUNCIÓN FULLSCREEN (FIX) ---
-            // Apunta al contenedor ID específico
+        // --- FUNCIÓN FULLSCREEN CORREGIDA V8.5 ---
             App.toggleFullscreenModal = function() {
-                const modalContainer = document.getElementById('reservation-modal-content');
-                if(!modalContainer) return;
+                // 1. Buscamos el contenedor padre real que crea UI.showModal
+                const modalWrapper = document.querySelector('.modal-content'); 
+                if(!modalWrapper) return;
                 
-                modalContainer.classList.toggle('is-fullscreen');
+                // 2. Alternamos la clase en el PADRE
+                modalWrapper.classList.toggle('is-fullscreen');
                 
-                // Al maximizar, nos aseguramos que el padre overlay no estorbe
-                const overlay = modalContainer.closest('.modal-overlay');
-                if(overlay) overlay.style.padding = modalContainer.classList.contains('is-fullscreen') ? '0' : '1rem';
-        
-                const icon = document.querySelector('.fa-expand');
-                if(icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
-                else { 
-                    const i2 = document.querySelector('.fa-compress'); 
-                    if(i2){ i2.classList.remove('fa-compress'); i2.classList.add('fa-expand'); } 
+                // 3. Cambiamos el icono
+                const icon = document.getElementById('fullscreen-icon');
+                if(icon) {
+                    if(modalWrapper.classList.contains('is-fullscreen')) {
+                        icon.classList.remove('fa-expand');
+                        icon.classList.add('fa-compress');
+                    } else {
+                        icon.classList.remove('fa-compress');
+                        icon.classList.add('fa-expand');
+                    }
                 }
             };
         
@@ -4297,6 +4306,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
