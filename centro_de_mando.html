@@ -617,106 +617,129 @@
 
 
     <template id="reservation-modal-template">
-        <div id="reservation-modal-content" class="flex flex-col h-full relative modal-transition bg-[#0a0a0a] text-white">
+        <div id="reservation-modal-content" class="w-full max-w-7xl glass-panel rounded-xl flex flex-col h-[90vh] modal-transition relative bg-[#0a0a0a] text-white overflow-hidden p-0">
             
-            <button type="button" onclick="App.toggleFullscreenModal()" class="absolute -top-1 -right-12 text-gray-500 hover:text-white transition p-2 z-50" title="Pantalla Completa / Restaurar">
-                <i class="fas fa-expand fa-lg"></i>
-            </button>
+            <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0">
+                <div>
+                    <h2 class="modal-title font-display text-2xl text-accent-gold text-white">Gestión de Reserva</h2>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-[10px] text-gray-500 uppercase tracking-widest">REF:</span>
+                        <span id="display-reserva-id" class="font-mono text-xs font-bold text-accent-primary tracking-wider">---</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="App.toggleFullscreenModal()" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10" title="Pantalla Completa">
+                        <i class="fas fa-expand fa-lg"></i>
+                    </button>
+                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10" title="Cerrar">
+                        <i class="fas fa-times fa-lg"></i>
+                    </button>
+                </div>
+            </div>
     
-            <form id="reservation-form" onsubmit="App.handleSaveBooking(event)" class="flex flex-col flex-grow overflow-hidden h-full">
+            <form id="reservation-form" onsubmit="App.handleSaveBooking(event)" class="flex flex-col flex-grow overflow-hidden">
                 <input type="hidden" name="id" id="input-reserva-id">
                 
-                <div class="bg-white/5 p-3 rounded-lg border border-white/10 mb-3 flex-shrink-0">
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-                        <div class="md:col-span-2 text-right md:order-last">
-                             <span class="block text-[10px] text-gray-500 uppercase tracking-widest">ID</span>
-                             <span id="display-reserva-id" class="font-mono text-lg font-bold text-accent-primary">---</span>
-                        </div>
-                        <div class="md:col-span-4">
-                            <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Cliente</label>
-                            <input type="text" id="c-customerName" class="grid-input font-bold text-base w-full bg-transparent border-b border-gray-600 focus:border-accent-primary outline-none" placeholder="Nombre del Cliente" required>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Estado</label>
-                            <select id="c-status" class="dark-select w-full p-1 rounded border border-gray-700 text-xs font-bold bg-[#1f2937] text-white">
-                                <option value="Pendiente">Pendiente</option>
-                                <option value="Confirmado">Confirmado</option>
-                                <option value="Pagado">Pagado</option>
-                                <option value="Cancelado">Cancelado</option>
-                            </select>
-                        </div>
-                        
-                        <div class="md:col-span-2">
-                            <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Teléfono</label>
-                            <input type="text" id="c-customerPhone" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1" placeholder="---">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Email</label>
-                            <input type="email" id="c-customerEmail" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1" placeholder="---">
-                        </div>
-                        
-                        <input type="hidden" id="c-customerCedula">
-                        <div class="md:col-span-12">
-                            <input type="text" id="c-customerAddress" class="grid-input bg-transparent border-b border-gray-700 w-full text-xs py-1 placeholder-gray-600" placeholder="Dirección de entrega (Opcional)...">
-                        </div>
-                    </div>
-                </div>
-    
-                <div class="flex-grow flex flex-col border border-gray-800 rounded-lg bg-[#0f0f0f] mb-3 min-h-0 relative">
-                    <div class="grid grid-cols-12 gap-2 bg-[#1a1a1a] p-2 booking-grid-header border-b border-gray-800 pr-4 flex-shrink-0">
-                        <div class="col-span-4">Artículo / Nota</div>
-                        <div class="col-span-3">Vigencia</div>
-                        <div class="col-span-3">Descuento</div>
-                        <div class="col-span-1 text-right">Total</div>
-                        <div class="col-span-1 text-center">Borrar</div>
-                    </div>
-                    <div id="lines-container" class="overflow-y-auto flex-grow p-2 space-y-1 custom-scrollbar relative h-full">
-                        </div>
-                    <div class="p-2 border-t border-gray-800 bg-[#141414] text-center flex-shrink-0">
-                        <button type="button" id="btn-add-line" class="text-accent-primary hover:text-white text-xs font-bold border border-accent-primary/30 rounded px-4 py-1 transition-all hover:bg-accent-primary/20">
-                            <i class="fas fa-plus mr-1"></i> AGREGAR ARTÍCULO
-                        </button>
-                    </div>
-                </div>
-    
-                <div class="bg-[#121212] border border-gray-800 rounded-lg p-0 flex-shrink-0 flex flex-col md:flex-row h-40 overflow-hidden">
-                    <div class="w-full md:w-1/2 border-r border-gray-800 p-3 flex flex-col h-full">
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] uppercase font-bold text-gray-500">Notas Generales</label>
-                            <i class="fas fa-pen text-[10px] text-gray-600"></i>
-                        </div>
-                        <textarea id="c-globalNotes" class="w-full h-full bg-transparent text-gray-300 text-xs resize-none outline-none no-scrollbar placeholder-gray-700 leading-relaxed" placeholder="Detalles globales..."></textarea>
-                    </div>
-    
-                    <div class="w-full md:w-1/2 p-3 flex flex-col justify-center space-y-1 bg-[#161616]">
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-[10px] uppercase font-bold text-gray-500">Desc. Global</label>
-                            <div class="flex rounded bg-gray-800 border border-gray-700 w-28 h-6">
-                                <select id="c-globalDiscType" class="dark-select text-[10px] px-1 border-r border-gray-600 outline-none h-full bg-transparent text-white">
-                                    <option value="percent">%</option>
-                                    <option value="money">$</option>
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                    
+                    <div class="bg-white/5 p-4 rounded-lg border border-white/10">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                            <div class="md:col-span-4">
+                                <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Cliente</label>
+                                <input type="text" id="c-customerName" class="grid-input font-bold text-base w-full bg-transparent border-b border-gray-600 focus:border-accent-primary outline-none py-1" placeholder="Nombre del Cliente" required>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Estado</label>
+                                <select id="c-status" class="dark-select w-full p-1 rounded border border-gray-700 text-xs font-bold bg-[#1f2937] text-white">
+                                    <option value="Pendiente">Pendiente</option>
+                                    <option value="Confirmado">Confirmado</option>
+                                    <option value="Pagado">Pagado</option>
+                                    <option value="Cancelado">Cancelado</option>
                                 </select>
-                                <input type="number" id="c-globalDiscVal" class="bg-transparent text-white text-right text-xs px-2 w-full outline-none h-full font-mono" value="0">
+                            </div>
+                            <div class="md:col-span-3">
+                                <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Teléfono</label>
+                                <input type="text" id="c-customerPhone" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1" placeholder="---">
+                            </div>
+                            <div class="md:col-span-3">
+                                <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Email</label>
+                                <input type="email" id="c-customerEmail" class="grid-input bg-transparent border-b border-gray-600 w-full text-xs py-1" placeholder="---">
+                            </div>
+                            <input type="hidden" id="c-customerCedula">
+                            <div class="md:col-span-12">
+                                <input type="text" id="c-customerAddress" class="grid-input bg-transparent border-b border-gray-700 w-full text-xs py-1 placeholder-gray-600" placeholder="Dirección de entrega (Opcional)...">
                             </div>
                         </div>
-                        <div class="border-t border-gray-800 my-1"></div>
-                        <div class="flex justify-between text-xs text-gray-400"><span>Subtotal:</span><span id="lbl-global-subtotal" class="font-mono text-white">$0.00</span></div>
-                        <div class="flex justify-between text-xs text-green-500"><span>Descuento:</span><span id="lbl-global-discount" class="font-mono">-$0.00</span></div>
-                        <div class="flex justify-between text-xs text-gray-400"><span>IVA (13%):</span><span id="lbl-global-tax" class="font-mono text-white">$0.00</span></div>
-                        <div class="flex justify-between items-end pt-1 border-t border-gray-800 mt-1">
-                            <div class="text-[10px] text-gray-600 text-left leading-tight">Rango: <span id="disp-date-range" class="text-gray-500">--</span></div>
-                            <div class="text-right"><span class="block text-[10px] text-gray-500 uppercase">Total Final</span><span id="lbl-global-total" class="text-2xl font-display font-bold text-white leading-none">$0.00</span></div>
+                    </div>
+    
+                    <div class="border border-gray-800 rounded-lg bg-[#0f0f0f] overflow-hidden">
+                        <div class="grid grid-cols-12 gap-2 bg-[#1a1a1a] p-2 booking-grid-header border-b border-gray-800 pr-4">
+                            <div class="col-span-4">Artículo / Nota</div>
+                            <div class="col-span-3">Vigencia</div>
+                            <div class="col-span-3">Descuento</div>
+                            <div class="col-span-1 text-right">Total</div>
+                            <div class="col-span-1 text-center">Borrar</div>
+                        </div>
+                        
+                        <div id="lines-container" class="p-2 space-y-1">
+                            </div>
+                        
+                        <div class="p-3 border-t border-gray-800 bg-[#141414] text-center">
+                            <button type="button" id="btn-add-line" class="text-accent-primary hover:text-white text-xs font-bold border border-accent-primary/30 rounded px-6 py-2 transition-all hover:bg-accent-primary/20">
+                                <i class="fas fa-plus mr-1"></i> AGREGAR ARTÍCULO
+                            </button>
                         </div>
                     </div>
-                </div>
     
-                <div class="flex justify-end items-center pt-3 gap-3 mt-auto flex-shrink-0">
-                    <button type="button" id="btn-delete-booking" class="text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider mr-auto hidden px-2">
+                    <div class="bg-[#121212] border border-gray-800 rounded-lg flex flex-col md:flex-row overflow-hidden">
+                        <div class="w-full md:w-1/2 border-r border-gray-800 p-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-[10px] uppercase font-bold text-gray-500">Notas Generales</label>
+                                <i class="fas fa-pen text-[10px] text-gray-600"></i>
+                            </div>
+                            <textarea id="c-globalNotes" class="w-full h-32 bg-transparent text-gray-300 text-xs resize-none outline-none subtle-scrollbar placeholder-gray-700 leading-relaxed" placeholder="Detalles globales de la reserva..."></textarea>
+                        </div>
+    
+                        <div class="w-full md:w-1/2 p-4 bg-[#161616] space-y-2">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="text-[10px] uppercase font-bold text-gray-500">Desc. Global</label>
+                                <div class="flex rounded bg-gray-800 border border-gray-700 w-32 h-7">
+                                    <select id="c-globalDiscType" class="dark-select text-[10px] px-1 border-r border-gray-600 outline-none h-full bg-transparent text-white">
+                                        <option value="percent">%</option>
+                                        <option value="money">$</option>
+                                    </select>
+                                    <input type="number" id="c-globalDiscVal" class="bg-transparent text-white text-right text-xs px-2 w-full outline-none h-full font-mono" value="0">
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-800"></div>
+    
+                            <div class="flex justify-between text-xs text-gray-400 mt-2"><span>Subtotal:</span><span id="lbl-global-subtotal" class="font-mono text-white">$0.00</span></div>
+                            <div class="flex justify-between text-xs text-green-500"><span>Descuento:</span><span id="lbl-global-discount" class="font-mono">-$0.00</span></div>
+                            <div class="flex justify-between text-xs text-gray-400"><span>IVA (13%):</span><span id="lbl-global-tax" class="font-mono text-white">$0.00</span></div>
+                            
+                            <div class="flex justify-between items-end pt-3 border-t border-gray-800 mt-2">
+                                <div class="text-[10px] text-gray-600 text-left leading-tight">Rango: <span id="disp-date-range" class="text-gray-500">--</span></div>
+                                <div class="text-right">
+                                    <span class="block text-[10px] text-gray-500 uppercase">Total Final</span>
+                                    <span id="lbl-global-total" class="text-3xl font-display font-bold text-white leading-none">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-gray-800 gap-3 flex-shrink-0 z-10">
+                    <button type="button" id="btn-delete-booking" class="text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider mr-auto hidden px-2 transition-colors">
                         <i class="fas fa-trash-alt mr-1"></i> Eliminar
                     </button>
                     
-                    <button type="button" class="cancel-btn text-gray-500 hover:text-white px-4 py-2 text-sm font-bold transition-colors" onclick="UI.closeModal()">Cancelar</button>
-                    <button type="submit" class="bg-white text-black font-bold py-2 px-6 rounded shadow hover:bg-gray-200 transition-all text-sm uppercase tracking-wide">Guardar Cambios</button>
+                    <button type="button" class="px-6 py-2 rounded text-sm font-bold text-gray-400 hover:text-white transition-colors" onclick="UI.closeModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="bg-white text-black font-bold py-2 px-8 rounded shadow hover:bg-gray-200 transition-all text-sm uppercase tracking-wide">
+                        Guardar Cambios
+                    </button>
                 </div>
             </form>
         </div>
@@ -4278,6 +4301,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
