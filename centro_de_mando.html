@@ -135,15 +135,16 @@
         </aside>
 
         <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative">
+
+
+            
             
             <div id="view-dashboard" class="view active">
                 
                 <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-8 gap-6">
                     <div>
                         <h1 class="text-4xl font-display font-bold text-gray-900 tracking-tight">Centro de Control</h1>
-                        <p class="text-gray-500 text-sm mt-1 flex items-center gap-2">
-                            <span class="w-2 h-2 bg-green-500 animate-pulse"></span> Sistema Operativo en Línea
-                        </p>
+                        <p class="text-gray-500 text-sm mt-1">Visión global del negocio</p>
                     </div>
                     
                     <div class="bg-white p-2 border border-gray-200 flex flex-wrap items-center gap-2 w-full xl:w-auto shadow-sm">
@@ -156,7 +157,7 @@
 
                         <div class="flex items-center gap-2">
                             <i class="fas fa-filter text-gray-400 text-xs ml-1"></i>
-                            <select id="dash-time-filter" class="form-select text-sm py-1.5 pl-2 pr-8 border-gray-300 bg-gray-50 focus:bg-white transition w-40" onchange="App.toggleCustomDate()">
+                            <select id="dash-time-filter" class="form-select text-sm py-1.5 pl-2 pr-8 border-gray-300 bg-gray-50 focus:bg-white transition w-40 cursor-pointer" onchange="App.handleFilterChange(this)">
                                 <optgroup label="Histórico (Cerrado)">
                                     <option value="current_month" selected>Este Mes</option>
                                     <option value="3">Últimos 3 Meses</option>
@@ -229,7 +230,8 @@
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                        <div class="lg:col-span-2 bg-white p-6 shadow-sm border border-gray-200 flex flex-col h-96">
+                        
+                        <div class="lg:col-span-2 bg-white p-6 shadow-sm border border-gray-200 rounded-xl flex flex-col h-96 overflow-hidden">
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-bold text-gray-800 text-sm">Tendencia de Ingresos</h3>
                                 <span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 uppercase font-bold" id="chart-label-period">Vista Dinámica</span>
@@ -240,14 +242,14 @@
                         </div>
 
                         <div class="flex flex-col gap-6 h-96">
-                            <div class="bg-white p-4 shadow-sm border border-gray-200 flex-1 flex flex-col relative">
+                            <div class="bg-white p-4 shadow-sm border border-gray-200 rounded-xl flex-1 flex flex-col relative overflow-hidden">
                                 <h3 class="font-bold text-gray-800 text-xs text-center mb-2">Distribución por Estado</h3>
                                 <div class="relative flex-1 w-full">
                                     <canvas id="statusChart"></canvas>
                                 </div>
                             </div>
                             
-                            <div class="bg-white p-4 shadow-sm border border-gray-200 flex-1 flex flex-col relative z-0">
+                            <div class="bg-white p-4 shadow-sm border border-gray-200 rounded-xl flex-1 flex flex-col relative overflow-hidden z-0">
                                 <h3 class="font-bold text-gray-800 text-xs text-center mb-2">Top Equipos (Periodo)</h3>
                                 <div class="relative flex-1 w-full">
                                     <canvas id="productsChart"></canvas>
@@ -259,7 +261,7 @@
 
                 <hr class="border-gray-200 my-10 border-dashed">
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 relative z-10">
                     
                     <div class="bg-white shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[28rem]">
                         <div class="p-4 border-b bg-gradient-to-r from-blue-50 to-white flex justify-between items-center shrink-0">
@@ -369,7 +371,7 @@
                                 <span class="text-gray-500 block text-left">Clientes</span>
                             </div>
 
-                            <div onclick="App.switchView('identity')" class="p-3 bg-white border border-gray-100 hover:border-teal-200 hover:shadow-sm cursor-pointer transition text-center group">
+                            <div onclick="App.switchView('identity')" class="p-3 bg-white border border-gray-100 hover:border-teal-200 hover:shadow-sm cursor-pointer transition text-center group relative overflow-hidden">
                                 <div class="flex justify-between items-center mb-1">
                                     <i class="fas fa-id-card text-teal-500 text-lg"></i>
                                     <span class="font-bold text-gray-800 text-lg" id="stat-identity">1</span>
@@ -384,6 +386,10 @@
                     </div>
                 </div>
             </div>
+
+
+
+            
 
             <div id="view-projects" class="view">
                 <div class="flex justify-between items-center mb-6">
@@ -770,11 +776,13 @@ const UI = {
             return val === 'si' || val === 'yes' || val === 'true' || val === '1';
         }).length;
 
+
+        
         if (view === 'dashboard') {
             const bookings = data.Bookings || [];
             const items = data.RentalItems || [];
             
-            // 1. LOGICA DE FILTRADO TEMPORAL ESTRICTA
+            // 1. LOGICA DE FILTRADO TEMPORAL
             const filterEl = document.getElementById('dash-time-filter');
             const filterVal = filterEl ? filterEl.value : 'current_month';
             
@@ -782,24 +790,18 @@ const UI = {
             let chartLabels = [];
             
             const now = new Date();
-            // Normalizar "Hoy" al inicio del día para comparaciones limpias
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const todayStr = today.toISOString().split('T')[0];
             const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
-            // Helper: Convertir string YYYY-MM-DD a objeto Date (sin hora)
             const parseDate = (str) => {
                 const parts = str.split('-');
                 return new Date(parts[0], parts[1]-1, parts[2]);
             };
 
             if (filterVal === 'future') {
-                // FUTURO: Desde MAÑANA en adelante (Opcional: Desde Hoy)
-                // Aquí tomamos "todo lo que sea >= Hoy"
                 filteredBookings = bookings.filter(b => b.startDate >= todayStr && b.status !== 'Cancelado');
                 document.getElementById('chart-label-period').innerText = "Proyección Futura";
-                
-                // Labels: Próximos 6 meses
                 for(let i=0; i<6; i++) {
                     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
                     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -807,10 +809,8 @@ const UI = {
                 }
 
             } else if (filterVal === 'current_month') {
-                // MES ACTUAL
                 filteredBookings = bookings.filter(b => b.startDate && b.startDate.startsWith(currentMonthPrefix));
                 document.getElementById('chart-label-period').innerText = "Mes Actual";
-                
                 const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
                 for(let i=1; i<=daysInMonth; i++) {
                     const dayStr = String(i).padStart(2,'0');
@@ -818,73 +818,42 @@ const UI = {
                 }
 
             } else if (filterVal === 'custom') {
-                // RANGO PERSONALIZADO
                 const sVal = document.getElementById('dash-date-start')?.value;
                 const eVal = document.getElementById('dash-date-end')?.value;
-                
                 if (sVal && eVal) {
                     filteredBookings = bookings.filter(b => b.startDate >= sVal && b.startDate <= eVal);
                     document.getElementById('chart-label-period').innerText = `${sVal} a ${eVal}`;
-                    
-                    // Generar etiquetas dinámicas para el gráfico
-                    // Si el rango es <= 31 días, mostramos días. Si es mayor, meses.
-                    const dStart = parseDate(sVal);
-                    const dEnd = parseDate(eVal);
-                    const diffTime = Math.abs(dEnd - dStart);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+                    const dStart = parseDate(sVal); const dEnd = parseDate(eVal);
+                    const diffDays = Math.ceil(Math.abs(dEnd - dStart) / (86400000));
                     if (diffDays <= 35) {
-                        // Modo Diario
                         for (let d = new Date(dStart); d <= dEnd; d.setDate(d.getDate() + 1)) {
-                            const iso = d.toISOString().split('T')[0];
-                            chartLabels.push({ label: d.getDate(), key: iso, mode: 'day' });
+                            chartLabels.push({ label: d.getDate(), key: d.toISOString().split('T')[0], mode: 'day' });
                         }
                     } else {
-                        // Modo Mensual (Simplificado)
-                        let d = new Date(dStart);
-                        d.setDate(1); // Forzar inicio de mes para iterar
-                        while (d <= dEnd) {
-                            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                            chartLabels.push({ label: d.toLocaleString('es-ES', { month: 'short' }), key: key, mode: 'month' });
-                            d.setMonth(d.getMonth() + 1);
-                        }
+                        chartLabels = [{label: 'Periodo', key: 'custom'}]; 
                     }
-
                 } else {
                     document.getElementById('chart-label-period').innerText = "Seleccione fechas";
                 }
 
             } else {
-                // HISTÓRICO (3, 6, 12, all)
-                // REGLA FUNDAMENTAL: start_date < Today (Estrictamente pasado)
                 const monthsBack = filterVal === 'all' ? 24 : parseInt(filterVal);
                 document.getElementById('chart-label-period').innerText = `Últimos ${monthsBack} Meses`;
-                
-                // Generar meses hacia atrás
                 for (let i = monthsBack - 1; i >= 0; i--) {
                     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    chartLabels.push({ 
-                        label: d.toLocaleString('es-ES', { month: 'short' }), 
-                        key: key,
-                        mode: 'month'
-                    });
+                    chartLabels.push({ label: d.toLocaleString('es-ES', { month: 'short' }), key: key, mode: 'month' });
                 }
-                
-                // Filtro: Debe estar dentro del rango de meses Y ser anterior a "mañana" (para no incluir futuro lejano si se cuela)
                 const startKey = chartLabels[0]?.key || '9999';
-                filteredBookings = bookings.filter(b => b.startDate >= startKey + '-01' && b.startDate < todayStr); // <--- CORRECCIÓN CLAVE
+                filteredBookings = bookings.filter(b => b.startDate >= startKey + '-01' && b.startDate < todayStr);
             }
 
-
-            // 2. CÁLCULO DE KPIs FINANCIEROS (CONECTADOS AL FILTRO)
+            // 2. CÁLCULO DE KPIs
             const sumMoney = (list) => list.reduce((s, b) => s + (parseFloat(b.totalPrice) || 0), 0);
-            
             const kpiConfirmed = sumMoney(filteredBookings.filter(b => b.status === 'Confirmado'));
             const kpiPaid = sumMoney(filteredBookings.filter(b => b.status === 'Pagado'));
             const kpiPending = sumMoney(filteredBookings.filter(b => b.status === 'Pendiente'));
             const kpiLost = sumMoney(filteredBookings.filter(b => b.status === 'Cancelado'));
-            
             const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 });
 
             document.getElementById('kpi-rev-total').innerText = fmt.format(kpiConfirmed + kpiPaid);
@@ -894,9 +863,7 @@ const UI = {
             document.getElementById('kpi-rev-lost').innerText = fmt.format(kpiLost);
             document.getElementById('kpi-count-total').innerText = filteredBookings.length;
 
-
-            // 3. PANELES OPERATIVOS (SIEMPRE ACTIVOS)
-            // A. Agenda Futura (Desde Hoy)
+            // 3. PANELES OPERATIVOS
             const agenda = bookings
                 .filter(b => b.startDate >= todayStr && (b.status === 'Confirmado' || b.status === 'Pagado'))
                 .sort((a,b) => new Date(a.startDate) - new Date(b.startDate)); 
@@ -928,11 +895,9 @@ const UI = {
                 }).join('');
             }
 
-            // B. Pendientes
             const pending = bookings.filter(b => b.status === 'Pendiente').sort((a,b) => new Date(b.bookingTimestamp||0) - new Date(a.bookingTimestamp||0));
             document.getElementById('kpi-pending-badge').innerText = pending.length;
             const pendingContainer = document.getElementById('dashboard-pending-list');
-            
             if (pending.length === 0) {
                 pendingContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-400 text-xs"><i class="fas fa-check-circle text-green-500 text-2xl mb-2 opacity-50"></i>Todo al día.</div>';
             } else {
@@ -947,19 +912,14 @@ const UI = {
                 `).join('');
             }
 
-
-            // 4. RESUMEN ECOSISTEMA (CONTADORES REALES)
+            // 4. RESUMEN ECOSISTEMA
             document.getElementById('stat-projects').innerText = (data.Projects||[]).length;
             document.getElementById('stat-portfolio').innerText = countPortfolio;
-            
             document.getElementById('stat-services').innerText = (data.Services||[]).length;
             document.getElementById('stat-services-img').innerText = (data.ServiceImages||[]).length + ' Ft';
-            
             document.getElementById('stat-videos').innerText = (data.Videos||[]).length;
-            
             document.getElementById('stat-items').innerText = items.length;
             document.getElementById('stat-items-img').innerText = (data.RentalItemImages||[]).length + ' Ft';
-            
             document.getElementById('stat-cats').innerText = (data.RentalCategories||[]).length;
             document.getElementById('stat-bookings').innerText = bookings.length;
             document.getElementById('stat-blocked').innerText = (data.BlockedDates||[]).length;
@@ -967,17 +927,16 @@ const UI = {
             const idImagesCount = (data.ImagenesIdentidad||[]).length;
             document.getElementById('stat-identity-img').innerText = idImagesCount + ' Ft';
 
-
             // 5. GRÁFICOS
             if (UI.charts) { UI.charts.forEach(c => c.destroy()); }
             UI.charts = [];
             Chart.defaults.font.family = "'Montserrat', sans-serif";
 
-            // A. Datos del Gráfico de Línea
+            // A. Ingresos
             const chartDataValues = chartLabels.map(lbl => {
+                if (filterVal === 'custom' && chartLabels.length === 1) return kpiConfirmed + kpiPaid;
                 return filteredBookings
                     .filter(b => {
-                        // Coincidencia Inteligente (Día o Mes)
                         if (lbl.mode === 'day') return b.startDate === lbl.key;
                         return b.startDate && b.startDate.startsWith(lbl.key);
                     })
@@ -987,89 +946,62 @@ const UI = {
 
             const ctxRev = document.getElementById('revenueChart').getContext('2d');
             const gradRev = ctxRev.createLinearGradient(0, 0, 0, 400);
-            gradRev.addColorStop(0, 'rgba(16, 185, 129, 0.2)'); 
-            gradRev.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+            gradRev.addColorStop(0, 'rgba(16, 185, 129, 0.2)'); gradRev.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
             UI.charts.push(new Chart(ctxRev, {
                 type: 'line',
                 data: {
                     labels: chartLabels.map(l => l.label),
                     datasets: [{
-                        label: 'Ingresos',
-                        data: chartDataValues,
-                        borderColor: '#10b981',
-                        backgroundColor: gradRev,
-                        tension: 0.4, fill: true, pointRadius: 5
+                        label: 'Ingresos', data: chartDataValues, borderColor: '#10b981', backgroundColor: gradRev, tension: 0.4, fill: true, pointRadius: 5
                     }]
                 },
                 plugins: [ChartDataLabels],
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        datalabels: { 
-                            align: 'top', anchor: 'end', color: '#059669', font: {weight:'bold'},
-                            formatter: (v) => v > 0 ? '$'+v : '' 
-                        }
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, datalabels: { align: 'top', anchor: 'end', color: '#059669', font: {weight:'bold'}, formatter: (v) => v > 0 ? '$'+v : '' } },
                     scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false } } }
                 }
             }));
 
-            // B. Datos Gráfico Estado
+            // B. Estado
             const stCounts = { 'Pendiente': 0, 'Confirmado': 0, 'Pagado': 0, 'Cancelado': 0 };
             filteredBookings.forEach(b => { if(stCounts[b.status]!==undefined) stCounts[b.status]++; });
-
             const ctxStatus = document.getElementById('statusChart').getContext('2d');
             UI.charts.push(new Chart(ctxStatus, {
                 type: 'doughnut',
                 data: {
                     labels: ['Pendiente', 'Confirmado', 'Pagado', 'Cancelado'],
-                    datasets: [{
-                        data: [stCounts['Pendiente'], stCounts['Confirmado'], stCounts['Pagado'], stCounts['Cancelado']],
-                        backgroundColor: ['#fcd34d', '#10b981', '#3b82f6', '#ef4444'], borderWidth: 0
-                    }]
+                    datasets: [{ data: [stCounts['Pendiente'], stCounts['Confirmado'], stCounts['Pagado'], stCounts['Cancelado']], backgroundColor: ['#fcd34d', '#10b981', '#3b82f6', '#ef4444'], borderWidth: 0 }]
                 },
                 plugins: [ChartDataLabels],
                 options: {
                     responsive: true, maintainAspectRatio: false, cutout: '70%',
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { boxWidth: 8, padding: 10, font: {size: 10} } },
-                        datalabels: { color: '#fff', font: { weight: 'bold' }, formatter: (v) => v > 0 ? v : '' }
-                    }
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 10, font: {size: 10} } }, datalabels: { color: '#fff', font: { weight: 'bold' }, formatter: (v) => v > 0 ? v : '' } }
                 }
             }));
 
-            // C. Datos Gráfico Productos
+            // C. Productos
             const prodCounts = {};
-            filteredBookings.forEach(b => { 
-                const n = b.itemName||'Otros'; 
-                if(b.status !== 'Cancelado') prodCounts[n]=(prodCounts[n]||0)+1; 
-            });
+            filteredBookings.forEach(b => { const n = b.itemName||'Otros'; if(b.status !== 'Cancelado') prodCounts[n]=(prodCounts[n]||0)+1; });
             const sortedProd = Object.entries(prodCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
             const ctxProd = document.getElementById('productsChart').getContext('2d');
             UI.charts.push(new Chart(ctxProd, {
                 type: 'bar',
                 data: {
                     labels: sortedProd.map(i => i[0].length>12 ? i[0].substring(0,12)+'..' : i[0]),
-                    datasets: [{
-                        data: sortedProd.map(i => i[1]),
-                        backgroundColor: '#374151', borderRadius: 4, barThickness: 20
-                    }]
+                    datasets: [{ data: sortedProd.map(i => i[1]), backgroundColor: '#374151', borderRadius: 4, barThickness: 20 }]
                 },
                 plugins: [ChartDataLabels],
                 options: {
                     indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        datalabels: { anchor: 'end', align: 'start', color: '#fff', font: { weight: 'bold' } }
-                    },
+                    plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'start', color: '#fff', font: { weight: 'bold' } } },
                     scales: { x: { display: false }, y: { grid: { display: false } } }
                 }
             }));
-        } else if (view === 'client-logos') {
+        }
+        
+        else if (view === 'client-logos') {
             const list = (data.LogosClientes || []).sort((a,b) => (parseInt(a.order)||99) - (parseInt(b.order)||99));
             
             // Ajustar encabezados dinámicamente para quitar ID si existe en HTML estático
@@ -2822,6 +2754,32 @@ const App = {
     },
     // --- FIN CÓDIGO NUEVO ---
 
+    // NUEVA FUNCIÓN PARA MANEJO INTELIGENTE DEL FILTRO
+    handleFilterChange(selectElement) {
+        const customDiv = document.getElementById('dash-custom-dates');
+        
+        if (selectElement.value === 'custom') {
+            // Mostrar inputs y esperar botón check
+            if (customDiv) {
+                customDiv.classList.remove('hidden');
+                customDiv.classList.add('flex');
+                
+                if(!customDiv.dataset.init) {
+                    flatpickr("#dash-date-start", { locale: 'es' });
+                    flatpickr("#dash-date-end", { locale: 'es' });
+                    customDiv.dataset.init = "true";
+                }
+            }
+        } else {
+            // Ocultar inputs y RECARGAR INMEDIATAMENTE
+            if (customDiv) {
+                customDiv.classList.add('hidden');
+                customDiv.classList.remove('flex');
+            }
+            UI.renderView('dashboard');
+        }
+    },
+
     async saveCrud(sheet, id) {
         try {
             const isNew = !id || id === 'null';
@@ -3900,6 +3858,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
