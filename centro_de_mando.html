@@ -108,7 +108,24 @@
         /* Inputs dentro de la grilla */
         .grid-input { background: transparent; border: none; border-bottom: 1px solid #4b5563; color: white; font-size: 0.85rem; width: 100%; outline: none; transition: border-color 0.2s; }
         .grid-input:focus { border-color: #B8860B; }
+
+        /* FIX V7: Scrollbars sutiles y Estilos Negros */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        .subtle-scrollbar::-webkit-scrollbar { width: 4px; }
+        .subtle-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .subtle-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 2px; }
+        .subtle-scrollbar::-webkit-scrollbar-thumb:hover { background: #B8860B; }
+        
+        /* Fondo Footer Negro/Gris Neutro */
+        .bg-neutral-dark { background-color: #121212; } /* Negro puro suave */
+        .bg-neutral-panel { background-color: #1e1e1e; } /* Gris oscuro */
+        
+        /* Modal Fullscreen Transition */
+        .modal-transition { transition: all 0.3s ease-in-out; }
+        .is-fullscreen { width: 100vw !important; height: 100vh !important; max-width: none !important; border-radius: 0 !important; top: 0 !important; left: 0 !important; margin: 0 !important; padding: 1rem !important; }
+                
     </style>
 </head>
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
@@ -4176,6 +4193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
