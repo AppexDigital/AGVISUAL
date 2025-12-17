@@ -2231,7 +2231,7 @@ const App = {
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
             // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
         } else if(sheet === 'Bookings'){
-            // 1. Carga de Dependencias (Incluyendo BookingsDetails para edición)
+            // 1. Carga de Dependencias Críticas
             if (!AppState.data.RentalItems || !AppState.data.BlockedDates || !AppState.data.BookingsDetails) {
                 UI.showLoading('Cargando sistema de reservas...');
                 const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems,BlockedDates,BookingsDetails');
@@ -2239,34 +2239,26 @@ const App = {
                 UI.hideLoading();
             }
         
-            // 2. Preparar Datos en Memoria (Cabecera y Líneas)
+            // 2. Preparar Datos
             const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
             
-            // Recuperar líneas guardadas o crear array vacío
+            // Recuperar líneas o migrar
             let currentLines = [];
             if (!isNew && AppState.data.BookingsDetails) {
                 currentLines = AppState.data.BookingsDetails.filter(d => String(d.bookingId) === String(id));
             }
-            
-            // Migración Legacy: Si la reserva existe pero no tiene detalles en la hoja nueva, usar datos viejos
             if (!isNew && currentLines.length === 0 && b.itemId) {
                 currentLines.push({
-                    uuid: 'legacy_' + Date.now(),
-                    itemId: b.itemId,
-                    itemName: b.itemName,
-                    startDate: b.startDate,
-                    endDate: b.endDate,
-                    basePrice: 0, // Se recalculará
-                    lineDiscountType: 'percent', lineDiscountVal: 0, manualAdjustment: 0, lineNote: 'Migrado'
+                    uuid: 'legacy_' + Date.now(), itemId: b.itemId, itemName: b.itemName,
+                    startDate: b.startDate, endDate: b.endDate, basePrice: 0,
+                    discountType: 'percent', discountVal: 0, manualAdj: 0, lineNote: 'Migrado'
                 });
             }
         
-            // Volcar a variable global temporal para manipulación en vivo
+            // Volcar a memoria global temporal
             window.tempBookingLines = currentLines.map(l => ({
                 uuid: l.uuid || `line_${Math.random().toString(36).substr(2,9)}`,
-                itemId: l.itemId,
-                startDate: l.startDate,
-                endDate: l.endDate,
+                itemId: l.itemId, startDate: l.startDate, endDate: l.endDate,
                 basePrice: parseFloat(l.basePrice) || 0,
                 discountType: l.lineDiscountType || 'percent',
                 discountVal: parseFloat(l.lineDiscountVal) || 0,
@@ -2274,19 +2266,12 @@ const App = {
                 note: l.lineNote || ''
             }));
         
-            modalTitle = isNew ? 'Nueva Reserva (Multi-Ítem)' : `Editar Reserva: ${b.customerName || 'Cliente'}`;
+            modalTitle = isNew ? 'Nueva Reserva' : `Editar Reserva: ${b.customerName || 'Cliente'}`;
         
-            // Botones del Modal (Footer se inyecta después, aquí definimos botones extra a la izquierda)
-            if (!isNew) {
-                leftButtons = `<button class="btn btn-danger h-10 px-3 mr-2" onclick="UI.closeModal(); App.handleDelete('Bookings', '${id}')"><i class="fas fa-trash mr-2"></i> Eliminar</button>`;
-            }
-        
-            // 3. Estructura HTML (Grilla + Panel Totales)
-            // Nota: Usamos clases de Tailwind y estilos inline para el fondo oscuro del modal de reservas
+            // 3. HTML (Grilla + Globales)
             html = `
                 <div class="bg-gray-900 text-white -m-6 p-6 h-full flex flex-col">
                     <input type="hidden" id="input-reserva-id" value="${id || ''}">
-                    
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 flex-shrink-0">
                         <div class="md:col-span-1">
                             <label class="text-[10px] uppercase font-bold text-gray-500">Cliente</label>
@@ -2294,7 +2279,7 @@ const App = {
                         </div>
                         <div class="md:col-span-1">
                             <label class="text-[10px] uppercase font-bold text-gray-500">Contacto</label>
-                            <input type="text" id="c-customerPhone" class="grid-input" value="${b.customerPhone || ''}" placeholder="Teléfono / Email">
+                            <input type="text" id="c-customerPhone" class="grid-input" value="${b.customerPhone || ''}" placeholder="Tel/Email">
                             <input type="hidden" id="c-customerEmail" value="${b.customerEmail || ''}">
                             <input type="hidden" id="c-customerCedula" value="${b.customerCedula || ''}">
                             <input type="hidden" id="c-customerAddress" value="${b.customerAddress || ''}">
@@ -2309,7 +2294,7 @@ const App = {
                             </select>
                         </div>
                         <div class="md:col-span-1 text-right">
-                            <span class="block text-[10px] text-gray-500 uppercase">ID Reserva</span>
+                            <span class="block text-[10px] text-gray-500 uppercase">ID</span>
                             <span class="font-mono text-xl text-accent-primary font-bold" id="display-id">${b.id || 'NUEVA'}</span>
                         </div>
                     </div>
@@ -2317,28 +2302,25 @@ const App = {
                     <div class="flex-grow flex flex-col bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden mb-4">
                         <div class="grid grid-cols-12 gap-2 p-2 booking-grid-header border-b border-gray-700">
                             <div class="col-span-3">Artículo / Nota</div>
-                            <div class="col-span-3">Vigencia (Inicio - Fin)</div>
-                            <div class="col-span-3">Descuento / Ajuste</div>
-                            <div class="col-span-2 text-right">Total Línea</div>
+                            <div class="col-span-3">Vigencia</div>
+                            <div class="col-span-3">Descuento</div>
+                            <div class="col-span-2 text-right">Total</div>
                             <div class="col-span-1 text-center"><i class="fas fa-trash"></i></div>
                         </div>
                         <div id="booking-lines-container" class="overflow-y-auto flex-grow p-2 space-y-1 custom-scrollbar"></div>
                         <div class="p-2 border-t border-gray-700 text-center bg-gray-800">
-                            <button type="button" id="btn-add-line-dom" class="text-accent-primary hover:text-white text-xs font-bold border border-accent-primary/30 rounded px-4 py-1 transition-all hover:bg-accent-primary/20">
-                                <i class="fas fa-plus mr-1"></i> AGREGAR ARTÍCULO
-                            </button>
+                            <button type="button" id="btn-add-line-dom" class="text-accent-primary hover:text-white text-xs font-bold border border-accent-primary/30 rounded px-4 py-1 transition-all">+ AGREGAR ARTÍCULO</button>
                         </div>
                     </div>
         
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end flex-shrink-0 bg-black/20 p-4 rounded-lg border border-gray-700">
                         <div>
-                            <label class="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Notas Internas</label>
-                            <textarea id="c-globalNotes" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-xs text-gray-300 h-20 resize-none outline-none focus:border-accent-primary" placeholder="Detalles de entrega, condiciones especiales...">${b.globalNotes || ''}</textarea>
+                            <label class="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Notas</label>
+                            <textarea id="c-globalNotes" class="w-full bg-gray-900 border border-gray-700 rounded p-2 text-xs text-gray-300 h-20 resize-none outline-none" placeholder="Notas...">${b.globalNotes || ''}</textarea>
                         </div>
-                        
                         <div class="space-y-2">
                             <div class="flex justify-between items-center">
-                                <label class="text-[10px] uppercase font-bold text-gray-400">Descuento Global</label>
+                                <label class="text-[10px] uppercase font-bold text-gray-400">Desc. Global</label>
                                 <div class="flex rounded bg-gray-800 border border-gray-600 w-32">
                                     <select id="c-globalDiscType" class="dark-select text-[10px] p-1 border-r border-gray-600 outline-none">
                                         <option value="percent" ${b.globalDiscountType==='percent'?'selected':''}>%</option>
@@ -2347,105 +2329,84 @@ const App = {
                                     <input type="number" id="c-globalDiscVal" class="bg-transparent text-white text-right text-xs p-1 w-full outline-none" value="${b.globalDiscountVal || 0}">
                                 </div>
                             </div>
-                            
                             <div class="border-t border-gray-700 my-2"></div>
-        
-                            <div class="flex justify-between text-xs text-gray-400">
-                                <span>Subtotal:</span>
-                                <span id="disp-subtotal" class="font-mono text-white">$0.00</span>
-                            </div>
-                            <div class="flex justify-between text-xs text-green-500">
-                                <span>Descuento:</span>
-                                <span id="disp-discount" class="font-mono">-$0.00</span>
-                            </div>
-                            <div class="flex justify-between text-xs text-gray-400">
-                                <span>IVA (13%):</span>
-                                <span id="disp-tax" class="font-mono text-white">$0.00</span>
-                            </div>
-                            <div class="flex justify-between text-xl font-bold text-white pt-1 border-t border-gray-600 mt-1">
-                                <span>TOTAL:</span>
-                                <span id="disp-total" class="text-accent-primary">$0.00</span>
-                            </div>
-                            <div class="text-[10px] text-gray-600 text-right">
-                                Fechas: <span id="disp-date-range">--</span>
-                            </div>
+                            <div class="flex justify-between text-xs text-gray-400"><span>Subtotal:</span><span id="disp-subtotal" class="font-mono text-white">$0.00</span></div>
+                            <div class="flex justify-between text-xs text-green-500"><span>Descuento:</span><span id="disp-discount" class="font-mono">-$0.00</span></div>
+                            <div class="flex justify-between text-xs text-gray-400"><span>IVA (13%):</span><span id="disp-tax" class="font-mono text-white">$0.00</span></div>
+                            <div class="flex justify-between text-xl font-bold text-white pt-1 border-t border-gray-600 mt-1"><span>TOTAL:</span><span id="disp-total" class="text-accent-primary">$0.00</span></div>
+                            <div class="text-[10px] text-gray-600 text-right"><span id="disp-date-range">--</span></div>
                         </div>
                     </div>
                 </div>
             `;
         
-            // 4. INICIALIZACIÓN LÓGICA (Post-Render)
+            // 4. FOOTER PERSONALIZADO (Aquí conectamos el botón)
+            const customFooter = `
+                <div class="flex justify-between items-center w-full">
+                    <div>
+                        ${!isNew ? `<button class="btn btn-danger" onclick="UI.closeModal(); App.handleDelete('Bookings', '${id}')"><i class="fas fa-trash mr-2"></i> Eliminar</button>` : ''}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
+                        <button class="btn btn-primary" onclick="App.handleSaveBooking(event)">Guardar Reserva</button>
+                    </div>
+                </div>
+            `;
+        
+            // 5. LANZAR MODAL Y DETENER EL FLUJO GENÉRICO
+            UI.showModal(modalTitle, html, customFooter);
+        
+            // 6. INICIALIZAR LÓGICA
             setTimeout(() => {
                 const container = document.getElementById('booking-lines-container');
                 const itemsList = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
         
-                // --- MOTOR DE CÁLCULO ---
+                // -- CALCULO --
                 window.recalcBooking = () => {
-                    let globalSub = 0;
-                    let totalTax = 0;
-                    let minD = null, maxD = null;
-        
+                    let globalSub=0, totalTax=0, minD=null, maxD=null;
                     window.tempBookingLines.forEach(line => {
-                        // Fechas
                         if(line.startDate) { if(!minD || line.startDate < minD) minD = line.startDate; }
                         if(line.endDate) { if(!maxD || line.endDate > maxD) maxD = line.endDate; }
-        
-                        // Datos Item (Con IVA Condicional)
+                        
                         const item = itemsList.find(i => i.id === line.itemId);
                         const bp = item ? parseFloat(item.pricePerDay) : 0;
                         const hasTax = item ? (String(item.hasTax).toUpperCase() === 'TRUE') : false;
                         line.basePrice = bp;
         
-                        // Días
                         let d = 0;
                         if(line.startDate && line.endDate) {
                             const diff = new Date(line.endDate) - new Date(line.startDate);
-                            if(!isNaN(diff) && diff >= 0) d = Math.ceil(diff/86400000) + 1;
+                            if(diff>=0) d = Math.ceil(diff/86400000) + 1;
                         }
                         const gross = bp * d;
-        
-                        // Descuento Linea
                         let disc = (line.discountType==='money') ? line.discountVal : (gross * (line.discountVal/100));
-                        
-                        // Neto Linea (Base - Dto + Ajuste)
                         const net = Math.max(0, gross - disc + line.manualAdj);
                         line.computedNet = net;
         
-                        // Acumular Impuesto (PUNTO 2)
                         if(hasTax) totalTax += (net * 0.13);
-        
                         globalSub += net;
         
-                        // Actualizar DOM Fila
                         const row = document.getElementById(`row-${line.uuid}`);
                         if(row) {
-                            const tInput = row.querySelector('.line-total-input');
-                            if(document.activeElement !== tInput) tInput.value = net.toFixed(2);
-                            
-                            const info = row.querySelector('.line-info');
-                            const taxLabel = hasTax ? '<span class="text-blue-400 font-bold ml-1">+IVA</span>' : '';
-                            info.innerHTML = `${d}d x $${bp}${taxLabel} ${line.manualAdj>0 ? `<span class='text-blue-500'>(Aj:${line.manualAdj})</span>` : ''}`;
+                            if(document.activeElement !== row.querySelector('.line-total-input')) row.querySelector('.line-total-input').value = net.toFixed(2);
+                            row.querySelector('.line-info').innerHTML = `${d}d x $${bp}${hasTax?'<span class="text-blue-400 ml-1">+IVA</span>':''} ${line.manualAdj>0 ? `(Aj:${line.manualAdj})` : ''}`;
                         }
                     });
         
-                    // Globales
                     const gType = document.getElementById('c-globalDiscType').value;
                     const gVal = parseFloat(document.getElementById('c-globalDiscVal').value) || 0;
                     let gDisc = (gType==='money') ? gVal : (globalSub * (gVal/100));
-        
                     const final = Math.max(0, globalSub - gDisc + totalTax);
         
-                    // Render Globales
                     document.getElementById('disp-subtotal').innerText = `$${globalSub.toFixed(2)}`;
                     document.getElementById('disp-discount').innerText = `-$${gDisc.toFixed(2)}`;
                     document.getElementById('disp-tax').innerText = `$${totalTax.toFixed(2)}`;
                     document.getElementById('disp-total').innerText = `$${final.toFixed(2)}`;
-                    
                     const fmt = d => d ? d.split('-').reverse().join('/') : '--';
                     document.getElementById('disp-date-range').innerText = `${fmt(minD)} a ${fmt(maxD)}`;
                 };
         
-                // --- RENDER FILA ---
+                // -- RENDER ROW --
                 const renderRow = (line) => {
                     const div = document.createElement('div');
                     div.id = `row-${line.uuid}`;
@@ -2456,18 +2417,15 @@ const App = {
                                 <option value="">Equipo...</option>
                                 ${itemsList.map(i => `<option value="${i.id}" ${i.id === line.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
                             </select>
-                            <input type="text" class="grid-input line-note text-gray-400 placeholder-gray-600" placeholder="Nota..." value="${line.note}">
+                            <input type="text" class="grid-input line-note text-gray-400" placeholder="Nota..." value="${line.note}">
                         </div>
                         <div class="col-span-3 flex flex-col gap-1">
-                            <input type="text" class="grid-input bg-gray-700 rounded border border-gray-600 p-1 line-start cursor-pointer text-center" placeholder="Inicio" value="${line.startDate||''}">
-                            <input type="text" class="grid-input bg-gray-700 rounded border border-gray-600 p-1 line-end cursor-pointer text-center" placeholder="Fin" value="${line.endDate||''}">
+                            <input type="text" class="grid-input bg-gray-700 rounded border border-gray-600 p-1 line-start text-center" placeholder="Inicio" value="${line.startDate||''}">
+                            <input type="text" class="grid-input bg-gray-700 rounded border border-gray-600 p-1 line-end text-center" placeholder="Fin" value="${line.endDate||''}">
                         </div>
                         <div class="col-span-3">
                             <div class="flex items-center border border-gray-600 rounded bg-gray-700">
-                                <select class="dark-select text-[10px] p-1 border-r border-gray-600 line-disc-type outline-none">
-                                    <option value="percent" ${line.discountType==='percent'?'selected':''}>%</option>
-                                    <option value="money" ${line.discountType==='money'?'selected':''}>$</option>
-                                </select>
+                                <select class="dark-select text-[10px] p-1 border-r border-gray-600 line-disc-type outline-none"><option value="percent" ${line.discountType==='percent'?'selected':''}>%</option><option value="money" ${line.discountType==='money'?'selected':''}>$</option></select>
                                 <input type="number" class="bg-transparent text-white text-right text-xs p-1 w-full outline-none line-disc-val" value="${line.discountVal}">
                             </div>
                         </div>
@@ -2475,57 +2433,36 @@ const App = {
                             <input type="number" class="grid-input text-right font-bold text-white border-b border-gray-600 line-total-input" value="0">
                             <div class="line-info text-[9px] text-gray-500 mt-1"></div>
                         </div>
-                        <div class="col-span-1 text-center pt-1">
-                            <button type="button" class="text-red-400 hover:text-red-500 line-delete"><i class="fas fa-times"></i></button>
-                        </div>
+                        <div class="col-span-1 text-center pt-1"><button type="button" class="text-red-400 hover:text-red-500 line-delete"><i class="fas fa-times"></i></button></div>
                     `;
         
-                    // PUNTO 1: FLATPICKR CON BLOQUEOS VISUALES
-                    const startIn = div.querySelector('.line-start');
-                    const endIn = div.querySelector('.line-end');
-                    
+                    // Flatpickr & Bloqueos
                     const getBlocks = (itemId) => {
                         if(!itemId) return [];
                         const myId = document.getElementById('input-reserva-id').value;
-                        return (AppState.data.BlockedDates||[])
-                            .filter(b => b.itemId === itemId && b.bookingId !== myId)
-                            .map(b => ({ from: b.startDate, to: b.endDate }));
+                        return (AppState.data.BlockedDates||[]).filter(b => b.itemId === itemId && b.bookingId !== myId).map(b => ({ from: b.startDate, to: b.endDate }));
                     };
-        
-                    const fpCfg = { 
-                        locale: 'es', dateFormat: "Y-m-d", minDate: "today", 
-                        disable: getBlocks(line.itemId) 
-                    };
+                    const fpCfg = { locale: 'es', dateFormat: "Y-m-d", minDate: "today", disable: getBlocks(line.itemId) };
                     
-                    const fpS = flatpickr(startIn, { ...fpCfg, onChange: (d,s) => { line.startDate=s; if(fpE) fpE.set('minDate', s); window.recalcBooking(); } });
-                    const fpE = flatpickr(endInput, { ...fpCfg, onChange: (d,s) => { line.endDate=s; window.recalcBooking(); } }); // Corregido typo variable endInput -> endIn
+                    const fpS = flatpickr(div.querySelector('.line-start'), { ...fpCfg, onChange: (d,s) => { line.startDate=s; if(fpE) fpE.set('minDate', s); window.recalcBooking(); } });
+                    const fpE = flatpickr(div.querySelector('.line-end'), { ...fpCfg, onChange: (d,s) => { line.endDate=s; window.recalcBooking(); } });
         
-                    // Corrección de variable flatpickr (fpE usa endIn)
-                    // Re-bind correcto:
-                    fpE.destroy(); 
-                    const fpEndCorrect = flatpickr(endIn, { ...fpCfg, onChange: (d,s) => { line.endDate=s; window.recalcBooking(); } });
-        
-                    // Listener Item
+                    // Listeners
                     div.querySelector('.line-item-select').addEventListener('change', (e) => {
                         line.itemId = e.target.value;
                         const newB = getBlocks(line.itemId);
-                        fpS.set('disable', newB);
-                        fpEndCorrect.set('disable', newB);
-                        fpS.clear(); fpEndCorrect.clear(); line.startDate=''; line.endDate='';
+                        fpS.set('disable', newB); fpE.set('disable', newB); fpS.clear(); fpE.clear(); line.startDate=''; line.endDate='';
                         window.recalcBooking();
                     });
-        
-                    // Listeners Varios
                     div.querySelector('.line-note').addEventListener('input', e => line.note = e.target.value);
                     div.querySelector('.line-disc-type').addEventListener('change', e => { line.discountType=e.target.value; line.manualAdj=0; window.recalcBooking(); });
                     div.querySelector('.line-disc-val').addEventListener('input', e => { line.discountVal=parseFloat(e.target.value)||0; line.manualAdj=0; window.recalcBooking(); });
-        
-                    // Lógica Inversa
+                    
+                    // Reversa
                     div.querySelector('.line-total-input').addEventListener('input', e => {
                         const userVal = parseFloat(e.target.value)||0;
                         const item = itemsList.find(i=>i.id===line.itemId);
                         const bp = item ? parseFloat(item.pricePerDay) : 0;
-                        
                         let d = 0;
                         if(line.startDate && line.endDate) {
                             const diff = new Date(line.endDate) - new Date(line.startDate);
@@ -2533,28 +2470,16 @@ const App = {
                         }
                         const gross = bp*d;
                         const diff = gross - userVal;
-        
-                        if(diff>0) {
-                            line.manualAdj=0;
-                            if(line.discountType==='money') line.discountVal=diff;
-                            else line.discountVal = gross>0 ? (diff/gross)*100 : 0;
-                        } else {
-                            line.discountVal=0;
-                            line.manualAdj = Math.abs(diff);
-                        }
+                        if(diff>0) { line.manualAdj=0; if(line.discountType==='money') line.discountVal=diff; else line.discountVal = gross>0 ? (diff/gross)*100 : 0; }
+                        else { line.discountVal=0; line.manualAdj = Math.abs(diff); }
                         window.recalcBooking();
                     });
-        
-                    div.querySelector('.line-delete').addEventListener('click', () => {
-                        window.tempBookingLines = window.tempBookingLines.filter(l=>l.uuid!==line.uuid);
-                        div.remove();
-                        window.recalcBooking();
-                    });
+                    div.querySelector('.line-delete').addEventListener('click', () => { window.tempBookingLines = window.tempBookingLines.filter(l=>l.uuid!==line.uuid); div.remove(); window.recalcBooking(); });
         
                     container.appendChild(div);
                 };
         
-                // Render Inicial
+                // Init
                 if(window.tempBookingLines.length === 0) {
                     const today = new Date().toISOString().split('T')[0];
                     window.tempBookingLines.push({ uuid: `l_${Date.now()}`, itemId:'', startDate:today, endDate:today, basePrice:0, discountType:'percent', discountVal:0, manualAdj:0, note:'' });
@@ -2562,7 +2487,6 @@ const App = {
                 window.tempBookingLines.forEach(l => renderRow(l));
                 window.recalcBooking();
         
-                // Botón Agregar
                 document.getElementById('btn-add-line-dom').addEventListener('click', () => {
                     const today = new Date().toISOString().split('T')[0];
                     const newLine = { uuid: `l_${Date.now()}`, itemId:'', startDate:today, endDate:today, basePrice:0, discountType:'percent', discountVal:0, manualAdj:0, note:'' };
@@ -2570,12 +2494,13 @@ const App = {
                     renderRow(newLine);
                     window.recalcBooking();
                 });
-        
-                // Listeners Globales
                 document.getElementById('c-globalDiscType').addEventListener('change', window.recalcBooking);
                 document.getElementById('c-globalDiscVal').addEventListener('input', window.recalcBooking);
         
             }, 200);
+            
+            // DETIENE EL FLUJO AQUÍ PARA NO EJECUTAR EL CÓDIGO GENÉRICO DE ABAJO
+            return; 
         } else if(sheet === 'BlockedDates'){
              // 1. Obtener Datos para Edición
              const b = isNew ? {} : AppState.data.BlockedDates.find(x => x.blockId === id);
@@ -3820,163 +3745,121 @@ const App = {
         }); 
     },
 
-    // --- NUEVA FUNCIÓN ESPECÍFICA PARA GUARDAR RESERVAS MULTI-ITEM ---
+    // NUEVA FUNCIÓN PARA RESERVAS MULTI-ITEM
     async handleSaveBooking(e) {
-        e.preventDefault(); // Detiene el recargo de página
+        e.preventDefault();
         
-        // 1. Validaciones de Seguridad
-        if (!window.tempBookingLines || window.tempBookingLines.length === 0) { 
-            UI.showToast("Error: La reserva debe tener al menos un artículo.", "error"); 
-            return; 
-        }
-        
-        // Validar que las líneas tengan datos completos
-        const invalidLine = window.tempBookingLines.find(l => !l.itemId || !l.startDate || !l.endDate);
-        if(invalidLine) { 
-            UI.showToast("Faltan datos (Equipo o Fechas) en alguna línea.", "error"); 
-            return; 
-        }
+        // Validar
+        const clientName = document.getElementById('c-customerName').value;
+        if (!clientName) { UI.showToast("Falta nombre del cliente", "error"); return; }
+        if (!window.tempBookingLines || window.tempBookingLines.length === 0) { UI.showToast("Agrega al menos un artículo", "error"); return; }
+        const invalid = window.tempBookingLines.find(l => !l.itemId || !l.startDate || !l.endDate);
+        if(invalid) { UI.showToast("Faltan datos en las líneas (Equipo o Fechas)", "error"); return; }
 
-        const clientSelect = document.getElementById('input-cliente');
-        if (!clientSelect.value) { 
-            UI.showToast("Selecciona un cliente.", "error"); 
-            return; 
-        }
-        const clientName = clientSelect.options[clientSelect.selectedIndex].text;
-
-        // 2. Gestión de IDs
+        // ID
         const currentId = document.getElementById('input-reserva-id').value;
-        const isNew = !currentId || currentId === "";
-        
-        // Generar ID Profesional si es nuevo (Ej: RES-2508-A9X1)
+        const isNew = !currentId;
         let bookingId = currentId;
         if (isNew) {
             const now = new Date();
-            const yy = now.getFullYear().toString().slice(-2);
-            const mm = (now.getMonth() + 1).toString().padStart(2, '0');
-            const rnd = Math.random().toString(36).substr(2, 4).toUpperCase();
-            bookingId = `RES-${yy}${mm}-${rnd}`;
+            bookingId = `RES-${now.getFullYear().toString().slice(-2)}${(now.getMonth()+1).toString().padStart(2,'0')}-${Math.floor(1000 + Math.random() * 9000)}`;
         }
 
-        UI.showLoading(isNew ? "Creando Reserva..." : "Guardando Cambios...");
+        UI.showLoading("Guardando Reserva...");
 
-        try {
-            // 3. Preparar Datos de Cabecera (Para el Dashboard)
-            const allStarts = window.tempBookingLines.map(l => new Date(l.startDate));
-            const allEnds = window.tempBookingLines.map(l => new Date(l.endDate));
-            // Fechas extremas para el calendario global
-            const globalStart = new Date(Math.min(...allStarts)).toISOString().split('T')[0];
-            const globalEnd = new Date(Math.max(...ends)).toISOString().split('T')[0];
+        // Datos Cabecera
+        const starts = window.tempBookingLines.map(l => new Date(l.startDate));
+        const ends = window.tempBookingLines.map(l => new Date(l.endDate));
+        const gStart = new Date(Math.min(...starts)).toISOString().split('T')[0];
+        const gEnd = new Date(Math.max(...ends)).toISOString().split('T')[0];
+        const total = parseFloat(document.getElementById('disp-total').innerText.replace('$','')) || 0;
+        
+        const itemsRef = AppState.data.RentalItems || [];
+        const names = window.tempBookingLines.map(l => itemsRef.find(i=>i.id===l.itemId)?.name || 'Item');
+        const summary = names.length > 1 ? `${names[0]} + ${names.length-1}` : names[0];
+
+        const headerData = {
+            id: bookingId,
+            customerName: clientName,
+            customerPhone: document.getElementById('c-customerPhone').value,
+            customerEmail: document.getElementById('c-customerEmail').value,
+            customerCedula: document.getElementById('c-customerCedula').value,
+            customerAddress: document.getElementById('c-customerAddress').value,
+            startDate: gStart,
+            endDate: gEnd,
+            totalPrice: total,
+            itemName: summary,
+            status: document.getElementById('c-status').value,
+            globalDiscountType: document.getElementById('c-globalDiscType').value,
+            globalDiscountVal: document.getElementById('c-globalDiscVal').value,
+            globalNotes: document.getElementById('c-globalNotes').value,
+            bookingTimestamp: isNew ? new Date().toISOString() : undefined
+        };
+
+        const batch = [];
+        
+        // 1. Cabecera
+        batch.push({ sheet: 'Bookings', action: isNew ? 'add' : 'update', criteria: isNew ? null : { id: bookingId }, data: headerData });
+
+        // 2. Limpieza (Si edición)
+        if (!isNew) {
+            const oldLines = (AppState.data.BookingsDetails || []).filter(d => String(d.bookingId) === String(bookingId));
+            oldLines.forEach(l => { if(l.id) batch.push({ sheet: 'BookingsDetails', action: 'delete', criteria: { id: l.id } }); });
             
-            // Resumen de texto (ej. "Cámara Sony + 2 más")
-            const itemsRef = AppState.data.RentalItems || [];
-            const firstItemName = itemsRef.find(i => i.id === window.tempBookingLines[0].itemId)?.name || 'Equipo';
-            const summaryName = window.tempBookingLines.length > 1 
-                ? `${firstItemName} + ${window.tempBookingLines.length - 1} más` 
-                : firstItemName;
+            const oldBlocks = (AppState.data.BlockedDates || []).filter(b => String(b.bookingId) === String(bookingId));
+            oldBlocks.forEach(b => { batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: b.blockId } }); });
+        }
 
-            const totalFinal = parseFloat(document.getElementById('lbl-global-total').innerText.replace('$','').replace(',','')) || 0;
-
-            // Objeto de la Cabecera
-            const headerData = {
-                id: bookingId,
-                customerName: clientName, 
-                // Datos de contacto (ocultos o derivados del cliente seleccionado si existieran)
-                // En este modelo simplificado asumimos que el cliente ya existe o se selecciona
-                startDate: globalStart,
-                endDate: globalEnd,
-                status: document.getElementById('c-status').value,
-                totalPrice: totalFinal,
-                itemName: summaryName,
-                // Nuevos campos globales
-                globalNotes: document.getElementById('input-notas-globales').value,
-                globalDiscountType: document.getElementById('input-global-disc-type').value,
-                globalDiscountVal: document.getElementById('input-global-disc-val').value,
-                bookingTimestamp: isNew ? new Date().toISOString() : undefined
-            };
-
-            // 4. PREPARAR LOTE DE ACTUALIZACIÓN (BATCH)
-            const batch = [];
-
-            // A. Guardar Cabecera
+        // 3. Insertar Nuevos
+        window.tempBookingLines.forEach((line, idx) => {
+            const detailId = `bd_${Date.now()}_${idx}`;
+            
+            // Detalle
             batch.push({
-                sheet: 'Bookings',
-                action: isNew ? 'add' : 'update',
-                criteria: isNew ? null : { id: bookingId },
-                data: headerData
-            });
-
-            // B. Limpieza de Datos Antiguos (Solo si es edición)
-            if (!isNew) {
-                // Borrar detalles anteriores
-                const oldDetails = (AppState.data.BookingsDetails || []).filter(d => String(d.bookingId) === String(bookingId));
-                oldDetails.forEach(d => {
-                     // Usamos un criterio compuesto o ID si existe. Asumimos que update-sheet-data maneja IDs únicos en BookingsDetails
-                     if(d.id) batch.push({ sheet: 'BookingsDetails', action: 'delete', criteria: { id: d.id } });
-                });
-
-                // Borrar bloqueos anteriores
-                const oldBlocks = (AppState.data.BlockedDates || []).filter(b => String(b.bookingId) === String(bookingId));
-                oldBlocks.forEach(b => {
-                    batch.push({ sheet: 'BlockedDates', action: 'delete', criteria: { blockId: b.blockId } });
-                });
-            }
-
-            // C. Insertar Nuevos Detalles y Bloqueos
-            window.tempBookingLines.forEach((line, idx) => {
-                const detailId = `bd_${Date.now()}_${idx}`;
-                
-                // 1. Guardar Detalle Contable
-                batch.push({
-                    sheet: 'BookingsDetails',
-                    action: 'add',
-                    data: {
-                        id: detailId,
-                        bookingId: bookingId, // Enlace FK
-                        itemId: line.itemId,
-                        itemName: itemsRef.find(i=>i.id===line.itemId)?.name,
-                        startDate: line.startDate,
-                        endDate: line.endDate,
-                        basePrice: line.basePrice,
-                        lineDiscountType: line.discountType,
-                        lineDiscountVal: line.discountVal,
-                        manualAdjustment: line.manualAdj,
-                        lineTotal: line.computedNet,
-                        lineNote: line.note
-                    }
-                });
-
-                // 2. Crear Bloqueo de Calendario (Si no está cancelada)
-                if (headerData.status !== 'Cancelado') {
-                    batch.push({
-                        sheet: 'BlockedDates',
-                        action: 'add',
-                        data: {
-                            blockId: `blk_${detailId}`, // ID único del bloqueo
-                            bookingId: bookingId,       // Enlace a la reserva
-                            itemId: line.itemId,
-                            startDate: line.startDate,
-                            endDate: line.endDate,
-                            reason: `Reserva ${bookingId}: ${clientName}` // Punto 3: ID en motivo
-                        }
-                    });
+                sheet: 'BookingsDetails',
+                action: 'add',
+                data: {
+                    id: detailId,
+                    bookingId: bookingId,
+                    itemId: line.itemId,
+                    itemName: itemsRef.find(i=>i.id===line.itemId)?.name,
+                    startDate: line.startDate,
+                    endDate: line.endDate,
+                    basePrice: line.basePrice,
+                    lineDiscountType: line.discountType,
+                    lineDiscountVal: line.discountVal,
+                    manualAdjustment: line.manualAdj,
+                    lineTotal: line.computedNet,
+                    lineNote: line.note
                 }
             });
 
-            // 5. ENVIAR AL SERVIDOR
-            await API.batchUpdate(batch, isNew ? "Creando Reserva..." : "Actualizando Reserva...");
-            
-            // 6. ACTUALIZAR ESTADO GLOBAL
-            // Recargamos datos críticos para que el Dashboard y el Calendario reflejen los cambios inmediatamente
+            // Bloqueo
+            if (headerData.status !== 'Cancelado') {
+                batch.push({
+                    sheet: 'BlockedDates',
+                    action: 'add',
+                    data: {
+                        blockId: `blk_${detailId}`,
+                        bookingId: bookingId,
+                        itemId: line.itemId,
+                        startDate: line.startDate,
+                        endDate: line.endDate,
+                        reason: `Reserva ${bookingId}: ${clientName}`
+                    }
+                });
+            }
+        });
+
+        try {
+            await API.batchUpdate(batch, "Procesando Reserva...");
             await App.loadData('dashboard'); 
-            
             UI.closeModal();
             UI.renderView('bookings');
             UI.showToast("Reserva guardada correctamente");
-
-        } catch(err) {
-            console.error(err);
-            UI.showToast("Error crítico al guardar: " + err.message, "error");
+        } catch(e) {
+            console.error(e);
+            UI.showToast("Error: " + e.message, "error");
         } finally {
             UI.hideLoading();
         }
@@ -4293,6 +4176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
