@@ -911,17 +911,62 @@ const UI = {
             const gradRev = ctxRev.createLinearGradient(0, 0, 0, 400);
             gradRev.addColorStop(0, 'rgba(16, 185, 129, 0.2)'); gradRev.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
+            // CÁLCULO DINÁMICO DEL MÁXIMO
+            const maxVal = Math.max(...chartDataValues, 0);
+            
             UI.charts.push(new Chart(ctxRev, {
                 type: 'line',
                 data: {
                     labels: chartLabels.map(l => l.label),
-                    datasets: [{ label: 'Ingresos', data: chartDataValues, borderColor: '#10b981', backgroundColor: gradRev, tension: 0.4, fill: true, pointRadius: 5 }]
+                    datasets: [{
+                        label: 'Ingresos',
+                        data: chartDataValues,
+                        borderColor: '#10b981',
+                        backgroundColor: gradRev,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5
+                    }]
                 },
                 plugins: [ChartDataLabels],
                 options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, datalabels: { align: 'top', anchor: 'end', color: '#059669', font: {weight:'bold'}, formatter: (v) => v > 0 ? '$'+v : '' } },
-                    scales: { y: { beginAtZero: true, display: false }, x: { grid: { display: false } } }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 25, // Espacio extra arriba para evitar cortes
+                            right: 20,
+                            left: 10,
+                            bottom: 0
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            align: 'top',
+                            anchor: 'end',
+                            color: '#059669',
+                            font: { weight: 'bold' },
+                            // Formato inteligente (1k, 1M) para evitar textos gigantes
+                            formatter: (v) => {
+                                if (v === 0) return '';
+                                if (v >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+                                if (v >= 1000) return '$' + (v / 1000).toFixed(1) + 'k';
+                                return '$' + v;
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            display: false,
+                            // TRUCO: Aumentar el techo del gráfico un 20% más que el valor más alto
+                            suggestedMax: maxVal * 1.2
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
                 }
             }));
 
@@ -3826,6 +3871,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
