@@ -1440,8 +1440,15 @@ const App = {
         }
     },
 
-    // Lazy Load
+    // Lazy Load (CON CORRECCIÓN PARA DASHBOARD)
     async ensureDataForView(view, force = false) {
+        // AJUSTE CRÍTICO: Si estamos en Dashboard y se fuerza actualización (al guardar), 
+        // recargamos los datos usando la lógica maestra de loadData.
+        if (view === 'dashboard' && force) {
+            await this.loadData('dashboard');
+            return;
+        }
+
         let sheets = []; const d = AppState.data || {};
         const need = (key) => force || !d[key];
 
@@ -1453,7 +1460,6 @@ const App = {
         else if (view === 'services') { if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); }
         else if (view === 'videos') { if(need('Videos')) sheets.push('Videos'); }
         else if (view === 'bookings') { if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); }
-        // Reemplaza la línea anterior con estas dos líneas:
         else if (view === 'client-logos') { if(need('LogosClientes')) sheets.push('LogosClientes'); }
         else if (view === 'identity') { 
             if(need('Identidad')) sheets.push('Identidad'); 
@@ -3820,6 +3826,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
