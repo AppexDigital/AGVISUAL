@@ -135,9 +135,12 @@
         }
         
         /* 6. Pantalla Completa Real (Forzando al navegador) */
-        /* Esto elimina el padding del overlay cuando hay un modal fullscreen dentro */
-        .modal-overlay:has(.is-fullscreen) { padding: 0 !important; display: flex !important; }
-        
+        /* 1. Ajuste del Overlay para permitir expansión total */
+        .modal-overlay:has(.is-fullscreen) { 
+            padding: 0 !important; 
+            display: flex !important; 
+            align-items: flex-start !important;
+        }
         /* 2. Clase Fullscreen aplicada al PADRE (.modal-content) */
         .modal-content.is-fullscreen {
             width: 100vw !important; 
@@ -629,9 +632,8 @@
 
 
     <template id="reservation-modal-template">
-        <div id="reservation-modal-content" class="flex flex-col h-full relative bg-[#0a0a0a] text-white overflow-hidden p-0">
-            
-            <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0">
+        <div id="reservation-modal-content" class="flex flex-col h-[85vh] relative bg-[#0a0a0a] text-white overflow-hidden p-0">   
+            <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0 z-20">
                 <div>
                     <h2 class="modal-title font-display text-2xl text-accent-gold text-white">Gestión de Reserva</h2>
                     <div class="flex items-center gap-2 mt-1">
@@ -650,7 +652,7 @@
                 </div>
             </div>
     
-            <form id="reservation-form" onsubmit="App.handleSaveBooking(event)" class="flex flex-col flex-grow overflow-hidden">
+            <form id="reservation-form" onsubmit="App.handleSaveBooking(event)" class="flex flex-col flex-grow overflow-hidden min-h-0 relative">
                 <input type="hidden" name="id" id="input-reserva-id">
                 
                 <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
@@ -701,7 +703,7 @@
                         </div>
                     </div>
     
-                    <div class="bg-[#121212] border border-gray-800 rounded-lg flex flex-col md:flex-row overflow-hidden">
+                    <div class="bg-[#121212] border border-gray-800 rounded-lg flex flex-col md:flex-row overflow-hidden mb-2">
                         <div class="w-full md:w-1/2 border-r border-gray-800 p-4">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-[10px] uppercase font-bold text-gray-500">Notas Generales</label>
@@ -736,7 +738,7 @@
                     </div>
                 </div>
     
-                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-gray-800 gap-3 flex-shrink-0 z-10">
+                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-gray-800 gap-3 flex-shrink-0 z-20">
                     <button type="button" id="btn-delete-booking" class="text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider mr-auto hidden px-2 transition-colors">
                         <i class="fas fa-trash-alt mr-1"></i> Eliminar
                     </button>
@@ -2429,29 +2431,36 @@ const App = {
                 note: l.lineNote || ''
             }));
         
-        // --- FUNCIÓN FULLSCREEN CORREGIDA V8.5 ---
+        // --- FUNCIÓN FULLSCREEN ROBUSTA V9 ---
             App.toggleFullscreenModal = function() {
-                // 1. Buscamos el contenedor padre real que crea UI.showModal
-                const modalWrapper = document.querySelector('.modal-content'); 
-                if(!modalWrapper) return;
+                // Buscamos nuestro contenedor interno
+                const internalContainer = document.getElementById('reservation-modal-content');
+                if(!internalContainer) return;
                 
-                // 2. Alternamos la clase en el PADRE
-                modalWrapper.classList.toggle('is-fullscreen');
+                // Alternamos la clase en el contenedor interno
+                internalContainer.classList.toggle('is-fullscreen');
+                const isFull = internalContainer.classList.contains('is-fullscreen');
                 
-                // 3. Cambiamos el icono
-                const icon = document.getElementById('fullscreen-icon');
-                if(icon) {
-                    if(modalWrapper.classList.contains('is-fullscreen')) {
-                        icon.classList.remove('fa-expand');
-                        icon.classList.add('fa-compress');
-                    } else {
-                        icon.classList.remove('fa-compress');
-                        icon.classList.add('fa-expand');
-                    }
+                // Ajustes dinámicos
+                if (isFull) {
+                    internalContainer.style.maxHeight = '100vh';
+                    internalContainer.style.height = '100vh';
+                    internalContainer.style.borderRadius = '0';
+                } else {
+                    internalContainer.style.maxHeight = '85vh'; // Volver al límite normal
+                    internalContainer.style.height = 'auto';
+                    internalContainer.style.borderRadius = '0.75rem';
+                }
+        
+                const icon = document.querySelector('.fa-expand');
+                if(icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
+                else { 
+                    const i2 = document.querySelector('.fa-compress'); 
+                    if(i2){ i2.classList.remove('fa-compress'); i2.classList.add('fa-expand'); } 
                 }
             };
         
-            // 3. Renderizar
+            // 3. Renderizar Modal
             const tpl = document.getElementById('reservation-modal-template');
             const clone = tpl.content.cloneNode(true);
             const divTemp = document.createElement('div');
@@ -2462,22 +2471,37 @@ const App = {
             htmlContent = htmlContent.replace('id="display-reserva-id">---', `id="display-reserva-id">${displayId}`);
             htmlContent = htmlContent.replace('id="input-reserva-id">', `id="input-reserva-id" value="${id||''}">`);
         
+            // Inyectar HTML (Footer vacío para usar el nuestro)
             UI.showModal('', htmlContent, ''); 
             
-            // Hacks visuales post-render
+            // 4. LÓGICA DE LIMPIEZA POST-RENDER (CRÍTICO)
             setTimeout(() => {
-                const mContent = document.querySelector('.modal-content');
-                if(mContent) {
-                    // Limpiar estilos heredados que causan bordes blancos
-                    mContent.style.background = 'transparent';
-                    mContent.style.boxShadow = 'none';
-                    mContent.style.border = 'none';
-                    const header = mContent.querySelector('.border-b');
-                    const footer = mContent.querySelector('.bg-gray-50.border-t');
+                // Buscamos el contenedor 'padre' que crea UI.showModal (clase .modal-content)
+                // y lo hacemos transparente para que SOLO se vea nuestro diseño oscuro
+                const parentModal = document.querySelector('.modal-content');
+                if(parentModal) {
+                    // Eliminar estilos por defecto que causan bordes blancos o padding extra
+                    parentModal.style.backgroundColor = 'transparent';
+                    parentModal.style.boxShadow = 'none';
+                    parentModal.style.border = 'none';
+                    parentModal.style.padding = '0';
+                    parentModal.style.maxWidth = 'none'; // Dejar que nuestro contenedor controle el ancho
+                    parentModal.style.width = 'auto'; // Ajuste automático al hijo
+                    
+                    // Ocultar header/footer genéricos si existen
+                    const header = parentModal.querySelector('.border-b'); 
+                    const footer = parentModal.querySelector('.bg-gray-50.border-t');
+                    // Solo ocultar si NO son los nuestros (los nuestros están dentro de #reservation-modal-content)
                     if(header && !header.closest('#reservation-modal-content')) header.style.display = 'none';
                     if(footer && !footer.closest('#reservation-modal-content')) footer.style.display = 'none';
-                    const body = mContent.querySelector('.p-6.flex-1');
-                    if(body) { body.style.padding = '0'; body.style.height = '100%'; body.className = 'flex-1 w-full'; }
+                    
+                    // Resetear body genérico
+                    const body = parentModal.querySelector('.p-6.flex-1');
+                    if(body) { 
+                        body.style.padding = '0'; 
+                        body.style.flex = 'none'; // Quitar flex grow para que no estire raro
+                        body.style.display = 'contents'; // Hacer que el body sea transparente al layout
+                    }
                 }
             }, 10);
         
@@ -4306,6 +4330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
