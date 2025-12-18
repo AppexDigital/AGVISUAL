@@ -97,10 +97,9 @@
 
 
         
-        /* --- FIX V11: ESTILOS RESERVA MULTI-ITEM (ESTABILIDAD) --- */
-        
-        /* 1. ELIMINAR EL CONTENEDOR BLANCO PADRE (LA CLAVE) */
-        /* Usamos :has() para detectar si es nuestra reserva y borrar el estilo del padre */
+       /* --- FIX V11.1: ESTABILIDAD TOTAL --- */
+
+        /* 1. ELIMINAR EL CONTENEDOR BLANCO PADRE Y SU SCROLL */
         .modal-content:has(#reservation-modal-content) {
             background-color: transparent !important;
             box-shadow: none !important;
@@ -109,10 +108,10 @@
             max-width: none !important;
             width: auto !important;
             height: auto !important;
-            overflow: visible !important; /* Permitir que nuestro hijo controle el scroll */
+            overflow: hidden !important; /* CRÍTICO: Mata el scrollbar gris externo */
         }
         
-        /* Ocultar header y footer genéricos que crea el sistema base */
+        /* Ocultar header/footer genéricos */
         .modal-content:has(#reservation-modal-content) > .border-b,
         .modal-content:has(#reservation-modal-content) > .bg-gray-50 {
             display: none !important;
@@ -129,8 +128,9 @@
             border-radius: 0 !important;
             background-color: #0a0a0a !important;
             z-index: 9999 !important;
+            overflow: hidden !important;
         }
-        .modal-overlay:has(.is-fullscreen) { padding: 0 !important; align-items: flex-start !important; }
+        .modal-overlay:has(.is-fullscreen) { padding: 0 !important; display: flex !important; }
         
         /* 3. ESTILOS INTERNOS */
         .booking-grid-header { background-color: #1a1a1a; color: #9ca3af; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -620,7 +620,7 @@
 
 
    <template id="reservation-modal-template">
-        <div id="reservation-modal-content" class="w-full max-w-7xl glass-panel rounded-xl flex flex-col h-[85vh] relative bg-[#0a0a0a] text-white overflow-hidden p-0">
+        <div id="reservation-modal-content" class="w-full max-w-7xl glass-panel rounded-xl flex flex-col h-[90vh] relative bg-[#0a0a0a] text-white overflow-hidden p-0" style="max-height: 90vh;">
             
             <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0 z-20">
                 <div>
@@ -648,7 +648,6 @@
                     
                     <div class="bg-white/5 p-4 rounded-lg border border-white/10">
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                            
                             <div class="md:col-span-6">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Cliente</label>
                                 <input type="text" id="c-customerName" class="grid-input font-bold text-xl w-full bg-transparent border-b border-gray-600 focus-gold outline-none py-1" placeholder="Nombre del Cliente" required>
@@ -2440,26 +2439,25 @@ const App = {
                     note: l.lineNote || ''
                 }));
             
-                // Función Fullscreen
+                // --- FUNCIÓN FULLSCREEN V11 (Simplificada) ---
                 App.toggleFullscreenModal = function() {
-                    // Buscamos el contenedor padre real (UI.showModal container)
                     const modalWrapper = document.querySelector('.modal-content'); 
                     if(!modalWrapper) return;
                     
                     modalWrapper.classList.toggle('is-fullscreen');
                     const isFull = modalWrapper.classList.contains('is-fullscreen');
                     
-                    // Ajuste de altura del contenedor interno para que siga al padre
+                    // Ajuste de altura del contenedor interno
                     const internalContainer = document.getElementById('reservation-modal-content');
-                    if (isFull) {
-                        if(internalContainer) {
+                    if (internalContainer) {
+                        if (isFull) {
                             internalContainer.style.height = '100vh';
-                            internalContainer.classList.remove('rounded-xl');
-                        }
-                    } else {
-                        if(internalContainer) {
-                            internalContainer.style.height = '85vh';
-                            internalContainer.classList.add('rounded-xl');
+                            internalContainer.style.maxHeight = '100vh';
+                            internalContainer.style.borderRadius = '0';
+                        } else {
+                            internalContainer.style.height = '85vh'; // Volver al tamaño normal
+                            internalContainer.style.maxHeight = '85vh';
+                            internalContainer.style.borderRadius = '0.75rem';
                         }
                     }
             
@@ -2480,7 +2478,6 @@ const App = {
                 const displayId = isNew ? 'NUEVA' : (b.id || '---');
                 htmlContent = htmlContent.replace('id="input-reserva-id">', `id="input-reserva-id" value="${id||''}">`);
             
-                // Mostrar Modal (Footer null porque está integrado)
                 UI.showModal('', htmlContent, ''); 
                 
                 // Inyectar el ID en el Header post-render
@@ -2568,18 +2565,18 @@ const App = {
                         div.className = "grid grid-cols-12 gap-2 items-start bg-[#161616] p-2 rounded border border-gray-700 text-xs shadow-sm mb-1 group hover:border-gray-600 transition-colors";
                         div.innerHTML = `
                             <div class="col-span-4">
-                                <select class="dark-select w-full text-xs p-1 rounded border border-gray-600 mb-1 line-item-select bg-[#222]">
+                                <select class="dark-select w-full text-xs p-1 rounded border border-gray-700 mb-1 line-item-select bg-[#222]">
                                     <option value="">Equipo...</option>
                                     ${itemsList.map(i => `<option value="${i.id}" ${i.id === line.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
                                 </select>
                                 <textarea class="form-input w-full text-[10px] p-1 border-none bg-transparent line-note text-gray-400 focus:text-white placeholder-gray-600 resize-none subtle-scrollbar leading-tight" placeholder="Nota..." rows="1" style="min-height: 22px;">${line.note}</textarea>
                             </div>
                             <div class="col-span-3 flex flex-col gap-1">
-                                <input type="text" class="grid-input bg-[#222] rounded border border-gray-600 p-1 line-start text-center cursor-pointer" placeholder="Inicio" value="${line.startDate||''}">
-                                <input type="text" class="grid-input bg-[#222] rounded border border-gray-600 p-1 line-end text-center cursor-pointer" placeholder="Fin" value="${line.endDate||''}">
+                                <input type="text" class="grid-input bg-[#222] rounded border border-gray-700 p-1 line-start text-center cursor-pointer" placeholder="Inicio" value="${line.startDate||''}">
+                                <input type="text" class="grid-input bg-[#222] rounded border border-gray-700 p-1 line-end text-center cursor-pointer" placeholder="Fin" value="${line.endDate||''}">
                             </div>
                             <div class="col-span-3">
-                                <div class="flex items-center border border-gray-600 rounded bg-[#222]">
+                                <div class="flex items-center border border-gray-700 rounded bg-[#222]">
                                     <select class="dark-select text-[10px] p-1 border-r border-gray-600 line-disc-type outline-none bg-transparent"><option value="percent" ${line.discountType==='percent'?'selected':''}>%</option><option value="money" ${line.discountType==='money'?'selected':''}>$</option></select>
                                     <input type="number" step="0.01" class="bg-transparent text-white text-right text-xs p-1 w-full outline-none line-disc-val" value="${line.discountVal}">
                                 </div>
@@ -2611,6 +2608,7 @@ const App = {
                         div.querySelector('.line-note').addEventListener('input', function(e) { line.note = this.value; this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
                         div.querySelector('.line-disc-type').addEventListener('change', e => { line.discountType=e.target.value; line.manualAdj=0; window.recalcBooking(); });
                         div.querySelector('.line-disc-val').addEventListener('input', e => { line.discountVal=parseFloat(e.target.value)||0; line.manualAdj=0; window.recalcBooking(); });
+                        
                         div.querySelector('.line-total-input').addEventListener('input', e => {
                             const userVal = parseFloat(e.target.value)||0;
                             const item = itemsList.find(i=>i.id===line.itemId);
@@ -4317,6 +4315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
