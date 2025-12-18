@@ -4588,53 +4588,34 @@ const App = {
 
     // 4. Generación Directa (Con Túnel Proxy + Espera)
     async generateQuoteDocument(mode) {
+        // Obtenemos el HTML (que ahora usa el link directo)
         const content = App.getQuoteHTMLString();
 
         if (mode === 'print') {
             const win = window.open('', '_blank');
             win.document.write(`<html><head><title>Documento</title></head><body style="margin:0">${content}</body></html>`);
             win.document.close();
+            // Simple espera para que cargue la imagen antes de imprimir
             setTimeout(() => { win.focus(); win.print(); }, 800);
 
         } else if (mode === 'pdf') {
             UI.showLoading('Generando PDF...');
             
+            // Creamos el contenedor temporal
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
-            tempDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: white; overflow-y: scroll; padding: 40px;`;
+            // Visible fuera de pantalla (truco para que html2canvas lo vea mejor)
+            tempDiv.style.cssText = `position: absolute; left: -9999px; top: 0; width: 800px; background: white; padding: 40px;`;
             document.body.appendChild(tempDiv);
 
-            // INTENTO DE PROXY SOLO PARA PDF
-            const logoImg = tempDiv.querySelector('#pdf-logo-img');
-            
-            if (logoImg) {
-                const googleId = logoImg.getAttribute('data-google-id');
-                // Si tenemos ID, intentamos cambiar al proxy
-                if (googleId) {
-                    console.log("PDF: Intentando cargar desde Proxy:", googleId);
-                    logoImg.src = `/.netlify/functions/proxy-image?id=${googleId}`;
-                }
-            }
-
-            // Esperar carga (sea proxy o directa)
-            await new Promise((resolve) => {
-                if (!logoImg || !logoImg.src) return resolve();
-                
-                logoImg.onload = () => resolve();
-                logoImg.onerror = () => {
-                    console.warn("Imagen PDF falló carga (Proxy o URL). Generando igual.");
-                    resolve();
-                };
-                setTimeout(resolve, 4000); // 4 seg para dar tiempo al proxy
-            });
-
+            // Configuración básica
             const opt = {
                 margin: 10, 
                 filename: `Documento.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
-                    useCORS: true, 
+                    useCORS: true, // Intentamos usar CORS, si falla, falla silenciosamente la imagen
                     letterRendering: true,
                     scrollY: 0,
                     windowWidth: 800 
@@ -4642,16 +4623,18 @@ const App = {
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            try {
-                await html2pdf().set(opt).from(tempDiv).save();
-                UI.showToast('PDF Descargado');
-            } catch (e) {
-                console.error(e);
-                UI.showToast('Error generando PDF', 'error');
-            } finally {
+            // Generamos directamente
+            html2pdf().set(opt).from(tempDiv).save().then(() => {
                 document.body.removeChild(tempDiv);
                 UI.hideLoading();
-            }
+                UI.showToast('PDF Descargado');
+            }).catch(e => {
+                // Si falla, limpiamos y avisamos, pero no bloqueamos el editor
+                if(document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+                UI.hideLoading();
+                console.error(e);
+                UI.showToast('Error generando PDF', 'error');
+            });
         }
     },
     // 5. HELPER PARA LOGO (La solución definitiva al problema de imagen rota)
@@ -4677,7 +4660,6 @@ const App = {
     // 6. Constructor de HTML (Con Lógica de Proxy Blindada)
     getQuoteHTMLString() {
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
-        // ... (resto de variables igual) ...
         const customerId = document.getElementById('c-customerCedula')?.value || '';
         const customerEmail = document.getElementById('c-customerEmail')?.value || '';
         const customerPhone = document.getElementById('c-customerPhone')?.value || '';
@@ -4694,12 +4676,9 @@ const App = {
         const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        // SIMPLE Y DIRECTO: Usamos la URL tal cual viene de la base de datos
+        // SIMPLE Y DIRECTO: Usamos el link tal cual está en la base de datos
+        // Esto garantiza que se vea en el editor inmediatamente.
         const logoSrc = sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
-
-        // Guardamos el ID en un atributo data por si el PDF lo necesita, pero la imagen carga directa
-        const logoItem = (AppState.data.ImagenesIdentidad || []).find(i => i.key === 'logo_black');
-        const googleIdAttr = logoItem?.fileId ? `data-google-id="${logoItem.fileId}"` : '';
 
         const companyInfo = `
             <strong>${ident.legal_commercial_name || 'Nombre Comercial'}</strong><br>
@@ -4713,12 +4692,14 @@ const App = {
             const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
             const itemName = item ? item.name : 'Artículo';
             const desc = item ? (item.description || '') : '';
+            
             let days = 1;
             if(line.startDate && line.endDate) {
                 const d1 = new Date(line.startDate); const d2 = new Date(line.endDate);
                 const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
                 if (diff > 0) days = diff;
             }
+
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
             const displayedUnitPrice = line.computedNet / days;
 
@@ -4739,7 +4720,7 @@ const App = {
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white; padding: 40px; color: #333;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #111; padding-bottom: 20px;">
                     <div>
-                        <img id="pdf-logo-img" src="${logoSrc}" ${googleIdAttr} crossorigin="anonymous" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
+                        <img id="pdf-logo-img" src="${logoSrc}" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #555; line-height: 1.4;">${companyInfo}</div>
                     </div>
                     <div style="text-align: right;">
@@ -4748,6 +4729,7 @@ const App = {
                         <div style="font-size: 12px; color: #888; margin-top: 5px;">Fecha: ${new Date().toLocaleDateString()}</div>
                     </div>
                 </div>
+                
                 <div style="margin-bottom: 40px;">
                     <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Cliente</div>
                     <div style="font-size: 16px; font-weight: bold; color: #000;">${customerName}</div>
@@ -4757,6 +4739,7 @@ const App = {
                         ${customerAddress}
                     </div>
                 </div>
+
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 30px;">
                     <thead>
                         <tr style="border-bottom: 2px solid #111;">
@@ -4767,6 +4750,7 @@ const App = {
                     </thead>
                     <tbody>${itemsRows}</tbody>
                 </table>
+
                 <div style="display: flex; justify-content: flex-end;">
                     <div style="width: 250px;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #eee;">
@@ -4783,7 +4767,9 @@ const App = {
                         </div>
                     </div>
                 </div>
+                
                 ${notes ? `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;"><div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Notas / Condiciones</div><div style="font-size: 11px; color: #555; white-space: pre-line; line-height: 1.5;">${notes}</div></div>` : ''}
+                
                 <div style="margin-top: 60px; text-align: center; font-size: 10px; color: #aaa;">
                     ${ident.legal_address ? ident.legal_address + '<br>' : ''}
                     Documento generado por AG Visual Info System
@@ -4950,6 +4936,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
