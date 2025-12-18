@@ -1,52 +1,64 @@
-//functions/proxy-image.js
+const https = require('https');
 
 exports.handler = async (event) => {
-    // 1. Obtener ID
     const { id } = event.queryStringParameters;
-    
+
     if (!id) {
-        return { statusCode: 400, body: 'Falta el parámetro ID' };
+        console.error("Proxy: Falta ID");
+        return { statusCode: 400, body: 'Falta ID' };
     }
 
-    // 2. URL de Google Drive
     const url = `https://drive.google.com/uc?export=view&id=${id}`;
+    console.log(`Proxy: Iniciando descarga para ID ${id}`);
 
-    try {
-        // 3. Usamos el FETCH nativo de Node.js (Sin require)
-        const response = await fetch(url);
+    return new Promise((resolve, reject) => {
+        const req = https.get(url, (res) => {
+            // Manejo de redirecciones de Google (común en Drive)
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                console.log("Proxy: Redireccionando...");
+                return https.get(res.headers.location, (res2) => processResponse(res2, resolve, reject));
+            }
+            processResponse(res, resolve, reject);
+        });
 
-        if (!response.ok) {
-            return { 
-                statusCode: response.status, 
-                body: `Error al obtener imagen de Google: ${response.statusText}` 
-            };
-        }
+        req.on('error', (e) => {
+            console.error("Proxy: Error de red", e);
+            resolve({ statusCode: 500, body: `Error de red: ${e.message}` });
+        });
+    });
+};
 
-        // 4. Procesamiento de Buffer Nativo
-        // Convertimos el ArrayBuffer a Buffer de Node para poder pasarlo a Base64
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64Image = buffer.toString('base64');
+function processResponse(res, resolve, reject) {
+    if (res.statusCode !== 200) {
+        console.error(`Proxy: Google respondió ${res.statusCode}`);
+        resolve({ statusCode: res.statusCode, body: `Error Google: ${res.statusMessage}` });
+        return;
+    }
+
+    const chunks = [];
+    res.on('data', (chunk) => chunks.push(chunk));
+    
+    res.on('end', () => {
+        const buffer = Buffer.concat(chunks);
+        const base64 = buffer.toString('base64');
+        const contentType = res.headers['content-type'] || 'image/jpeg';
         
-        // Intentar obtener el tipo de contenido, o asumir jpeg
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
+        console.log(`Proxy: Éxito. Imagen de ${buffer.length} bytes convertida.`);
 
-        return {
+        resolve({
             statusCode: 200,
             headers: {
                 'Content-Type': contentType,
                 'Access-Control-Allow-Origin': '*', // Vital para CORS
                 'Cache-Control': 'public, max-age=31536000'
             },
-            body: base64Image,
+            body: base64,
             isBase64Encoded: true
-        };
+        });
+    });
 
-    } catch (error) {
-        console.error("Error en Proxy:", error);
-        return { 
-            statusCode: 500, 
-            body: JSON.stringify({ error: error.message }) 
-        };
-    }
-};
+    res.on('error', (e) => {
+        console.error("Proxy: Error procesando stream", e);
+        resolve({ statusCode: 500, body: "Error procesando imagen" });
+    });
+}
