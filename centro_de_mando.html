@@ -4599,36 +4599,34 @@ const App = {
         } else if (mode === 'pdf') {
             UI.showLoading('Generando PDF...');
             
-            // 1. Crear contenedor temporal
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
             tempDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: white; overflow-y: scroll; padding: 40px;`;
             document.body.appendChild(tempDiv);
 
-            // --- ESTRATEGIA HÍBRIDA: PASO 2 (El Cambiazo) ---
+            // INTENTO DE PROXY SOLO PARA PDF
             const logoImg = tempDiv.querySelector('#pdf-logo-img');
+            
             if (logoImg) {
                 const googleId = logoImg.getAttribute('data-google-id');
-                // Si tenemos el ID, cambiamos la URL directa por la del PROXY solo para el PDF
+                // Si tenemos ID, intentamos cambiar al proxy
                 if (googleId) {
-                    console.log("PDF: Cambiando a URL Proxy para ID:", googleId);
+                    console.log("PDF: Intentando cargar desde Proxy:", googleId);
                     logoImg.src = `/.netlify/functions/proxy-image?id=${googleId}`;
                 }
             }
 
-            // 3. Esperar a que la nueva imagen (Proxy o Directa) cargue
+            // Esperar carga (sea proxy o directa)
             await new Promise((resolve) => {
                 if (!logoImg || !logoImg.src) return resolve();
-                // Si ya está completa y bien, seguimos
-                if (logoImg.complete && logoImg.naturalHeight > 0) return resolve();
-
-                logoImg.onload = () => { console.log("Imagen PDF cargada OK"); resolve(); };
-                logoImg.onerror = () => { console.warn("Imagen PDF falló carga"); resolve(); };
                 
-                // Timeout de seguridad (5s para que el proxy responda)
-                setTimeout(() => { console.log("Timeout espera imagen"); resolve(); }, 5000);
+                logoImg.onload = () => resolve();
+                logoImg.onerror = () => {
+                    console.warn("Imagen PDF falló carga (Proxy o URL). Generando igual.");
+                    resolve();
+                };
+                setTimeout(resolve, 4000); // 4 seg para dar tiempo al proxy
             });
-            // --------------------------------------------------
 
             const opt = {
                 margin: 10, 
@@ -4636,7 +4634,7 @@ const App = {
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
-                    useCORS: true, // Ahora sí funcionará con el proxy
+                    useCORS: true, 
                     letterRendering: true,
                     scrollY: 0,
                     windowWidth: 800 
@@ -4656,7 +4654,6 @@ const App = {
             }
         }
     },
-
     // 5. HELPER PARA LOGO (La solución definitiva al problema de imagen rota)
     async convertLogoToBase64InContainer(container) {
         const img = container.querySelector('#pdf-logo-img');
@@ -4680,6 +4677,7 @@ const App = {
     // 6. Constructor de HTML (Con Lógica de Proxy Blindada)
     getQuoteHTMLString() {
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
+        // ... (resto de variables igual) ...
         const customerId = document.getElementById('c-customerCedula')?.value || '';
         const customerEmail = document.getElementById('c-customerEmail')?.value || '';
         const customerPhone = document.getElementById('c-customerPhone')?.value || '';
@@ -4693,18 +4691,15 @@ const App = {
         const tax = document.getElementById('lbl-global-tax')?.innerText || '$0.00';
         const total = document.getElementById('lbl-global-total')?.innerText || '$0.00';
 
+        const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        // --- ESTRATEGIA HÍBRIDA: PASO 1 ---
-        // 1. Buscar el logo
-        const logoItem = (AppState.data.ImagenesIdentidad || []).find(i => i.key === 'logo_black');
-        
-        // 2. Usar la URL DIRECTA por defecto (para el editor visual)
-        let logoSrc = logoItem?.imageUrl || 'https://placehold.co/150x50?text=SIN+LOGO';
+        // SIMPLE Y DIRECTO: Usamos la URL tal cual viene de la base de datos
+        const logoSrc = sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
 
-        // 3. Guardar el ID en un atributo de datos para usarlo en el PDF después
+        // Guardamos el ID en un atributo data por si el PDF lo necesita, pero la imagen carga directa
+        const logoItem = (AppState.data.ImagenesIdentidad || []).find(i => i.key === 'logo_black');
         const googleIdAttr = logoItem?.fileId ? `data-google-id="${logoItem.fileId}"` : '';
-        // ----------------------------------
 
         const companyInfo = `
             <strong>${ident.legal_commercial_name || 'Nombre Comercial'}</strong><br>
@@ -4955,6 +4950,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
