@@ -4586,7 +4586,7 @@ const App = {
         });
     },
 
-    // 4. Generación Directa (Técnica "Puente Blob" + Flash Render)
+    // 4. Generación Directa (Con Túnel Proxy + Espera)
     async generateQuoteDocument(mode) {
         const content = App.getQuoteHTMLString();
 
@@ -4597,35 +4597,30 @@ const App = {
             setTimeout(() => { win.focus(); win.print(); }, 800);
 
         } else if (mode === 'pdf') {
-            UI.showLoading('Procesando Documento...');
+            UI.showLoading('Generando PDF...');
             
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
-            // Render visible pero fuera de foco para asegurar carga
-            tempDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: white; overflow-y: scroll; padding: 40px;`;
+            tempDiv.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+                z-index: 99999; background: white; overflow-y: scroll; padding: 40px;
+            `;
             document.body.appendChild(tempDiv);
 
-            // PUENTE BLOB: Convertir URL externa a Objeto Local seguro
             const logoImg = tempDiv.querySelector('#pdf-logo-img');
             
-            if (logoImg && logoImg.src && !logoImg.src.startsWith('data:')) {
-                try {
-                    // Intentamos descargar la imagen como Blob
-                    const response = await fetch(logoImg.src);
-                    const blob = await response.blob();
-                    const localUrl = URL.createObjectURL(blob);
-                    // Reemplazamos el src externo por el local
-                    logoImg.src = localUrl;
-                    
-                    // Esperamos a que la nueva versión local cargue
-                    await new Promise(resolve => {
-                        logoImg.onload = resolve;
-                        logoImg.onerror = resolve; // Si falla, seguimos
-                    });
-                } catch (e) {
-                    console.warn("No se pudo hacer puente Blob (CORS estricto), intentando carga normal...", e);
-                }
-            }
+            // Esperar carga real (ahora sí cargará gracias al proxy)
+            await new Promise((resolve) => {
+                if (!logoImg || !logoImg.src) return resolve();
+                if (logoImg.complete) return resolve();
+                
+                logoImg.onload = () => resolve();
+                logoImg.onerror = () => {
+                    console.warn("Fallo carga imagen PDF, generando sin logo.");
+                    resolve();
+                };
+                setTimeout(resolve, 5000); // 5 seg max
+            });
 
             const opt = {
                 margin: 10, 
@@ -4633,7 +4628,7 @@ const App = {
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
-                    useCORS: true, // Aún necesario
+                    useCORS: true, // Esto ahora funcionará porque el proxy devuelve el header correcto
                     letterRendering: true,
                     scrollY: 0,
                     windowWidth: 800 
@@ -4641,18 +4636,16 @@ const App = {
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            UI.showLoading('Generando PDF...');
-            
-            html2pdf().set(opt).from(tempDiv).save().then(() => {
+            try {
+                await html2pdf().set(opt).from(tempDiv).save();
+                UI.showToast('PDF Descargado');
+            } catch (e) {
+                console.error(e);
+                UI.showToast('Error generando PDF', 'error');
+            } finally {
                 document.body.removeChild(tempDiv);
                 UI.hideLoading();
-                UI.showToast('PDF Descargado');
-            }).catch(e => {
-                if(document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
-                UI.hideLoading();
-                console.error(e);
-                UI.showToast('Error en PDF', 'error');
-            });
+            }
         }
     },
 
@@ -4676,7 +4669,6 @@ const App = {
         }
     },
 
-    // 6. Constructor de HTML (Con ID para cambio de título)
     getQuoteHTMLString() {
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
         const customerId = document.getElementById('c-customerCedula')?.value || '';
@@ -4686,7 +4678,6 @@ const App = {
         const quoteId = document.getElementById('header-ref-display')?.innerText || 'BORRADOR';
         const notes = document.getElementById('c-globalNotes')?.value || '';
         
-        // Título dinámico o por defecto
         const docTitle = document.getElementById('doc-type-title')?.innerText || 'COTIZACIÓN';
         
         const subtotal = document.getElementById('lbl-global-subtotal')?.innerText || '$0.00';
@@ -4697,7 +4688,23 @@ const App = {
         const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        const logoSrc = App.LOGO_BASE64 || sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
+        let logoSrc = sysImages.logo_black || 'https://placehold.co/150x50?text=SIN+LOGO';
+
+        // --- LÓGICA DEL TÚNEL (PROXY) ---
+        // Si el logo viene de Google Drive, lo pasamos por nuestro proxy para evitar bloqueo en PDF
+        if (logoSrc.includes('drive.google.com') || logoSrc.includes('googleusercontent')) {
+            // Intentar extraer ID
+            let fileId = null;
+            const matchId = logoSrc.match(/id=([a-zA-Z0-9_-]+)/);
+            if (matchId) fileId = matchId[1];
+            else if (logoSrc.includes('/d/')) fileId = logoSrc.split('/d/')[1].split('/')[0];
+            
+            if (fileId) {
+                // Usamos nuestro propio backend para servir la imagen limpia de CORS
+                logoSrc = `/.netlify/functions/proxy-image?id=${fileId}`;
+            }
+        }
+        // ---------------------------------
 
         const companyInfo = `
             <strong>${ident.legal_commercial_name || 'Nombre Comercial'}</strong><br>
@@ -4720,8 +4727,6 @@ const App = {
             }
 
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-            
-            // CÁLCULO INVERSO: Unitario = Total Neto / Días
             const displayedUnitPrice = line.computedNet / days;
 
             return `
@@ -4954,6 +4959,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
