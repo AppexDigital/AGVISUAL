@@ -636,7 +636,7 @@
 
 
    <template id="reservation-modal-template">
-        <div id="reservation-modal-content" class="w-full max-w-7xl glass-panel rounded-xl flex flex-col h-[90vh] relative bg-[#0a0a0a] text-white overflow-hidden p-0" style="max-height: 90vh;">
+           <div id="reservation-modal-content" class="flex flex-col h-full relative bg-[#0a0a0a] text-white overflow-hidden p-0 rounded-xl">
             
             <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0 z-20">
                 <div>
@@ -2423,7 +2423,7 @@ const App = {
              html = `${UI.inputHTML('c', 'order', 'Orden', c?.order||nextOrder, 'number')} ${UI.inputHTML('c', 'name', 'Nombre', c?.name)}`;
             // --- INICIO CÓDIGO NUEVO (FORMULARIO RESERVAS) ---
             } else if(sheet === 'Bookings'){
-                // 1. Carga Dependencias
+                // 1. Carga de Dependencias
                 if (!AppState.data.RentalItems || !AppState.data.BlockedDates || !AppState.data.BookingsDetails) {
                     UI.showLoading('Cargando sistema...');
                     const d = await API.call('/.netlify/functions/get-admin-data?sheets=RentalItems,BlockedDates,BookingsDetails');
@@ -2433,10 +2433,14 @@ const App = {
             
                 // 2. Preparar Datos
                 const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
+                
+                // Recuperar líneas guardadas o crear array vacío
                 let currentLines = [];
                 if (!isNew && AppState.data.BookingsDetails) {
                     currentLines = AppState.data.BookingsDetails.filter(d => String(d.bookingId) === String(id));
                 }
+                
+                // Migración Legacy (si existen datos viejos sin líneas)
                 if (!isNew && currentLines.length === 0 && b.itemId) {
                     currentLines.push({
                         uuid: 'legacy_' + Date.now(), itemId: b.itemId, itemName: b.itemName,
@@ -2445,6 +2449,7 @@ const App = {
                     });
                 }
             
+                // Volcar a memoria global temporal
                 window.tempBookingLines = currentLines.map(l => ({
                     uuid: l.uuid || `line_${Math.random().toString(36).substr(2,9)}`,
                     itemId: l.itemId, startDate: l.startDate, endDate: l.endDate,
@@ -2455,36 +2460,32 @@ const App = {
                     note: l.lineNote || ''
                 }));
             
-                // --- FUNCIÓN FULLSCREEN V11 (Simplificada) ---
+                // --- FUNCIÓN FULLSCREEN (SIMPLIFICADA V12) ---
                 App.toggleFullscreenModal = function() {
-                    const modalWrapper = document.querySelector('.modal-content'); 
-                    if(!modalWrapper) return;
+                    // 1. Apuntamos al PADRE (.modal-content), que es el que controla el tamaño
+                    const modalParent = document.querySelector('.modal-content');
+                    if(!modalParent) return;
                     
-                    modalWrapper.classList.toggle('is-fullscreen');
-                    const isFull = modalWrapper.classList.contains('is-fullscreen');
+                    // 2. Alternar clase
+                    modalParent.classList.toggle('is-fullscreen');
+                    const isFull = modalParent.classList.contains('is-fullscreen');
                     
-                    // Ajuste de altura del contenedor interno
-                    const internalContainer = document.getElementById('reservation-modal-content');
-                    if (internalContainer) {
-                        if (isFull) {
-                            internalContainer.style.height = '100vh';
-                            internalContainer.style.maxHeight = '100vh';
-                            internalContainer.style.borderRadius = '0';
-                        } else {
-                            internalContainer.style.height = '85vh'; // Volver al tamaño normal
-                            internalContainer.style.maxHeight = '85vh';
-                            internalContainer.style.borderRadius = '0.75rem';
-                        }
+                    // 3. Ajuste de bordes internos (Estético) para que cuadre perfecto
+                    const internal = document.getElementById('reservation-modal-content');
+                    if(internal) {
+                        if(isFull) internal.classList.remove('rounded-xl');
+                        else internal.classList.add('rounded-xl');
                     }
             
-                    const icon = document.querySelector('.fa-expand');
-                    if(icon) { 
+                    // 4. Icono
+                    const icon = document.getElementById('fullscreen-icon');
+                    if(icon) {
                         if (isFull) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
                         else { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
                     }
                 };
             
-                // 3. Renderizar Modal
+                // 3. Renderizar Modal usando Template
                 const tpl = document.getElementById('reservation-modal-template');
                 const clone = tpl.content.cloneNode(true);
                 const divTemp = document.createElement('div');
@@ -2492,18 +2493,47 @@ const App = {
                 let htmlContent = divTemp.innerHTML;
             
                 const displayId = isNew ? 'NUEVA' : (b.id || '---');
+                // Inyectamos el ID oculto del form
                 htmlContent = htmlContent.replace('id="input-reserva-id">', `id="input-reserva-id" value="${id||''}">`);
             
+                // Mostrar Modal (Footer vacío porque está integrado)
                 UI.showModal('', htmlContent, ''); 
                 
-                // Inyectar el ID en el Header post-render
+                // Inyectar ID visual en Header
                 setTimeout(() => {
                     const headerRef = document.getElementById('header-ref-display');
                     if(headerRef) headerRef.textContent = displayId;
                 }, 0);
             
-                // 4. LÓGICA POST-RENDER
+                // 4. LÓGICA POST-RENDER (Limpieza de estilos y Llenado de datos)
                 setTimeout(() => {
+                    // A. LIMPIEZA CRÍTICA DEL MODAL PADRE (Fix del Scroll Gris)
+                    const parentModal = document.querySelector('.modal-content');
+                    if(parentModal) {
+                        // Aseguramos que el padre sea invisible y flexible
+                        parentModal.style.backgroundColor = 'transparent';
+                        parentModal.style.boxShadow = 'none';
+                        parentModal.style.border = 'none';
+                        parentModal.style.padding = '0';
+                        
+                        // Ocultar basura del modal genérico
+                        const header = parentModal.querySelector('.border-b'); 
+                        const footer = parentModal.querySelector('.bg-gray-50.border-t');
+                        if(header && !header.closest('#reservation-modal-content')) header.style.display = 'none';
+                        if(footer && !footer.closest('#reservation-modal-content')) footer.style.display = 'none';
+                        
+                        // Ajustar el body genérico para que no estorbe
+                        const body = parentModal.querySelector('.p-6.flex-1');
+                        if(body) { 
+                            body.style.padding = '0'; 
+                            body.style.flex = '1'; 
+                            body.style.display = 'flex';
+                            body.style.flexDirection = 'column';
+                            body.style.overflow = 'hidden'; // Doble seguridad
+                        }
+                    }
+            
+                    // B. Llenar Campos del Formulario
                     const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v||''; };
                     if (!isNew) {
                         setVal('c-customerName', b.customerName);
@@ -2523,12 +2553,14 @@ const App = {
                         }
                     }
             
+                    // C. Helper Formato Moneda
                     const formatMoney = (amount) => {
                         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
                     };
             
                     const itemsList = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
                     
+                    // --- MOTOR DE CÁLCULO ---
                     window.recalcBooking = () => {
                         let globalSub=0, totalTax=0, minD=null, maxD=null;
                         
@@ -2552,9 +2584,13 @@ const App = {
                             if(hasTax) totalTax += (net * 0.13);
                             globalSub += net;
             
+                            // Actualizar info visual de la fila
                             const row = document.getElementById(`row-${line.uuid}`);
                             if(row) {
-                                if(document.activeElement !== row.querySelector('.line-total-input')) row.querySelector('.line-total-input').value = net.toFixed(2);
+                                const inputTotal = row.querySelector('.line-total-input');
+                                if(document.activeElement !== inputTotal) {
+                                    inputTotal.value = net.toFixed(2);
+                                }
                                 const info = row.querySelector('.line-info');
                                 const taxLabel = hasTax ? '<span class="text-gray-400 font-bold ml-1">+IVA</span>' : '';
                                 info.innerHTML = `${d}d x $${bp}${taxLabel} ${line.manualAdj>0 ? `(Aj:${line.manualAdj})` : ''}`;
@@ -2566,6 +2602,7 @@ const App = {
                         let gDisc = (gType==='money') ? gVal : (globalSub * (gVal/100));
                         const final = Math.max(0, globalSub - gDisc + totalTax);
             
+                        // Actualizar Totales Globales
                         document.getElementById('lbl-global-subtotal').innerText = formatMoney(globalSub);
                         document.getElementById('lbl-global-discount').innerText = formatMoney(gDisc * -1);
                         document.getElementById('lbl-global-tax').innerText = formatMoney(totalTax);
@@ -2575,10 +2612,12 @@ const App = {
                         document.getElementById('disp-date-range').innerText = `${fmt(minD)} a ${fmt(maxD)}`;
                     };
             
+                    // --- RENDERIZADO DE FILA ---
                     const renderRow = (line) => {
                         const div = document.createElement('div');
                         div.id = `row-${line.uuid}`;
-                        div.className = "grid grid-cols-12 gap-2 items-start bg-[#161616] p-2 rounded border border-gray-700 text-xs shadow-sm mb-1 group hover:border-gray-600 transition-colors";
+                        div.className = "grid grid-cols-12 gap-2 items-start bg-[#161616] p-3 border border-gray-800 text-xs shadow-sm mb-1 group hover:border-gray-600 transition-colors";
+                        
                         div.innerHTML = `
                             <div class="col-span-4">
                                 <select class="dark-select w-full text-xs p-1 rounded border border-gray-700 mb-1 line-item-select bg-[#222]">
@@ -2606,6 +2645,7 @@ const App = {
                             </div>
                         `;
             
+                        // Flatpickr
                         const getBlocks = (itemId) => {
                             if(!itemId) return [];
                             const myId = document.getElementById('input-reserva-id').value;
@@ -2615,6 +2655,7 @@ const App = {
                         const fpS = flatpickr(div.querySelector('.line-start'), { ...fpCfg, onChange: (d,s) => { line.startDate=s; if(fpE) fpE.set('minDate', s); window.recalcBooking(); } });
                         const fpE = flatpickr(div.querySelector('.line-end'), { ...fpCfg, onChange: (d,s) => { line.endDate=s; window.recalcBooking(); } });
             
+                        // Listeners
                         div.querySelector('.line-item-select').addEventListener('change', (e) => {
                             line.itemId = e.target.value;
                             const newB = getBlocks(line.itemId);
@@ -2641,6 +2682,7 @@ const App = {
                         document.getElementById('lines-container').appendChild(div);
                     };
             
+                    // Init
                     if(window.tempBookingLines.length === 0) {
                         const today = new Date().toISOString().split('T')[0];
                         window.tempBookingLines.push({ uuid: `l_${Date.now()}`, itemId:'', startDate:today, endDate:today, basePrice:0, discountType:'percent', discountVal:0, manualAdj:0, note:'' });
@@ -4331,6 +4373,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
