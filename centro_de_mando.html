@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
@@ -567,6 +569,7 @@
                 <div class="tab-nav">
                     <button class="tab-btn active" onclick="UI.switchTab('id-general')">Identidad y Redes</button>
                     <button class="tab-btn" onclick="UI.switchTab('id-whoami')">Quién Soy</button>
+                    <button class="tab-btn" onclick="UI.switchTab('id-legal')">Información Legal</button>
                 </div>
                 
                 <div id="tab-id-general" class="tab-content active space-y-8">
@@ -621,7 +624,45 @@
                         </div>
                     </div>
                 </div>
-            </div>
+
+                <div id="tab-id-legal" class="tab-content">
+                    <div class="bg-white p-6 rounded border border-gray-200 max-w-4xl">
+                        <h3 class="font-bold text-lg mb-4 border-b pb-2">Datos de Facturación y Cotizaciones</h3>
+                        <p class="text-xs text-gray-500 mb-6">Esta información aparecerá en los encabezados de los PDF.</p>
+                        
+                        <div id="legal-form-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="mb-4">
+                                <label class="form-label">Nombre Comercial</label>
+                                <input type="text" id="leg-legal_commercial_name" data-key="legal_commercial_name" class="form-input" placeholder="Ej: AG Visual">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">Razón Social (Nombre Legal)</label>
+                                <input type="text" id="leg-legal_name" data-key="legal_name" class="form-input" placeholder="Nombre en Hacienda">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">Cédula Jurídica / Física</label>
+                                <input type="text" id="leg-legal_id" data-key="legal_id" class="form-input" placeholder="0-0000-0000">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">Teléfono Facturación</label>
+                                <input type="text" id="leg-legal_phone" data-key="legal_phone" class="form-input">
+                            </div>
+                            <div class="mb-4 md:col-span-2">
+                                <label class="form-label">Correo Electrónico (Facturas)</label>
+                                <input type="text" id="leg-legal_email" data-key="legal_email" class="form-input">
+                            </div>
+                            <div class="mb-4 md:col-span-2">
+                                <label class="form-label">Dirección Fiscal Completa</label>
+                                <textarea id="leg-legal_address" data-key="legal_address" class="form-textarea" rows="2"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-end">
+                            <button class="btn btn-primary" onclick="App.handleSaveIdentityText('legal')">Guardar Info Legal</button>
+                        </div>
+                    </div>
+                </div>
+            </div> 
         </main>
     </div>
 
@@ -651,8 +692,17 @@
                     </div>
                 </div>
                 
-                <div class="flex items-center gap-3">
-                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10" title="Cerrar">
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="App.generateQuoteDocument('print')" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10" title="Imprimir / Vista Previa">
+                        <i class="fas fa-print fa-lg"></i>
+                    </button>
+                    <button type="button" onclick="App.generateQuoteDocument('pdf')" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10 mr-2" title="Descargar PDF">
+                        <i class="fas fa-file-pdf fa-lg"></i>
+                    </button>
+                    
+                    <div class="h-6 w-px bg-white/10"></div>
+
+                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10 ml-2" title="Cerrar">
                         <i class="fas fa-times fa-lg"></i>
                     </button>
                 </div>
@@ -1251,6 +1301,16 @@ const UI = {
                     <button class="btn btn-primary w-full md:w-auto" onclick="App.handleSaveIdentityText('whoami')">Guardar</button>
                 </div>
             `;
+
+            // NUEVO: Llenar Formulario Legal (usando la variable 'ident' que ya tienes arriba)
+            const legalContainer = document.getElementById('legal-form-container');
+            if (legalContainer) {
+                const fields = ['legal_commercial_name', 'legal_name', 'legal_id', 'legal_phone', 'legal_email', 'legal_address'];
+                fields.forEach(f => {
+                    const input = document.getElementById(`leg-${f}`);
+                    if(input) input.value = ident[f] || '';
+                });
+            }
             
         } else if (view === 'projects') {
 
@@ -4261,12 +4321,19 @@ const App = {
         }
     },
 
-    // C. Guardar Textos de Identidad/Perfil (Hojas 'Identidad' y 'About')
+    // C. Guardar Textos de Identidad/Perfil
     async handleSaveIdentityText(section) {
         // Determinar contexto
-        const isGeneral = section === 'general';
-        const containerId = isGeneral ? 'identity-form-container' : 'whoami-form-container';
-        const sheetName = isGeneral ? 'Identidad' : 'About';
+        let containerId = 'identity-form-container';
+        let sheetName = 'Identidad';
+
+        if (section === 'whoami') {
+            containerId = 'whoami-form-container';
+            sheetName = 'About';
+        } else if (section === 'legal') {
+            containerId = 'legal-form-container';
+            sheetName = 'Identidad'; // Legal va en la misma hoja que redes
+        }
         
         const inputs = document.querySelectorAll(`#${containerId} input, #${containerId} textarea`);
         
@@ -4371,6 +4438,202 @@ const App = {
         }
     },
     // --- FIN CÓDIGO NUEVO ---
+
+
+
+    // --- GENERADOR DE DOCUMENTOS (COTIZACIÓN PDF/PRINT) ---
+    async generateQuoteDocument(mode) {
+        // 1. Recolectar Datos Actuales (lo que se ve en pantalla)
+        const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
+        const customerId = document.getElementById('c-customerCedula')?.value || '';
+        const customerEmail = document.getElementById('c-customerEmail')?.value || '';
+        const customerPhone = document.getElementById('c-customerPhone')?.value || '';
+        const customerAddress = document.getElementById('c-customerAddress')?.value || '';
+        const quoteId = document.getElementById('header-ref-display')?.innerText || 'BORRADOR';
+        const notes = document.getElementById('c-globalNotes')?.value || '';
+        
+        // Totales (del DOM)
+        const subtotal = document.getElementById('lbl-global-subtotal')?.innerText || '$0.00';
+        const discount = document.getElementById('lbl-global-discount')?.innerText || '$0.00';
+        const tax = document.getElementById('lbl-global-tax')?.innerText || '$0.00';
+        const total = document.getElementById('lbl-global-total')?.innerText || '$0.00';
+
+        // Datos de la Empresa (Desde Identidad)
+        const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
+        const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+        
+        const logoUrl = sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
+        const companyName = ident.legal_commercial_name || 'Nombre Comercial';
+        const legalName = ident.legal_name || '';
+        const companyId = ident.legal_id || '';
+        const companyEmail = ident.legal_email || '';
+        const companyPhone = ident.legal_phone || '';
+        const companyAddress = ident.legal_address || '';
+
+        // Construir Filas de la Tabla
+        const itemsRows = window.tempBookingLines.map(line => {
+            const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
+            const itemName = item ? item.name : 'Artículo';
+            const desc = item ? (item.description || '') : '';
+            // Calcular días
+            let days = 0;
+            if(line.startDate && line.endDate) {
+                const d1 = new Date(line.startDate); const d2 = new Date(line.endDate);
+                days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+            }
+            const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+            
+            return `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px 0;">
+                        <div style="font-weight: bold; color: #111;">${itemName}</div>
+                        <div style="font-size: 10px; color: #666; margin-top:2px;">${line.note || desc}</div>
+                        <div style="font-size: 10px; color: #888;">${line.startDate} al ${line.endDate} (${days} días)</div>
+                    </td>
+                    <td style="padding: 12px 0; text-align: right;">${fmt(line.basePrice)}</td>
+                    <td style="padding: 12px 0; text-align: right;">${line.discountVal > 0 ? (line.discountType === 'percent' ? line.discountVal+'%' : fmt(line.discountVal)) : '-'}</td>
+                    <td style="padding: 12px 0; text-align: right; font-weight: bold;">${fmt(line.computedNet)}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // 2. Construir Plantilla HTML Profesional (Blanco Puro)
+        const content = `
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white; padding: 40px; color: #333;">
+                
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #111; padding-bottom: 20px;">
+                    <div>
+                        <img src="${logoUrl}" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
+                        <div style="font-size: 12px; color: #555; line-height: 1.4;">
+                            <strong>${companyName}</strong><br>
+                            ${legalName ? legalName + '<br>' : ''}
+                            ${companyId ? 'Cédula: ' + companyId + '<br>' : ''}
+                            ${companyEmail}<br>
+                            ${companyPhone}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <h1 style="font-family: 'Garamond', serif; font-size: 32px; color: #111; margin: 0;">COTIZACIÓN</h1>
+                        <div style="font-size: 14px; color: #666; margin-top: 5px;"># ${quoteId}</div>
+                        <div style="font-size: 12px; color: #888; margin-top: 5px;">Fecha: ${new Date().toLocaleDateString()}</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 40px;">
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Cliente</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #000;">${customerName}</div>
+                    <div style="font-size: 12px; color: #555; margin-top: 4px;">
+                        ${customerId ? 'ID: ' + customerId + ' &nbsp;|&nbsp; ' : ''}
+                        ${customerEmail}
+                        ${customerPhone ? '<br>Tel: ' + customerPhone : ''}
+                        ${customerAddress ? '<br>' + customerAddress : ''}
+                    </div>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 30px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #111;">
+                            <th style="text-align: left; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555;">Descripción</th>
+                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 80px;">Precio Unit.</th>
+                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 80px;">Desc.</th>
+                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 100px;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsRows}
+                    </tbody>
+                </table>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <div style="width: 250px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #eee;">
+                            <span style="color: #666;">Subtotal:</span>
+                            <span>${subtotal}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #eee; color: #ef4444;">
+                            <span>Descuento Global:</span>
+                            <span>${discount}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #eee;">
+                            <span style="color: #666;">IVA / Impuestos:</span>
+                            <span>${tax}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; padding: 15px 0; color: #000; border-bottom: 2px solid #111;">
+                            <span>TOTAL:</span>
+                            <span>${total}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${notes ? `
+                <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Notas / Condiciones</div>
+                    <div style="font-size: 11px; color: #555; white-space: pre-line; line-height: 1.5;">${notes}</div>
+                </div>
+                ` : ''}
+
+                <div style="margin-top: 60px; text-align: center; font-size: 10px; color: #aaa;">
+                    ${companyAddress ? companyAddress + '<br>' : ''}
+                    Documento generado por AG Visual Info System
+                </div>
+            </div>
+        `;
+
+        // 3. Ejecutar Acción
+        if (mode === 'print') {
+            // Abrir ventana nueva para imprimir
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Cotización ${quoteId}</title>
+                        <style>
+                            @media print { 
+                                body { margin: 0; } 
+                                @page { margin: 1cm; size: auto; }
+                            }
+                        </style>
+                    </head>
+                    <body>${content}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            // Esperar carga de imágenes antes de imprimir
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+            }, 500);
+
+        } else if (mode === 'pdf') {
+            UI.showLoading('Generando PDF...');
+            
+            // Crear contenedor temporal invisible
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            document.body.appendChild(tempDiv);
+
+            const opt = {
+                margin:       10, // mm
+                filename:     `Cotizacion_${quoteId}_${customerName.replace(/ /g,'_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, // Alta calidad
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(tempDiv).save().then(() => {
+                document.body.removeChild(tempDiv);
+                UI.hideLoading();
+                UI.showToast('PDF Descargado');
+            }).catch(err => {
+                console.error(err);
+                UI.hideLoading();
+                UI.showToast('Error generando PDF', 'error');
+            });
+        }
+    },
+
+    
+
     
     async savePortfolioOrder() { UI.showLoading('Guardando...'); try { const updates = AppState.data.ProjectImages.filter(i => String(i.showInPortfolio).toLowerCase().trim() === 'si').map(i => ({ sheet: 'ProjectImages', action: 'update', criteria: {id: i.id}, data: {portfolioOrder: i.portfolioOrder} })); await API.batchUpdate(updates); UI.showToast('Orden guardado'); } catch(e) { alert(e.message); } finally { UI.hideLoading(); } },
     // CÓDIGO NUEVO (Con Feedback y Limpieza de Orden)
@@ -4465,25 +4728,3 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
