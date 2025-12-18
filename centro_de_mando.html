@@ -4496,9 +4496,9 @@ const App = {
 
 
 
-// --- FUNCIONES DEL EDITOR & PDF (Con Logo Fix) ---
+    // --- FUNCIONES DEL EDITOR & PDF (Con Logo Fix) ---
 
-// 1. Abrir el Editor (Con Color de Texto y sin conversión compleja de imagen)
+    // 1. Abrir el Editor
     openQuoteEditor() {
         UI.showLoading('Cargando documento...');
         
@@ -4507,39 +4507,16 @@ const App = {
         
         // Inyectar en la hoja de papel
         const editorPage = document.getElementById('quote-editor-page');
-        editorPage.innerHTML = htmlContent;
-        
-        // Renderizar Toolbar (Solo una vez, ahora con COLOR)
-        const toolbarContainer = document.getElementById('editor-toolbar-container');
-        if (!toolbarContainer.innerHTML) {
-            toolbarContainer.innerHTML = `
-                <div id="editor-toolbar-strip">
-                    <select class="toolbar-select" onchange="document.execCommand('fontName',false,this.value)">
-                        <option value="Arial">Arial</option><option value="Times New Roman">Times New Roman</option><option value="Helvetica">Helvetica</option>
-                    </select>
-                    <div class="toolbar-separator"></div>
-                    <select class="toolbar-select" onchange="document.execCommand('fontSize',false,this.value)">
-                        <option value="3">Normal</option><option value="5">Grande</option><option value="6">Título</option>
-                    </select>
-                    <div class="toolbar-separator"></div>
-                    <div class="flex items-center border border-gray-300 rounded px-1 bg-white" title="Color de Texto">
-                        <i class="fas fa-font text-gray-500 text-xs mr-1"></i>
-                        <input type="color" onchange="document.execCommand('foreColor',false,this.value)" style="border:none; width:20px; height:20px; cursor:pointer;" value="#000000">
-                    </div>
-                    <div class="toolbar-separator"></div>
-                    <button class="toolbar-btn" onclick="document.execCommand('bold',false,null)" title="Negrita"><i class="fas fa-bold"></i></button>
-                    <button class="toolbar-btn" onclick="document.execCommand('italic',false,null)" title="Cursiva"><i class="fas fa-italic"></i></button>
-                    <button class="toolbar-btn" onclick="document.execCommand('underline',false,null)" title="Subrayado"><i class="fas fa-underline"></i></button>
-                    <div class="toolbar-separator"></div>
-                    <button class="toolbar-btn" onclick="document.execCommand('justifyLeft',false,null)"><i class="fas fa-align-left"></i></button>
-                    <button class="toolbar-btn" onclick="document.execCommand('justifyCenter',false,null)"><i class="fas fa-align-center"></i></button>
-                    <button class="toolbar-btn" onclick="document.execCommand('justifyRight',false,null)"><i class="fas fa-align-right"></i></button>
-                </div>
-            `;
+        if (editorPage) {
+            editorPage.innerHTML = htmlContent;
+            
+            // Mostrar Overlay
+            document.getElementById('quote-editor-overlay').style.display = 'flex';
+        } else {
+            console.error("No se encontró el elemento #quote-editor-page");
+            UI.showToast("Error interno al abrir editor", "error");
         }
         
-        // Mostrar Overlay
-        document.getElementById('quote-editor-overlay').style.display = 'flex';
         UI.hideLoading();
     },
 
@@ -4889,6 +4866,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
