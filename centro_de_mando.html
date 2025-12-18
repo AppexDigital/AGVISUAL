@@ -1273,6 +1273,7 @@ const UI = {
                     <td class="p-4 font-mono text-xs text-center">${p.order||99}</td> 
                     <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" ></td>
                     <td class="p-4 font-bold text-sm">${p.title}</td>
+                    <td class="p-4 text-center text-xs uppercase font-bold text-gray-500">${p.status === 'hidden' ? 'Oculto' : 'Visible'}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
                     <td class="p-4 align-middle">
                         <div class="flex items-center justify-center gap-3">
@@ -1285,7 +1286,7 @@ const UI = {
             }).join('');
             const thead = document.querySelector('#view-projects thead tr');
             if(thead) {
-                thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4 text-center">Fotos</th><th class="p-4 text-center">Acciones</th>';
+                thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4">Portada</th><th class="p-4">Título</th><th class="p-4 text-center">Estado</th><th class="p-4 text-center">Fotos</th><th class="p-4 text-center">Acciones</th>';
             }
             
         } else if (view === 'portfolio-manager') {
@@ -1354,7 +1355,7 @@ const UI = {
                     <td class="p-4 font-mono text-xs w-16 text-center">${s.order||99}</td>
                     <td class="p-4 w-16 text-center text-xl text-gray-600"><i class="${s.iconClass || 'fas fa-circle-question'}"></i></td>
                     <td class="p-4 font-bold text-sm">${s.title}</td>
-                    
+                    <td class="p-4 text-center text-xs uppercase font-bold text-gray-500">${s.status === 'hidden' ? 'Oculto' : 'Visible'}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">
                         <span class="bg-gray-100 px-2 py-1 rounded">${blockCount} Bloques</span>
                     </td>
@@ -1373,7 +1374,7 @@ const UI = {
             
             // Actualizar Encabezados de Tabla
             const thead = document.querySelector('#view-services thead tr');
-            if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-center">Acciones</th>';
+            if(thead) thead.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Icono</th><th class="p-4">Título</th><th class="p-4 text-center">Estado</th><th class="p-4 text-center">Contenido</th><th class="p-4 text-center">Galería</th><th class="p-4 text-center">Acciones</th>';
             
         } else if (view === 'rentals') { 
              // 1. EQUIPOS (Con Portada Real)
@@ -1396,6 +1397,7 @@ const UI = {
                         <td class="p-4 font-mono text-xs text-center">${i.order||99}</td>
                         <td class="p-4 text-center"><img src="${displayUrl}" class="img-preview mx-auto" referrerpolicy="no-referrer" ></td>
                         <td class="p-4 font-bold text-sm">${i.name}</td>
+                        <td class="p-4 text-center text-xs uppercase font-bold ${i.status==='blocked'?'text-red-500':(i.status==='hidden'?'text-gray-400':'text-green-600')}">${i.status === 'hidden' ? 'Oculto' : (i.status === 'blocked' ? 'Bloqueado' : 'Visible')}</td>
                         <td class="p-4 text-xs font-bold text-gray-500 uppercase">${catName}</td>
                         
                         <td class="p-4 font-mono text-sm font-bold text-center text-gray-700">
@@ -1411,7 +1413,7 @@ const UI = {
                 }).join('');
             // Actualizar Encabezado Equipos (Cambiamos Img por PORTADA y centramos acciones)
             const theadItems = document.querySelector('#tab-rental-items thead tr');
-            if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Portada</th><th class="p-4">Nombre</th><th class="p-4">Categoría</th><th class="p-4 text-center">Precio</th><th class="p-4 text-center">Acciones</th>';
+            if(theadItems) theadItems.innerHTML = '<th class="p-4 text-center">Orden</th><th class="p-4 text-center">Portada</th><th class="p-4">Nombre</th><th class="p-4 text-center">Estado</th><th class="p-4">Categoría</th><th class="p-4 text-center">Precio</th><th class="p-4 text-center">Acciones</th>';
 
             // 2. CATEGORÍAS (Encabezados Centrados)
             document.getElementById('rental-categories-table-body').innerHTML = (data.RentalCategories || [])
@@ -2206,7 +2208,7 @@ const App = {
              }
              
             // Definimos las opciones de estado
-             const statusOpts = [{id:'active', name:'🟢 Visible en Web'}, {id:'hidden', name:'👁️ Oculto'}];
+             const statusOpts = [{id:'active', name:'Visible'}, {id:'hidden', name:'Oculto'}];
              
              // Agregamos el selector al HTML
              html = `${UI.inputHTML('c','order','Orden',p?.order||nextOrder,'number')} 
@@ -2365,10 +2367,10 @@ const App = {
 
              // Definimos los 3 estados
              const statusOpts = [
-                 {id:'active', name:'🟢 Visible (Web + Admin)'}, 
-                 {id:'hidden', name:'👁️ Oculto (Solo Admin)'},
-                 {id:'blocked', name:'🔴 Bloqueado (Nadie)'}
-             ];
+                {id:'active', name:'Visible'}, 
+                {id:'hidden', name:'Oculto'}, 
+                {id:'blocked', name:'Bloqueado'}
+            ];
 
              html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||nextOrder, 'number')} 
                      ${UI.selectHTML('c', 'status', 'Estado del Equipo', statusOpts, i?.status||'active')}
@@ -2660,20 +2662,45 @@ const App = {
                     const fmt = d => d ? d.split('-').reverse().join('/') : '--';
                     document.getElementById('disp-date-range').innerText = `${fmt(minD)} a ${fmt(maxD)}`;
                 };
-        
+
+                // Helper para abrir galería desde la reserva
+                window.viewItemGallery = (itemId) => {
+                    const images = (AppState.data.RentalItemImages || []).filter(img => img.itemId === itemId);
+                    if(images.length === 0) { UI.showToast('Sin imágenes', 'info'); return; }
+                    
+                    // Cargamos las imágenes en la memoria del lightbox y abrimos el primero
+                    currentModalImages = images.sort((a, b) => (parseInt(a.order) || 99) - (parseInt(b.order) || 99));
+                    UI.openLightbox(images[0].id);
+                };
+                
                 const renderRow = (line) => {
                     const div = document.createElement('div');
                     div.id = `row-${line.uuid}`;
                     div.className = "grid grid-cols-12 gap-2 items-start bg-[#161616] p-3 border border-white/10 text-xs shadow-sm mb-1 group hover:border-white/20 transition-colors";
                     
+                    // 1. Obtener imagen de portada
+                    const allImgs = AppState.data.RentalItemImages || [];
+                    const itemImgs = allImgs.filter(m => m.itemId === line.itemId);
+                    const coverImg = itemImgs.find(m => String(m.isCover).toLowerCase() === 'si') || itemImgs[0];
+                    const imgUrl = coverImg ? coverImg.imageUrl : 'https://placehold.co/50x50/222/555?text=Img';
+                    const cursorClass = itemImgs.length > 0 ? 'cursor-pointer hover:opacity-80' : 'cursor-default';
+                    const clickAction = itemImgs.length > 0 ? `onclick="window.viewItemGallery('${line.itemId}')"` : '';
+        
                     div.innerHTML = `
-                        <div class="col-span-4">
-                            <select class="dark-select w-full text-xs p-1 rounded border border-white/10 mb-1 line-item-select bg-[#222]">
-                                <option value="">Equipo...</option>
-                                ${itemsList.map(i => `<option value="${i.id}" ${i.id === line.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
-                            </select>
-                            <textarea class="form-input w-full text-[10px] p-1 border-none bg-transparent line-note text-gray-400 focus:text-white placeholder-gray-600 resize-none subtle-scrollbar leading-tight" placeholder="Nota..." rows="1" style="min-height: 22px;">${line.note}</textarea>
+                        <div class="col-span-4 flex gap-2">
+                            <div class="w-12 h-12 flex-shrink-0 bg-[#222] rounded border border-white/10 overflow-hidden ${cursorClass}" ${clickAction} title="Ver Galería">
+                                <img src="${imgUrl}" class="w-full h-full object-cover" referrerpolicy="no-referrer">
+                            </div>
+        
+                            <div class="flex-1 min-w-0">
+                                <select class="dark-select w-full text-xs p-1 rounded border border-white/10 mb-1 line-item-select bg-[#222]">
+                                    <option value="">Equipo...</option>
+                                    ${itemsList.map(i => `<option value="${i.id}" ${i.id === line.itemId ? 'selected' : ''}>${i.name}</option>`).join('')}
+                                </select>
+                                <textarea class="form-input w-full text-[10px] p-1 border-none bg-transparent line-note text-gray-400 focus:text-white placeholder-gray-600 resize-none subtle-scrollbar leading-tight" placeholder="Nota..." rows="1" style="min-height: 22px;">${line.note}</textarea>
+                            </div>
                         </div>
+        
                         <div class="col-span-3 flex flex-col gap-1">
                             <input type="text" class="grid-input bg-[#222] rounded border border-white/10 p-1 line-start text-center cursor-pointer" placeholder="Inicio" value="${line.startDate||''}">
                             <input type="text" class="grid-input bg-[#222] rounded border border-white/10 p-1 line-end text-center cursor-pointer" placeholder="Fin" value="${line.endDate||''}">
@@ -2706,6 +2733,26 @@ const App = {
                         line.itemId = e.target.value;
                         const newB = getBlocks(line.itemId);
                         fpS.set('disable', newB); fpE.set('disable', newB);
+                        
+                        // Actualizar la foto al cambiar el equipo (Re-render manual simple)
+                        // Buscamos las nuevas fotos y actualizamos el src y el onclick del div de imagen
+                        const newImgs = (AppState.data.RentalItemImages || []).filter(m => m.itemId === line.itemId);
+                        const newCover = newImgs.find(m => String(m.isCover).toLowerCase() === 'si') || newImgs[0];
+                        const imgTag = div.querySelector('img');
+                        const imgDiv = imgTag.parentElement;
+                        
+                        imgTag.src = newCover ? newCover.imageUrl : 'https://placehold.co/50x50/222/555?text=Img';
+                        
+                        if (newImgs.length > 0) {
+                            imgDiv.onclick = () => window.viewItemGallery(line.itemId);
+                            imgDiv.classList.add('cursor-pointer', 'hover:opacity-80');
+                            imgDiv.classList.remove('cursor-default');
+                        } else {
+                            imgDiv.onclick = null;
+                            imgDiv.classList.remove('cursor-pointer', 'hover:opacity-80');
+                            imgDiv.classList.add('cursor-default');
+                        }
+        
                         window.recalcBooking();
                     });
                     div.querySelector('.line-note').addEventListener('input', function(e) { line.note = this.value; this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
@@ -4418,6 +4465,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
