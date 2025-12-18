@@ -166,6 +166,48 @@
         }
         /* Al pasar el mouse sigue negro para no delatar su posición */
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #000000; }
+
+
+
+        /* --- ESTILOS DEL EDITOR DE COTIZACIÓN (VISTA PREVIA) --- */
+        #quote-editor-overlay {
+            position: fixed; inset: 0; z-index: 100000; background: #e5e7eb;
+            display: none; flex-direction: column; font-family: 'Inter', sans-serif;
+        }
+        #editor-toolbar-strip {
+            background: #f3f4f6; border-bottom: 1px solid #d1d5db; padding: 0.5rem 1rem;
+            display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .toolbar-btn {
+            background: white; border: 1px solid #d1d5db; color: #374151; cursor: pointer;
+            padding: 0.25rem; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; transition: all 0.2s;
+        }
+        .toolbar-btn:hover { background: #e5e7eb; border-color: #9ca3af; }
+        .toolbar-select {
+            height: 32px; border: 1px solid #d1d5db; border-radius: 4px; padding: 0 0.5rem;
+            font-size: 0.8rem; background: white; cursor: pointer; outline: none;
+        }
+        .toolbar-separator { width: 1px; height: 24px; background: #d1d5db; margin: 0 0.25rem; }
+        
+        #quote-editor-scroll {
+            flex: 1; overflow-y: auto; padding: 2rem; display: flex; justify-content: center;
+        }
+        #quote-editor-page {
+            background: white; width: 100%; max-width: 800px; min-height: 1100px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); outline: none; padding: 40px;
+            color: #000; /* Asegurar texto negro para impresión */
+        }
+        /* Ocultar elementos al imprimir desde el navegador */
+        @media print {
+            #quote-editor-overlay { position: static; display: block; height: auto; overflow: visible; background: white; }
+            #editor-header, #editor-toolbar-strip { display: none !important; }
+            #quote-editor-scroll { padding: 0; display: block; overflow: visible; }
+            #quote-editor-page { box-shadow: none; max-width: none; min-height: 0; padding: 0; margin: 0; }
+            body > *:not(#quote-editor-overlay) { display: none !important; }
+        }
+
+        
         
     </style>
 </head>
@@ -693,15 +735,16 @@
                 </div>
                 
                 <div class="flex items-center gap-2">
-                    <button type="button" onclick="App.generateQuoteDocument('print')" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10" title="Imprimir / Vista Previa">
+                    <button type="button" onclick="App.openQuoteEditor()" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10 mr-1" title="Vista Previa y Edición">
+                        <i class="fas fa-eye fa-lg"></i>
+                    </button>
+                    <button type="button" onclick="App.generateQuoteDocument('print')" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10" title="Imprimir Directo">
                         <i class="fas fa-print fa-lg"></i>
                     </button>
-                    <button type="button" onclick="App.generateQuoteDocument('pdf')" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10 mr-2" title="Descargar PDF">
+                    <button type="button" onclick="App.generateQuoteDocument('pdf')" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10 mr-2" title="Descargar PDF Directo">
                         <i class="fas fa-file-pdf fa-lg"></i>
                     </button>
-                    
                     <div class="h-6 w-px bg-white/10"></div>
-
                     <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10 ml-2" title="Cerrar">
                         <i class="fas fa-times fa-lg"></i>
                     </button>
@@ -1585,44 +1628,57 @@ const UI = {
             const oldControls = document.getElementById('booking-controls');
             if (oldControls) oldControls.remove();
 
-            // 2. LIMPIEZA: Eliminar el encabezado estático original del HTML (El duplicado de abajo)
-            // Buscamos cualquier div que tenga un H1 dentro y NO sea nuestros controles
-            const staticHeader = Array.from(viewContainer.children).find(el => 
-                el.querySelector('h1') && el.id !== 'booking-controls'
-            );
+            // 1. LIMPIEZA: Eliminar el encabezado estático viejo (si existe)
+            const staticHeader = Array.from(viewContainer.children).find(el => el.querySelector('h1') && el.id !== 'booking-controls');
             if (staticHeader) staticHeader.remove();
             
-            // 3. Inyectar Nuevos Controles (El título principal)
-            const controlsHTML = `
-                <div id="booking-controls" class="mb-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h1 class="text-3xl font-display font-bold">Reservas</h1>
-                        <button class="btn btn-primary" onclick="App.handleManualBooking()"><i class="fas fa-plus mr-2"></i> Nueva Reserva</button>
+            // 2. INYECTAR CONTROLES SOLO SI NO EXISTEN
+            // Esto evita que se sobrescriba el input mientras escribes
+            if (!document.getElementById('booking-controls')) {
+                const controlsHTML = `
+                    <div id="booking-controls" class="mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h1 class="text-3xl font-display font-bold">Reservas</h1>
+                            <button class="btn btn-primary" onclick="App.handleManualBooking()"><i class="fas fa-plus mr-2"></i> Nueva Reserva</button>
+                        </div>
+                        <div class="bg-white p-4 rounded border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input id="booking-search-input" type="text" class="form-input" placeholder="Buscar Cliente, ID, Email..." value="${AppState.bookingSearch||''}" onkeyup="App.setBookingFilter('search', this.value)">
+                            
+                            <select id="booking-time-filter" class="form-select" onchange="App.setBookingFilter('time', this.value)">
+                                <option value="active" ${timeFilter==='active'?'selected':''}>Activas (Futuras)</option>
+                                <option value="inactive" ${timeFilter==='inactive'?'selected':''}>Histórico / Canceladas</option>
+                                <option value="all" ${timeFilter==='all'?'selected':''}>Todas</option>
+                            </select>
+                            <select id="booking-status-filter" class="form-select" onchange="App.setBookingFilter('status', this.value)">
+                                <option value="all">Todos los Estados</option>
+                                <option value="Pendiente" ${statusFilter==='Pendiente'?'selected':''}>Pendiente</option>
+                                <option value="Confirmado" ${statusFilter==='Confirmado'?'selected':''}>Confirmado</option>
+                                <option value="Pagado" ${statusFilter==='Pagado'?'selected':''}>Pagado</option>
+                                <option value="Cancelado" ${statusFilter==='Cancelado'?'selected':''}>Cancelado</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="bg-white p-4 rounded border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <input type="text" class="form-input" placeholder="Buscar Cliente, ID, Email..." value="${AppState.bookingSearch||''}" onkeyup="App.setBookingFilter('search', this.value)">
-                        <select class="form-select" onchange="App.setBookingFilter('time', this.value)">
-                            <option value="active" ${timeFilter==='active'?'selected':''}>Activas (Futuras)</option>
-                            <option value="inactive" ${timeFilter==='inactive'?'selected':''}>Histórico / Canceladas</option>
-                            <option value="all" ${timeFilter==='all'?'selected':''}>Todas</option>
-                        </select>
-                        <select class="form-select" onchange="App.setBookingFilter('status', this.value)">
-                            <option value="all">Todos los Estados</option>
-                            <option value="Pendiente" ${statusFilter==='Pendiente'?'selected':''}>Pendiente</option>
-                            <option value="Confirmado" ${statusFilter==='Confirmado'?'selected':''}>Confirmado</option>
-                            <option value="Pagado" ${statusFilter==='Pagado'?'selected':''}>Pagado</option>
-                            <option value="Cancelado" ${statusFilter==='Cancelado'?'selected':''}>Cancelado</option>
-                        </select>
-                    </div>
-                </div>
-            `;
-            viewContainer.insertAdjacentHTML('afterbegin', controlsHTML);
+                `;
+                viewContainer.insertAdjacentHTML('afterbegin', controlsHTML);
+                
+                // Truco: Poner el cursor al final si acabamos de renderizar y hay texto
+                const input = document.getElementById('booking-search-input');
+                if(input && AppState.bookingSearch) { 
+                    input.focus(); 
+                    var val = input.value; input.value = ''; input.value = val; 
+                }
+            } else {
+                // Si ya existe, solo sincronizamos si el foco NO está en el buscador
+                // Esto permite que los selectores de filtro funcionen bien
+                if (document.activeElement.id !== 'booking-search-input') {
+                    document.getElementById('booking-search-input').value = AppState.bookingSearch||'';
+                }
+            }
             
             App.setBookingFilter = (t, v) => {
                 if(t==='search') AppState.bookingSearch=v; if(t==='time') AppState.bookingTimeFilter=v; if(t==='status') AppState.bookingStatusFilter=v;
                 UI.renderView('bookings');
             };
-
             // --- Renderizar Tabla (Botones Estandarizados y Fechas Ok) ---
             document.getElementById('bookings-list-body').innerHTML = filtered.map(b => `
                 <tr class="border-b hover:bg-gray-50 align-top">
@@ -4444,9 +4500,125 @@ const App = {
 
 
 
-    // --- GENERADOR DE DOCUMENTOS (COTIZACIÓN PDF/PRINT) ---
+// --- FUNCIONES DEL EDITOR & PDF (Con Logo Fix) ---
+
+    // 1. Abrir el Editor con el contenido actual
+    async openQuoteEditor() {
+        UI.showLoading('Preparando editor...');
+        
+        // Obtener HTML limpio
+        const htmlContent = App.getQuoteHTMLString();
+        
+        // Inyectar en la hoja de papel
+        const editorPage = document.getElementById('quote-editor-page');
+        editorPage.innerHTML = htmlContent;
+        
+        // Mostrar Overlay
+        document.getElementById('quote-editor-overlay').style.display = 'flex';
+        
+        // FIX CRÍTICO: Convertir logo a Base64 DENTRO del editor para que el PDF funcione después
+        await App.convertLogoToBase64InContainer(editorPage);
+        
+        UI.hideLoading();
+    },
+
+    // 2. Imprimir desde el Editor (Imprime lo que editaste)
+    printFromEditor() {
+        const content = document.getElementById('quote-editor-page').innerHTML;
+        const win = window.open('', '_blank');
+        win.document.write(`<html><head><title>Imprimir Cotización</title></head><body style="margin:0; padding: 20px;">${content}</body></html>`);
+        win.document.close();
+        setTimeout(() => { win.focus(); win.print(); }, 500);
+    },
+
+    // 3. PDF desde el Editor (Usa lo que editaste)
+    pdfFromEditor() {
+        const element = document.getElementById('quote-editor-page');
+        UI.showLoading('Generando PDF...');
+        
+        const opt = { 
+            margin: 10, 
+            filename: 'Cotizacion_Editada.pdf', 
+            image: { type: 'jpeg', quality: 0.98 }, 
+            html2canvas: { scale: 2, useCORS: true }, 
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+        };
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+            UI.hideLoading();
+            UI.showToast('PDF Descargado');
+        }).catch(e => {
+            UI.hideLoading();
+            console.error(e);
+            UI.showToast('Error generando PDF', 'error');
+        });
+    },
+
+    // 4. Generación Directa (Sin abrir editor, botones rápidos)
     async generateQuoteDocument(mode) {
-        // 1. Recolectar Datos
+        const content = App.getQuoteHTMLString();
+
+        if (mode === 'print') {
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Cotización</title></head><body style="margin:0">${content}</body></html>`);
+            win.document.close();
+            setTimeout(() => { win.focus(); win.print(); }, 800);
+
+        } else if (mode === 'pdf') {
+            UI.showLoading('Generando PDF...');
+            
+            // Crear contenedor temporal
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            tempDiv.style.width = '800px'; // Forzar ancho para consistencia
+            document.body.appendChild(tempDiv);
+
+            // FIX CRÍTICO: Convertir logo a Base64 antes de llamar a html2pdf
+            await App.convertLogoToBase64InContainer(tempDiv);
+
+            const opt = {
+                margin: 10, filename: `Cotizacion.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(tempDiv).save().then(() => {
+                document.body.removeChild(tempDiv);
+                UI.hideLoading();
+                UI.showToast('PDF Descargado');
+            }).catch(e => {
+                document.body.removeChild(tempDiv);
+                UI.hideLoading();
+                console.error(e);
+                UI.showToast('Error en PDF', 'error');
+            });
+        }
+    },
+
+    // 5. HELPER PARA LOGO (La solución definitiva al problema de imagen rota)
+    async convertLogoToBase64InContainer(container) {
+        const img = container.querySelector('#pdf-logo-img');
+        if (!img || !img.src) return;
+
+        try {
+            const blob = await fetch(img.src).then(r => r.blob());
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    img.src = reader.result; // Reemplaza URL por Base64 data:image...
+                    resolve();
+                };
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.warn("No se pudo convertir logo a Base64 (posible CORS)", e);
+        }
+    },
+
+    // 6. Constructor de HTML (Datos puros)
+    getQuoteHTMLString() {
+        // Recolectar Datos
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
         const customerId = document.getElementById('c-customerCedula')?.value || '';
         const customerEmail = document.getElementById('c-customerEmail')?.value || '';
@@ -4464,14 +4636,15 @@ const App = {
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
         const logoUrl = sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
-        const companyName = ident.legal_commercial_name || 'Nombre Comercial';
-        const legalName = ident.legal_name || '';
-        const companyId = ident.legal_id || '';
-        const companyEmail = ident.legal_email || '';
-        const companyPhone = ident.legal_phone || '';
-        const companyAddress = ident.legal_address || '';
+        const companyInfo = `
+            <strong>${ident.legal_commercial_name || 'Nombre Comercial'}</strong><br>
+            ${ident.legal_name || ''}<br>
+            ${ident.legal_id ? 'ID: ' + ident.legal_id : ''}<br>
+            ${ident.legal_email || ''}<br>
+            ${ident.legal_phone || ''}
+        `;
 
-        // Construir Filas (SIN COLUMNA DE DESCUENTO)
+        // Filas (Sin columna descuento)
         const itemsRows = window.tempBookingLines.map(line => {
             const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
             const itemName = item ? item.name : 'Artículo';
@@ -4496,19 +4669,12 @@ const App = {
             `;
         }).join('');
 
-        // 2. HTML Limpio (SIN HEADER DE DESCUENTO)
-        const content = `
+        return `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white; padding: 40px; color: #333;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #111; padding-bottom: 20px;">
                     <div>
-                        <img src="${logoUrl}" crossorigin="anonymous" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
-                        <div style="font-size: 12px; color: #555; line-height: 1.4;">
-                            <strong>${companyName}</strong><br>
-                            ${legalName ? legalName + '<br>' : ''}
-                            ${companyId ? 'Cédula: ' + companyId + '<br>' : ''}
-                            ${companyEmail}<br>
-                            ${companyPhone}
-                        </div>
+                        <img id="pdf-logo-img" src="${logoUrl}" crossorigin="anonymous" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
+                        <div style="font-size: 12px; color: #555; line-height: 1.4;">${companyInfo}</div>
                     </div>
                     <div style="text-align: right;">
                         <h1 style="font-family: 'Garamond', serif; font-size: 32px; color: #111; margin: 0;">COTIZACIÓN</h1>
@@ -4516,18 +4682,15 @@ const App = {
                         <div style="font-size: 12px; color: #888; margin-top: 5px;">Fecha: ${new Date().toLocaleDateString()}</div>
                     </div>
                 </div>
-
                 <div style="margin-bottom: 40px;">
                     <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Cliente</div>
                     <div style="font-size: 16px; font-weight: bold; color: #000;">${customerName}</div>
                     <div style="font-size: 12px; color: #555; margin-top: 4px;">
-                        ${customerId ? 'ID: ' + customerId + ' &nbsp;|&nbsp; ' : ''}
-                        ${customerEmail}
-                        ${customerPhone ? '<br>Tel: ' + customerPhone : ''}
-                        ${customerAddress ? '<br>' + customerAddress : ''}
+                        ${customerId ? 'ID: ' + customerId + ' &nbsp;|&nbsp; ' : ''} ${customerEmail} <br>
+                        ${customerPhone ? 'Tel: ' + customerPhone : ''} <br>
+                        ${customerAddress}
                     </div>
                 </div>
-
                 <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 30px;">
                     <thead>
                         <tr style="border-bottom: 2px solid #111;">
@@ -4538,84 +4701,34 @@ const App = {
                     </thead>
                     <tbody>${itemsRows}</tbody>
                 </table>
-
                 <div style="display: flex; justify-content: flex-end;">
                     <div style="width: 250px;">
                         <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #eee;">
-                            <span style="color: #666;">Subtotal:</span>
-                            <span>${subtotal}</span>
+                            <span style="color: #666;">Subtotal:</span><span>${subtotal}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #eee; color: #ef4444;">
-                            <span>Descuento Global:</span>
-                            <span>${discount}</span>
+                            <span>Descuento Global:</span><span>${discount}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #eee;">
-                            <span style="color: #666;">IVA / Impuestos:</span>
-                            <span>${tax}</span>
+                            <span style="color: #666;">IVA / Impuestos:</span><span>${tax}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; padding: 15px 0; color: #000; border-bottom: 2px solid #111;">
-                            <span>TOTAL:</span>
-                            <span>${total}</span>
+                            <span>TOTAL:</span><span>${total}</span>
                         </div>
                     </div>
                 </div>
-
                 ${notes ? `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;"><div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Notas / Condiciones</div><div style="font-size: 11px; color: #555; white-space: pre-line; line-height: 1.5;">${notes}</div></div>` : ''}
-
                 <div style="margin-top: 60px; text-align: center; font-size: 10px; color: #aaa;">
-                    ${companyAddress ? companyAddress + '<br>' : ''}
+                    ${ident.legal_address ? ident.legal_address + '<br>' : ''}
                     Documento generado por AG Visual Info System
                 </div>
             </div>
         `;
-
-        if (mode === 'print') {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`<html><head><title>Cotización ${quoteId}</title><style>@media print { body { margin: 0; } @page { margin: 1cm; size: auto; } }</style></head><body>${content}</body></html>`);
-            printWindow.document.close();
-            setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
-
-        } else if (mode === 'pdf') {
-            UI.showLoading('Generando PDF...');
-            
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = content;
-            document.body.appendChild(tempDiv);
-
-            // FUNCIÓN DE ESPERA PARA EL LOGO
-            // Esperamos a que la imagen se cargue en el DOM antes de tomar la "foto"
-            const imgEl = tempDiv.querySelector('img');
-            
-            const runPdf = () => {
-                const opt = {
-                    margin: 10, filename: `Cotizacion_${quoteId}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-                html2pdf().set(opt).from(tempDiv).save().then(() => {
-                    document.body.removeChild(tempDiv);
-                    UI.hideLoading();
-                    UI.showToast('PDF Descargado');
-                }).catch(() => {
-                    UI.hideLoading(); UI.showToast('Error generando PDF', 'error');
-                });
-            };
-
-            // Si hay logo, esperamos. Si no, ejecutamos directo.
-            if (imgEl) {
-                if (imgEl.complete) {
-                    runPdf();
-                } else {
-                    imgEl.onload = runPdf;
-                    imgEl.onerror = runPdf; // Si falla la carga, generar igual sin logo
-                }
-            } else {
-                runPdf();
-            }
-        }
     },
 
+
+
+    
     
 
     
@@ -4709,7 +4822,51 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="text-white text-6xl hover:text-accent-primary transition p-4" onclick="UI.navLightbox(1)">&#8250;</button>
         </div>
     </div>
+
+    <div id="quote-editor-overlay">
+        <div id="editor-header" class="bg-white border-b px-6 py-3 flex justify-between items-center shadow-sm z-50">
+            <div>
+                <h3 class="font-bold text-gray-800 text-lg">Vista Previa & Edición</h3>
+                <p class="text-xs text-gray-500">Puedes editar el texto directamente en la hoja antes de descargar.</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="App.printFromEditor()" class="btn btn-secondary text-xs h-9 px-4 shadow-sm">
+                    <i class="fas fa-print mr-2"></i> Imprimir
+                </button>
+                <button onclick="App.pdfFromEditor()" class="btn btn-primary text-xs h-9 px-4 shadow-sm bg-gray-800 text-white hover:bg-gray-700">
+                    <i class="fas fa-file-pdf mr-2"></i> Descargar PDF
+                </button>
+                <div class="w-px h-8 bg-gray-300 mx-1"></div>
+                <button onclick="document.getElementById('quote-editor-overlay').style.display='none'" class="btn btn-danger text-xs h-9 px-4 bg-red-600 text-white hover:bg-red-700">
+                    <i class="fas fa-times mr-2"></i> Cerrar
+                </button>
+            </div>
+        </div>
+        
+        <div id="editor-toolbar-strip">
+            <select class="toolbar-select" onchange="document.execCommand('fontName',false,this.value)">
+                <option value="Arial">Arial</option><option value="Times New Roman">Times New Roman</option><option value="Helvetica">Helvetica</option>
+            </select>
+            <div class="toolbar-separator"></div>
+            <select class="toolbar-select" onchange="document.execCommand('fontSize',false,this.value)">
+                <option value="3">Normal</option><option value="5">Grande</option><option value="6">Título</option>
+            </select>
+            <div class="toolbar-separator"></div>
+            <button class="toolbar-btn" onclick="document.execCommand('bold',false,null)" title="Negrita"><i class="fas fa-bold"></i></button>
+            <button class="toolbar-btn" onclick="document.execCommand('italic',false,null)" title="Cursiva"><i class="fas fa-italic"></i></button>
+            <button class="toolbar-btn" onclick="document.execCommand('underline',false,null)" title="Subrayado"><i class="fas fa-underline"></i></button>
+            <div class="toolbar-separator"></div>
+            <button class="toolbar-btn" onclick="document.execCommand('justifyLeft',false,null)"><i class="fas fa-align-left"></i></button>
+            <button class="toolbar-btn" onclick="document.execCommand('justifyCenter',false,null)"><i class="fas fa-align-center"></i></button>
+            <button class="toolbar-btn" onclick="document.execCommand('justifyRight',false,null)"><i class="fas fa-align-right"></i></button>
+        </div>
+
+        <div id="quote-editor-scroll">
+            <div id="quote-editor-page" contenteditable="true" spellcheck="false"></div>
+        </div>
+    </div>
     
 </body>
 </html>
+
 
