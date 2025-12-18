@@ -132,34 +132,40 @@
             display: block !important;
         }
         
-        /* 2. El Modal Padre en Fullscreen */
+        /* 2. Al Modal Padre (.modal-content): Lo pegamos a la pantalla a la fuerza */
         .modal-content.is-fullscreen {
             position: fixed !important;
-            inset: 0 !important; /* Top:0, Right:0, Bottom:0, Left:0 */
+            top: 0 !important;
+            left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
+            
+            /* Anular restricciones de tamaño */
             max-width: none !important;
             max-height: none !important;
-            margin: 0 !important;
-            border-radius: 0 !important;
             
-            /* Eliminamos cualquier transformación que lo desplace */
+            /* Anular márgenes y centrado */
+            margin: 0 !important;
+            
+            /* LA SOLUCIÓN DEL BUG: Anular la transformación de la animación */
             transform: none !important; 
             
+            border-radius: 0 !important;
             background-color: #0a0a0a !important;
-            z-index: 99999 !important; /* Encima de todo */
+            z-index: 99999 !important;
             
-            /* Asegurar estructura interna */
+            /* Estructura interna */
             display: flex !important;
             flex-direction: column !important;
+            overflow: hidden !important;
         }
 
-        /* 3. Asegurar que el contenido interno llene el espacio */
-        /* Esto asegura que tu diseño #reservation-modal-content se estire */
+
+          /* 3. Al Hijo (#reservation-modal-content): Que llene el espacio disponible */
         .modal-content.is-fullscreen #reservation-modal-content {
-            height: 100vh !important;
-            max-height: 100vh !important;
-            width: 100vw !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: none !important;
             border-radius: 0 !important;
         }
         
@@ -2477,26 +2483,28 @@ const App = {
             
                 // --- FUNCIÓN FULLSCREEN (FIX V13) ---
                 App.toggleFullscreenModal = function() {
-                    // 1. Buscamos el contenedor padre real (.modal-content)
-                    const modalParent = document.querySelector('.modal-content');
-                    if(!modalParent) return;
-                    
-                    // 2. Alternamos la clase maestra
-                    modalParent.classList.toggle('is-fullscreen');
-                    const isFull = modalParent.classList.contains('is-fullscreen');
-                    
-                    // 3. Ajuste estético del icono y bordes internos
+                    // 1. Encontrar el hijo interno
                     const internal = document.getElementById('reservation-modal-content');
+                    if (!internal) return;
+            
+                    // 2. Encontrar al padre contenedor (.modal-content) de forma segura
+                    const parent = internal.closest('.modal-content');
+                    if (!parent) return;
+            
+                    // 3. Alternar la clase maestra en el PADRE
+                    parent.classList.toggle('is-fullscreen');
+                    const isFull = parent.classList.contains('is-fullscreen');
+            
+                    // 4. Cambiar ícono
                     const icon = document.getElementById('fullscreen-icon');
-                    
-                    if (isFull) {
-                        // Modo Pantalla Completa
-                        if(internal) internal.classList.remove('rounded-xl'); // Quitar curvas
-                        if(icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
-                    } else {
-                        // Modo Normal
-                        if(internal) internal.classList.add('rounded-xl'); // Restaurar curvas
-                        if(icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
+                    if (icon) {
+                        if (isFull) {
+                            icon.classList.remove('fa-expand');
+                            icon.classList.add('fa-compress');
+                        } else {
+                            icon.classList.remove('fa-compress');
+                            icon.classList.add('fa-expand');
+                        }
                     }
                 };
             
@@ -4388,6 +4396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
