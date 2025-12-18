@@ -1,49 +1,55 @@
-// functions/proxy-image.js
+const https = require('https');
 
-exports.handler = async (event) => {
-    // 1. Log de vida inmediato
-    console.log(">>> PROXY INICIADO. Query:", event.queryStringParameters);
-
+exports.handler = (event, context, callback) => {
     const { id } = event.queryStringParameters;
 
     if (!id) {
-        console.error(">>> ERROR: Falta ID");
-        return { statusCode: 400, body: 'Falta ID' };
+        return callback(null, { statusCode: 400, body: 'Falta ID' });
     }
 
-    const url = `https://drive.google.com/uc?export=view&id=${id}`;
+    const initialUrl = `https://drive.google.com/uc?export=view&id=${id}`;
 
-    try {
-        // 2. Fetch Nativo (Sigue redirecciones 302 automáticamente)
-        const response = await fetch(url);
+    // Función recursiva para seguir redirecciones
+    const download = (url) => {
+        https.get(url, (res) => {
+            // 1. Manejo de Redirección (Google Drive siempre redirige)
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                return download(res.headers.location);
+            }
 
-        if (!response.ok) {
-            console.error(`>>> ERROR GOOGLE: ${response.status} ${response.statusText}`);
-            return { statusCode: response.status, body: response.statusText };
-        }
+            // 2. Descarga de Datos
+            const data = [];
+            res.on('data', (chunk) => data.push(chunk));
 
-        // 3. Procesamiento de Buffer
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64 = buffer.toString('base64');
-        const contentType = response.headers.get('content-type') || 'image/jpeg';
+            res.on('end', () => {
+                const buffer = Buffer.concat(data);
+                const base64 = buffer.toString('base64');
+                
+                // Si Google no dice qué es, asumimos JPEG (común en logos escaneados)
+                let contentType = res.headers['content-type'];
+                if (!contentType || contentType === 'application/octet-stream') {
+                    contentType = 'image/jpeg';
+                }
 
-        console.log(`>>> ÉXITO: Imagen descargada. Bytes: ${buffer.length}, Tipo: ${contentType}`);
+                // 3. Respuesta Exitosa
+                callback(null, {
+                    statusCode: 200,
+                    headers: {
+                        'Content-Type': contentType,
+                        'Access-Control-Allow-Origin': '*',
+                        'Cache-Control': 'public, max-age=31536000'
+                    },
+                    body: base64,
+                    isBase64Encoded: true
+                });
+            });
 
-        // 4. Respuesta Binaria (Netlify decodifica el base64 body al navegador)
-        return {
-            statusCode: 200,
-            headers: {
-                'Content-Type': contentType,
-                'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 'public, max-age=31536000'
-            },
-            body: base64,
-            isBase64Encoded: true
-        };
+        }).on('error', (e) => {
+            console.error("Proxy Error:", e);
+            callback(null, { statusCode: 500, body: e.message });
+        });
+    };
 
-    } catch (error) {
-        console.error(">>> ERROR CRÍTICO:", error);
-        return { statusCode: 500, body: error.message };
-    }
+    // Iniciar
+    download(initialUrl);
 };
