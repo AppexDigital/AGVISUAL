@@ -97,67 +97,53 @@
 
 
         
-        /* --- ESTILOS SISTEMA RESERVAS V10 (FINAL) --- */
-        
-        /* 1. ELIMINACIÓN DEL PARPADEO BLANCO Y BORDES */
-        /* Si el modal contiene nuestra reserva, anular estilos base inmediatamente */
+        /* --- FIX V11: ESTABILIDAD VISUAL Y FULLSCREEN --- */
+
+        /* 1. BLOQUEAR ANIMACIONES Y SCROLLBAR EN EL PADRE */
+        /* Esto congela el modal en su tamaño final inmediatamente al abrir */
         .modal-content:has(#reservation-modal-content) {
+            transition: none !important;       /* No animar tamaño */
+            transform: none !important;        /* No animar escala/zoom */
+            animation: none !important;
+            overflow: hidden !important;       /* Matar el scrollbar externo */
+            padding: 0 !important;
+            border: none !important;
             background-color: transparent !important;
             box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-            max-width: none !important;
-            width: auto !important;
-            height: auto !important;
+            
+            /* Forzar dimensiones iniciales fijas para evitar el "baile" */
+            width: 95% !important;
+            max-width: 1280px !important; 
+            height: 85vh !important;
         }
         
-        /* Ocultar header/footer genéricos inmediatamente si existen */
-        .modal-content:has(#reservation-modal-content) > .border-b,
-        .modal-content:has(#reservation-modal-content) > .bg-gray-50 {
-            display: none !important;
-        }
-        
-        /* 2. FULLSCREEN REAL (Sin bordes negros) */
+        /* 2. FULLSCREEN REAL (Sobre-escribe lo anterior cuando se activa) */
         .modal-content.is-fullscreen {
-            position: fixed !important;
-            inset: 0 !important; /* Top, Right, Bottom, Left = 0 */
             width: 100vw !important;
             height: 100vh !important;
             max-width: none !important;
             max-height: none !important;
+            top: 0 !important;
+            left: 0 !important;
             margin: 0 !important;
             border-radius: 0 !important;
-            transform: none !important;
+            position: fixed !important;
             z-index: 9999 !important;
             background-color: #0a0a0a !important;
         }
         
-        /* Forzar al overlay a soltar el padding cuando está full */
-        .modal-overlay:has(.is-fullscreen) {
-            padding: 0 !important;
-            display: flex !important;
-            align-items: flex-start !important;
-        }
-        
-        /* 3. ESTILOS INTERNOS */
+        /* 3. ESTILOS INTERNOS (Mantener) */
         .booking-grid-header { background-color: #1a1a1a; color: #9ca3af; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-        
-        /* Inputs invisibles pero con foco dorado */
         .grid-input { background: transparent; border: none; border-bottom: 1px solid #4b5563; color: white; width: 100%; outline: none; transition: border-color 0.2s; }
         .grid-input:focus { border-color: #B8860B !important; }
         .focus-gold:focus { border-color: #B8860B !important; }
-        
-        /* Selects oscuros */
         select.dark-select { background-color: #1f2937; color: white; border-color: #374151; }
         select.dark-select option { background-color: #1f2937; color: white; }
-        
-        /* Tipografía y Scroll */
         .font-total { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #B8860B; }
         .no-resize { resize: none; }
-
 
 
         
@@ -636,7 +622,7 @@
 
 
     <template id="reservation-modal-template">
-        <div id="reservation-modal-content" class="w-full max-w-7xl glass-panel rounded-xl flex flex-col h-[85vh] relative bg-[#0a0a0a] text-white overflow-hidden p-0">
+        <div id="reservation-modal-content" class="flex flex-col h-full relative bg-[#0a0a0a] text-white overflow-hidden p-0 rounded-xl">
             
             <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0 z-20">
                 <div>
@@ -4334,6 +4320,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
