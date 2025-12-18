@@ -658,7 +658,7 @@
                         </div>
                         
                         <div class="mt-6 flex justify-end">
-                            <button class="btn btn-primary" onclick="App.handleSaveIdentityText('legal')">Guardar Info Legal</button>
+                            <button class="btn btn-primary" onclick="App.handleSaveIdentityText('legal')">Guardar</button>
                         </div>
                     </div>
                 </div>
@@ -1626,6 +1626,9 @@ const UI = {
             // --- Renderizar Tabla (Botones Estandarizados y Fechas Ok) ---
             document.getElementById('bookings-list-body').innerHTML = filtered.map(b => `
                 <tr class="border-b hover:bg-gray-50 align-top">
+                    <td class="p-4 font-mono text-xs font-bold text-gray-500 pt-5">
+                        ${b.id}
+                    </td>
                     <td class="p-4 whitespace-nowrap">
                         <div class="font-bold text-sm">${formatDateSafe(b.startDate)}</div>
                         <div class="text-xs text-gray-400">hasta ${formatDateSafe(b.endDate)}</div>
@@ -1654,7 +1657,7 @@ const UI = {
             `).join('');
             
             const thead = document.querySelector('#view-bookings thead tr');
-            if(thead) thead.innerHTML = '<th class="p-4">Fechas</th><th class="p-4">Cliente</th><th class="p-4">Dirección</th><th class="p-4">Equipo</th><th class="p-4 text-right">Total</th><th class="p-4">Estado</th><th class="p-4 text-center">Acciones</th>';
+            if(thead) thead.innerHTML = '<th class="p-4">REF</th><th class="p-4">Fechas</th><th class="p-4">Cliente</th><th class="p-4">Dirección</th><th class="p-4">Equipo</th><th class="p-4 text-right">Total</th><th class="p-4">Estado</th><th class="p-4 text-center">Acciones</th>';
         }
     },
 
@@ -4443,7 +4446,7 @@ const App = {
 
     // --- GENERADOR DE DOCUMENTOS (COTIZACIÓN PDF/PRINT) ---
     async generateQuoteDocument(mode) {
-        // 1. Recolectar Datos Actuales (lo que se ve en pantalla)
+        // 1. Recolectar Datos
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
         const customerId = document.getElementById('c-customerCedula')?.value || '';
         const customerEmail = document.getElementById('c-customerEmail')?.value || '';
@@ -4452,13 +4455,11 @@ const App = {
         const quoteId = document.getElementById('header-ref-display')?.innerText || 'BORRADOR';
         const notes = document.getElementById('c-globalNotes')?.value || '';
         
-        // Totales (del DOM)
         const subtotal = document.getElementById('lbl-global-subtotal')?.innerText || '$0.00';
         const discount = document.getElementById('lbl-global-discount')?.innerText || '$0.00';
         const tax = document.getElementById('lbl-global-tax')?.innerText || '$0.00';
         const total = document.getElementById('lbl-global-total')?.innerText || '$0.00';
 
-        // Datos de la Empresa (Desde Identidad)
         const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
@@ -4470,12 +4471,11 @@ const App = {
         const companyPhone = ident.legal_phone || '';
         const companyAddress = ident.legal_address || '';
 
-        // Construir Filas de la Tabla
+        // Construir Filas (SIN COLUMNA DE DESCUENTO)
         const itemsRows = window.tempBookingLines.map(line => {
             const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
             const itemName = item ? item.name : 'Artículo';
             const desc = item ? (item.description || '') : '';
-            // Calcular días
             let days = 0;
             if(line.startDate && line.endDate) {
                 const d1 = new Date(line.startDate); const d2 = new Date(line.endDate);
@@ -4491,19 +4491,17 @@ const App = {
                         <div style="font-size: 10px; color: #888;">${line.startDate} al ${line.endDate} (${days} días)</div>
                     </td>
                     <td style="padding: 12px 0; text-align: right;">${fmt(line.basePrice)}</td>
-                    <td style="padding: 12px 0; text-align: right;">${line.discountVal > 0 ? (line.discountType === 'percent' ? line.discountVal+'%' : fmt(line.discountVal)) : '-'}</td>
                     <td style="padding: 12px 0; text-align: right; font-weight: bold;">${fmt(line.computedNet)}</td>
                 </tr>
             `;
         }).join('');
 
-        // 2. Construir Plantilla HTML Profesional (Blanco Puro)
+        // 2. HTML Limpio (SIN HEADER DE DESCUENTO)
         const content = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white; padding: 40px; color: #333;">
-                
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #111; padding-bottom: 20px;">
                     <div>
-                        <img src="${logoUrl}" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
+                        <img src="${logoUrl}" crossorigin="anonymous" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #555; line-height: 1.4;">
                             <strong>${companyName}</strong><br>
                             ${legalName ? legalName + '<br>' : ''}
@@ -4534,14 +4532,11 @@ const App = {
                     <thead>
                         <tr style="border-bottom: 2px solid #111;">
                             <th style="text-align: left; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555;">Descripción</th>
-                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 80px;">Precio Unit.</th>
-                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 80px;">Desc.</th>
-                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 100px;">Total</th>
+                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 100px;">Precio Unit.</th>
+                            <th style="text-align: right; padding: 10px 0; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; color: #555; width: 120px;">Total</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        ${itemsRows}
-                    </tbody>
+                    <tbody>${itemsRows}</tbody>
                 </table>
 
                 <div style="display: flex; justify-content: flex-end;">
@@ -4565,12 +4560,7 @@ const App = {
                     </div>
                 </div>
 
-                ${notes ? `
-                <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Notas / Condiciones</div>
-                    <div style="font-size: 11px; color: #555; white-space: pre-line; line-height: 1.5;">${notes}</div>
-                </div>
-                ` : ''}
+                ${notes ? `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee;"><div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 5px;">Notas / Condiciones</div><div style="font-size: 11px; color: #555; white-space: pre-line; line-height: 1.5;">${notes}</div></div>` : ''}
 
                 <div style="margin-top: 60px; text-align: center; font-size: 10px; color: #aaa;">
                     ${companyAddress ? companyAddress + '<br>' : ''}
@@ -4579,56 +4569,50 @@ const App = {
             </div>
         `;
 
-        // 3. Ejecutar Acción
         if (mode === 'print') {
-            // Abrir ventana nueva para imprimir
             const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Cotización ${quoteId}</title>
-                        <style>
-                            @media print { 
-                                body { margin: 0; } 
-                                @page { margin: 1cm; size: auto; }
-                            }
-                        </style>
-                    </head>
-                    <body>${content}</body>
-                </html>
-            `);
+            printWindow.document.write(`<html><head><title>Cotización ${quoteId}</title><style>@media print { body { margin: 0; } @page { margin: 1cm; size: auto; } }</style></head><body>${content}</body></html>`);
             printWindow.document.close();
-            // Esperar carga de imágenes antes de imprimir
-            setTimeout(() => {
-                printWindow.focus();
-                printWindow.print();
-            }, 500);
+            setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
 
         } else if (mode === 'pdf') {
             UI.showLoading('Generando PDF...');
             
-            // Crear contenedor temporal invisible
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
             document.body.appendChild(tempDiv);
 
-            const opt = {
-                margin:       10, // mm
-                filename:     `Cotizacion_${quoteId}_${customerName.replace(/ /g,'_')}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true }, // Alta calidad
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            // FUNCIÓN DE ESPERA PARA EL LOGO
+            // Esperamos a que la imagen se cargue en el DOM antes de tomar la "foto"
+            const imgEl = tempDiv.querySelector('img');
+            
+            const runPdf = () => {
+                const opt = {
+                    margin: 10, filename: `Cotizacion_${quoteId}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(tempDiv).save().then(() => {
+                    document.body.removeChild(tempDiv);
+                    UI.hideLoading();
+                    UI.showToast('PDF Descargado');
+                }).catch(() => {
+                    UI.hideLoading(); UI.showToast('Error generando PDF', 'error');
+                });
             };
 
-            html2pdf().set(opt).from(tempDiv).save().then(() => {
-                document.body.removeChild(tempDiv);
-                UI.hideLoading();
-                UI.showToast('PDF Descargado');
-            }).catch(err => {
-                console.error(err);
-                UI.hideLoading();
-                UI.showToast('Error generando PDF', 'error');
-            });
+            // Si hay logo, esperamos. Si no, ejecutamos directo.
+            if (imgEl) {
+                if (imgEl.complete) {
+                    runPdf();
+                } else {
+                    imgEl.onload = runPdf;
+                    imgEl.onerror = runPdf; // Si falla la carga, generar igual sin logo
+                }
+            } else {
+                runPdf();
+            }
         }
     },
 
@@ -4728,3 +4712,4 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
