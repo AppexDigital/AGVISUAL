@@ -193,11 +193,25 @@
         #quote-editor-scroll {
             flex: 1; overflow-y: auto; padding: 2rem; display: flex; justify-content: center;
         }
+        /* AJUSTE VISUAL: Editor Transparente e Infinito */
         #quote-editor-page {
-            background: white; width: 100%; max-width: 800px; min-height: 1100px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15); outline: none; padding: 40px;
-            color: #000; /* Asegurar texto negro para impresión */
+            background: transparent !important; /* Fondo transparente */
+            box-shadow: none !important;        /* Sin sombra */
+            width: 100%; 
+            max-width: 800px; 
+            min-height: auto !important;        /* Altura automática */
+            height: auto !important;            /* Crece con el contenido */
+            padding: 20px 0; 
+            color: #000;
+            margin: 0 auto;
         }
+
+        /* Asegura que el contenedor permita scroll sin cortes */
+        #quote-editor-scroll {
+            align-items: flex-start; /* Alineación superior para evitar cortes */
+            padding-bottom: 100px;   /* Espacio extra al final */
+        }
+        
         /* Ocultar elementos al imprimir desde el navegador */
         @media print {
             #quote-editor-overlay { position: static; display: block; height: auto; overflow: visible; background: white; }
@@ -4555,7 +4569,7 @@ const App = {
         });
     },
 
-    // 4. Generación Directa (Ajuste "Espera Activa de Imagen")
+    // 4. Generación Directa (Técnica "Flash Render" para forzar imagen)
     async generateQuoteDocument(mode) {
         const content = App.getQuoteHTMLString();
 
@@ -4566,34 +4580,36 @@ const App = {
             setTimeout(() => { win.focus(); win.print(); }, 800);
 
         } else if (mode === 'pdf') {
-            UI.showLoading('Procesando Documento...');
+            UI.showLoading('Generando PDF...');
             
-            // Crear contenedor temporal fuera de la vista
+            // TÉCNICA FLASH: Crear contenedor VISIBLE sobre todo lo demás
+            // Esto evita que el navegador optimice y oculte la imagen
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
-            tempDiv.style.width = '800px'; 
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px'; // Oculto pero renderizable
+            tempDiv.style.cssText = `
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 100vw; 
+                height: 100vh; 
+                z-index: 99999; 
+                background: white; 
+                overflow-y: scroll;
+                padding: 40px;
+            `;
             document.body.appendChild(tempDiv);
 
-            // ESTRATEGIA: Esperar explícitamente a que la imagen reporte "onload"
+            // Esperar explícitamente a la imagen (aunque sea Base64)
             const logoImg = tempDiv.querySelector('#pdf-logo-img');
             
-            const waitForImage = new Promise((resolve) => {
-                // Si no hay logo o no tiene src, seguimos inmediato
+            await new Promise((resolve) => {
                 if (!logoImg || !logoImg.src) return resolve(); 
-                // Si el navegador dice que ya está completa (cache), seguimos
                 if (logoImg.complete) return resolve(); 
-                
-                // Si no, esperamos el evento
                 logoImg.onload = () => resolve(); 
-                logoImg.onerror = () => resolve(); // Si falla, seguimos sin logo para no colgar
-                
-                // Timeout de seguridad: Si en 3s no carga, generamos igual
-                setTimeout(resolve, 3000); 
+                logoImg.onerror = () => resolve(); 
+                // Timeout de seguridad más corto (1s) ya que es Base64
+                setTimeout(resolve, 1000); 
             });
-
-            await waitForImage; // Pausa aquí hasta tener imagen
 
             const opt = {
                 margin: 10, 
@@ -4601,25 +4617,25 @@ const App = {
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
-                    useCORS: true, // Vital para imágenes
+                    useCORS: true, 
                     letterRendering: true,
-                    scrollY: 0
+                    scrollY: 0,
+                    windowWidth: 800 // Forzar ancho de renderizado
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            UI.showLoading('Generando PDF...');
-            
-            html2pdf().set(opt).from(tempDiv).save().then(() => {
+            try {
+                await html2pdf().set(opt).from(tempDiv).save();
+                UI.showToast('PDF Descargado');
+            } catch (e) {
+                console.error(e);
+                UI.showToast('Error generando PDF', 'error');
+            } finally {
+                // Remover el contenedor "Flash"
                 document.body.removeChild(tempDiv);
                 UI.hideLoading();
-                UI.showToast('PDF Descargado');
-            }).catch(e => {
-                if(document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
-                UI.hideLoading();
-                console.error(e);
-                UI.showToast('Error en PDF', 'error');
-            });
+            }
         }
     },
 
@@ -4643,7 +4659,7 @@ const App = {
         }
     },
 
-    // 6. Constructor de HTML (Datos puros + Cálculo Inverso)
+    // 6. Constructor de HTML (Lógica Inversa de Precio + Datos Puros)
     getQuoteHTMLString() {
         // Recolectar Datos
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
@@ -4662,7 +4678,7 @@ const App = {
         const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        // Prioridad: Base64 > URL Sistema > Placeholder
+        // Prioridad absoluta a la variable Base64 para el PDF
         const logoSrc = App.LOGO_BASE64 || sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
 
         const companyInfo = `
@@ -4673,14 +4689,14 @@ const App = {
             ${ident.legal_phone || ''}
         `;
 
-        // Filas con Lógica Inversa de Precio
+        // LÓGICA DE PRECIO AJUSTADA: Unitario = Total / Días
         const itemsRows = window.tempBookingLines.map(line => {
             const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
             const itemName = item ? item.name : 'Artículo';
             const desc = item ? (item.description || '') : '';
             
-            // Cálculo de días
-            let days = 1; // Default 1 para evitar división por cero
+            // Cálculo de días (Mínimo 1 para evitar división por cero)
+            let days = 1;
             if(line.startDate && line.endDate) {
                 const d1 = new Date(line.startDate); const d2 = new Date(line.endDate);
                 const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
@@ -4689,9 +4705,8 @@ const App = {
 
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
             
-            // LÓGICA SOLICITADA: Unitario = Total Neto / Días
-            // Esto asegura que el unitario visual refleje el descuento aplicado proporcionalmente
-            const unitPrice = line.computedNet / days;
+            // MATEMÁTICA INVERSA: El precio unitario mostrado refleja el descuento
+            const displayedUnitPrice = line.computedNet / days;
 
             return `
                 <tr style="border-bottom: 1px solid #eee;">
@@ -4700,7 +4715,7 @@ const App = {
                         <div style="font-size: 10px; color: #666; margin-top:2px;">${line.note || desc}</div>
                         <div style="font-size: 10px; color: #888;">${line.startDate} al ${line.endDate} (${days} días)</div>
                     </td>
-                    <td style="padding: 12px 0; text-align: right;">${fmt(unitPrice)}</td>
+                    <td style="padding: 12px 0; text-align: right;">${fmt(displayedUnitPrice)}</td>
                     <td style="padding: 12px 0; text-align: right; font-weight: bold;">${fmt(line.computedNet)}</td>
                 </tr>
             `;
@@ -4913,6 +4928,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
