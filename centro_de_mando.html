@@ -4599,36 +4599,39 @@ const App = {
         } else if (mode === 'pdf') {
             UI.showLoading('Generando PDF...');
             
+            // 1. Renderizar fuera de pantalla pero visible
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
-            tempDiv.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-                z-index: 99999; background: white; overflow-y: scroll; padding: 40px;
-            `;
+            tempDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: white; overflow-y: scroll; padding: 40px;`;
             document.body.appendChild(tempDiv);
 
+            // 2. Esperar al Logo (Lógica Robusta)
             const logoImg = tempDiv.querySelector('#pdf-logo-img');
             
-            // Esperar carga real (ahora sí cargará gracias al proxy)
             await new Promise((resolve) => {
+                // Si no hay imagen o es un placeholder local, seguimos
                 if (!logoImg || !logoImg.src) return resolve();
-                if (logoImg.complete) return resolve();
+                if (logoImg.complete && logoImg.naturalHeight !== 0) return resolve();
+
+                // Eventos de carga
+                logoImg.onload = () => { console.log("Logo PDF cargado"); resolve(); };
+                logoImg.onerror = () => { console.warn("Logo PDF falló"); resolve(); };
                 
-                logoImg.onload = () => resolve();
-                logoImg.onerror = () => {
-                    console.warn("Fallo carga imagen PDF, generando sin logo.");
+                // Timeout de 6 segundos (Google a veces tarda)
+                setTimeout(() => {
+                    console.log("Timeout espera logo");
                     resolve();
-                };
-                setTimeout(resolve, 5000); // 5 seg max
+                }, 6000); 
             });
 
+            // 3. Generar
             const opt = {
                 margin: 10, 
                 filename: `Documento.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
-                    useCORS: true, // Esto ahora funcionará porque el proxy devuelve el header correcto
+                    useCORS: true, 
                     letterRendering: true,
                     scrollY: 0,
                     windowWidth: 800 
@@ -4964,6 +4967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
