@@ -1,61 +1,67 @@
-const https = require('https');
+async generateQuoteDocument(mode) {
+        const content = App.getQuoteHTMLString();
 
-exports.handler = (event, context, callback) => {
-    // Log de vida inmediato
-    console.log(">>> PROXY ACTIVO. ID Solicitado:", event.queryStringParameters.id);
+        if (mode === 'print') {
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Documento</title></head><body style="margin:0">${content}</body></html>`);
+            win.document.close();
+            setTimeout(() => { win.focus(); win.print(); }, 800);
 
-    const { id } = event.queryStringParameters;
+        } else if (mode === 'pdf') {
+            UI.showLoading('Generando PDF...');
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            tempDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: white; overflow-y: scroll; padding: 40px;`;
+            document.body.appendChild(tempDiv);
 
-    if (!id) {
-        return callback(null, { statusCode: 400, body: 'Falta ID' });
-    }
-
-    const url = `https://drive.google.com/uc?export=view&id=${id}`;
-
-    // Función recursiva para seguir redirecciones de Google (302)
-    const downloadImage = (currentUrl) => {
-        https.get(currentUrl, (res) => {
-            // 1. Manejo de Redirección (Google siempre hace esto primero)
-            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                console.log(">>> Redireccionando a Google Content...");
-                return downloadImage(res.headers.location);
+            // INTENTO DE PROXY SOLO PARA PDF
+            const logoImg = tempDiv.querySelector('#pdf-logo-img');
+            
+            if (logoImg) {
+                const googleId = logoImg.getAttribute('data-google-id');
+                // Si tenemos ID, intentamos cambiar al proxy
+                if (googleId) {
+                    console.log("PDF: Intentando cargar desde Proxy:", googleId);
+                    logoImg.src = `/.netlify/functions/proxy-image?id=${googleId}`;
+                }
             }
 
-            // 2. Si no es 200 OK, error
-            if (res.statusCode !== 200) {
-                console.error(">>> Error Google:", res.statusCode);
-                return callback(null, { statusCode: res.statusCode, body: 'Error Google' });
-            }
-
-            // 3. Descarga exitosa (Stream)
-            const chunks = [];
-            res.on('data', (chunk) => chunks.push(chunk));
-
-            res.on('end', () => {
-                const buffer = Buffer.concat(chunks);
-                const base64 = buffer.toString('base64');
-                const contentType = res.headers['content-type'] || 'image/jpeg';
-
-                console.log(`>>> ÉXITO: Imagen descargada (${buffer.length} bytes). Enviando...`);
-
-                callback(null, {
-                    statusCode: 200,
-                    headers: {
-                        'Content-Type': contentType,
-                        'Access-Control-Allow-Origin': '*', // LLAVE MAESTRA CORS
-                        'Cache-Control': 'public, max-age=31536000'
-                    },
-                    body: base64,
-                    isBase64Encoded: true
-                });
+            // Esperar carga (sea proxy o directa)
+            await new Promise((resolve) => {
+                if (!logoImg || !logoImg.src) return resolve();
+                
+                logoImg.onload = () => resolve();
+                logoImg.onerror = () => {
+                    console.warn("Imagen PDF falló carga (Proxy o URL). Generando igual.");
+                    resolve();
+                };
+                setTimeout(resolve, 4000); // 4 seg para dar tiempo al proxy
             });
 
-        }).on('error', (e) => {
-            console.error(">>> Error Red:", e.message);
-            callback(null, { statusCode: 500, body: e.message });
-        });
-    };
+            const opt = {
+                margin: 10, 
+                filename: `Documento.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    letterRendering: true,
+                    scrollY: 0,
+                    windowWidth: 800 
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
 
-    // Iniciar proceso
-    downloadImage(url);
-};
+            try {
+                await html2pdf().set(opt).from(tempDiv).save();
+                UI.showToast('PDF Descargado');
+            } catch (e) {
+                console.error(e);
+                UI.showToast('Error generando PDF', 'error');
+            } finally {
+                document.body.removeChild(tempDiv);
+                UI.hideLoading();
+            }
+        }
+    },
