@@ -133,5 +133,5 @@ const myHandler = async (event, context) => {
     }
 };
 
-// AJUSTE DE FRECUENCIA: Se ejecuta cada 8 horas (00:00, 08:00, 16:00)
-module.exports.handler = schedule("0 */8 * * *", myHandler);
+// AJUSTE DE FRECUENCIA: (Se ejecuta en el minuto 0 de cada hora, 24 veces al día)
+module.exports.handler = schedule("0 * * * *", myHandler);
