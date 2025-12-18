@@ -634,7 +634,7 @@
    <template id="reservation-modal-template">
         <div id="reservation-modal-content" class="w-full h-full flex flex-col relative bg-[#0a0a0a] text-white overflow-hidden p-0">
             
-            <div class="flex justify-between items-center bg-[#111] border-b border-gray-800 p-4 px-6 flex-shrink-0 z-20">
+            <div class="flex justify-between items-center bg-[#111] border-b border-white/10 p-4 px-6 flex-shrink-0 z-20">
                 <div>
                     <h2 class="modal-title font-display text-2xl text-accent-gold text-white">Gestión de Reserva</h2>
                     <div class="flex items-center gap-2 mt-1">
@@ -689,24 +689,24 @@
                         </div>
                     </div>
     
-                    <div class="border border-gray-800 rounded-lg bg-[#0f0f0f] overflow-hidden">
-                        <div class="grid grid-cols-12 gap-2 bg-[#1a1a1a] p-3 booking-grid-header border-b border-gray-800 pr-4">
-                            <div class="col-span-4">Equípo / Nota</div>
-                            <div class="col-span-3 text-center">Vigencia</div>
-                            <div class="col-span-3 text-center">Descuento</div>
-                            <div class="col-span-1 text-center">Total</div>
-                            <div class="col-span-1 text-center"> </div>
+                    <div class="border border-white/10 rounded-lg bg-[#0f0f0f] overflow-hidden">
+                        <div class="grid grid-cols-12 gap-2 bg-[#1a1a1a] p-3 booking-grid-header border-b border-white/10 pr-4">
+                            <div class="col-span-4">Artículo / Nota</div>
+                            <div class="col-span-3">Vigencia</div>
+                            <div class="col-span-3">Descuento</div>
+                            <div class="col-span-1 text-right">Total</div>
+                            <div class="col-span-1 text-center">Borrar</div>
                         </div>
                         <div id="lines-container" class="p-2 space-y-1"></div>
-                        <div class="p-3 border-t border-gray-800 bg-[#141414] text-center">
-                            <button type="button" id="btn-add-line" class="text-gray-400 hover:text-white text-xs font-bold border border-gray-700 hover:border-white rounded px-6 py-2 transition-all hover:bg-white/5">
-                                <i class="fas fa-plus mr-1"></i> AGREGAR EQUÍPO
+                        <div class="p-3 border-t border-white/10 bg-[#141414] text-center">
+                            <button type="button" id="btn-add-line" class="text-gray-500 hover:text-white text-xs font-bold border border-gray-700 hover:border-white rounded px-6 py-2 transition-all hover:bg-white/5">
+                                <i class="fas fa-plus mr-1"></i> AGREGAR ARTÍCULO
                             </button>
                         </div>
                     </div>
     
-                    <div class="bg-[#121212] border border-gray-800 rounded-lg flex flex-col md:flex-row overflow-hidden mb-4">
-                        <div class="w-full md:w-1/2 border-r border-gray-800 p-5">
+                    <div class="bg-[#121212] border border-white/10 rounded-lg flex flex-col md:flex-row overflow-hidden mb-4">
+                        <div class="w-full md:w-1/2 border-r border-white/10 p-5">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-[10px] uppercase font-bold text-gray-500">Notas Generales</label>
                                 <i class="fas fa-pen text-[10px] text-gray-600"></i>
@@ -715,7 +715,7 @@
                         </div>
                         <div class="w-full md:w-1/2 p-5 bg-[#161616] space-y-3">
                             <div class="flex justify-between items-center mb-3">
-                                <label class="text-xs uppercase font-bold text-gray-500">Descuento Global</label>
+                                <label class="text-xs uppercase font-bold text-gray-500">Desc. Global</label>
                                 <div class="flex rounded bg-gray-800 border border-gray-700 w-36 h-8">
                                     <select id="c-globalDiscType" class="dark-select text-xs px-2 border-r border-gray-600 outline-none h-full bg-transparent text-white">
                                         <option value="percent">%</option>
@@ -724,11 +724,11 @@
                                     <input type="number" id="c-globalDiscVal" step="0.01" class="bg-transparent text-white text-right text-sm px-2 w-full outline-none h-full font-mono" value="0">
                                 </div>
                             </div>
-                            <div class="border-t border-gray-800"></div>
+                            <div class="border-t border-white/10"></div>
                             <div class="flex justify-between text-sm text-gray-400 mt-2"><span>Subtotal:</span><span id="lbl-global-subtotal" class="font-mono text-white">$0.00</span></div>
                             <div class="flex justify-between text-sm text-green-500"><span>Descuento:</span><span id="lbl-global-discount" class="font-mono">-$0.00</span></div>
                             <div class="flex justify-between text-sm text-gray-400"><span>IVA (13%):</span><span id="lbl-global-tax" class="font-mono text-white">$0.00</span></div>
-                            <div class="flex justify-between items-end pt-4 border-t border-gray-800 mt-3">
+                            <div class="flex justify-between items-end pt-4 border-t border-white/10 mt-3">
                                 <div class="text-xs text-gray-600 text-left leading-tight">Rango: <span id="disp-date-range" class="text-gray-500">--</span></div>
                                 <div class="text-right">
                                     <span class="block text-xs text-gray-500 uppercase font-bold mb-1">Total Final</span>
@@ -739,7 +739,7 @@
                     </div>
                 </div>
     
-                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-gray-800 gap-3 flex-shrink-0 z-20">
+                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-white/10 gap-3 flex-shrink-0 z-20">
                     <button type="button" id="btn-delete-booking" class="text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider mr-auto hidden px-2 transition-colors">
                         <i class="fas fa-trash-alt mr-1"></i> Eliminar
                     </button>
@@ -4284,6 +4284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
