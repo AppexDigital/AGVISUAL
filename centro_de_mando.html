@@ -4586,73 +4586,73 @@ const App = {
         });
     },
 
-    // 4. Generación Directa (Técnica "Flash Render" para forzar imagen)
+    // 4. Generación Directa (Técnica "Puente Blob" + Flash Render)
     async generateQuoteDocument(mode) {
         const content = App.getQuoteHTMLString();
 
         if (mode === 'print') {
             const win = window.open('', '_blank');
-            win.document.write(`<html><head><title>Cotización</title></head><body style="margin:0">${content}</body></html>`);
+            win.document.write(`<html><head><title>Documento</title></head><body style="margin:0">${content}</body></html>`);
             win.document.close();
             setTimeout(() => { win.focus(); win.print(); }, 800);
 
         } else if (mode === 'pdf') {
-            UI.showLoading('Generando PDF...');
+            UI.showLoading('Procesando Documento...');
             
-            // TÉCNICA FLASH: Crear contenedor VISIBLE sobre todo lo demás
-            // Esto evita que el navegador optimice y oculte la imagen
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
-            tempDiv.style.cssText = `
-                position: fixed; 
-                top: 0; 
-                left: 0; 
-                width: 100vw; 
-                height: 100vh; 
-                z-index: 99999; 
-                background: white; 
-                overflow-y: scroll;
-                padding: 40px;
-            `;
+            // Render visible pero fuera de foco para asegurar carga
+            tempDiv.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 99999; background: white; overflow-y: scroll; padding: 40px;`;
             document.body.appendChild(tempDiv);
 
-            // Esperar explícitamente a la imagen (aunque sea Base64)
+            // PUENTE BLOB: Convertir URL externa a Objeto Local seguro
             const logoImg = tempDiv.querySelector('#pdf-logo-img');
             
-            await new Promise((resolve) => {
-                if (!logoImg || !logoImg.src) return resolve(); 
-                if (logoImg.complete) return resolve(); 
-                logoImg.onload = () => resolve(); 
-                logoImg.onerror = () => resolve(); 
-                // Timeout de seguridad más corto (1s) ya que es Base64
-                setTimeout(resolve, 1000); 
-            });
+            if (logoImg && logoImg.src && !logoImg.src.startsWith('data:')) {
+                try {
+                    // Intentamos descargar la imagen como Blob
+                    const response = await fetch(logoImg.src);
+                    const blob = await response.blob();
+                    const localUrl = URL.createObjectURL(blob);
+                    // Reemplazamos el src externo por el local
+                    logoImg.src = localUrl;
+                    
+                    // Esperamos a que la nueva versión local cargue
+                    await new Promise(resolve => {
+                        logoImg.onload = resolve;
+                        logoImg.onerror = resolve; // Si falla, seguimos
+                    });
+                } catch (e) {
+                    console.warn("No se pudo hacer puente Blob (CORS estricto), intentando carga normal...", e);
+                }
+            }
 
             const opt = {
                 margin: 10, 
-                filename: `Cotizacion.pdf`,
+                filename: `Documento.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { 
                     scale: 2, 
-                    useCORS: true, 
+                    useCORS: true, // Aún necesario
                     letterRendering: true,
                     scrollY: 0,
-                    windowWidth: 800 // Forzar ancho de renderizado
+                    windowWidth: 800 
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            try {
-                await html2pdf().set(opt).from(tempDiv).save();
-                UI.showToast('PDF Descargado');
-            } catch (e) {
-                console.error(e);
-                UI.showToast('Error generando PDF', 'error');
-            } finally {
-                // Remover el contenedor "Flash"
+            UI.showLoading('Generando PDF...');
+            
+            html2pdf().set(opt).from(tempDiv).save().then(() => {
                 document.body.removeChild(tempDiv);
                 UI.hideLoading();
-            }
+                UI.showToast('PDF Descargado');
+            }).catch(e => {
+                if(document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
+                UI.hideLoading();
+                console.error(e);
+                UI.showToast('Error en PDF', 'error');
+            });
         }
     },
 
@@ -4686,6 +4686,9 @@ const App = {
         const quoteId = document.getElementById('header-ref-display')?.innerText || 'BORRADOR';
         const notes = document.getElementById('c-globalNotes')?.value || '';
         
+        // Título dinámico o por defecto
+        const docTitle = document.getElementById('doc-type-title')?.innerText || 'COTIZACIÓN';
+        
         const subtotal = document.getElementById('lbl-global-subtotal')?.innerText || '$0.00';
         const discount = document.getElementById('lbl-global-discount')?.innerText || '$0.00';
         const tax = document.getElementById('lbl-global-tax')?.innerText || '$0.00';
@@ -4717,6 +4720,8 @@ const App = {
             }
 
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+            
+            // CÁLCULO INVERSO: Unitario = Total Neto / Días
             const displayedUnitPrice = line.computedNet / days;
 
             return `
@@ -4736,11 +4741,11 @@ const App = {
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white; padding: 40px; color: #333;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #111; padding-bottom: 20px;">
                     <div>
-                        <img id="pdf-logo-img" src="${logoSrc}" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
+                        <img id="pdf-logo-img" src="${logoSrc}" crossorigin="anonymous" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #555; line-height: 1.4;">${companyInfo}</div>
                     </div>
                     <div style="text-align: right;">
-                        <h1 id="doc-type-title" style="font-family: 'Garamond', serif; font-size: 32px; color: #111; margin: 0;">COTIZACIÓN</h1>
+                        <h1 id="doc-type-title" style="font-family: 'Garamond', serif; font-size: 32px; color: #111; margin: 0;">${docTitle}</h1>
                         <div style="font-size: 14px; color: #666; margin-top: 5px;"># ${quoteId}</div>
                         <div style="font-size: 12px; color: #888; margin-top: 5px;">Fecha: ${new Date().toLocaleDateString()}</div>
                     </div>
@@ -4949,6 +4954,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
