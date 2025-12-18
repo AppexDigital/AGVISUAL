@@ -103,23 +103,30 @@
         /* 1. ELIMINAR EL CONTENEDOR BLANCO Y SU SCROLL (ESTADO NORMAL) */
         /* Esto fuerza al modal genérico a ser transparente y ajustarse a nuestro diseño */
         .modal-content:has(#reservation-modal-content) {
-            background-color: transparent !important;
-            box-shadow: none !important;
-            border: none !important;
+            position: fixed !important;
+            inset: 0 !important; /* Top, Right, Bottom, Left = 0 */
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            max-height: none !important;
+            margin: 0 !important;
             padding: 0 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background-color: #0a0a0a !important; /* Fondo negro total */
+            z-index: 99999 !important;
             
-            /* Dimensiones Iniciales (Modo Ventana) */
-            width: 100% !important;
-            max-width: 2400px !important;
-            height: 100vh !important; 
-            
-            /* ESTO MATA EL SCROLLBAR GRIS EXTERNO: */
-            overflow: hidden !important;
-
-            margin: auto !important;
+            /* Estructura para el hijo */
             display: flex !important;
             flex-direction: column !important;
-            transition: width 0.2s, height 0.2s; /* Suavizar el cambio */
+            overflow: hidden !important; /* Evitar scroll en el padre */
+        }
+
+        /* 2. ELIMINAR EL PADDING DEL OVERLAY */
+        .modal-overlay:has(#reservation-modal-content) {
+            padding: 0 !important;
+            display: block !important; /* Rompe el centrado flex para permitir full cover */
         }
         
         /* Ocultar elementos basura del modal genérico */
@@ -159,7 +166,7 @@
         /* Al poner display: block, eliminamos el centrado flexbox que causa los espacios laterales */
         .modal-overlay:has(.is-fullscreen) {
             padding: 0 !important;
-            display: flex !important;
+            display: block !important;
         }
         
         /* 3. ESTILOS INTERNOS (Mantener diseño bonito) */
@@ -4360,6 +4367,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
