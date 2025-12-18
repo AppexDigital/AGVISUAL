@@ -1,69 +1,49 @@
-const https = require('https');
+// functions/proxy-image.js
 
 exports.handler = async (event) => {
+    // 1. Log de vida inmediato
+    console.log(">>> PROXY INICIADO. Query:", event.queryStringParameters);
+
     const { id } = event.queryStringParameters;
 
     if (!id) {
+        console.error(">>> ERROR: Falta ID");
         return { statusCode: 400, body: 'Falta ID' };
     }
 
-    const initialUrl = `https://drive.google.com/uc?export=view&id=${id}`;
-    console.log(`Proxy: Solicitando ID ${id}`);
+    const url = `https://drive.google.com/uc?export=view&id=${id}`;
 
-    const fetchUrl = (url) => {
-        return new Promise((resolve, reject) => {
-            https.get(url, (res) => {
-                // Manejo de Redirecciones (Recursivo)
-                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    console.log("Proxy: Redireccionando...");
-                    resolve(fetchUrl(res.headers.location));
-                    return;
-                }
+    try {
+        // 2. Fetch Nativo (Sigue redirecciones 302 automáticamente)
+        const response = await fetch(url);
 
-                // Éxito: Procesar imagen
-                if (res.statusCode === 200) {
-                    const chunks = [];
-                    res.on('data', (chunk) => chunks.push(chunk));
-                    
-                    res.on('end', () => {
-                        const buffer = Buffer.concat(chunks);
-                        const base64 = buffer.toString('base64');
-                        
-                        // IMPORTANTE: Detectar tipo MIME real o usar fallback seguro
-                        let contentType = res.headers['content-type'];
-                        if (!contentType || contentType === 'application/octet-stream') {
-                            // Intentar adivinar por "magic bytes" (muy básico)
-                            if (base64.startsWith('/9j/')) contentType = 'image/jpeg';
-                            else if (base64.startsWith('iVBORw0KGgo')) contentType = 'image/png';
-                            else contentType = 'image/jpeg'; // Default seguro
-                        }
+        if (!response.ok) {
+            console.error(`>>> ERROR GOOGLE: ${response.status} ${response.statusText}`);
+            return { statusCode: response.status, body: response.statusText };
+        }
 
-                        console.log(`Proxy: Éxito. Tipo: ${contentType}, Tamaño: ${buffer.length}`);
-                        
-                        resolve({
-                            statusCode: 200,
-                            headers: {
-                                'Content-Type': contentType,
-                                'Access-Control-Allow-Origin': '*',
-                                'Cache-Control': 'public, max-age=31536000'
-                            },
-                            body: base64,
-                            isBase64Encoded: true
-                        });
-                    });
-                    return;
-                }
+        // 3. Procesamiento de Buffer
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64 = buffer.toString('base64');
+        const contentType = response.headers.get('content-type') || 'image/jpeg';
 
-                // Error
-                console.error(`Proxy: Error ${res.statusCode}`);
-                resolve({ statusCode: res.statusCode, body: `Error: ${res.statusMessage}` });
+        console.log(`>>> ÉXITO: Imagen descargada. Bytes: ${buffer.length}, Tipo: ${contentType}`);
 
-            }).on('error', (e) => {
-                console.error("Proxy: Error red", e);
-                resolve({ statusCode: 500, body: e.message });
-            });
-        });
-    };
+        // 4. Respuesta Binaria (Netlify decodifica el base64 body al navegador)
+        return {
+            statusCode: 200,
+            headers: {
+                'Content-Type': contentType,
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'public, max-age=31536000'
+            },
+            body: base64,
+            isBase64Encoded: true
+        };
 
-    return await fetchUrl(initialUrl);
+    } catch (error) {
+        console.error(">>> ERROR CRÍTICO:", error);
+        return { statusCode: 500, body: error.message };
+    }
 };
