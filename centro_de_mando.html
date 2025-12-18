@@ -4669,6 +4669,7 @@ const App = {
         }
     },
 
+    // 6. Constructor de HTML (Con Lógica de Proxy Blindada)
     getQuoteHTMLString() {
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
         const customerId = document.getElementById('c-customerCedula')?.value || '';
@@ -4678,7 +4679,6 @@ const App = {
         const quoteId = document.getElementById('header-ref-display')?.innerText || 'BORRADOR';
         const notes = document.getElementById('c-globalNotes')?.value || '';
         
-        // Título dinámico
         const docTitle = document.getElementById('doc-type-title')?.innerText || 'COTIZACIÓN';
         
         const subtotal = document.getElementById('lbl-global-subtotal')?.innerText || '$0.00';
@@ -4690,18 +4690,23 @@ const App = {
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
         // 2. LÓGICA DE LOGO BLINDADA (PROXY)
-        // Buscamos el objeto del logo negro en la lista de imágenes
+        // Buscamos el objeto del logo negro
         const logoItem = (AppState.data.ImagenesIdentidad || []).find(i => i.key === 'logo_black');
         
+        // Placeholder por defecto si no hay nada
         let logoSrc = 'https://placehold.co/150x50?text=SIN+LOGO';
 
         if (logoItem) {
-            if (logoItem.fileId) {
-                // SI TENEMOS ID DE DRIVE, USAMOS EL PROXY (Esto evita el error CORS)
-                logoSrc = `/.netlify/functions/proxy-image?id=${logoItem.fileId}`;
+            // VERIFICACIÓN ROBUSTA: Solo usar proxy si el fileId existe Y NO ES 'undefined'
+            const safeId = logoItem.fileId;
+            if (safeId && safeId !== 'undefined' && safeId !== null && safeId.trim() !== '') {
+                // ID Válido: Usamos el túnel proxy
+                logoSrc = `/.netlify/functions/proxy-image?id=${safeId}`;
+                console.log("Usando Proxy para logo:", logoSrc); // Log para depurar
             } else if (logoItem.imageUrl) {
-                // Fallback: Si no hay ID, usamos la URL (aunque puede fallar en PDF)
+                // Fallback: Si no hay ID válido, usamos la URL directa (se verá en editor, quizás falle en PDF)
                 logoSrc = logoItem.imageUrl;
+                console.warn("ID de logo no encontrado, usando URL directa (CORS puede fallar en PDF).");
             }
         }
 
@@ -4959,6 +4964,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
