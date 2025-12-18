@@ -1842,13 +1842,22 @@ const App = {
         }
     },
     
-    async loadData(mode = 'all') { 
-        // CAMBIO: Pedimos todas las hojas de metadatos al inicio para tener los contadores reales
-        // Esto es liviano porque es solo texto JSON, no imágenes binarias
-        const allSheets = 'Projects,Bookings,ProjectImages,Services,ServiceImages,Videos,RentalItems,RentalItemImages,RentalCategories,BlockedDates,LogosClientes,ImagenesIdentidad';
-        const p = mode === 'dashboard' ? `?sheets=${allSheets}` : ''; 
+    async loadData(mode = 'dashboard') { 
+        // DEFINICIÓN DE ESTRATEGIAS DE CARGA
+        const loadStrategies = {
+            // A. Carga Pesada (Solo al inicio): Necesaria para que los contadores del Dashboard (KPIs) marquen los números correctos
+            'dashboard': 'Projects,Bookings,BookingsDetails,ProjectImages,Services,ServiceImages,Videos,RentalItems,RentalItemImages,RentalCategories,BlockedDates,LogosClientes,ImagenesIdentidad,Identidad',
+            
+            // B. Carga Quirúrgica (Al guardar Reserva): Solo recarga reservas, detalles, bloqueos y datos legales (PDF)
+            'bookings_refresh': 'Bookings,BookingsDetails,BlockedDates,Identidad'
+        };
+
+        // Seleccionamos la estrategia, o usamos dashboard por defecto
+        const sheets = loadStrategies[mode] || loadStrategies['dashboard'];
         
-        const nd = await API.call(`/.netlify/functions/get-admin-data${p}`); 
+        const nd = await API.call(`/.netlify/functions/get-admin-data?sheets=${sheets}`); 
+        
+        // Fusión inteligente de datos
         AppState.data = { ...AppState.data, ...nd }; 
     },
 
@@ -4172,6 +4181,14 @@ const App = {
         }); 
     },
 
+    // Función para cambiar el título del documento en vivo
+    changeDocumentTitle(newTitle) {
+        const titleEl = document.getElementById('doc-type-title');
+        if (titleEl) {
+            titleEl.innerText = newTitle;
+        }
+    },
+
     // NUEVA FUNCIÓN PARA RESERVAS MULTI-ITEM
     async handleSaveBooking(e) {
         e.preventDefault();
@@ -4659,9 +4676,8 @@ const App = {
         }
     },
 
-    // 6. Constructor de HTML (Lógica Inversa de Precio + Datos Puros)
+    // 6. Constructor de HTML (Con ID para cambio de título)
     getQuoteHTMLString() {
-        // Recolectar Datos
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
         const customerId = document.getElementById('c-customerCedula')?.value || '';
         const customerEmail = document.getElementById('c-customerEmail')?.value || '';
@@ -4678,7 +4694,6 @@ const App = {
         const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        // Prioridad absoluta a la variable Base64 para el PDF
         const logoSrc = App.LOGO_BASE64 || sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
 
         const companyInfo = `
@@ -4689,13 +4704,11 @@ const App = {
             ${ident.legal_phone || ''}
         `;
 
-        // LÓGICA DE PRECIO AJUSTADA: Unitario = Total / Días
         const itemsRows = window.tempBookingLines.map(line => {
             const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
             const itemName = item ? item.name : 'Artículo';
             const desc = item ? (item.description || '') : '';
             
-            // Cálculo de días (Mínimo 1 para evitar división por cero)
             let days = 1;
             if(line.startDate && line.endDate) {
                 const d1 = new Date(line.startDate); const d2 = new Date(line.endDate);
@@ -4704,8 +4717,6 @@ const App = {
             }
 
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-            
-            // MATEMÁTICA INVERSA: El precio unitario mostrado refleja el descuento
             const displayedUnitPrice = line.computedNet / days;
 
             return `
@@ -4729,7 +4740,7 @@ const App = {
                         <div style="font-size: 12px; color: #555; line-height: 1.4;">${companyInfo}</div>
                     </div>
                     <div style="text-align: right;">
-                        <h1 style="font-family: 'Garamond', serif; font-size: 32px; color: #111; margin: 0;">COTIZACIÓN</h1>
+                        <h1 id="doc-type-title" style="font-family: 'Garamond', serif; font-size: 32px; color: #111; margin: 0;">COTIZACIÓN</h1>
                         <div style="font-size: 14px; color: #666; margin-top: 5px;"># ${quoteId}</div>
                         <div style="font-size: 12px; color: #888; margin-top: 5px;">Fecha: ${new Date().toLocaleDateString()}</div>
                     </div>
@@ -4895,6 +4906,16 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         
         <div id="editor-toolbar-strip">
+            <div class="relative group" title="Tipo de Documento">
+                <select class="toolbar-select font-bold text-gray-700 bg-gray-50 border-gray-300" onchange="App.changeDocumentTitle(this.value)">
+                    <option value="COTIZACIÓN">COTIZACIÓN</option>
+                    <option value="RESERVACIÓN">RESERVACIÓN</option>
+                    <option value="CONFIRMACIÓN">CONFIRMACIÓN</option>
+                    <option value="FACTURA">FACTURA</option>
+                    <option value="PROFORMA">PROFORMA</option>
+                </select>
+            </div>
+            <div class="toolbar-separator"></div>
             <select class="toolbar-select" onchange="document.execCommand('fontName',false,this.value)">
                 <option value="Arial">Arial</option><option value="Times New Roman">Times New Roman</option><option value="Helvetica">Helvetica</option>
             </select>
@@ -4928,6 +4949,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
