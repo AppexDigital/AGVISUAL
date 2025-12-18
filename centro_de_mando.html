@@ -1355,7 +1355,7 @@ const UI = {
                     <td class="p-4 font-mono text-xs w-16 text-center">${s.order||99}</td>
                     <td class="p-4 w-16 text-center text-xl text-gray-600"><i class="${s.iconClass || 'fas fa-circle-question'}"></i></td>
                     <td class="p-4 font-bold text-sm">${s.title}</td>
-                    <td class="p-4 text-center text-xs uppercase font-bold text-gray-500">${s.status === 'hidden' ? 'Oculto' : 'Visible'}</td>
+                    <td class="p-4 text-center text-xs uppercase font-bold ${s.status === 'hidden' ? 'text-gray-400' : 'text-green-600'}">${s.status === 'hidden' ? 'Oculto' : 'Visible'}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">
                         <span class="bg-gray-100 px-2 py-1 rounded">${blockCount} Bloques</span>
                     </td>
@@ -4465,6 +4465,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
