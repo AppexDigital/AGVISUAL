@@ -4678,6 +4678,7 @@ const App = {
         const quoteId = document.getElementById('header-ref-display')?.innerText || 'BORRADOR';
         const notes = document.getElementById('c-globalNotes')?.value || '';
         
+        // Título dinámico
         const docTitle = document.getElementById('doc-type-title')?.innerText || 'COTIZACIÓN';
         
         const subtotal = document.getElementById('lbl-global-subtotal')?.innerText || '$0.00';
@@ -4685,26 +4686,24 @@ const App = {
         const tax = document.getElementById('lbl-global-tax')?.innerText || '$0.00';
         const total = document.getElementById('lbl-global-total')?.innerText || '$0.00';
 
-        const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
+        // 1. Obtener Datos de Identidad
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        let logoSrc = sysImages.logo_black || 'https://placehold.co/150x50?text=SIN+LOGO';
+        // 2. LÓGICA DE LOGO BLINDADA (PROXY)
+        // Buscamos el objeto del logo negro en la lista de imágenes
+        const logoItem = (AppState.data.ImagenesIdentidad || []).find(i => i.key === 'logo_black');
+        
+        let logoSrc = 'https://placehold.co/150x50?text=SIN+LOGO';
 
-        // --- LÓGICA DEL TÚNEL (PROXY) ---
-        // Si el logo viene de Google Drive, lo pasamos por nuestro proxy para evitar bloqueo en PDF
-        if (logoSrc.includes('drive.google.com') || logoSrc.includes('googleusercontent')) {
-            // Intentar extraer ID
-            let fileId = null;
-            const matchId = logoSrc.match(/id=([a-zA-Z0-9_-]+)/);
-            if (matchId) fileId = matchId[1];
-            else if (logoSrc.includes('/d/')) fileId = logoSrc.split('/d/')[1].split('/')[0];
-            
-            if (fileId) {
-                // Usamos nuestro propio backend para servir la imagen limpia de CORS
-                logoSrc = `/.netlify/functions/proxy-image?id=${fileId}`;
+        if (logoItem) {
+            if (logoItem.fileId) {
+                // SI TENEMOS ID DE DRIVE, USAMOS EL PROXY (Esto evita el error CORS)
+                logoSrc = `/.netlify/functions/proxy-image?id=${logoItem.fileId}`;
+            } else if (logoItem.imageUrl) {
+                // Fallback: Si no hay ID, usamos la URL (aunque puede fallar en PDF)
+                logoSrc = logoItem.imageUrl;
             }
         }
-        // ---------------------------------
 
         const companyInfo = `
             <strong>${ident.legal_commercial_name || 'Nombre Comercial'}</strong><br>
@@ -4727,6 +4726,8 @@ const App = {
             }
 
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+            
+            // CÁLCULO INVERSO: Unitario = Total Neto / Días
             const displayedUnitPrice = line.computedNet / days;
 
             return `
@@ -4798,7 +4799,6 @@ const App = {
             </div>
         `;
     },
-
 
     
     
@@ -4959,6 +4959,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
