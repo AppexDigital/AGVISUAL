@@ -1273,7 +1273,7 @@ const UI = {
                     <td class="p-4 font-mono text-xs text-center">${p.order||99}</td> 
                     <td class="p-4"><img src="${cover?.imageUrl||'https://placehold.co/50'}" class="img-preview" referrerpolicy="no-referrer" ></td>
                     <td class="p-4 font-bold text-sm">${p.title}</td>
-                    <td class="p-4 text-center text-xs uppercase font-bold text-gray-500">${p.status === 'hidden' ? 'Oculto' : 'Visible'}</td>
+                    <td class="p-4 text-center text-xs uppercase font-bold ${p.status === 'hidden' ? 'text-gray-400' : 'text-green-600'}">${p.status === 'hidden' ? 'Oculto' : 'Visible'}</td>
                     <td class="p-4 text-center font-mono text-sm text-gray-500">${imageCount}</td>
                     <td class="p-4 align-middle">
                         <div class="flex items-center justify-center gap-3">
@@ -2289,8 +2289,8 @@ const App = {
 
             const editorHtml = `<div class="mb-4"><label class="form-label">Introducción (Bio)</label><div id="editor-intro"></div></div>`;
 
-             // Definimos opciones
-             const statusOpts = [{id:'active', name:'🟢 Visible en Web'}, {id:'hidden', name:'👁️ Oculto'}];
+             // Definimos opciones LIMPIAS
+             const statusOpts = [{id:'active', name:'Visible'}, {id:'hidden', name:'Oculto'}];
 
              // Agregamos el selector al HTML
              html = `${UI.inputHTML('c','order','Orden',s?.order||nextOrder,'number')} 
@@ -4465,6 +4465,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
