@@ -1764,6 +1764,9 @@ const UI = {
   
 // --- LOGICA PRINCIPAL (App) ---
 const App = {
+    // PEGA AQUÍ TU CÓDIGO BASE64 LARGO ENTRE LAS COMILLAS
+    LOGO_BASE64: "",
+    
     /// NUEVO ESTADO: Guardamos el archivo pendiente en memoria, NO en Drive
     pendingLogoFile: null,
 
@@ -4633,7 +4636,9 @@ const App = {
         const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        const logoUrl = sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
+        // CORRECCIÓN IMAGEN: Usamos Base64 si existe, sino URL (fallback)
+        const logoSrc = App.LOGO_BASE64 || sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
+
         const companyInfo = `
             <strong>${ident.legal_commercial_name || 'Nombre Comercial'}</strong><br>
             ${ident.legal_name || ''}<br>
@@ -4642,11 +4647,12 @@ const App = {
             ${ident.legal_phone || ''}
         `;
 
-        // Filas (Sin columna descuento)
+        // CORRECCIÓN PRECIO UNITARIO
         const itemsRows = window.tempBookingLines.map(line => {
             const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
             const itemName = item ? item.name : 'Artículo';
             const desc = item ? (item.description || '') : '';
+            
             let days = 0;
             if(line.startDate && line.endDate) {
                 const d1 = new Date(line.startDate); const d2 = new Date(line.endDate);
@@ -4654,6 +4660,9 @@ const App = {
             }
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
             
+            // LÓGICA DE PRECIO CORREGIDA: Si la línea viene en 0, usa el precio del item maestro
+            const unitPrice = parseFloat(line.basePrice) || parseFloat(item?.pricePerDay) || 0;
+
             return `
                 <tr style="border-bottom: 1px solid #eee;">
                     <td style="padding: 12px 0;">
@@ -4661,7 +4670,7 @@ const App = {
                         <div style="font-size: 10px; color: #666; margin-top:2px;">${line.note || desc}</div>
                         <div style="font-size: 10px; color: #888;">${line.startDate} al ${line.endDate} (${days} días)</div>
                     </td>
-                    <td style="padding: 12px 0; text-align: right;">${fmt(line.basePrice)}</td>
+                    <td style="padding: 12px 0; text-align: right;">${fmt(unitPrice)}</td>
                     <td style="padding: 12px 0; text-align: right; font-weight: bold;">${fmt(line.computedNet)}</td>
                 </tr>
             `;
@@ -4671,7 +4680,7 @@ const App = {
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white; padding: 40px; color: #333;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid #111; padding-bottom: 20px;">
                     <div>
-                        <img src="${logoUrl}" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
+                        <img id="pdf-logo-img" src="${logoSrc}" style="height: 60px; object-fit: contain; margin-bottom: 10px;">
                         <div style="font-size: 12px; color: #555; line-height: 1.4;">${companyInfo}</div>
                     </div>
                     <div style="text-align: right;">
@@ -4850,9 +4859,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <option value="3">Normal</option><option value="5">Grande</option><option value="6">Título</option>
             </select>
             <div class="toolbar-separator"></div>
+            
             <button class="toolbar-btn" onclick="document.execCommand('bold',false,null)" title="Negrita"><i class="fas fa-bold"></i></button>
             <button class="toolbar-btn" onclick="document.execCommand('italic',false,null)" title="Cursiva"><i class="fas fa-italic"></i></button>
             <button class="toolbar-btn" onclick="document.execCommand('underline',false,null)" title="Subrayado"><i class="fas fa-underline"></i></button>
+            
+            <div class="toolbar-btn" style="position: relative;" title="Color de Texto">
+                <i class="fas fa-palette"></i>
+                <input type="color" 
+                       style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;" 
+                       onchange="document.execCommand('foreColor', false, this.value); this.previousElementSibling.style.color = this.value;">
+            </div>
+        
             <div class="toolbar-separator"></div>
             <button class="toolbar-btn" onclick="document.execCommand('justifyLeft',false,null)"><i class="fas fa-align-left"></i></button>
             <button class="toolbar-btn" onclick="document.execCommand('justifyCenter',false,null)"><i class="fas fa-align-center"></i></button>
@@ -4866,6 +4884,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
