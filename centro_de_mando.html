@@ -2402,13 +2402,11 @@ const App = {
             // 2. Preparar Datos
             const b = isNew ? {} : AppState.data.Bookings.find(x => String(x.id) === String(id));
             
-            // Recuperar líneas guardadas o crear array vacío
             let currentLines = [];
             if (!isNew && AppState.data.BookingsDetails) {
                 currentLines = AppState.data.BookingsDetails.filter(d => String(d.bookingId) === String(id));
             }
             
-            // Migración Legacy (si existen datos viejos sin líneas)
             if (!isNew && currentLines.length === 0 && b.itemId) {
                 currentLines.push({
                     uuid: 'legacy_' + Date.now(), itemId: b.itemId, itemName: b.itemName,
@@ -2417,7 +2415,6 @@ const App = {
                 });
             }
         
-            // Volcar a memoria global temporal
             window.tempBookingLines = currentLines.map(l => ({
                 uuid: l.uuid || `line_${Math.random().toString(36).substr(2,9)}`,
                 itemId: l.itemId, startDate: l.startDate, endDate: l.endDate,
@@ -2428,31 +2425,7 @@ const App = {
                 note: l.lineNote || ''
             }));
         
-            // --- FUNCIÓN FULLSCREEN V13 (Lógica de Clases) ---
-            App.toggleFullscreenModal = function() {
-                const modalParent = document.querySelector('.modal-content');
-                if(!modalParent) return;
-                
-                // Alternar clase maestra en el padre
-                modalParent.classList.toggle('is-fullscreen');
-                const isFull = modalParent.classList.contains('is-fullscreen');
-                
-                // Ajuste estético de bordes internos (hijo)
-                const internal = document.getElementById('reservation-modal-content');
-                if(internal) {
-                    if(isFull) internal.classList.remove('rounded-xl');
-                    else internal.classList.add('rounded-xl');
-                }
-        
-                // Icono
-                const icon = document.getElementById('fullscreen-icon');
-                if(icon) {
-                    if (isFull) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
-                    else { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
-                }
-            };
-        
-            // 3. Renderizar Modal
+            // 3. Renderizar Modal (Full Screen Directo)
             const tpl = document.getElementById('reservation-modal-template');
             const clone = tpl.content.cloneNode(true);
             const divTemp = document.createElement('div');
@@ -2460,21 +2433,19 @@ const App = {
             let htmlContent = divTemp.innerHTML;
         
             const displayId = isNew ? 'NUEVA' : (b.id || '---');
-            // Inyectamos el ID oculto del form
             htmlContent = htmlContent.replace('id="input-reserva-id">', `id="input-reserva-id" value="${id||''}">`);
         
             // Mostrar Modal
             UI.showModal('', htmlContent, ''); 
             
-            // Inyectar ID visual en Header
+            // Inyectar ID visual
             setTimeout(() => {
                 const headerRef = document.getElementById('header-ref-display');
                 if(headerRef) headerRef.textContent = displayId;
             }, 0);
         
-            // 4. LÓGICA DE DATOS Y CÁLCULOS (Sin hacks de estilo)
+            // 4. LÓGICA DE DATOS
             setTimeout(() => {
-                // Llenar Campos
                 const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v||''; };
                 if (!isNew) {
                     setVal('c-customerName', b.customerName);
@@ -2494,14 +2465,12 @@ const App = {
                     }
                 }
         
-                // Helper Formato Moneda
                 const formatMoney = (amount) => {
                     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
                 };
         
                 const itemsList = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
                 
-                // --- MOTOR DE CÁLCULO ---
                 window.recalcBooking = () => {
                     let globalSub=0, totalTax=0, minD=null, maxD=null;
                     
@@ -2525,7 +2494,6 @@ const App = {
                         if(hasTax) totalTax += (net * 0.13);
                         globalSub += net;
         
-                        // Actualizar fila visualmente
                         const row = document.getElementById(`row-${line.uuid}`);
                         if(row) {
                             const inputTotal = row.querySelector('.line-total-input');
@@ -2543,7 +2511,6 @@ const App = {
                     let gDisc = (gType==='money') ? gVal : (globalSub * (gVal/100));
                     const final = Math.max(0, globalSub - gDisc + totalTax);
         
-                    // Totales formateados
                     document.getElementById('lbl-global-subtotal').innerText = formatMoney(globalSub);
                     document.getElementById('lbl-global-discount').innerText = formatMoney(gDisc * -1);
                     document.getElementById('lbl-global-tax').innerText = formatMoney(totalTax);
@@ -2553,7 +2520,6 @@ const App = {
                     document.getElementById('disp-date-range').innerText = `${fmt(minD)} a ${fmt(maxD)}`;
                 };
         
-                // --- RENDERIZADO DE FILA ---
                 const renderRow = (line) => {
                     const div = document.createElement('div');
                     div.id = `row-${line.uuid}`;
@@ -2586,7 +2552,6 @@ const App = {
                         </div>
                     `;
         
-                    // Flatpickr
                     const getBlocks = (itemId) => {
                         if(!itemId) return [];
                         const myId = document.getElementById('input-reserva-id').value;
@@ -2596,7 +2561,6 @@ const App = {
                     const fpS = flatpickr(div.querySelector('.line-start'), { ...fpCfg, onChange: (d,s) => { line.startDate=s; if(fpE) fpE.set('minDate', s); window.recalcBooking(); } });
                     const fpE = flatpickr(div.querySelector('.line-end'), { ...fpCfg, onChange: (d,s) => { line.endDate=s; window.recalcBooking(); } });
         
-                    // Listeners
                     div.querySelector('.line-item-select').addEventListener('change', (e) => {
                         line.itemId = e.target.value;
                         const newB = getBlocks(line.itemId);
@@ -2606,7 +2570,6 @@ const App = {
                     div.querySelector('.line-note').addEventListener('input', function(e) { line.note = this.value; this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; });
                     div.querySelector('.line-disc-type').addEventListener('change', e => { line.discountType=e.target.value; line.manualAdj=0; window.recalcBooking(); });
                     div.querySelector('.line-disc-val').addEventListener('input', e => { line.discountVal=parseFloat(e.target.value)||0; line.manualAdj=0; window.recalcBooking(); });
-                    
                     div.querySelector('.line-total-input').addEventListener('input', e => {
                         const userVal = parseFloat(e.target.value)||0;
                         const item = itemsList.find(i=>i.id===line.itemId);
@@ -2623,7 +2586,6 @@ const App = {
                     document.getElementById('lines-container').appendChild(div);
                 };
         
-                // Inicialización
                 if(window.tempBookingLines.length === 0) {
                     const today = new Date().toISOString().split('T')[0];
                     window.tempBookingLines.push({ uuid: `l_${Date.now()}`, itemId:'', startDate:today, endDate:today, basePrice:0, discountType:'percent', discountVal:0, manualAdj:0, note:'' });
@@ -4314,6 +4276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
