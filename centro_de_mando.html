@@ -140,7 +140,15 @@
         .booking-grid-header { background-color: #1a1a1a; color: #9ca3af; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
         .grid-input { background: transparent; border: none; border-bottom: 1px solid #4b5563; color: white; width: 100%; outline: none; transition: border-color 0.2s; }
         .grid-input:focus, .focus-gold:focus { border-color: #ffffff !important; }
-        select.dark-select { background-color: #1f2937; color: white; border-color: #374151; }
+        select.dark-select { 
+            background-color: #1a1a1a !important; 
+            color: white !important; 
+            border-color: rgba(255, 255, 255, 0.1) !important; /* Mismo borde sutil del resto */
+        }
+        select.dark-select option { 
+            background-color: #1a1a1a !important; 
+            color: white !important; 
+        }
         .font-total { font-family: 'Inter', sans-serif; font-weight: 800; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
@@ -4284,6 +4292,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
