@@ -97,42 +97,58 @@
 
 
         
-       /* --- FIX V11.1: ESTABILIDAD TOTAL --- */
 
-        /* 1. ELIMINAR EL CONTENEDOR BLANCO PADRE Y SU SCROLL */
+        /* --- FIX V12: SOLUCIÓN FINAL SCROLL Y FULLSCREEN --- */
+
+        /* 1. ELIMINAR EL CONTENEDOR BLANCO Y SU SCROLL (ESTADO NORMAL) */
+        /* Esto fuerza al modal genérico a ser transparente y ajustarse a nuestro diseño */
         .modal-content:has(#reservation-modal-content) {
-            background-color: transparent !important;
+            background: transparent !important;
             box-shadow: none !important;
             border: none !important;
             padding: 0 !important;
-            max-width: none !important;
-            width: auto !important;
-            height: auto !important;
-            overflow: hidden !important; /* CRÍTICO: Mata el scrollbar gris externo */
+            
+            /* Dimensiones Iniciales (Modo Ventana) */
+            width: 95% !important;
+            max-width: 1400px !important;
+            height: 85vh !important; 
+            
+            /* ESTO MATA EL SCROLLBAR GRIS EXTERNO: */
+            overflow: hidden !important; 
+            display: flex !important;
+            flex-direction: column !important;
         }
         
-        /* Ocultar header/footer genéricos */
+        /* Ocultar elementos basura del modal genérico */
         .modal-content:has(#reservation-modal-content) > .border-b,
         .modal-content:has(#reservation-modal-content) > .bg-gray-50 {
             display: none !important;
         }
         
-        /* 2. FULLSCREEN REAL */
+        /* 2. FULLSCREEN REAL (PEGADO A LOS BORDES) */
         .modal-content.is-fullscreen {
             position: fixed !important;
-            inset: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
             max-width: none !important;
             max-height: none !important;
+            margin: 0 !important;
             border-radius: 0 !important;
             background-color: #0a0a0a !important;
             z-index: 9999 !important;
-            overflow: hidden !important;
         }
-        .modal-overlay:has(.is-fullscreen) { padding: 0 !important; display: flex !important; }
         
-        /* 3. ESTILOS INTERNOS */
+        /* Permitir que el overlay deje pasar el fullscreen */
+        .modal-overlay:has(.is-fullscreen) {
+            padding: 0 !important;
+            align-items: flex-start !important;
+        }
+        
+        /* 3. ESTILOS INTERNOS (Mantener diseño bonito) */
         .booking-grid-header { background-color: #1a1a1a; color: #9ca3af; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
         .grid-input { background: transparent; border: none; border-bottom: 1px solid #4b5563; color: white; width: 100%; outline: none; transition: border-color 0.2s; }
         .grid-input:focus, .focus-gold:focus { border-color: #B8860B !important; }
@@ -4315,6 +4331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
