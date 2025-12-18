@@ -2503,7 +2503,7 @@ const App = {
                 // 2. Guardamos el estado inicial (Original)
                 const initialState = getFormSnapshot();
         
-                // 3. Función Segura de Cierre
+                // 3. Función Segura de Cierre (CON MODAL PROPIO)
                 App.attemptCloseBooking = () => {
                     const currentState = getFormSnapshot();
                     
@@ -2513,15 +2513,54 @@ const App = {
                         return;
                     }
         
-                    // SI HAY CAMBIOS: Lanzamos alerta
-                    // Nota: Aquí uso confirm() nativo por seguridad y rapidez. 
-                    // Si tienes un UI.showConfirm bonito, úsalo así: UI.showConfirm("...", () => UI.closeModal());
-                    const userChoice = confirm("⚠️ TIENES CAMBIOS SIN GUARDAR\n\nSi sales ahora, perderás todo el progreso de esta cotización.\n\n¿Estás seguro que deseas salir y descartar los cambios?");
+                    // SI HAY CAMBIOS: Mostramos Modal Personalizado (Z-Index Superior)
+                    // Creamos el overlay dinámicamente
+                    const overlay = document.createElement('div');
+                    overlay.className = "fixed inset-0 z-[100000] bg-black/80 backdrop-blur-sm flex items-center justify-center opacity-0 transition-opacity duration-200";
                     
-                    if (userChoice) {
-                        UI.closeModal(); // El usuario eligió perder los cambios
-                    }
-                    // Si elige Cancelar, no hacemos nada y se queda en el modal (Opción "Seguir Editando")
+                    // HTML del Modal (Estilo idéntico a tu sistema)
+                    overlay.innerHTML = `
+                        <div class="bg-[#0a0a0a] border border-white/10 rounded-xl p-6 w-[90%] max-w-sm shadow-2xl transform scale-95 transition-transform duration-200">
+                            <div class="text-center mb-5">
+                                <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+                                </div>
+                                <h3 class="text-white font-bold text-lg mb-2">Cambios sin guardar</h3>
+                                <p class="text-gray-400 text-sm leading-relaxed">
+                                    Tienes modificaciones pendientes en esta reserva. Si sales ahora, perderás todos los cambios no guardados.
+                                </p>
+                            </div>
+                            <div class="flex gap-3">
+                                <button id="btn-alert-stay" class="flex-1 px-4 py-2 rounded text-sm font-bold text-gray-400 hover:text-white border border-white/10 hover:border-white transition-colors">
+                                    Seguir Editando
+                                </button>
+                                <button id="btn-alert-leave" class="flex-1 px-4 py-2 rounded text-sm font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg transition-colors">
+                                    Salir y Perder
+                                </button>
+                            </div>
+                        </div>
+                    `;
+        
+                    document.body.appendChild(overlay);
+        
+                    // Animación de entrada
+                    requestAnimationFrame(() => {
+                        overlay.classList.remove('opacity-0');
+                        overlay.querySelector('div').classList.remove('scale-95');
+                        overlay.querySelector('div').classList.add('scale-100');
+                    });
+        
+                    // Acción: QUEDARSE
+                    overlay.querySelector('#btn-alert-stay').onclick = () => {
+                        overlay.classList.add('opacity-0');
+                        setTimeout(() => overlay.remove(), 200);
+                    };
+        
+                    // Acción: SALIR (Destruye todo)
+                    overlay.querySelector('#btn-alert-leave').onclick = () => {
+                        overlay.remove();
+                        UI.closeModal(); // Cierra el modal principal de reserva
+                    };
                 };
         
                 // 4. Interceptamos los botones de Cerrar y Cancelar del HTML
@@ -4352,6 +4391,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
