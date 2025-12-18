@@ -2205,8 +2205,15 @@ const App = {
                  nextOrder = maxOrder + 1;
              }
              
-             html = `${UI.inputHTML('c','order','Orden',p?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',p?.title)} ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
-
+            // Definimos las opciones de estado
+             const statusOpts = [{id:'active', name:'🟢 Visible en Web'}, {id:'hidden', name:'👁️ Oculto'}];
+             
+             // Agregamos el selector al HTML
+             html = `${UI.inputHTML('c','order','Orden',p?.order||nextOrder,'number')} 
+                     ${UI.selectHTML('c','status','Visibilidad Web', statusOpts, p?.status||'active')}
+                     ${UI.inputHTML('c','title','Título',p?.title)} 
+                     ${UI.textareaHTML('c','description','Descripción',p?.description)}`;
+            
              // 2. Botones de Izquierda (Solo al editar)
             if (!isNew) {
                  leftButtons = `
@@ -2278,10 +2285,17 @@ const App = {
              });
              iconsHtml += `</div></div>`;
 
-             const editorHtml = `<div class="mb-4"><label class="form-label">Introducción (Bio)</label><div id="editor-intro"></div></div>`;
+            const editorHtml = `<div class="mb-4"><label class="form-label">Introducción (Bio)</label><div id="editor-intro"></div></div>`;
 
-             html = `${UI.inputHTML('c','order','Orden',s?.order||nextOrder,'number')} ${UI.inputHTML('c','title','Título',s?.title)} ${iconsHtml} ${editorHtml}`;
-             
+             // Definimos opciones
+             const statusOpts = [{id:'active', name:'🟢 Visible en Web'}, {id:'hidden', name:'👁️ Oculto'}];
+
+             // Agregamos el selector al HTML
+             html = `${UI.inputHTML('c','order','Orden',s?.order||nextOrder,'number')} 
+                     ${UI.selectHTML('c','status','Visibilidad Web', statusOpts, s?.status||'active')}
+                     ${UI.inputHTML('c','title','Título',s?.title)} 
+                     ${iconsHtml} ${editorHtml}`;
+            
              App.selectIcon = (btn, iconClass) => {
                  document.querySelectorAll('.icon-option').forEach(b => b.className = 'icon-option p-1.5 rounded text-center transition-all bg-white text-gray-600 hover:bg-gray-200');
                  btn.className = 'icon-option p-1.5 rounded text-center transition-all bg-gray-800 text-white ring-2 ring-offset-1 ring-gray-800';
@@ -2336,7 +2350,7 @@ const App = {
              // 2. Checkbox de Impuesto y Calculadora
              const hasTaxChecked = String(i?.hasTax).toUpperCase() === 'TRUE' ? 'checked' : '';
              
-             const taxHtml = `
+            const taxHtml = `
                 <div class="mb-4 bg-gray-50 p-3 rounded border">
                     <div class="flex items-center mb-2">
                         <input type="checkbox" id="c-hasTax" class="w-4 h-4 text-blue-600 rounded cursor-pointer" ${hasTaxChecked}>
@@ -2349,14 +2363,21 @@ const App = {
                 </div>
              `;
 
+             // Definimos los 3 estados
+             const statusOpts = [
+                 {id:'active', name:'🟢 Visible (Web + Admin)'}, 
+                 {id:'hidden', name:'👁️ Oculto (Solo Admin)'},
+                 {id:'blocked', name:'🔴 Bloqueado (Nadie)'}
+             ];
+
              html = `${UI.inputHTML('c', 'order', 'Orden', i?.order||nextOrder, 'number')} 
+                     ${UI.selectHTML('c', 'status', 'Estado del Equipo', statusOpts, i?.status||'active')}
                      ${UI.inputHTML('c', 'name', 'Nombre', i?.name)} 
                      ${UI.selectHTML('c', 'categoryId', 'Categoría', cats, i?.categoryId)} 
                      ${UI.inputHTML('c', 'pricePerDay', 'Precio Base (Sin Impuesto)', i?.pricePerDay, 'number')} 
                      ${taxHtml} 
                      ${UI.textareaHTML('c', 'description', 'Descripción Corta', i?.description)} 
                      ${UI.textareaHTML('c', 'longDescription', 'Descripción Larga', i?.longDescription)}`;
-             
              // 3. Botones Estandarizados
              if (!isNew) {
                  leftButtons = `
@@ -2577,15 +2598,21 @@ const App = {
         
                 // --- FIN SISTEMA PROTECCIÓN ---
         
-        
+
+                
                 // B. Helpers y Cálculos (Tu lógica original se mantiene igual)
                 const formatMoney = (amount) => {
                     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(amount);
                 };
         
-                const itemsList = (AppState.data.RentalItems || []).sort((a,b) => a.name.localeCompare(b.name));
+                // FILTRO APLICADO: Si status es 'blocked', NO aparece en la lista.
+                const itemsList = (AppState.data.RentalItems || [])
+                    .filter(i => i.status !== 'blocked')
+                    .sort((a,b) => a.name.localeCompare(b.name));
                 
                 window.recalcBooking = () => {
+
+                    
                     let globalSub=0, totalTax=0, minD=null, maxD=null;
                     
                     window.tempBookingLines.forEach(line => {
@@ -4391,6 +4418,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
