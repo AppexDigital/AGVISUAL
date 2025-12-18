@@ -4555,7 +4555,7 @@ const App = {
         });
     },
 
-    // 4. Generación Directa (Sin abrir editor, botones rápidos)
+    // 4. Generación Directa (Ajuste "Espera Activa de Imagen")
     async generateQuoteDocument(mode) {
         const content = App.getQuoteHTMLString();
 
@@ -4566,30 +4566,56 @@ const App = {
             setTimeout(() => { win.focus(); win.print(); }, 800);
 
         } else if (mode === 'pdf') {
-            UI.showLoading('Generando PDF...');
+            UI.showLoading('Procesando Documento...');
             
-            // Crear contenedor temporal
+            // Crear contenedor temporal fuera de la vista
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = content;
-            tempDiv.style.width = '800px'; // Forzar ancho para consistencia
+            tempDiv.style.width = '800px'; 
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px'; // Oculto pero renderizable
             document.body.appendChild(tempDiv);
 
-            // FIX CRÍTICO: Convertir logo a Base64 antes de llamar a html2pdf
-            await App.convertLogoToBase64InContainer(tempDiv);
+            // ESTRATEGIA: Esperar explícitamente a que la imagen reporte "onload"
+            const logoImg = tempDiv.querySelector('#pdf-logo-img');
+            
+            const waitForImage = new Promise((resolve) => {
+                // Si no hay logo o no tiene src, seguimos inmediato
+                if (!logoImg || !logoImg.src) return resolve(); 
+                // Si el navegador dice que ya está completa (cache), seguimos
+                if (logoImg.complete) return resolve(); 
+                
+                // Si no, esperamos el evento
+                logoImg.onload = () => resolve(); 
+                logoImg.onerror = () => resolve(); // Si falla, seguimos sin logo para no colgar
+                
+                // Timeout de seguridad: Si en 3s no carga, generamos igual
+                setTimeout(resolve, 3000); 
+            });
+
+            await waitForImage; // Pausa aquí hasta tener imagen
 
             const opt = {
-                margin: 10, filename: `Cotizacion.pdf`,
+                margin: 10, 
+                filename: `Cotizacion.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, // Vital para imágenes
+                    letterRendering: true,
+                    scrollY: 0
+                },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
+            UI.showLoading('Generando PDF...');
+            
             html2pdf().set(opt).from(tempDiv).save().then(() => {
                 document.body.removeChild(tempDiv);
                 UI.hideLoading();
                 UI.showToast('PDF Descargado');
             }).catch(e => {
-                document.body.removeChild(tempDiv);
+                if(document.body.contains(tempDiv)) document.body.removeChild(tempDiv);
                 UI.hideLoading();
                 console.error(e);
                 UI.showToast('Error en PDF', 'error');
@@ -4617,7 +4643,7 @@ const App = {
         }
     },
 
-    // 6. Constructor de HTML (Datos puros)
+    // 6. Constructor de HTML (Datos puros + Cálculo Inverso)
     getQuoteHTMLString() {
         // Recolectar Datos
         const customerName = document.getElementById('c-customerName')?.value || 'Cliente';
@@ -4636,7 +4662,7 @@ const App = {
         const sysImages = (AppState.data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         const ident = (AppState.data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
         
-        // CORRECCIÓN IMAGEN: Usamos Base64 si existe, sino URL (fallback)
+        // Prioridad: Base64 > URL Sistema > Placeholder
         const logoSrc = App.LOGO_BASE64 || sysImages.logo_black || 'https://placehold.co/150x50?text=LOGO';
 
         const companyInfo = `
@@ -4647,21 +4673,25 @@ const App = {
             ${ident.legal_phone || ''}
         `;
 
-        // CORRECCIÓN PRECIO UNITARIO
+        // Filas con Lógica Inversa de Precio
         const itemsRows = window.tempBookingLines.map(line => {
             const item = (AppState.data.RentalItems || []).find(i => i.id === line.itemId);
             const itemName = item ? item.name : 'Artículo';
             const desc = item ? (item.description || '') : '';
             
-            let days = 0;
+            // Cálculo de días
+            let days = 1; // Default 1 para evitar división por cero
             if(line.startDate && line.endDate) {
                 const d1 = new Date(line.startDate); const d2 = new Date(line.endDate);
-                days = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+                const diff = Math.floor((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+                if (diff > 0) days = diff;
             }
+
             const fmt = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
             
-            // LÓGICA DE PRECIO CORREGIDA: Si la línea viene en 0, usa el precio del item maestro
-            const unitPrice = parseFloat(line.basePrice) || parseFloat(item?.pricePerDay) || 0;
+            // LÓGICA SOLICITADA: Unitario = Total Neto / Días
+            // Esto asegura que el unitario visual refleje el descuento aplicado proporcionalmente
+            const unitPrice = line.computedNet / days;
 
             return `
                 <tr style="border-bottom: 1px solid #eee;">
@@ -4732,7 +4762,6 @@ const App = {
             </div>
         `;
     },
-
 
 
     
@@ -4868,7 +4897,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <i class="fas fa-palette"></i>
                 <input type="color" 
                        style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;" 
-                       onchange="document.execCommand('foreColor', false, this.value); this.previousElementSibling.style.color = this.value;">
+                       oninput="document.execCommand('foreColor', false, this.value); this.previousElementSibling.style.color = this.value;">
             </div>
         
             <div class="toolbar-separator"></div>
@@ -4884,6 +4913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
