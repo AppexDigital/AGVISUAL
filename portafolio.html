@@ -2009,8 +2009,14 @@
             // =================================================================
             const showCheckoutModal = () => {
                 const container = document.getElementById('checkout-modal-container');
-                const total = cart.reduce((t,i)=>t+(i.price*i.totalDays),0);
-                // DENTRO DE showCheckoutModal
+                
+                // 1. CÁLCULO CORRECTO DEL TOTAL (Incluyendo IVA si aplica)
+                const total = cart.reduce((t, i) => {
+                    const lineSubtotal = i.price * i.totalDays;
+                    const lineTotal = i.hasTax ? (lineSubtotal * 1.13) : lineSubtotal;
+                    return t + lineTotal;
+                }, 0);
+
                 container.innerHTML = `
                 <div id="checkout-modal-overlay" class="checkout-modal-overlay visible">
                     <div id="checkout-modal-content" class="checkout-modal-content">
@@ -2039,15 +2045,16 @@
                                         <div class="flex justify-between text-sm border-b pb-2">
                                             <div>
                                                 <span class="font-bold block">${i.name}</span>
-                                                <span class="text-xs text-gray-500">${i.totalDays} días (${new Date(i.startDate).toLocaleDateString()} - ${new Date(i.endDate).toLocaleDateString()})</span>
+                                                <span class="text-xs text-gray-500">${i.totalDays} días (${new Date(i.startDate + 'T00:00:00').toLocaleDateString()} - ${new Date(i.endDate + 'T00:00:00').toLocaleDateString()})</span>
                                             </div>
                                             <div class="text-right">
                                                 <span class="font-bold">$${((i.price * i.totalDays) * (i.hasTax ? 1.13 : 1)).toFixed(2)}</span>
+                                                ${i.hasTax ? '<span class="text-[10px] text-gray-400 block">(Inc. IVA)</span>' : ''}
                                             </div>
                                         </div>`).join('')}
                                 </div>
                                 <div class="flex justify-between items-center font-bold text-xl mt-6 pt-4 border-t border-black">
-                                    <span>Total Estimado:</span>
+                                    <span>Total:</span>
                                     <span>$${total.toFixed(2)}</span>
                                 </div>
                             </div>
@@ -2069,34 +2076,47 @@
                                     <span id="final-res-id" class="text-3xl font-mono font-bold tracking-widest text-black">---</span>
                                 </div>
                                 <p class="text-sm text-gray-500 mb-6">Te hemos enviado un correo con los detalles. Nos pondremos en contacto pronto.</p>
-                                <button id="btn-finish" class="bg-black text-white py-3 px-8 rounded-full font-bold hover:bg-gray-800 transition-transform hover:scale-105">Volver al Inicio</button>
+                                <button id="btn-finish" class="bg-black text-white py-3 px-8 rounded-full font-bold hover:bg-gray-800 transition-transform hover:scale-105">Cerrar</button>
                             </div>
                         </div>
                     </div>
                 </div>`;
                 
                 const overlay = document.getElementById('checkout-modal-overlay');
-                const step1 = document.getElementById('step-1'); const step2 = document.getElementById('step-2'); const step3 = document.getElementById('step-3');
+                const step1 = document.getElementById('step-1'); 
+                const step2 = document.getElementById('step-2'); 
+                const step3 = document.getElementById('step-3');
                 
-                setTimeout(()=>overlay.classList.add('visible'),10);
                 const close = () => { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
-                document.getElementById('close-co').onclick = close;
-                document.getElementById('btn-next-1').onclick = () => { if(document.getElementById('co-form').checkValidity()) { step1.classList.remove('active'); step2.classList.add('active'); } else document.getElementById('co-form').reportValidity(); };
-                document.getElementById('btn-back-2').onclick = () => { step2.classList.remove('active'); step1.classList.add('active'); };
                 
-                // Lógica de Envío Real
+                document.getElementById('close-co').onclick = close;
+                document.getElementById('btn-finish').onclick = close;
+                
+                document.getElementById('btn-next-1').onclick = () => { 
+                    if(document.getElementById('co-form').checkValidity()) { 
+                        step1.classList.remove('active'); 
+                        step2.classList.add('active'); 
+                    } else document.getElementById('co-form').reportValidity(); 
+                };
+                
+                document.getElementById('btn-back-2').onclick = () => { 
+                    step2.classList.remove('active'); 
+                    step1.classList.add('active'); 
+                };
+
+                // LÓGICA DE ENVÍO REAL (Batch Completo)
                 document.getElementById('btn-pay').onclick = async () => {
                     const btn = document.getElementById('btn-pay');
                     const spinner = document.getElementById('co-spinner');
                     
-                    // 1. Bloquear UI
+                    // Bloquear UI
                     btn.disabled = true;
                     btn.querySelector('span').textContent = 'Procesando...';
                     spinner.classList.remove('hidden');
-    
+
                     try {
-                        // 2. Preparar Datos
                         const now = new Date();
+                        // Generar ID formato Centro de Mando: RES-AAMMMM-RAND
                         const bookingId = `RES-${now.getFullYear().toString().slice(-2)}${(now.getMonth()+1).toString().padStart(2,'0')}-${Math.floor(1000 + Math.random() * 9000)}`;
                         
                         const customer = {
@@ -2106,20 +2126,20 @@
                             email: document.getElementById('co-email').value,
                             address: document.getElementById('co-address').value
                         };
-    
-                        // Resumen de items para la cabecera
-                        const itemNames = cart.map(i => i.name);
-                        const summaryName = itemNames.length > 1 ? `${itemNames[0]} + ${itemNames.length-1} más` : itemNames[0];
-                        
-                        // Calcular fechas globales
+
+                        // Calcular fechas globales de la reserva
                         const starts = cart.map(i => new Date(i.startDate));
                         const ends = cart.map(i => new Date(i.endDate));
                         const minDate = new Date(Math.min(...starts)).toISOString().split('T')[0];
                         const maxDate = new Date(Math.max(...ends)).toISOString().split('T')[0];
-    
+
+                        // Resumen de items
+                        const itemNames = cart.map(i => i.name);
+                        const summaryName = itemNames.length > 1 ? `${itemNames[0]} + ${itemNames.length-1} más` : itemNames[0];
+
                         const batch = [];
-    
-                        // A. Cabecera Reserva
+
+                        // 1. REGISTRAR CABECERA DE RESERVA
                         batch.push({
                             sheet: 'Bookings',
                             action: 'add',
@@ -2132,7 +2152,7 @@
                                 customerAddress: customer.address,
                                 itemName: summaryName,
                                 totalPrice: total,
-                                status: 'Pendiente', // Por defecto
+                                status: 'Pendiente', 
                                 startDate: minDate,
                                 endDate: maxDate,
                                 bookingTimestamp: now.toISOString(),
@@ -2140,12 +2160,12 @@
                                 globalNotes: 'Reserva Web'
                             }
                         });
-    
-                        // B. Detalles y Bloqueos por cada item
+
+                        // 2. REGISTRAR DETALLES Y BLOQUEOS POR ITEM
                         cart.forEach((item, idx) => {
                             const detailId = `bd_${Date.now()}_${idx}`;
                             
-                            // Detalle
+                            // Detalle Contable
                             batch.push({
                                 sheet: 'BookingsDetails',
                                 action: 'add',
@@ -2157,12 +2177,13 @@
                                     startDate: item.startDate,
                                     endDate: item.endDate,
                                     basePrice: item.price,
+                                    // Guardamos el total de la línea ya con impuesto si aplica
                                     lineTotal: (item.price * item.totalDays) * (item.hasTax ? 1.13 : 1),
                                     lineNote: 'Web'
                                 }
                             });
-    
-                            // Bloqueo
+
+                            // Bloqueo de Calendario
                             batch.push({
                                 sheet: 'BlockedDates',
                                 action: 'add',
@@ -2176,39 +2197,41 @@
                                 }
                             });
                         });
-    
-                        // 3. Enviar al Backend
+
+                        // 3. ENVIAR AL SERVIDOR
+                        // Nota: Si esto da 401, el backend requiere permisos públicos
                         const response = await fetch('/.netlify/functions/update-sheet-data', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(batch)
                         });
-    
-                        if (!response.ok) throw new Error('Error de red');
-    
-                        // 4. Éxito
+
+                        if (!response.ok) {
+                            if(response.status === 401) throw new Error('Error de permisos (401). Contacta al administrador.');
+                            throw new Error('Error de red o servidor');
+                        }
+
+                        // 4. ÉXITO
                         document.getElementById('final-res-id').textContent = bookingId;
                         
-                        // Limpiar Carrito y Memoria
+                        // Limpiar Memoria y Carrito
                         cart = [];
-                        saveCartToMemory(); // Limpia localStorage
+                        if(typeof saveCartToMemory === 'function') saveCartToMemory(); 
                         renderCart();
                         updateCartIcon();
-    
-                        // Pasar al paso 3
-                        document.getElementById('step-2').classList.remove('active');
-                        document.getElementById('step-3').classList.add('active');
-    
+
+                        // Avanzar
+                        step2.classList.remove('active');
+                        step3.classList.add('active');
+
                     } catch (error) {
                         console.error(error);
-                        alert("Hubo un error procesando tu solicitud. Por favor intenta de nuevo o contáctanos.");
+                        alert(`No se pudo procesar la reserva: ${error.message}`);
                         btn.disabled = false;
                         btn.querySelector('span').textContent = 'Confirmar Reserva';
                         spinner.classList.add('hidden');
                     }
                 };
-                
-                document.getElementById('btn-finish').onclick = close;
             };
     
             const showCalendarModal = (item, bookedDates) => {
