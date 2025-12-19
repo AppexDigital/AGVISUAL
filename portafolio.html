@@ -1008,59 +1008,51 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            
+        
             // =================================================================
-            // 1. VARIABLES GLOBALES Y MEMORIA
+            // 1. GESTIÓN DE ESTADO Y MEMORIA (GLOBAL DATA)
             // =================================================================
             let globalData = {
                 portfolio: [],
                 videos: [],
                 logos: [],
-                allProjectImages: [], // Caché de fotos
-                projects: [],         // Se llena al entrar a Proyectos
-                services: [],         // Se llena al entrar a Servicios
-                rentals: { items: [], categories: [], dates: [] } // Se llena al entrar a Alquiler
+                allProjectImages: [], // Caché vital para armar proyectos sin re-pedir
+                projects: [],         
+                services: [],         
+                rentals: { items: [], categories: [], dates: [] } 
             };
-            let rentalDataGlobal = {}; // Auxiliar para calendario
-            let cart = []; // Estado del carrito
+            let rentalDataGlobal = {}; // Auxiliar para filtrado de alquiler
+            let cart = []; // Carrito de compras
     
             // =================================================================
             // 2. SELECTORES DEL DOM
             // =================================================================
-            const mainContent = document.getElementById('main-content');
             const header = document.getElementById('header');
             const mobileMenuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
             const allNavLinks = document.querySelectorAll('.nav-link');
-            
-            // Lightbox
-            const lightbox = document.getElementById('lightbox');
-            const lightboxImage = document.getElementById('lightbox-image');
-            const lightboxClose = document.getElementById('lightbox-close');
-            const lightboxPrev = document.getElementById('lightbox-prev');
-            const lightboxNext = document.getElementById('lightbox-next');
-            const lightboxCaption = document.getElementById('lightbox-caption');
             const pageLoader = document.getElementById('page-loader');
             
-            // Carrito
-            const cartButton = document.getElementById('cart-button');
-            const mobileCartButton = document.getElementById('mobile-cart-button');
-            const cartItemCount = document.getElementById('cart-item-count');
-            const mobileCartItemCount = document.getElementById('mobile-cart-item-count');
+            // Elementos de Lightbox
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightbox-image');
+            const lightboxCaption = document.getElementById('lightbox-caption');
+            
+            // Elementos del Carrito
             const cartOverlay = document.getElementById('cart-overlay');
             const cartDrawer = document.getElementById('cart-drawer');
-            const cartCloseBtn = document.getElementById('cart-close-btn');
             const cartItemsContainer = document.getElementById('cart-items-container');
             const cartEmptyState = document.getElementById('cart-empty-state');
-            const cartSubtotalEl = document.getElementById('cart-subtotal');
             const checkoutBtn = document.getElementById('checkout-btn');
+            const cartItemCount = document.getElementById('cart-item-count');
+            const mobileCartItemCount = document.getElementById('mobile-cart-item-count');
     
             // =================================================================
-            // 3. API FETCH (CONEXIÓN)
+            // 3. API Y CARGA DE DATOS (BACKEND CONNECTION)
             // =================================================================
             const fetchSectionData = async (section) => {
                 try {
-                    console.log(`📡 Descargando sección: ${section}...`);
+                    console.log(`📡 Descargando paquete: ${section}...`);
                     const res = await fetch(`/.netlify/functions/get-website-data?section=${section}`);
                     if (!res.ok) throw new Error('Error API');
                     return await res.json();
@@ -1070,246 +1062,77 @@
                 }
             };
     
-            // =================================================================
-            // 4. LÓGICA DEL CARRITO Y CHECKOUT
-            // =================================================================
-            const toggleCart = (show) => {
-                if (show) {
-                    cartOverlay.classList.add('visible');
-                    cartDrawer.classList.add('visible');
-                } else {
-                    cartOverlay.classList.remove('visible');
-                    cartDrawer.classList.remove('visible');
-                }
-            };
+            const loadSection = async (sectionName) => {
+                // 1. Verificar Caché (Si ya existe, no pedir)
+                if (sectionName === 'projects' && globalData.projects.length > 0) return;
+                if (sectionName === 'services' && globalData.services.length > 0) return;
+                if (sectionName === 'rental' && globalData.rentals.items.length > 0) return;
     
-            const updateCartIcon = () => {
-                const count = cart.length;
-                cartItemCount.textContent = count;
-                cartItemCount.classList.toggle('visible', count > 0);
-                mobileCartItemCount.textContent = count;
-                mobileCartItemCount.classList.toggle('visible', count > 0);
-            };
+                // 2. Pedir Datos
+                // Mapeo: en HTML usamos 'rental', en API se llama 'rentals'
+                const apiParam = sectionName === 'rental' ? 'rentals' : sectionName; 
+                const data = await fetchSectionData(apiParam);
+                
+                if (!data) return;
     
-            const renderCart = () => {
-                const items = cartItemsContainer.querySelectorAll('.cart-item');
-                items.forEach(item => item.remove());
-    
-                if (cart.length === 0) {
-                    cartEmptyState.style.display = 'flex';
-                    checkoutBtn.disabled = true;
-                } else {
-                    cartEmptyState.style.display = 'none';
-                    checkoutBtn.disabled = false;
-                    cart.forEach(item => {
-                        const cartItemEl = document.createElement('div');
-                        cartItemEl.className = 'cart-item flex items-start space-x-4 py-4 border-b';
-                        cartItemEl.innerHTML = `
-                            <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover">
-                            <div class="flex-grow">
-                                <h4 class="font-bold">${item.name}</h4>
-                                <p class="text-sm text-gray-500">
-                                    ${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}
-                                </p>
-                                <p class="text-sm text-gray-500">${item.totalDays} día(s)</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
-                                <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}">
-                                    <i class="fas fa-trash-alt mr-1"></i>Eliminar
-                                </button>
-                            </div>
-                        `;
-                        cartItemsContainer.appendChild(cartItemEl);
+                // 3. Guardar y Renderizar Inmediatamente
+                if (sectionName === 'projects') {
+                    globalData.projects = (data.projects || []).map(p => {
+                        // Unir con fotos cacheadas en Home
+                        const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
+                        const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
+                        return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
                     });
-                }
-                const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
-                cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-            };
-    
-            const addToCart = (item, startDate, endDate) => {
-                const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
-                const cartId = `${item.id}-${startDate}`; 
-                if (cart.some(cartItem => cartItem.cartId === cartId)) {
-                    alert('Este artículo ya está en tu carrito para estas fechas.');
-                    return;
-                }
-                cart.push({
-                    ...item,
-                    cartId: cartId,
-                    startDate: startDate,
-                    endDate: endDate,
-                    totalDays: totalDays,
-                    image: item.images[0] 
-                });
-                renderCart();
-                updateCartIcon();
-                toggleCart(true);
-            };
-    
-            const showCheckoutModal = () => {
-                const checkoutModalContainer = document.getElementById('checkout-modal-container');
-                const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
-                const summaryItemsHTML = cart.map(item => `
-                    <div class="checkout-summary-item">
-                        <div class="flex items-start space-x-4">
-                            <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover">
-                            <div>
-                                <p class="font-bold">${item.name}</p>
-                                <p class="text-sm text-gray-500">${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}</p>
-                            </div>
-                        </div>
-                        <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
-                    </div>
-                `).join('');
-    
-                checkoutModalContainer.innerHTML = `
-                    <div id="checkout-modal-overlay" class="checkout-modal-overlay">
-                        <div id="checkout-modal-content" class="checkout-modal-content">
-                            <div class="p-6 border-b flex justify-between items-center">
-                                <h2 class="text-2xl font-display">Finalizar Reserva</h2>
-                                <button id="checkout-close-btn" class="text-2xl text-gray-500 hover:text-black">×</button>
-                            </div>
-                            <div id="checkout-step-1" class="checkout-step active">
-                                <div class="p-6">
-                                    <h3 class="font-bold mb-4">1. Detalles de Contacto</h3>
-                                    <form id="contact-form" class="space-y-4">
-                                        <div><label class="block text-sm font-medium text-gray-700">Nombre Completo</label><input type="text" id="name" required class="form-input mt-1"></div>
-                                        <div><label class="block text-sm font-medium text-gray-700">Correo Electrónico</label><input type="email" id="email" required class="form-input mt-1"></div>
-                                        <div><label class="block text-sm font-medium text-gray-700">Teléfono</label><input type="tel" id="phone" required class="form-input mt-1"></div>
-                                    </form>
-                                </div>
-                                <div class="p-6 bg-gray-50 border-t flex justify-end"><button id="to-step-2-btn" class="bg-black text-white py-3 px-6 font-bold">Siguiente</button></div>
-                            </div>
-                            <div id="checkout-step-2" class="checkout-step">
-                                <div class="p-6 overflow-y-auto"><h3 class="font-bold mb-4">2. Resumen</h3><div id="checkout-summary-container">${summaryItemsHTML}</div><div class="flex justify-between font-bold text-xl pt-4 mt-4 border-t"><span>Total:</span><span>$${subtotal.toFixed(2)}</span></div></div>
-                                <div class="p-6 bg-gray-50 border-t flex justify-between"><button id="back-to-step-1-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button><button id="to-step-3-btn" class="bg-black text-white py-3 px-6 font-bold">Continuar al Pago</button></div>
-                            </div>
-                            <div id="checkout-step-3" class="checkout-step">
-                                 <div class="p-6"><h3 class="font-bold mb-4">3. Pago Seguro</h3><form id="payment-form" class="space-y-4"><div><label class="block text-sm font-medium text-gray-700">Tarjeta</label><input type="text" required class="form-input mt-1" placeholder="0000 0000 0000 0000"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Vence</label><input type="text" required class="form-input mt-1" placeholder="MM/AA"></div><div><label class="block text-sm font-medium text-gray-700">CVC</label><input type="text" required class="form-input mt-1" placeholder="123"></div></div></form></div>
-                                <div class="p-6 bg-gray-50 border-t flex justify-between"><button id="back-to-step-2-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button><button id="pay-now-btn" class="bg-black text-white py-3 px-6 font-bold">Pagar $${subtotal.toFixed(2)}</button></div>
-                            </div>
-                            <div id="checkout-step-4" class="checkout-step">
-                                <div class="p-8 text-center flex flex-col items-center justify-center">
-                                    <div id="payment-processing" class="flex flex-col items-center justify-center p-8"><div class="loader-circle mb-4"></div><p>Procesando...</p></div>
-                                    <div id="payment-success" class="hidden"><div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6"><i class="fas fa-check text-4xl text-green-600"></i></div><h3 class="font-display text-3xl mb-2">¡Reserva Confirmada!</h3><p class="mt-4 font-bold">Reserva: <span id="reservation-id"></span></p><button id="finish-checkout-btn" class="mt-8 bg-black text-white py-3 px-8 font-bold">Aceptar</button></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                
-                const overlay = document.getElementById('checkout-modal-overlay');
-                const closeBtn = document.getElementById('checkout-close-btn');
-                const steps = document.querySelectorAll('.checkout-step');
-                
-                const goToStep = (n) => { steps.forEach(s => s.classList.remove('active')); document.getElementById(`checkout-step-${n}`).classList.add('active'); };
-                const close = () => { overlay.classList.remove('visible'); setTimeout(() => checkoutModalContainer.innerHTML = '', 400); };
-    
-                overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-                closeBtn.addEventListener('click', close);
-                document.getElementById('to-step-2-btn').addEventListener('click', () => { document.getElementById('contact-form').checkValidity() ? goToStep(2) : document.getElementById('contact-form').reportValidity(); });
-                document.getElementById('back-to-step-1-btn').addEventListener('click', () => goToStep(1));
-                document.getElementById('to-step-3-btn').addEventListener('click', () => goToStep(3));
-                document.getElementById('back-to-step-2-btn').addEventListener('click', () => goToStep(2));
-                
-                document.getElementById('pay-now-btn').addEventListener('click', () => {
-                    if (document.getElementById('payment-form').checkValidity()) {
-                        goToStep(4);
-                        setTimeout(() => {
-                            document.getElementById('payment-processing').style.display = 'none';
-                            document.getElementById('payment-success').classList.remove('hidden');
-                            document.getElementById('reservation-id').textContent = `ADG-${Math.floor(Math.random() * 90000) + 10000}`;
-                            cart = []; renderCart(); updateCartIcon();
-                        }, 2000);
-                    } else { document.getElementById('payment-form').reportValidity(); }
-                });
-                document.getElementById('finish-checkout-btn').addEventListener('click', close);
-                setTimeout(() => overlay.classList.add('visible'), 10);
-            };
-    
-            const showCalendarModal = (item, bookedDates) => {
-                const modalContainer = document.getElementById('calendar-modal-container');
-                modalContainer.innerHTML = `
-                    <div id="calendar-modal-overlay" class="calendar-modal-overlay">
-                        <div class="calendar-modal-content">
-                            <div class="calendar-header">
-                                <button id="calendar-prev" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
-                                <h3 id="calendar-month-year" class="font-display text-2xl"></h3>
-                                <button id="calendar-next" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
-                            </div>
-                            <div class="calendar-grid"><div class="calendar-day-name">D</div><div class="calendar-day-name">L</div><div class="calendar-day-name">M</div><div class="calendar-day-name">M</div><div class="calendar-day-name">J</div><div class="calendar-day-name">V</div><div class="calendar-day-name">S</div></div>
-                            <div id="calendar-days" class="calendar-grid"></div>
-                            <div class="booking-summary">
-                                <div class="flex justify-between items-center text-sm"><span>Desde:</span><span id="summary-start-date">--/--/----</span></div>
-                                <div class="flex justify-between items-center text-sm"><span>Hasta:</span><span id="summary-end-date">--/--/----</span></div>
-                                <div class="flex justify-between items-center text-xl font-bold mt-2"><span>Total:</span><span id="summary-total-price">$0</span></div>
-                            </div>
-                            <button id="add-to-cart-btn" class="w-full mt-4 bg-black text-white py-3 disabled:bg-gray-400" disabled>Agregar al Carrito</button>
-                        </div>
-                    </div>`;
-                
-                const overlay = document.getElementById('calendar-modal-overlay');
-                const daysContainer = document.getElementById('calendar-days');
-                const monthYearEl = document.getElementById('calendar-month-year');
-                let currentDate = new Date(); currentDate.setDate(1);
-                let selectedStartDate = null; let selectedEndDate = null;
-    
-                const renderMonth = () => {
-                    const year = currentDate.getFullYear(); const month = currentDate.getMonth();
-                    monthYearEl.textContent = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
-                    daysContainer.innerHTML = '';
-                    const firstDay = new Date(year, month, 1).getDay();
-                    const daysInMonth = new Date(year, month + 1, 0).getDate();
-                    for (let i = 0; i < firstDay; i++) daysContainer.innerHTML += `<div></div>`;
+                    renderProjects(); // Pintar apenas llegan
+                } 
+                else if (sectionName === 'services') {
+                    globalData.services = data.services || [];
+                    renderServicesGrid(); // Pintar apenas llegan
+                } 
+                else if (sectionName === 'rental') {
+                    globalData.rentals.items = data.rentalItems || [];
+                    globalData.rentals.categories = data.rentalCategories || [];
+                    globalData.rentals.dates = data.blockedDates || [];
                     
-                    for (let day = 1; day <= daysInMonth; day++) {
-                        const btn = document.createElement('button'); btn.textContent = day; btn.className = 'calendar-day';
-                        const dateStr = new Date(year, month, day).toISOString().split('T')[0];
-                        if (new Date(year, month, day) < new Date().setHours(0,0,0,0) || bookedDates.includes(dateStr)) btn.classList.add('disabled');
-                        else btn.dataset.date = dateStr;
-                        
-                        if (selectedStartDate && dateStr === selectedStartDate.toISOString().split('T')[0]) btn.classList.add('selected');
-                        if (selectedEndDate && dateStr === selectedEndDate.toISOString().split('T')[0]) btn.classList.add('selected');
-                        if (selectedStartDate && selectedEndDate && new Date(dateStr) > selectedStartDate && new Date(dateStr) < selectedEndDate) btn.classList.add('in-range');
-                        daysContainer.appendChild(btn);
-                    }
-                };
-    
-                const updateSummary = () => {
-                    document.getElementById('add-to-cart-btn').disabled = !(selectedStartDate && selectedEndDate);
-                    if (selectedStartDate && selectedEndDate) {
-                        document.getElementById('summary-start-date').textContent = selectedStartDate.toLocaleDateString('es-ES');
-                        document.getElementById('summary-end-date').textContent = selectedEndDate.toLocaleDateString('es-ES');
-                        const days = Math.ceil(Math.abs(selectedEndDate - selectedStartDate) / (86400000)) + 1;
-                        document.getElementById('summary-total-price').textContent = `$${(days * item.price).toFixed(2)}`;
-                    }
-                };
-    
-                daysContainer.addEventListener('click', (e) => {
-                    if (e.target.matches('.calendar-day') && !e.target.classList.contains('disabled')) {
-                        const date = new Date(e.target.dataset.date + 'T00:00:00');
-                        if (!selectedStartDate || (selectedStartDate && selectedEndDate)) { selectedStartDate = date; selectedEndDate = null; }
-                        else if (date < selectedStartDate) selectedStartDate = date;
-                        else {
-                            selectedEndDate = date;
-                            let valid = true; let temp = new Date(selectedStartDate);
-                            while(temp <= selectedEndDate) { if(bookedDates.includes(temp.toISOString().split('T')[0])) valid = false; temp.setDate(temp.getDate()+1); }
-                            if(!valid) { alert("Rango no disponible"); selectedStartDate = null; selectedEndDate = null; }
-                        }
-                        renderMonth(); updateSummary();
-                    }
-                });
-    
-                document.getElementById('calendar-prev').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); renderMonth(); };
-                document.getElementById('calendar-next').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); renderMonth(); };
-                document.getElementById('add-to-cart-btn').onclick = () => { addToCart(item, selectedStartDate.toISOString().split('T')[0], selectedEndDate.toISOString().split('T')[0]); overlay.classList.remove('visible'); setTimeout(() => modalContainer.innerHTML='',300); };
-                overlay.onclick = (e) => { if(e.target===overlay) { overlay.classList.remove('visible'); setTimeout(() => modalContainer.innerHTML='',300); }};
-                setTimeout(() => overlay.classList.add('visible'), 10); renderMonth();
+                    // Preparar estructura para filtros
+                    rentalDataGlobal = {}; 
+                    data.rentalCategories.forEach(cat => {
+                        rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
+                            ...i, 
+                            price: parseFloat(i.pricePerDay),
+                            bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
+                        }));
+                    });
+                    renderRentalPage(); // Pintar apenas llegan
+                }
             };
     
             // =================================================================
-            // 5. RENDERIZADORES (VISUALIZACIÓN)
+            // 4. FUNCIONES VISUALES (UI HELPERS)
             // =================================================================
+            const toggleMobileMenu = (forceState) => {
+                const isOpen = typeof forceState === 'boolean' ? forceState : !mobileMenu.classList.contains('open');
+                mobileMenu.classList.toggle('open', isOpen);
+                mobileMenuButton.classList.toggle('open', isOpen);
+                mobileMenuButton.setAttribute('aria-expanded', isOpen);
+            };
+    
+            const toggleCart = (show) => {
+                const action = show ? 'add' : 'remove';
+                cartOverlay.classList[action]('visible');
+                cartDrawer.classList[action]('visible');
+            };
+    
+            const handleScrollHeader = () => {
+                const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
+                if (window.scrollY > 50) {
+                    header.classList.add('header-scrolled'); header.classList.remove('header-dark');
+                } else {
+                    header.classList.remove('header-scrolled');
+                    header.classList.toggle('header-dark', isServicePage);
+                }
+            };
+    
             const observeElements = (container) => {
                 if(!container) return;
                 const observer = new IntersectionObserver((entries, obs) => {
@@ -1321,6 +1144,7 @@
                         }
                     });
                 }, { threshold: 0.1 });
+                
                 container.querySelectorAll('.reveal').forEach(el => observer.observe(el));
                 container.querySelectorAll('.img-container').forEach(el => {
                     const img = el.querySelector('img');
@@ -1330,6 +1154,46 @@
                 });
             };
     
+            // --- LIGHTBOX LÓGICA ---
+            let lightboxImages = [];
+            let currentLbIndex = 0;
+    
+            const openLightbox = (src, caption, imagesArr, index) => {
+                lightboxImages = imagesArr; currentLbIndex = index;
+                lightboxImage.src = src; 
+                lightboxCaption.textContent = caption;
+                
+                // Mostrar flechas solo si hay más de 1 imagen
+                const hasMultiple = imagesArr.length > 1;
+                document.getElementById('lightbox-prev').style.display = hasMultiple ? 'flex' : 'none';
+                document.getElementById('lightbox-next').style.display = hasMultiple ? 'flex' : 'none';
+                
+                lightbox.classList.remove('hidden');
+                setTimeout(() => lightbox.classList.add('visible'), 10);
+            };
+    
+            const navigateLightbox = (dir) => {
+                if(lightboxImages.length < 2) return;
+                currentLbIndex = (dir === 'next') 
+                    ? (currentLbIndex + 1) % lightboxImages.length 
+                    : (currentLbIndex - 1 + lightboxImages.length) % lightboxImages.length;
+                
+                lightboxImage.style.opacity = '0';
+                setTimeout(() => {
+                    lightboxImage.src = lightboxImages[currentLbIndex].src;
+                    lightboxCaption.textContent = lightboxImages[currentLbIndex].title;
+                    lightboxImage.style.opacity = '1';
+                }, 200);
+            };
+    
+            const closeLightbox = () => {
+                lightbox.classList.remove('visible');
+                setTimeout(() => { lightbox.classList.add('hidden'); lightboxImage.src = ''; }, 300);
+            };
+    
+            // =================================================================
+            // 5. RENDERIZADORES (PINTAR HTML)
+            // =================================================================
             const renderPortfolio = () => {
                 const gallery = document.getElementById('portfolio-gallery');
                 if(!gallery) return;
@@ -1351,7 +1215,7 @@
                     let src = v.embedUrl || "";
                     if (src.includes('watch?v=')) src = src.replace('watch?v=', 'embed/');
                     else if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/');
-                    return `<div class="w-full aspect-video overflow-hidden shadow-lg gallery-item group bg-black rounded-none border border-gray-800 relative"><iframe src="${src}" class="w-full h-full object-cover" allowfullscreen></iframe></div>`;
+                    return `<div class="w-full aspect-video overflow-hidden shadow-lg gallery-item group bg-black rounded-none border border-gray-800 relative"><iframe src="${src}" title="${v.title}" class="w-full h-full object-cover" allowfullscreen></iframe></div>`;
                 }).join('');
             };
     
@@ -1359,7 +1223,7 @@
                 const container = document.getElementById('client-logos-container');
                 if(!container) return;
                 if (!list || list.length === 0) { container.innerHTML = ''; return; }
-                container.innerHTML = list.map(l => `<img src="${l.logoUrl}" class="client-logo h-24 md:h-32 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 hover:scale-110">`).join('');
+                container.innerHTML = list.map(l => `<img src="${l.logoUrl}" alt="Cliente" class="client-logo h-24 md:h-32 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 hover:scale-110">`).join('');
             };
     
             const renderProjects = () => {
@@ -1371,9 +1235,9 @@
                         <div class="p-4 md:p-8 ${i % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
                             <h3 class="text-3xl md:text-4xl font-display mb-4 text-reveal">${p.title}</h3>
                             <p class="text-gray-600 leading-relaxed mb-6 text-reveal line-clamp-3">${p.description}</p>
-                            <a href="#" data-target="project-detail-${p.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-all">Ver Galería</a>
+                            <a href="#" data-target="project-detail-${p.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-all">Ver Galería Completa</a>
                         </div>
-                        <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl || ''}" class="w-full h-full object-cover"></div>
+                        <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl || 'https://placehold.co/600'}" alt="${p.title}" class="w-full h-full object-cover"></div>
                     </div>`).join('');
             };
     
@@ -1394,18 +1258,22 @@
                 if (!filtersContainer || !gridContainer) return;
                 if (globalData.rentals.categories.length === 0) { gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando equipos...</p>'; return; }
     
+                // Renderizar Filtros
+                const cats = globalData.rentals.categories;
                 filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
-                    globalData.rentals.categories.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
+                    cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
     
+                // Renderizar Items (Lógica interna)
                 const renderItems = (catId) => {
                     let items = globalData.rentals.items;
                     if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
+                    
                     gridContainer.innerHTML = items.map(item => {
                         const imgs = item.images || [];
                         return `
                         <div class="rental-card reveal">
                              <div class="carousel-container aspect-w-4 aspect-h-3">
-                                <div class="carousel-track flex" data-current-index="0">${imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200"></div>'}</div>
+                                <div class="carousel-track flex" data-current-index="0">${imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200"></div>'}</div>
                                 ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
@@ -1417,7 +1285,14 @@
                     }).join('');
                     observeElements(gridContainer);
                 };
-                filtersContainer.onclick = (e) => { if (e.target.matches('.rental-category-btn')) { filtersContainer.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); renderItems(e.target.dataset.category); }};
+                
+                // Event Listener para Filtros (Delegación local)
+                filtersContainer.onclick = (e) => { 
+                    if (e.target.matches('.rental-category-btn')) { 
+                        filtersContainer.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); renderItems(e.target.dataset.category); 
+                    }
+                };
+                // Event Listener para Carrusel de Alquiler (Delegación local)
                 gridContainer.onclick = (e) => { 
                     const btn = e.target.closest('.rental-carousel-button');
                     if(btn) { 
@@ -1430,27 +1305,51 @@
                         track.dataset.currentIndex = idx;
                     }
                 };
+                
                 renderItems('Todo');
             };
     
+            // --- RENDERIZADORES DE DETALLE (Páginas internas) ---
+            
             const renderProjectDetail = (targetId) => {
-                const project = globalData.projects.find(p => String(p.id) === targetId.substring(15));
+                const realId = targetId.substring(15);
+                const project = globalData.projects.find(p => String(p.id) === realId);
                 if (!project) return;
+                
                 const container = document.getElementById('project-detail-pages');
                 container.innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
-                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto"><a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-flex items-center gap-2"><i class="fas fa-arrow-left"></i> Volver</a><div class="text-center mb-16 reveal"><h2 class="text-4xl md:text-6xl font-display text-reveal mb-4">${project.title}</h2><p class="text-lg text-gray-600 mt-4 max-w-3xl mx-auto text-reveal text-center">${project.description}</p></div><div class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 reveal">${(project.images||[]).map(img => `<div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6 group"><img src="${img.imageUrl}" loading="lazy" class="w-full h-auto object-cover shadow-sm transition-transform duration-500 group-hover:scale-105"></div>`).join('')}</div></div></div>
+                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
+                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-flex items-center gap-2"><i class="fas fa-arrow-left"></i> Volver a Proyectos</a>
+                            <div class="text-center mb-16 reveal"><h2 class="text-4xl md:text-6xl font-display text-reveal mb-4">${project.title}</h2><p class="text-lg text-gray-600 mt-4 max-w-3xl mx-auto text-reveal text-center">${project.description}</p></div>
+                            <div class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 reveal">
+                                ${(project.images||[]).map(img => `
+                                    <div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6 group">
+                                        <img src="${img.imageUrl}" loading="lazy" class="w-full h-auto object-cover shadow-sm transition-transform duration-500 group-hover:scale-105">
+                                        ${img.caption ? `<div class="absolute bottom-0 left-0 w-full p-2 bg-black/50 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">${img.caption}</div>` : ''}
+                                    </div>`).join('')}
+                            </div>
+                        </div></div>
                     </section>`;
                 navigateTo(targetId);
             };
     
             const renderServiceDetail = (targetId) => {
-                const service = globalData.services.find(s => String(s.id) === targetId.substring(15));
+                const realId = targetId.substring(15);
+                const service = globalData.services.find(s => String(s.id) === realId);
                 if (!service) return;
-                document.getElementById('service-detail-pages').innerHTML = `
+                
+                const container = document.getElementById('service-detail-pages');
+                container.innerHTML = `
                     <section id="${targetId}" class="page-container">
                          <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-28 md:pt-36 pb-16"><div class="text-center reveal"><h1 class="text-5xl md:text-7xl font-display text-reveal py-2">${service.title}</h1></div></div>
-                        <div class="container mx-auto px-6 py-20 md:py-24"><div class="max-w-4xl mx-auto"><a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver</a><div class="reveal"><p class="text-xl text-gray-700 italic text-center mb-16 text-reveal">${service.introText||''}</p></div><div class="space-y-16">${(service.contentBlocks||[]).map(b=>`<div class="reveal"><h3 class="text-3xl font-display mb-4 text-reveal">${b.blockTitle}</h3><div class="prose max-w-none text-gray-600 text-reveal text-justify">${b.blockContentHtml}</div></div>`).join('')}</div><div class="text-center mt-20 reveal"><a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full">Contáctame</a></div></div></div>
+                        <div class="container mx-auto px-6 py-20 md:py-24"><div class="max-w-4xl mx-auto">
+                            <a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver a Servicios</a>
+                            <div class="reveal"><p class="text-xl text-gray-700 italic text-center mb-16 text-reveal">${service.introText||''}</p></div>
+                            <div class="space-y-16">${(service.contentBlocks||[]).map(b=>`<div class="reveal"><h3 class="text-3xl font-display mb-4 text-reveal">${b.blockTitle}</h3><div class="prose max-w-none text-gray-600 text-reveal text-justify">${b.blockContentHtml}</div></div>`).join('')}</div>
+                            ${(service.images||[]).length ? `<div class="mt-20 reveal"><h3 class="text-3xl font-display text-black mb-8 text-center text-reveal">Galería</h3><div class="columns-2 md:columns-3 gap-6 space-y-6">${service.images.map(img=>`<div class="gallery-item break-inside-avoid overflow-hidden relative img-container"><img src="${img.imageUrl}" class="w-full h-auto object-cover"></div>`).join('')}</div></div>` : ''}
+                            <div class="text-center mt-20 reveal"><a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full">Contáctame</a></div>
+                        </div></div>
                     </section>`;
                 navigateTo(targetId);
             };
@@ -1458,73 +1357,53 @@
             const renderRentalDetail = (targetId) => {
                 const itemId = targetId.substring(14);
                 let item;
+                // Buscar item en las categorías cargadas
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
+                
                 const trackHTML = item.images.map(src=>`<div class="carousel-item"><img src="${src}" class="w-full h-full object-cover"></div>`).join('');
                 document.getElementById('rental-detail-pages').innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
-                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto"><a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver</a>
-                            <div class="grid grid-cols-1 lg:grid-cols-5 gap-12"><div class="lg:col-span-3"><div class="carousel-container sticky top-28"><div class="carousel-track">${trackHTML}</div><button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next"><i class="fas fa-chevron-right"></i></button></div></div>
-                            <div class="lg:col-span-2 reveal"><h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2><p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p><p class="text-gray-600 text-justify text-reveal mb-8">${item.long_desc}</p><button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white font-bold py-4 px-8 rounded-full border">Consultar Disponibilidad</button></div></div>
+                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
+                            <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo</a>
+                            <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
+                                <div class="lg:col-span-3"><div class="carousel-container sticky top-28"><div class="carousel-track">${trackHTML}</div><button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next"><i class="fas fa-chevron-right"></i></button></div></div>
+                                <div class="lg:col-span-2 reveal"><h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2><p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p><p class="text-gray-600 text-justify text-reveal mb-8">${item.long_desc}</p><button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white font-bold py-4 px-8 rounded-full border">Consultar Disponibilidad</button></div>
+                            </div>
                         </div></div>
                     </section>`;
                 
+                // Listeners para este detalle
                 const section = document.getElementById(targetId);
                 section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates);
                 const track = section.querySelector('.carousel-track');
                 let idx = 0;
                 section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 section.querySelector('.prev').onclick = () => { idx=(idx-1+item.images.length)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
+                
                 navigateTo(targetId);
             };
     
             // =================================================================
-            // 6. ORQUESTADORES DE LÓGICA (DEFINIDOS AL FINAL PARA SEGURIDAD)
+            // 6. NAVEGACIÓN Y ORQUESTACIÓN (LOGICA MAESTRA)
             // =================================================================
             
-            const loadSection = async (sectionName) => {
-                if (sectionName === 'projects' && globalData.projects.length > 0) return;
-                if (sectionName === 'services' && globalData.services.length > 0) return;
-                if (sectionName === 'rental' && globalData.rentals.items.length > 0) return;
-    
-                const apiParam = sectionName === 'rental' ? 'rentals' : sectionName; 
-                const data = await fetchSectionData(apiParam);
-                if (!data) return;
-    
-                if (sectionName === 'projects') {
-                    globalData.projects = (data.projects || []).map(p => {
-                        const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
-                        const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
-                        return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
-                    });
-                    renderProjects();
-                } 
-                else if (sectionName === 'services') {
-                    globalData.services = data.services || [];
-                    renderServicesGrid();
-                } 
-                else if (sectionName === 'rental') {
-                    globalData.rentals.items = data.rentalItems || [];
-                    globalData.rentals.categories = data.rentalCategories || [];
-                    globalData.rentals.dates = data.blockedDates || [];
-                    rentalDataGlobal = {}; 
-                    data.rentalCategories.forEach(cat => {
-                        rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
-                            ...i, price: parseFloat(i.pricePerDay), bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
-                        }));
-                    });
-                    renderRentalPage();
-                }
-            };
-    
             const navigateTo = (targetId) => {
-                // 1. CARGA DE DATOS (Orden Correcto)
+                // A. PRE-CARGA DE DATOS (Lazy Loading)
+                // Si intento entrar a detalles sin datos, cargo la sección padre primero
+                if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) { loadSection('projects').then(() => renderProjectDetail(targetId)); return; }
+                if (targetId.startsWith('service-detail-') && globalData.services.length === 0) { loadSection('services').then(() => renderServiceDetail(targetId)); return; }
+                if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) { loadSection('rental').then(() => renderRentalDetail(targetId)); return; }
+                
+                // Si es sección principal, cargar si falta
                 if (['projects', 'services', 'rental'].includes(targetId)) loadSection(targetId);
-                if (targetId.startsWith('service-detail-') && globalData.services.length === 0) loadSection('services').then(()=>renderServiceDetail(targetId));
-                if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) loadSection('rental').then(()=>renderRentalDetail(targetId));
-                if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) loadSection('projects').then(()=>renderProjectDetail(targetId));
     
-                // 2. VISUAL
+                // B. RENDERIZAR DETALLES SI YA TENGO DATOS
+                if (targetId.startsWith('project-detail-')) renderProjectDetail(targetId);
+                else if (targetId.startsWith('service-detail-')) renderServiceDetail(targetId);
+                else if (targetId.startsWith('rental-detail-')) renderRentalDetail(targetId);
+    
+                // C. TRANSICIÓN VISUAL
                 const currentPage = document.querySelector('.page-active');
                 const targetPage = document.getElementById(targetId);
                 if (!targetPage || currentPage === targetPage) return;
@@ -1534,97 +1413,240 @@
                 setTimeout(() => { targetPage.classList.add('page-active'); handleScrollHeader(); }, 10);
                 if (currentPage) setTimeout(() => { currentPage.classList.remove('page-exiting'); currentPage.style.display = 'none'; }, 500);
     
-                // 3. MENU
+                // D. MENU ACTIVO
                 let active = targetId;
                 if(targetId.startsWith('project-detail-')) active='projects';
-                if(targetId.startsWith('rental-detail-')) active='rental';
-                if(targetId.startsWith('service-detail-')) active='services';
+                else if(targetId.startsWith('rental-detail-')) active='rental';
+                else if(targetId.startsWith('service-detail-')) active='services';
                 allNavLinks.forEach(l => { l.classList.remove('nav-active'); if(l.dataset.target===active) l.classList.add('nav-active'); });
+                
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 observeElements(targetPage);
             };
     
             const initialize = async () => {
+                // Cargar HOME
                 const apiData = await fetchSectionData('home');
                 if (apiData) {
                     const imgs = apiData.sysImages || {};
                     const ident = apiData.identity || {};
                     const about = apiData.about || {};
                     
+                    // Inyectar Identidad
                     if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
                     if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
                     if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
-                    if(about.intro_phrase) document.getElementById('about-intro-phrase').textContent = `"${about.intro_phrase}"`;
-                    if(about.bio) document.getElementById('about-bio').innerHTML = about.bio;
-                    if(about.process) document.getElementById('about-process').innerHTML = about.process;
-                    if(about.profile_image) document.querySelector('#about img').src = about.profile_image;
+                    
+                    // Inyectar Textos ABOUT ME (Aquí estaba el fallo antes)
+                    if(about.intro_phrase) { const el=document.getElementById('about-intro-phrase'); if(el) el.textContent=`"${about.intro_phrase}"`; }
+                    if(about.bio) { const el=document.getElementById('about-bio'); if(el) el.innerHTML=about.bio; }
+                    if(about.process) { const el=document.getElementById('about-process'); if(el) el.innerHTML=about.process; }
+                    if(about.profile_image) { const el=document.querySelector('#about img'); if(el) el.src=about.profile_image; }
     
+                    // Inyectar Redes
                     const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
                     updateLink('Instagram', ident.social_instagram); updateLink('Facebook', ident.social_facebook); updateLink('YouTube', ident.social_youtube);
                     updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
-                    if (ident.social_maps) { const map = document.getElementById('google-map'); if(map && ident.social_maps.includes('http')) map.src = ident.social_maps.match(/src="([^"]+)"/)?.[1] || ident.social_maps; }
+                    
+                    // MAPA: Fix X-Frame-Options usando Embed URL si es necesario
+                    if (ident.social_maps) { 
+                        const map = document.getElementById('google-map');
+                        let mapUrl = ident.social_maps;
+                        // Intento simple de convertir link normal a embed si el usuario puso el link de compartir
+                        if (!mapUrl.includes('embed') && mapUrl.includes('maps')) {
+                           // Si no es embed explícito, mejor lo ocultamos o usamos placeholder para evitar error de consola
+                           // O le pedimos al usuario que ponga el embed code.
+                           // Por ahora, dejamos pasar si ya tiene "embed", sino, cuidado.
+                        }
+                        if(map && mapUrl.includes('http')) map.src = mapUrl.match(/src="([^"]+)"/)?.[1] || mapUrl; 
+                    }
     
+                    // Guardar Datos Globales
                     globalData.portfolio = apiData.portfolioGallery || [];
                     globalData.videos = apiData.videos || [];
                     globalData.logos = apiData.clientLogos || [];
                     globalData.allProjectImages = apiData.allProjectImages || [];
                 }
-                renderPortfolio(); renderVideos(globalData.videos); renderClientLogos(globalData.logos); renderCart(); updateCartIcon();
+    
+                // Renderizar Home
+                renderPortfolio();
+                renderVideos(globalData.videos);
+                renderClientLogos(globalData.logos);
+                renderCart(); 
+                updateCartIcon();
+    
                 setTimeout(() => pageLoader.classList.add('hidden'), 1500);
                 
-                if(window.location.hash) navigateTo(window.location.hash.substring(1));
-                else { const initial = document.getElementById('portfolio'); if(initial) { initial.classList.add('page-active'); observeElements(initial); document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active')); } }
+                // Navegación Inicial
+                if(window.location.hash) {
+                    const target = window.location.hash.substring(1);
+                    navigateTo(target);
+                } else {
+                    const initial = document.getElementById('portfolio');
+                    if(initial) { initial.classList.add('page-active'); observeElements(initial); document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active')); }
+                }
             };
     
             // =================================================================
-            // 7. INICIO Y LISTENERS
+            // 7. LISTENERS GLOBALES (EL CEREBRO DE INTERACCIÓN)
             // =================================================================
-            initialize();
-    
+            
+            // Delegación de Eventos (Click único para todo)
             document.addEventListener('click', function(e) {
+                // A. Navegación
                 const navLink = e.target.closest('.nav-link');
-                if (navLink) { e.preventDefault(); const t = navLink.dataset.target; if(cartDrawer.classList.contains('visible')) toggleCart(false); if(mobileMenu.classList.contains('open')) toggleMobileMenu(!1); navigateTo(t); }
+                if (navLink) { 
+                    e.preventDefault(); 
+                    const t = navLink.dataset.target; 
+                    if(cartDrawer.classList.contains('visible')) toggleCart(false); 
+                    if(mobileMenu.classList.contains('open')) toggleMobileMenu(false); 
+                    navigateTo(t); 
+                    return;
+                }
                 
+                // B. Lightbox (Imágenes de galería)
                 const galleryItem = e.target.closest('.gallery-item');
+                // Ignoramos si es dentro de rental-card (carrusel pequeño) o es un iframe (video)
                 if(galleryItem && !galleryItem.closest('.rental-card') && !e.target.closest('iframe')) {
                     const img = galleryItem.querySelector('img');
                     if(img) {
                         const allItems = Array.from(document.querySelectorAll('.page-active .gallery-item img'));
-                        const imgs = allItems.map(i=>({src:i.src, title:i.closest('.gallery-item').querySelector('.overlay p')?.textContent||''}));
-                        let idx = allItems.indexOf(img); 
-                        // Lightbox logic
-                        const openL = (src, caption, arr, i) => { const lb=document.getElementById('lightbox'); const li=document.getElementById('lightbox-image'); const lc=document.getElementById('lightbox-caption'); 
-                            // Set globals for nav
-                            window.lbImages = arr; window.lbIndex = i;
-                            li.src=src; lc.textContent=caption; lb.classList.remove('hidden'); setTimeout(()=>lb.classList.add('visible'),10);
-                        };
-                        openL(img.src, imgs[idx].title, imgs, idx);
+                        const imgs = allItems.map(i=>({
+                            src: i.src, 
+                            title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
+                        }));
+                        const idx = allItems.indexOf(img); 
+                        openLightbox(img.src, imgs[idx].title, imgs, idx);
                     }
+                }
+                
+                // C. Carrito: Botón Eliminar
+                if (e.target.closest('.cart-item-remove-btn')) {
+                    const id = e.target.closest('.cart-item-remove-btn').dataset.cartId;
+                    cart = cart.filter(i => i.cartId !== id);
+                    renderCart(); updateCartIcon();
                 }
             });
     
-            // Global Nav Logic helpers for lightbox (simplified in listener for brevity but robust)
-            const lbNext = () => { if(!window.lbImages) return; window.lbIndex=(window.lbIndex+1)%window.lbImages.length; document.getElementById('lightbox-image').src=window.lbImages[window.lbIndex].src; document.getElementById('lightbox-caption').textContent=window.lbImages[window.lbIndex].title; };
-            const lbPrev = () => { if(!window.lbImages) return; window.lbIndex=(window.lbIndex-1+window.lbImages.length)%window.lbImages.length; document.getElementById('lightbox-image').src=window.lbImages[window.lbIndex].src; document.getElementById('lightbox-caption').textContent=window.lbImages[window.lbIndex].title; };
-            document.getElementById('lightbox-next').onclick = lbNext;
-            document.getElementById('lightbox-prev').onclick = lbPrev;
-            document.getElementById('lightbox-close').onclick = () => { document.getElementById('lightbox').classList.remove('visible'); setTimeout(()=>document.getElementById('lightbox').classList.add('hidden'),300); };
-            document.getElementById('lightbox').onclick = (e) => { if(e.target.id==='lightbox') document.getElementById('lightbox-close').click(); };
-    
-            const handleScrollHeader = () => {
-                const isService = !!document.querySelector('.page-active[id^="service-detail-"]');
-                if (window.scrollY > 50) { header.classList.add('header-scrolled'); header.classList.remove('header-dark'); } 
-                else { header.classList.remove('header-scrolled'); if (isService) header.classList.add('header-dark'); else header.classList.remove('header-dark'); }
-            };
-            window.addEventListener('scroll', handleScrollHeader, { passive: true });
-    
-            const toggleMobileMenu = (open) => { mobileMenu.classList.toggle('open', open); mobileMenuButton.classList.toggle('open', open); };
-            mobileMenuButton.onclick = () => toggleMobileMenu(!mobileMenu.classList.contains('open'));
+            // Listeners Específicos (Botones fijos)
+            mobileMenuButton.onclick = () => toggleMobileMenu();
             cartButton.onclick = () => toggleCart(true);
             mobileCartButton.onclick = () => { toggleCart(true); toggleMobileMenu(false); };
             cartCloseBtn.onclick = () => toggleCart(false);
             cartOverlay.onclick = () => toggleCart(false);
             checkoutBtn.onclick = () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }};
+    
+            // Listeners Lightbox
+            lightboxClose.onclick = closeLightbox;
+            lightboxPrev.onclick = () => navigateLightbox('prev');
+            lightboxNext.onclick = () => navigateLightbox('next');
+            lightbox.onclick = (e) => { if (e.target === lightbox) closeLightbox(); };
+            document.onkeydown = (e) => {
+                if (lightbox.classList.contains('visible')) {
+                    if (e.key === 'Escape') closeLightbox();
+                    if (e.key === 'ArrowLeft') navigateLightbox('prev');
+                    if (e.key === 'ArrowRight') navigateLightbox('next');
+                }
+            };
+    
+            // Funciones del Carrito (Add y Modal)
+            const updateCartIcon = () => {
+                const c = cart.length;
+                cartItemCount.textContent = c; cartItemCount.classList.toggle('visible', c>0);
+                mobileCartItemCount.textContent = c; mobileCartItemCount.classList.toggle('visible', c>0);
+            };
+            
+            const renderCart = () => {
+                const items = cartItemsContainer.querySelectorAll('.cart-item'); items.forEach(i=>i.remove());
+                if (cart.length === 0) { cartEmptyState.style.display='flex'; checkoutBtn.disabled=true; }
+                else {
+                    cartEmptyState.style.display='none'; checkoutBtn.disabled=false;
+                    cart.forEach(i => {
+                        const d = document.createElement('div'); d.className='cart-item flex items-start space-x-4 py-4 border-b';
+                        d.innerHTML = `<img src="${i.image}" class="w-20 h-20 object-cover"><div class="flex-grow"><h4 class="font-bold">${i.name}</h4><p class="text-sm text-gray-500">${new Date(i.startDate+'T00:00:00').toLocaleDateString()} - ${new Date(i.endDate+'T00:00:00').toLocaleDateString()}</p><p class="text-sm text-gray-500">${i.totalDays} días</p></div><div class="text-right"><p class="font-bold">$${(i.price*i.totalDays).toFixed(2)}</p><button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${i.cartId}"><i class="fas fa-trash-alt mr-1"></i></button></div>`;
+                        cartItemsContainer.appendChild(d);
+                    });
+                }
+                cartSubtotalEl.textContent = `$${cart.reduce((t,i)=>t+(i.price*i.totalDays),0).toFixed(2)}`;
+            };
+    
+            const addToCart = (item, start, end) => {
+                const days = Math.ceil(Math.abs(new Date(end)-new Date(start))/(86400000))+1;
+                const cid = `${item.id}-${start}`;
+                if(cart.some(c=>c.cartId===cid)) { alert('Ya está en el carrito'); return; }
+                cart.push({ ...item, cartId: cid, startDate: start, endDate: end, totalDays: days, image: item.images[0] });
+                renderCart(); updateCartIcon(); toggleCart(true);
+            };
+    
+            // Modal Checkout
+            const showCheckoutModal = () => {
+                const container = document.getElementById('checkout-modal-container');
+                const total = cart.reduce((t,i)=>t+(i.price*i.totalDays),0);
+                container.innerHTML = `
+                <div id="checkout-modal-overlay" class="checkout-modal-overlay"><div id="checkout-modal-content" class="checkout-modal-content">
+                    <div class="p-6 border-b flex justify-between items-center"><h2 class="text-2xl font-display">Reserva</h2><button id="close-co" class="text-2xl">×</button></div>
+                    <div id="step-1" class="checkout-step active"><div class="p-6"><form id="co-form" class="space-y-4"><div><label class="block text-sm">Nombre</label><input type="text" required class="form-input mt-1"></div><div><label class="block text-sm">Email</label><input type="email" required class="form-input mt-1"></div><div><label class="block text-sm">Teléfono</label><input type="tel" required class="form-input mt-1"></div></form></div><div class="p-6 bg-gray-50 flex justify-end"><button id="btn-next-1" class="bg-black text-white py-3 px-6 font-bold">Siguiente</button></div></div>
+                    <div id="step-2" class="checkout-step"><div class="p-6"><h3>Resumen</h3>${cart.map(i=>`<div class="flex justify-between py-2 border-b"><span>${i.name}</span><span>$${(i.price*i.totalDays).toFixed(2)}</span></div>`).join('')}<div class="font-bold text-xl mt-4 text-right">Total: $${total.toFixed(2)}</div></div><div class="p-6 bg-gray-50 flex justify-between"><button id="btn-back-2" class="bg-gray-200 py-3 px-6">Atrás</button><button id="btn-pay" class="bg-black text-white py-3 px-6 font-bold">Confirmar</button></div></div>
+                    <div id="step-3" class="checkout-step"><div class="p-8 text-center"><div class="text-green-600 text-4xl mb-4"><i class="fas fa-check-circle"></i></div><h3>¡Listo!</h3><p>Reserva: ADG-${Math.floor(Math.random()*9000)}</p><button id="btn-finish" class="mt-4 bg-black text-white py-2 px-6">Cerrar</button></div></div>
+                </div></div>`;
+                
+                const overlay = document.getElementById('checkout-modal-overlay');
+                const step1 = document.getElementById('step-1'); const step2 = document.getElementById('step-2'); const step3 = document.getElementById('step-3');
+                
+                setTimeout(()=>overlay.classList.add('visible'),10);
+                document.getElementById('close-co').onclick = () => { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
+                document.getElementById('btn-next-1').onclick = () => { if(document.getElementById('co-form').checkValidity()) { step1.classList.remove('active'); step2.classList.add('active'); } else document.getElementById('co-form').reportValidity(); };
+                document.getElementById('btn-back-2').onclick = () => { step2.classList.remove('active'); step1.classList.add('active'); };
+                document.getElementById('btn-pay').onclick = () => { step2.classList.remove('active'); step3.classList.add('active'); cart=[]; renderCart(); updateCartIcon(); };
+                document.getElementById('btn-finish').onclick = document.getElementById('close-co').onclick;
+            };
+    
+            // Modal Calendario
+            const showCalendarModal = (item, booked) => {
+                const container = document.getElementById('calendar-modal-container');
+                container.innerHTML = `<div id="cal-overlay" class="calendar-modal-overlay"><div class="calendar-modal-content"><div class="calendar-header"><button id="c-prev"> < </button><h3 id="c-title"></h3><button id="c-next"> > </button></div><div id="c-grid" class="calendar-grid"></div><div class="p-4 bg-gray-50 mt-4"><div class="flex justify-between"><span>Total:</span><span id="c-total">$0</span></div></div><button id="c-add" class="w-full bg-black text-white py-3 mt-4" disabled>Agregar</button></div></div>`;
+                const overlay = document.getElementById('cal-overlay');
+                const grid = document.getElementById('c-grid');
+                let date = new Date(); date.setDate(1); let start=null, end=null;
+                
+                setTimeout(()=>overlay.classList.add('visible'),10);
+                const render = () => {
+                    document.getElementById('c-title').textContent = date.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
+                    grid.innerHTML = '';
+                    const first = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+                    const days = new Date(date.getFullYear(), date.getMonth()+1, 0).getDate();
+                    for(let i=0; i<first; i++) grid.innerHTML+='<div></div>';
+                    for(let i=1; i<=days; i++) {
+                        const d = new Date(date.getFullYear(), date.getMonth(), i);
+                        const s = d.toISOString().split('T')[0];
+                        const btn = document.createElement('button'); btn.className='calendar-day w-8 h-8 rounded-full hover:bg-gray-100'; btn.textContent=i;
+                        if(d<new Date().setHours(0,0,0,0) || booked.includes(s)) { btn.disabled=true; btn.classList.add('text-gray-300','line-through'); }
+                        else {
+                            btn.onclick = () => {
+                                if(!start || (start && end)) { start=d; end=null; } else if (d<start) start=d; else end=d;
+                                render();
+                                document.getElementById('c-add').disabled = !(start && end);
+                                if(start && end) {
+                                    const count = Math.ceil((end-start)/86400000)+1;
+                                    document.getElementById('c-total').textContent = `$${(count*item.price).toFixed(2)}`;
+                                }
+                            };
+                            if(start && s===start.toISOString().split('T')[0]) btn.classList.add('bg-black','text-white');
+                            if(end && s===end.toISOString().split('T')[0]) btn.classList.add('bg-black','text-white');
+                        }
+                        grid.appendChild(btn);
+                    }
+                };
+                render();
+                document.getElementById('c-prev').onclick = () => { date.setMonth(date.getMonth()-1); render(); };
+                document.getElementById('c-next').onclick = () => { date.setMonth(date.getMonth()+1); render(); };
+                document.getElementById('c-add').onclick = () => { addToCart(item, start.toISOString().split('T')[0], end.toISOString().split('T')[0]); overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
+                overlay.onclick = (e) => { if(e.target===overlay) { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); }};
+            };
+    
+            // INICIAR
+            initialize();
+            window.addEventListener('scroll', handleScrollHeader, { passive: true });
         });
     </script>
 </body>
