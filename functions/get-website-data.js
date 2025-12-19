@@ -22,10 +22,9 @@ exports.handler = async (event, context) => {
 
     // 1. AGREGAMOS LAS HOJAS DE IDENTIDAD QUE FALTABAN
     const sheetTitles = [
-        'Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages', 
+        'Identidad', 'About', 'ImagenesIdentidad', 'Videos', 'LogosClientes', 'Projects', 'ProjectImages', 
         'Services', 'ServiceContentBlocks', 'ServiceImages', 
         'RentalCategories', 'RentalItems', 'RentalItemImages', 'BlockedDates',
-        'Identidad', 'ImagenesIdentidad' // <--- NUEVAS
     ];
     
     const sheetsData = {};
