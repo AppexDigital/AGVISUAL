@@ -370,24 +370,6 @@
             overflow: hidden;
             background-color: #f3f4f6;
         }
-        .img-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
-            animation: shimmer 1.5s infinite;
-            z-index: 1;
-        }
-        @keyframes shimmer {
-            100% { left: 100%; }
-        }
-        .img-container.loaded::before {
-            animation: none;
-            opacity: 0;
-        }
 
         /* --- Estilos para la sección de Alquiler (Rediseño) --- */
         .rental-category-btn {
@@ -1010,7 +992,7 @@
         document.addEventListener('DOMContentLoaded', function () {
         
             // =================================================================
-            // 1. MEMORIA Y VARIABLES GLOBALES
+            // 1. VARIABLES GLOBALES Y MEMORIA
             // =================================================================
             let globalData = {
                 portfolio: [],
@@ -1024,12 +1006,12 @@
             let rentalDataGlobal = {}; 
             let cart = [];
             
-            // Variables para Lightbox
+            // Lightbox vars
             let lightboxImages = [];
             let currentLbIndex = 0;
     
             // =================================================================
-            // 2. SELECTORES DEL DOM (DEFINIDOS AL INICIO PARA EVITAR ERRORES)
+            // 2. SELECTORES DEL DOM (DEFINIDOS PRIMERO - VITAL)
             // =================================================================
             const header = document.getElementById('header');
             const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -1037,7 +1019,7 @@
             const allNavLinks = document.querySelectorAll('.nav-link');
             const pageLoader = document.getElementById('page-loader');
             
-            // Lightbox
+            // Lightbox Elements
             const lightbox = document.getElementById('lightbox');
             const lightboxImage = document.getElementById('lightbox-image');
             const lightboxCaption = document.getElementById('lightbox-caption');
@@ -1045,7 +1027,7 @@
             const lightboxPrev = document.getElementById('lightbox-prev');
             const lightboxNext = document.getElementById('lightbox-next');
             
-            // Carrito
+            // Carrito Elements
             const cartButton = document.getElementById('cart-button');
             const mobileCartButton = document.getElementById('mobile-cart-button');
             const cartItemCount = document.getElementById('cart-item-count');
@@ -1059,23 +1041,22 @@
             const checkoutBtn = document.getElementById('checkout-btn');
     
             // =================================================================
-            // 3. API FETCH (CONEXIÓN)
+            // 3. API FETCH (CONEXIÓN SEGURA)
             // =================================================================
             const fetchSectionData = async (section) => {
                 try {
-                    // Solo logueamos si estamos en desarrollo para no ensuciar la consola
-                    // console.log(`📡 Descargando sección: ${section}...`);
+                    // console.log(`📡 Descargando: ${section}...`); 
                     const res = await fetch(`/.netlify/functions/get-website-data?section=${section}`);
                     if (!res.ok) throw new Error('Error API');
                     return await res.json();
                 } catch (e) {
-                    console.warn(`Aviso: Esperando datos para ${section}...`);
+                    console.warn(`Esperando datos para ${section}...`);
                     return null;
                 }
             };
     
             // =================================================================
-            // 4. FUNCIONES DE INTERFAZ (UI HELPERS)
+            // 4. FUNCIONES DE INTERFAZ (UI)
             // =================================================================
             const handleScrollHeader = () => {
                 const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
@@ -1107,10 +1088,8 @@
     
             const updateCartIcon = () => {
                 const count = cart.length;
-                cartItemCount.textContent = count;
-                cartItemCount.classList.toggle('visible', count > 0);
-                mobileCartItemCount.textContent = count;
-                mobileCartItemCount.classList.toggle('visible', count > 0);
+                if(cartItemCount) { cartItemCount.textContent = count; cartItemCount.classList.toggle('visible', count > 0); }
+                if(mobileCartItemCount) { mobileCartItemCount.textContent = count; mobileCartItemCount.classList.toggle('visible', count > 0); }
             };
     
             const observeElements = (container) => {
@@ -1125,29 +1104,17 @@
                     });
                 }, { threshold: 0.1 });
                 container.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
-                
-                const imgObserver = new IntersectionObserver((entries, obs) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target.querySelector('img');
-                            if (img && img.complete) el.classList.add('loaded');
-                            else if (img) img.onload = () => el.classList.add('loaded');
-                            obs.unobserve(entry.target);
-                        }
-                    });
-                }, { threshold: 0.1 });
-                container.querySelectorAll('.img-container').forEach(el => imgObserver.observe(el));
             };
     
-            // --- Lógica Lightbox ---
+            // --- Lightbox Logic ---
             const openLightbox = (src, caption, imagesArr, index) => {
                 lightboxImages = imagesArr; currentLbIndex = index;
                 lightboxImage.src = src; 
-                lightboxCaption.textContent = caption;
+                if(lightboxCaption) lightboxCaption.textContent = caption;
                 
                 const hasMultiple = imagesArr.length > 1;
-                document.getElementById('lightbox-prev').style.display = hasMultiple ? 'flex' : 'none';
-                document.getElementById('lightbox-next').style.display = hasMultiple ? 'flex' : 'none';
+                if(lightboxPrev) lightboxPrev.style.display = hasMultiple ? 'flex' : 'none';
+                if(lightboxNext) lightboxNext.style.display = hasMultiple ? 'flex' : 'none';
                 
                 lightbox.classList.remove('hidden');
                 setTimeout(() => lightbox.classList.add('visible'), 10);
@@ -1162,7 +1129,7 @@
                 lightboxImage.style.opacity = '0';
                 setTimeout(() => {
                     lightboxImage.src = lightboxImages[currentLbIndex].src;
-                    lightboxCaption.textContent = lightboxImages[currentLbIndex].title;
+                    if(lightboxCaption) lightboxCaption.textContent = lightboxImages[currentLbIndex].title;
                     lightboxImage.style.opacity = '1';
                 }, 200);
             };
@@ -1173,19 +1140,20 @@
             };
     
             // =================================================================
-            // 5. RENDERIZADORES (VISUALIZACIÓN)
+            // 5. RENDERIZADORES (PINTAR HTML)
             // =================================================================
             
             const renderCart = () => {
+                if(!cartItemsContainer) return;
                 const items = cartItemsContainer.querySelectorAll('.cart-item');
                 items.forEach(item => item.remove());
     
                 if (cart.length === 0) {
-                    cartEmptyState.style.display = 'flex';
-                    checkoutBtn.disabled = true;
+                    if(cartEmptyState) cartEmptyState.style.display = 'flex';
+                    if(checkoutBtn) checkoutBtn.disabled = true;
                 } else {
-                    cartEmptyState.style.display = 'none';
-                    checkoutBtn.disabled = false;
+                    if(cartEmptyState) cartEmptyState.style.display = 'none';
+                    if(checkoutBtn) checkoutBtn.disabled = false;
                     cart.forEach(item => {
                         const el = document.createElement('div');
                         el.className = 'cart-item flex items-start space-x-4 py-4 border-b';
@@ -1203,8 +1171,8 @@
                         cartItemsContainer.appendChild(el);
                     });
                 }
-                const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
-                cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+                const total = cart.reduce((t, i) => t + (i.price * i.totalDays), 0);
+                if(cartSubtotalEl) cartSubtotalEl.textContent = `$${total.toFixed(2)}`;
             };
     
             const addToCart = (item, startDate, endDate) => {
@@ -1401,7 +1369,7 @@
             };
     
             // =================================================================
-            // 6. ORQUESTACIÓN DE DATOS Y NAVEGACIÓN
+            // 6. ORQUESTACIÓN DE DATOS (LOGICA MAESTRA)
             // =================================================================
             const loadSection = async (sectionName) => {
                 if (sectionName === 'projects' && globalData.projects.length > 0) return;
@@ -1440,18 +1408,24 @@
             };
     
             const navigateTo = (targetId) => {
-                // 1. CARGA DE DATOS (Lazy Load)
+                // A. CARGA INTELIGENTE
                 if (['projects', 'services', 'rental'].includes(targetId)) loadSection(targetId);
-                if (targetId.startsWith('service-detail-') && globalData.services.length === 0) loadSection('services').then(()=>renderServiceDetail(targetId));
-                if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) loadSection('rental').then(()=>renderRentalDetail(targetId));
-                if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) loadSection('projects').then(()=>renderProjectDetail(targetId));
+                
+                // B. MANEJO DE DETALLES PROFUNDOS (Espera a tener datos)
+                if (targetId.startsWith('service-detail-')) {
+                    if (globalData.services.length === 0) loadSection('services').then(() => renderServiceDetail(targetId));
+                    else renderServiceDetail(targetId);
+                }
+                else if (targetId.startsWith('rental-detail-')) {
+                    if (globalData.rentals.items.length === 0) loadSection('rental').then(() => renderRentalDetail(targetId));
+                    else renderRentalDetail(targetId);
+                }
+                else if (targetId.startsWith('project-detail-')) {
+                    if (globalData.projects.length === 0) loadSection('projects').then(() => renderProjectDetail(targetId));
+                    else renderProjectDetail(targetId);
+                }
     
-                // 2. RENDERIZADO INMEDIATO SI HAY DATOS
-                if (targetId.startsWith('project-detail-') && globalData.projects.length > 0) renderProjectDetail(targetId);
-                else if (targetId.startsWith('service-detail-') && globalData.services.length > 0) renderServiceDetail(targetId);
-                else if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length > 0) renderRentalDetail(targetId);
-    
-                // 3. TRANSICIÓN VISUAL
+                // C. TRANSICIÓN VISUAL
                 const currentPage = document.querySelector('.page-active');
                 const targetPage = document.getElementById(targetId);
                 if (!targetPage || currentPage === targetPage) return;
@@ -1461,12 +1435,13 @@
                 setTimeout(() => { targetPage.classList.add('page-active'); handleScrollHeader(); }, 10);
                 if (currentPage) setTimeout(() => { currentPage.classList.remove('page-exiting'); currentPage.style.display = 'none'; }, 500);
     
-                // 4. MENU
+                // D. MENU
                 let active = targetId;
                 if(targetId.startsWith('project-detail-')) active='projects';
-                if(targetId.startsWith('rental-detail-')) active='rental';
-                if(targetId.startsWith('service-detail-')) active='services';
+                else if(targetId.startsWith('rental-detail-')) active='rental';
+                else if(targetId.startsWith('service-detail-')) active='services';
                 allNavLinks.forEach(l => { l.classList.remove('nav-active'); if(l.dataset.target===active) l.classList.add('nav-active'); });
+                
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 observeElements(targetPage);
             };
@@ -1478,10 +1453,11 @@
                     const ident = apiData.identity || {};
                     const about = apiData.about || {};
                     
-                    // Inyectar Identidad y Textos (Recuperado)
                     if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
                     if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
                     if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
+                    
+                    // Inserción de textos About
                     if(about.intro_phrase) { const el=document.getElementById('about-intro-phrase'); if(el) el.textContent=`"${about.intro_phrase}"`; }
                     if(about.bio) { const el=document.getElementById('about-bio'); if(el) el.innerHTML=about.bio; }
                     if(about.process) { const el=document.getElementById('about-process'); if(el) el.innerHTML=about.process; }
@@ -1491,12 +1467,12 @@
                     updateLink('Instagram', ident.social_instagram); updateLink('Facebook', ident.social_facebook); updateLink('YouTube', ident.social_youtube);
                     updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
                     
-                    // Fix para Mapa (X-Frame-Options)
+                    // MAPA (Sanitizado)
                     if (ident.social_maps) { 
                         const map = document.getElementById('google-map');
                         let mapUrl = ident.social_maps;
-                        // Solo inyectar si es seguro
-                        if(map && mapUrl.includes('http')) map.src = mapUrl.match(/src="([^"]+)"/)?.[1] || mapUrl; 
+                        if(map && mapUrl.includes('embed')) map.src = mapUrl; 
+                        else if(map) map.style.display = 'none'; // Ocultar si no es embed válido
                     }
     
                     globalData.portfolio = apiData.portfolioGallery || [];
@@ -1610,29 +1586,32 @@
                             src: i.src, 
                             title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
                         }));
-                        openLightbox(img.src, imgs[allItems.indexOf(img)].title, imgs, allItems.indexOf(img));
+                        const idx = allItems.indexOf(img); 
+                        openLightbox(img.src, imgs[idx].title, imgs, idx);
                     }
                 }
                 
                 // C. Carrito Eliminar
                 if (e.target.closest('.cart-item-remove-btn')) {
-                    cart = cart.filter(i => i.cartId !== e.target.closest('.cart-item-remove-btn').dataset.cartId);
+                    const id = e.target.closest('.cart-item-remove-btn').dataset.cartId;
+                    cart = cart.filter(i => i.cartId !== id);
                     renderCart(); updateCartIcon();
                 }
             });
     
             // Listeners Fijos
-            mobileMenuButton.onclick = () => toggleMobileMenu();
-            cartButton.onclick = () => toggleCart(true);
-            mobileCartButton.onclick = () => { toggleCart(true); toggleMobileMenu(false); };
-            cartCloseBtn.onclick = () => toggleCart(false);
-            cartOverlay.onclick = () => toggleCart(false);
-            checkoutBtn.onclick = () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }};
+            if(mobileMenuButton) mobileMenuButton.onclick = () => toggleMobileMenu();
+            if(cartButton) cartButton.onclick = () => toggleCart(true);
+            if(mobileCartButton) mobileCartButton.onclick = () => { toggleCart(true); toggleMobileMenu(false); };
+            if(cartCloseBtn) cartCloseBtn.onclick = () => toggleCart(false);
+            if(cartOverlay) cartOverlay.onclick = () => toggleCart(false);
+            if(checkoutBtn) checkoutBtn.onclick = () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }};
             
-            lightboxClose.onclick = closeLightbox;
-            lightboxPrev.onclick = () => navigateLightbox('prev');
-            lightboxNext.onclick = () => navigateLightbox('next');
-            lightbox.onclick = (e) => { if(e.target===lightbox) closeLightbox(); };
+            if(lightboxClose) lightboxClose.onclick = closeLightbox;
+            if(lightboxPrev) lightboxPrev.onclick = () => navigateLightbox('prev');
+            if(lightboxNext) lightboxNext.onclick = () => navigateLightbox('next');
+            if(lightbox) lightbox.onclick = (e) => { if(e.target===lightbox) closeLightbox(); };
+            
             document.onkeydown = (e) => {
                 if (lightbox.classList.contains('visible')) {
                     if(e.key==='Escape') closeLightbox();
