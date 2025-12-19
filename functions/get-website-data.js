@@ -80,7 +80,7 @@ exports.handler = async (event, context) => {
       about: aboutContent, 
       portfolioGallery: portfolioImages,
       videos: (sheetsData.Videos||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
-      clientLogos: (sheetsData.ClientLogos||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
+      clientLogos: (sheetsData.LogosClientes||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
       projects: projectsWithImages, 
       services: servicesWithContent,
       rentalCategories: (sheetsData.RentalCategories||[]).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
