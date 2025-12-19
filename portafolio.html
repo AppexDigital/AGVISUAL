@@ -104,7 +104,7 @@
 
     <div class="loader" id="page-loader">
         <div class="flex flex-col items-center w-3/4 max-w-xs md:max-w-md">
-            <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-full h-auto mb-8 logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/200x64/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+            <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-full h-auto mb-8 logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/400x150/ffffff/1a1a1a?text=ADAN+GOMEZ';">
             <div class="loader-circle"></div>
         </div>
     </div>
@@ -112,8 +112,8 @@
     <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
         <div class="container mx-auto px-6 flex justify-between items-center">
             <a href="#" data-target="portfolio" class="nav-link relative group">
-                <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-dark" id="header-logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/350x144/1a1a1a/ffffff?text=ADAN+GOMEZ';">
-                <img src="imagenes/LogoBlanco.png" alt="Logo Adán Gómez Blanco" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-light" id="header-logo-light" style="display: none;" onerror="this.onerror=null;this.src='https://placehold.co/350x144/ffffff/1a1a1a?text=ADAN+GOMEZ';">
+                <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-dark" id="header-logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/350x120/ffffff/1a1a1a?text=ADAN+GOMEZ';">
+                <img src="imagenes/LogoBlanco.png" alt="Logo Adán Gómez Blanco" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-light" id="header-logo-light" style="display: none;" onerror="this.onerror=null;this.src='https://placehold.co/350x120/1a1a1a/ffffff?text=ADAN+GOMEZ';">
             </a>
 
             <div class="flex items-center">
@@ -365,10 +365,13 @@
                 });
                 // Añadir items sin categoría o categoría perdida
                 const uncategorized = items.filter(i => !cats.find(c => c.id === i.categoryId) && i.status !== 'hidden');
-                if (uncategorized.length > 0) rentalDataGlobal["Otros"] = uncategorized;
+                if (uncategorized.length > 0) {
+                     rentalDataGlobal["Otros"] = uncategorized;
+                }
 
                 // B. Adaptador de Proyectos (Para detalles)
-                (appData.projects || []).forEach(p => {
+                const projectsList = appData.projects || [];
+                projectsList.forEach(p => {
                     projectDetails[p.id] = {
                         title: p.title,
                         description: p.description,
@@ -378,7 +381,8 @@
                 });
 
                 // C. Adaptador de Servicios (Para detalles)
-                (appData.services || []).forEach(s => {
+                const servicesList = appData.services || [];
+                servicesList.forEach(s => {
                     serviceDetails[s.id] = {
                         title: s.title,
                         intro: s.introText || s.description || '',
@@ -423,12 +427,8 @@
             if(appData.settings.hero_title) document.getElementById('hero-title').innerHTML = appData.settings.hero_title;
             if(appData.settings.hero_subtitle) document.getElementById('hero-subtitle').innerText = appData.settings.hero_subtitle;
             
-            // Logos Header (Negro y Blanco)
-            // Se busca en la hoja especial de imágenes de sistema (ImagenesIdentidad) que viene en el JSON
-            // Nota: La API debería devolver esto. Si no, usamos fallbacks visuales del HTML.
-            // Asumimos que appData.settings o appData.identityImages traen estas URLs.
-            // Si tu API get-website-data no trae 'identityImages', revisa get-website-data.js.
-            // Por ahora, usamos lo que hay en el HTML estático si no viene nada.
+            // Logos Navbar
+            // Intentamos cargar la URL de la hoja Settings o usamos el fallback del HTML
         }
 
         function renderPortfolio(images) {
