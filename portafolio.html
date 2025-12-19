@@ -1077,9 +1077,26 @@
     
             const toggleMobileMenu = (forceState) => {
                 const isOpen = typeof forceState === 'boolean' ? forceState : !mobileMenu.classList.contains('open');
+                
                 mobileMenu.classList.toggle('open', isOpen);
                 mobileMenuButton.classList.toggle('open', isOpen);
                 mobileMenuButton.setAttribute('aria-expanded', isOpen);
+    
+                // RESTAURADO: Bucle que hace aparecer los textos uno por uno
+                const links = mobileMenu.querySelectorAll('.mobile-nav-link');
+                links.forEach((link, index) => {
+                    if (isOpen) {
+                        // Entrada: Retraso escalonado
+                        setTimeout(() => {
+                            link.style.opacity = '1';
+                            link.style.transform = 'translateY(0)';
+                        }, 150 + (index * 50));
+                    } else {
+                        // Salida: Reset inmediato
+                        link.style.opacity = '0';
+                        link.style.transform = 'translateY(30px)';
+                    }
+                });
             };
     
             const toggleCart = (show) => {
@@ -1184,13 +1201,29 @@
             const addToCart = (item, startDate, endDate) => {
                 const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (86400000)) + 1;
                 const cartId = `${item.id}-${startDate}`; 
+                
                 if (cart.some(cartItem => cartItem.cartId === cartId)) {
                     alert('Este artículo ya está en tu carrito para estas fechas.');
                     return;
                 }
-                cart.push({ ...item, cartId: cartId, startDate: startDate, endDate: endDate, totalDays: totalDays, image: item.images[0] });
-                renderCart(); updateCartIcon(); toggleCart(true);
-            };
+    
+                // CORRECCIÓN: Extraemos explícitamente .imageUrl del primer objeto del array
+                const firstImageObj = (item.images && item.images.length > 0) ? item.images[0] : null;
+                const thumbUrl = firstImageObj ? firstImageObj.imageUrl : 'https://placehold.co/100?text=Sin+Foto';
+    
+                cart.push({ 
+                    ...item, 
+                    cartId: cartId, 
+                    startDate: startDate, 
+                    endDate: endDate, 
+                    totalDays: totalDays, 
+                    image: thumbUrl // Ahora sí es un string (URL), no un objeto
+                });
+
+            renderCart(); 
+            updateCartIcon(); 
+            toggleCart(true);
+        };;
     
             const renderPortfolio = () => {
                 const gallery = document.getElementById('portfolio-gallery');
