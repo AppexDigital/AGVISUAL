@@ -1060,6 +1060,20 @@
                     return null;
                 }
             };
+
+            // --- HELPER: EXPANDIR RANGOS DE FECHAS ---
+            // Toma una fecha de inicio y fin, y devuelve una lista de todos los días intermedios.
+            const getDatesInRange = (startDate, endDate) => {
+                const date = new Date(startDate + 'T00:00:00');
+                const end = new Date(endDate + 'T00:00:00');
+                const dates = [];
+                while (date <= end) {
+                    dates.push(new Date(date).toISOString().split('T')[0]);
+                    date.setDate(date.getDate() + 1);
+                }
+                return dates;
+            };
+            
     
             // =================================================================
             // 4. FUNCIONES DE INTERFAZ (UI)
@@ -1406,29 +1420,37 @@
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
-                // Corrección: Usamos img.imageUrl para obtener el link real
-                const trackHTML = item.images.map(img => `<div class="carousel-item"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
+                const trackHTML = item.images.map(img=>`<div class="carousel-item"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
+                
                 document.getElementById('rental-detail-pages').innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
                         <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
                             <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo</a>
                             <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
                                 <div class="lg:col-span-3"><div class="carousel-container sticky top-28"><div class="carousel-track">${trackHTML}</div><button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next"><i class="fas fa-chevron-right"></i></button></div></div>
-                                <div class="lg:col-span-2 reveal"><h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2><p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p><p class="text-gray-600 text-justify text-reveal mb-8">${item.long_desc}</p><button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white font-bold py-4 px-8 rounded-full border">Consultar Disponibilidad</button></div>
+                                <div class="lg:col-span-2 reveal">
+                                    <h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2>
+                                    <p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p>
+                                    <p class="text-gray-600 text-justify text-reveal mb-8">${item.description}</p>
+                                    <button id="calendar-btn-${item.id}" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300">
+                                        <i class="fas fa-calendar-alt mr-2"></i> Consultar Disponibilidad
+                                    </button>
+                                </div>
                             </div>
                         </div></div>
                     </section>`;
                 
                 const section = document.getElementById(targetId);
-                section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates);
+                // Pasamos item.bookedDates que ya viene filtrado desde loadSection
+                section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates || []);
+                
                 const track = section.querySelector('.carousel-track');
                 let idx = 0;
                 section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 section.querySelector('.prev').onclick = () => { idx=(idx-1+item.images.length)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 
-                // Eliminamos recursión
                 const page = document.getElementById(targetId);
-                if(page && !page.classList.contains('page-active')) {
+                if(page) {
                     document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
                     page.style.display='block';
                     setTimeout(()=>page.classList.add('page-active'), 10);
@@ -1448,28 +1470,52 @@
                 const data = await fetchSectionData(apiParam);
                 if (!data) return;
     
+                // --- FILTRO DE SEGURIDAD EXACTO ---
+                // La regla es simple: Solo se muestra si el status es "active".
+                const isVisible = (item) => {
+                    // Obtenemos el valor de la columna 'status', lo pasamos a minúsculas y quitamos espacios.
+                    const status = String(item.status || '').toLowerCase().trim();
+                    // Solo devolvemos 'true' si el estado es exactamente 'active'.
+                    return status === 'active';
+                };
+    
                 if (sectionName === 'projects') {
-                    globalData.projects = (data.projects || []).map(p => {
-                        const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
-                        const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
-                        return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
-                    });
+                    globalData.projects = (data.projects || [])
+                        .filter(isVisible) // Aplica el filtro: solo "active"
+                        .map(p => {
+                            const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
+                            const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
+                            return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
+                        });
                     renderProjects();
                 } 
                 else if (sectionName === 'services') {
-                    globalData.services = data.services || [];
+                    globalData.services = (data.services || [])
+                        .filter(isVisible) // Aplica el filtro: solo "active"
+                        .map(s => s);
                     renderServicesGrid();
                 } 
                 else if (sectionName === 'rental') {
-                    globalData.rentals.items = data.rentalItems || [];
+                    // Filtramos equipos: solo "active"
+                    const visibleItems = (data.rentalItems || []).filter(isVisible);
+                    
+                    globalData.rentals.items = visibleItems;
                     globalData.rentals.categories = data.rentalCategories || [];
                     globalData.rentals.dates = data.blockedDates || [];
                     
                     rentalDataGlobal = {}; 
                     data.rentalCategories.forEach(cat => {
-                        rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
-                            ...i, price: parseFloat(i.pricePerDay), bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
-                        }));
+                        rentalDataGlobal[cat.name] = visibleItems
+                            .filter(i => i.categoryId === cat.id)
+                            .map(i => ({
+                                ...i, 
+                                price: parseFloat(i.pricePerDay), 
+                                images: i.images || [],
+                                // Calendario corregido: usa getDatesInRange para bloquear todos los días
+                                bookedDates: data.blockedDates
+                                    .filter(b => b.itemId === i.id)
+                                    .flatMap(b => getDatesInRange(b.startDate, b.endDate))
+                            }));
                     });
                     renderRentalPage();
                 }
@@ -1586,48 +1632,171 @@
                 document.getElementById('btn-finish').onclick = close;
             };
     
-            const showCalendarModal = (item, booked) => {
-                const container = document.getElementById('calendar-modal-container');
-                container.innerHTML = `<div id="cal-overlay" class="calendar-modal-overlay"><div class="calendar-modal-content"><div class="calendar-header"><button id="c-prev"> < </button><h3 id="c-title"></h3><button id="c-next"> > </button></div><div id="c-grid" class="calendar-grid"></div><div class="p-4 bg-gray-50 mt-4"><div class="flex justify-between"><span>Total:</span><span id="c-total">$0</span></div></div><button id="c-add" class="w-full bg-black text-white py-3 mt-4" disabled>Agregar</button></div></div>`;
-                const overlay = document.getElementById('cal-overlay');
-                const grid = document.getElementById('c-grid');
-                let date = new Date(); date.setDate(1); let start=null, end=null;
+            const showCalendarModal = (item, bookedDates) => {
+                const modalContainer = document.getElementById('calendar-modal-container');
+                // HTML IDÉNTICO AL ESTÁTICO
+                modalContainer.innerHTML = `
+                    <div id="calendar-modal-overlay" class="calendar-modal-overlay">
+                        <div class="calendar-modal-content">
+                            <div class="calendar-header">
+                                <button id="calendar-prev" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
+                                <h3 id="calendar-month-year" class="font-display text-2xl"></h3>
+                                <button id="calendar-next" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="calendar-grid">
+                                <div class="calendar-day-name">D</div><div class="calendar-day-name">L</div><div class="calendar-day-name">M</div>
+                                <div class="calendar-day-name">M</div><div class="calendar-day-name">J</div><div class="calendar-day-name">V</div>
+                                <div class="calendar-day-name">S</div>
+                            </div>
+                            <div id="calendar-days" class="calendar-grid"></div>
+                            
+                            <div class="booking-summary">
+                                <div class="flex justify-between items-center text-sm"><span>Desde:</span><span id="summary-start-date">--/--/----</span></div>
+                                <div class="flex justify-between items-center text-sm"><span>Hasta:</span><span id="summary-end-date">--/--/----</span></div>
+                                <div class="flex justify-between items-center text-sm border-t mt-2 pt-2"><span>Total Días:</span><span id="summary-total-days">0</span></div>
+                                <div class="flex justify-between items-center text-xl font-bold mt-2"><span>Total a Pagar:</span><span id="summary-total-price">$0</span></div>
+                            </div>
+                            
+                            <button id="add-to-cart-btn" class="w-full mt-4 bg-black text-white py-3 font-bold disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>Agregar al Carrito</button>
+                        </div>
+                    </div>
+                `;
                 
-                setTimeout(()=>overlay.classList.add('visible'),10);
-                const close = () => { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
+                const overlay = document.getElementById('calendar-modal-overlay');
+                const monthYearEl = document.getElementById('calendar-month-year');
+                const daysContainer = document.getElementById('calendar-days');
+                const summaryStartDate = document.getElementById('summary-start-date');
+                const summaryEndDate = document.getElementById('summary-end-date');
+                const summaryTotalDays = document.getElementById('summary-total-days');
+                const summaryTotalPrice = document.getElementById('summary-total-price');
+                const addToCartBtn = document.getElementById('add-to-cart-btn');
                 
-                const render = () => {
-                    document.getElementById('c-title').textContent = date.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
-                    grid.innerHTML = '';
-                    const first = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-                    const days = new Date(date.getFullYear(), date.getMonth()+1, 0).getDate();
-                    for(let i=0; i<first; i++) grid.innerHTML+='<div></div>';
-                    for(let i=1; i<=days; i++) {
-                        const d = new Date(date.getFullYear(), date.getMonth(), i);
-                        const s = d.toISOString().split('T')[0];
-                        const btn = document.createElement('button'); btn.className='calendar-day w-8 h-8 rounded-full hover:bg-gray-100'; btn.textContent=i;
-                        if(d<new Date().setHours(0,0,0,0) || booked.includes(s)) { btn.disabled=true; btn.classList.add('text-gray-300','line-through'); }
-                        else {
-                            btn.onclick = () => {
-                                if(!start || (start && end)) { start=d; end=null; } else if (d<start) start=d; else end=d;
-                                render();
-                                document.getElementById('c-add').disabled = !(start && end);
-                                if(start && end) {
-                                    const count = Math.ceil((end-start)/86400000)+1;
-                                    document.getElementById('c-total').textContent = `$${(count*item.price).toFixed(2)}`;
-                                }
-                            };
-                            if(start && s===start.toISOString().split('T')[0]) btn.classList.add('bg-black','text-white');
-                            if(end && s===end.toISOString().split('T')[0]) btn.classList.add('bg-black','text-white');
+                const close = () => {
+                    overlay.classList.remove('visible');
+                    setTimeout(() => modalContainer.innerHTML = '', 300);
+                };
+    
+                setTimeout(() => overlay.classList.add('visible'), 10);
+    
+                let currentDate = new Date();
+                currentDate.setDate(1);
+                let selectedStartDate = null;
+                let selectedEndDate = null;
+    
+                const renderMonth = () => {
+                    const year = currentDate.getFullYear();
+                    const month = currentDate.getMonth();
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    
+                    // Capitalizar mes
+                    let monthName = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(currentDate);
+                    monthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+                    monthYearEl.textContent = `${monthName} ${year}`;
+                    
+                    daysContainer.innerHTML = '';
+                    const firstDayOfMonth = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    
+                    for (let i = 0; i < firstDayOfMonth; i++) daysContainer.innerHTML += `<div></div>`;
+                    
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dayEl = document.createElement('button');
+                        dayEl.textContent = day;
+                        dayEl.classList.add('calendar-day');
+                        
+                        // Construir fecha local sin problemas de zona horaria
+                        const dayDate = new Date(year, month, day); 
+                        const dateString = dayDate.toLocaleDateString('en-CA'); // YYYY-MM-DD local
+                        
+                        // Bloqueo: si es pasado O si está en la lista de bookedDates
+                        if (dayDate < today || bookedDates.includes(dateString)) {
+                            dayEl.classList.add('disabled');
+                        } else {
+                            dayEl.dataset.date = dateString;
                         }
-                        grid.appendChild(btn);
+                        
+                        // Estilos de selección
+                        if (selectedStartDate && dateString === selectedStartDate) dayEl.classList.add('selected');
+                        if (selectedEndDate && dateString === selectedEndDate) dayEl.classList.add('selected');
+                        if (selectedStartDate && selectedEndDate && dateString > selectedStartDate && dateString < selectedEndDate) dayEl.classList.add('in-range');
+                        
+                        daysContainer.appendChild(dayEl);
                     }
                 };
-                render();
-                document.getElementById('c-prev').onclick = () => { date.setMonth(date.getMonth()-1); render(); };
-                document.getElementById('c-next').onclick = () => { date.setMonth(date.getMonth()+1); render(); };
-                document.getElementById('c-add').onclick = () => { addToCart(item, start.toISOString().split('T')[0], end.toISOString().split('T')[0]); close(); };
-                overlay.onclick = (e) => { if(e.target===overlay) close(); };
+                
+                const updateSummary = () => {
+                    addToCartBtn.disabled = !(selectedStartDate && selectedEndDate);
+                    if (selectedStartDate && selectedEndDate) {
+                        // Formato visual para el usuario
+                        const startObj = new Date(selectedStartDate + 'T00:00:00');
+                        const endObj = new Date(selectedEndDate + 'T00:00:00');
+                        
+                        summaryStartDate.textContent = startObj.toLocaleDateString('es-ES');
+                        summaryEndDate.textContent = endObj.toLocaleDateString('es-ES');
+                        
+                        const diffDays = Math.ceil((endObj - startObj) / (1000 * 60 * 60 * 24)) + 1;
+                        summaryTotalDays.textContent = diffDays;
+                        summaryTotalPrice.textContent = `$${(diffDays * item.price).toFixed(2)}`;
+                    } else if (selectedStartDate) {
+                        const startObj = new Date(selectedStartDate + 'T00:00:00');
+                        summaryStartDate.textContent = startObj.toLocaleDateString('es-ES');
+                        summaryEndDate.textContent = '--/--/----';
+                        summaryTotalDays.textContent = '1';
+                        summaryTotalPrice.textContent = `$${item.price.toFixed(2)}`;
+                    } else {
+                         summaryStartDate.textContent = '--/--/----'; summaryEndDate.textContent = '--/--/----';
+                         summaryTotalDays.textContent = '0'; summaryTotalPrice.textContent = '$0';
+                    }
+                };
+                
+                daysContainer.addEventListener('click', (e) => {
+                    if (e.target.matches('.calendar-day') && !e.target.classList.contains('disabled')) {
+                        const clickedDateStr = e.target.dataset.date;
+                        
+                        if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+                            // Nuevo inicio
+                            selectedStartDate = clickedDateStr; selectedEndDate = null;
+                        } else if (clickedDateStr < selectedStartDate) {
+                            // Clic antes del inicio -> Nuevo inicio
+                            selectedStartDate = clickedDateStr;
+                        } else {
+                            // Selección de final
+                            // Verificar si hay días bloqueados en medio
+                            let validRange = true;
+                            let tempDate = new Date(selectedStartDate + 'T00:00:00');
+                            const endDateObj = new Date(clickedDateStr + 'T00:00:00');
+                            
+                            while(tempDate <= endDateObj) {
+                                const tempStr = tempDate.toLocaleDateString('en-CA');
+                                if(bookedDates.includes(tempStr)) {
+                                    validRange = false; break;
+                                }
+                                tempDate.setDate(tempDate.getDate() + 1);
+                            }
+                            
+                            if(!validRange) {
+                                alert("El rango incluye días no disponibles.");
+                                selectedStartDate = null; selectedEndDate = null;
+                            } else {
+                                selectedEndDate = clickedDateStr;
+                            }
+                        }
+                        renderMonth(); updateSummary();
+                    }
+                });
+                
+                addToCartBtn.addEventListener('click', () => {
+                    if (selectedStartDate && selectedEndDate) {
+                        addToCart(item, selectedStartDate, selectedEndDate);
+                        close();
+                    }
+                });
+    
+                document.getElementById('calendar-prev').onclick = () => { currentDate.setMonth(currentDate.getMonth() - 1); renderMonth(); };
+                document.getElementById('calendar-next').onclick = () => { currentDate.setMonth(currentDate.getMonth() + 1); renderMonth(); };
+                overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+                
+                renderMonth();
             };
     
             // =================================================================
