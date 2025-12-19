@@ -1036,6 +1036,37 @@
         let servicesData = [];
         let serviceDetails = {};
         let bookedDatesGlobal = []; 
+
+        // --- SELECTORES (Asegúrate de tener este bloque completo) ---
+        const mainContent = document.getElementById('main-content');
+        const header = document.getElementById('header');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const allNavLinks = document.querySelectorAll('.nav-link');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImage = document.getElementById('lightbox-image');
+        const lightboxClose = document.getElementById('lightbox-close');
+        const lightboxPrev = document.getElementById('lightbox-prev');
+        const lightboxNext = document.getElementById('lightbox-next');
+        const lightboxCaption = document.getElementById('lightbox-caption');
+        const pageLoader = document.getElementById('page-loader');
+        
+        // --- Selectores del Carrito (CRUCIALES PARA EL ERROR ACTUAL) ---
+        const cartButton = document.getElementById('cart-button');
+        const mobileCartButton = document.getElementById('mobile-cart-button');
+        const cartItemCount = document.getElementById('cart-item-count');
+        const mobileCartItemCount = document.getElementById('mobile-cart-item-count');
+        const cartOverlay = document.getElementById('cart-overlay');
+        const cartDrawer = document.getElementById('cart-drawer');
+        const cartCloseBtn = document.getElementById('cart-close-btn');
+        const cartItemsContainer = document.getElementById('cart-items-container');
+        const cartEmptyState = document.getElementById('cart-empty-state');
+        const cartSubtotalEl = document.getElementById('cart-subtotal');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        
+        // --- ESTADO DEL CARRITO ---
+        let cart = [];
+        
         
         // --- FUNCIÓN DE CONEXIÓN (API) ---
         const fetchWebsiteData = async () => {
@@ -2008,7 +2039,7 @@
                 // Asignamos los datos reales a las variables globales
                 portfolioData = apiData.portfolioGallery || [];
                 projectsData = apiData.projects || [];
-                
+                rentalDataGlobal = {};
                 // NOTA: 'projectDetails' ya no es necesario como objeto separado, 
                 // porque 'projectsData' ya contiene los detalles (imágenes) dentro.
             }
