@@ -2157,7 +2157,7 @@
                                 endDate: maxDate,
                                 bookingTimestamp: now.toISOString(),
                                 globalDiscountVal: 0,
-                                globalNotes: 'Reserva Web'
+                                globalNotes: ''
                             }
                         });
 
@@ -2179,7 +2179,7 @@
                                     basePrice: item.price,
                                     // Guardamos el total de la línea ya con impuesto si aplica
                                     lineTotal: (item.price * item.totalDays) * (item.hasTax ? 1.13 : 1),
-                                    lineNote: 'Web'
+                                    lineNote: ''
                                 }
                             });
 
