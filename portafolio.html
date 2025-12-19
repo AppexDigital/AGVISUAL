@@ -1343,20 +1343,19 @@
             const renderRentalPage = () => {
                 const filtersContainer = document.getElementById('rental-filters');
                 const gridContainer = document.getElementById('rental-grid-categorized');
-                const wrapper = document.getElementById('rental-filters-wrapper'); // Contenedor padre de filtros
+                const wrapper = document.getElementById('rental-filters-wrapper');
                 
                 if (!filtersContainer || !gridContainer) return;
     
-                // 1. INYECCIÓN DEL BUSCADOR (Solo si no existe)
+                // 1. INYECCIÓN DEL BUSCADOR (Corregido: Sin clase 'reveal')
                 let searchInput = document.getElementById('rental-search-input');
                 if (!searchInput && wrapper) {
                     const searchHTML = `
-                        <div class="w-full max-w-md mx-auto mb-8 relative reveal">
-                            <input type="text" id="rental-search-input" placeholder="Buscar equipo (ej: Sony, Lente...)" class="w-full py-3 px-6 rounded-full border border-gray-300 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all text-sm shadow-sm">
+                        <div class="w-full max-w-md mx-auto mb-8 relative">
+                            <input type="text" id="rental-search-input" placeholder="Buscar equipo (ej: Sony, Lente...)" class="w-full py-3 px-6 rounded-full border border-gray-300 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all text-sm shadow-sm bg-white text-black">
                             <i class="fas fa-search absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                         </div>
                     `;
-                    // Insertamos ANTES de los botones de filtro
                     wrapper.insertAdjacentHTML('afterbegin', searchHTML);
                     searchInput = document.getElementById('rental-search-input');
                 }
@@ -1367,20 +1366,16 @@
                 filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
                     cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
     
-                // Variable de estado para saber qué categoría está activa
                 let activeCategory = 'Todo';
     
-                // Función de Renderizado Inteligente (Combina Categoría + Texto)
                 const renderItems = () => {
                     const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
                     let items = globalData.rentals.items;
     
-                    // Paso 1: Filtrar por Categoría
                     if(activeCategory !== 'Todo') {
                         items = items.filter(i => i.categoryId === activeCategory);
                     }
     
-                    // Paso 2: Filtrar por Texto (Nombre o Descripción)
                     if (term) {
                         items = items.filter(i => 
                             i.name.toLowerCase().includes(term) || 
@@ -1418,17 +1413,15 @@
                     observeElements(gridContainer);
                 };
                 
-                // Listener de Filtros (Actualiza categoría y repinta)
                 filtersContainer.onclick = (e) => { 
                     if (e.target.matches('.rental-category-btn')) { 
                         filtersContainer.querySelector('.active').classList.remove('active'); 
                         e.target.classList.add('active'); 
-                        activeCategory = e.target.dataset.category; // Guardamos la selección
+                        activeCategory = e.target.dataset.category; 
                         renderItems(); 
                     }
                 };
     
-                // Listener de Buscador (Repinta al escribir)
                 if(searchInput) {
                     searchInput.oninput = () => renderItems();
                 }
@@ -1446,7 +1439,6 @@
                     }
                 };
                 
-                // Render inicial
                 renderItems();
             };
 
