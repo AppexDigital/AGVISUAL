@@ -1011,14 +1011,17 @@
     
     document.addEventListener('DOMContentLoaded', function () {
         
-        // --- VARIABLES GLOBALES (Se llenarán desde el Backend) ---
-        let rentalDataGlobal = {}; 
-        let portfolioData = [];
-        let projectsData = [];
-        let projectDetails = {};
-        let servicesData = [];
-        let serviceDetails = {};
-        let bookedDatesGlobal = []; 
+        // --- MEMORIA GLOBAL ---
+        let globalData = {
+            portfolio: [],
+            videos: [],
+            logos: [],
+            allProjectImages: [], // Caché de fotos
+            projects: [],         // Se llena al entrar a Proyectos
+            services: [],         // Se llena al entrar a Servicios
+            rentals: { items: [], categories: [], dates: [] } // Se llena al entrar a Alquiler
+        };
+        let rentalDataGlobal = {}; // Auxiliar para calendario
 
         // --- SELECTORES (Asegúrate de tener este bloque completo) ---
         const mainContent = document.getElementById('main-content');
@@ -1050,6 +1053,64 @@
         // --- ESTADO DEL CARRITO ---
         let cart = [];
         
+
+        // --- FUNCIÓN DE CONEXIÓN POR SECCIÓN ---
+        const fetchSectionData = async (section) => {
+            try {
+                console.log(`📡 Descargando sección: ${section}...`);
+                const res = await fetch(`/.netlify/functions/get-website-data?section=${section}`);
+                if (!res.ok) throw new Error('Error API');
+                return await res.json();
+            } catch (e) {
+                console.error(`Error cargando ${section}:`, e);
+                return null;
+            }
+        };
+
+        // --- GESTOR DE CARGA (LAZY LOAD) ---
+        const loadSection = async (sectionName) => {
+            // 1. Si ya tenemos los datos en memoria, NO llamamos al robot (Ahorro total)
+            if (sectionName === 'projects' && globalData.projects.length > 0) return;
+            if (sectionName === 'services' && globalData.services.length > 0) return;
+            if (sectionName === 'rental' && globalData.rentals.items.length > 0) return;
+
+            // 2. Si no los tenemos, llamamos al robot
+            const apiParam = sectionName === 'rental' ? 'rentals' : sectionName; 
+            const data = await fetchSectionData(apiParam);
+            if (!data) return;
+
+            // 3. Guardamos en memoria según lo que llegó
+            if (sectionName === 'projects') {
+                // Combinamos proyectos con las fotos que ya bajamos en Home (¡Eficiencia!)
+                globalData.projects = (data.projects || []).map(p => {
+                    const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
+                    const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
+                    return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
+                });
+                renderProjects();
+            } 
+            else if (sectionName === 'services') {
+                globalData.services = data.services || [];
+                renderServicesGrid();
+            } 
+            else if (sectionName === 'rental') {
+                globalData.rentals.items = data.rentalItems || [];
+                globalData.rentals.categories = data.rentalCategories || [];
+                globalData.rentals.dates = data.blockedDates || [];
+                
+                // Mapeo especial para el calendario
+                rentalDataGlobal = {}; 
+                data.rentalCategories.forEach(cat => {
+                    rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
+                        ...i, 
+                        price: parseFloat(i.pricePerDay),
+                        bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
+                    }));
+                });
+                renderRentalPage();
+            }
+        };
+
         
         // --- FUNCIÓN DE CONEXIÓN (API) ---
         const fetchWebsiteData = async () => {
@@ -1409,48 +1470,31 @@
         };
         
         const renderProjectDetail = (targetId) => {
-            // targetId viene como "project-detail-ID_REAL"
-            // Extraemos el ID real cortando "project-detail-" (15 caracteres)
             const realId = targetId.substring(15);
-            
-            // Buscamos en los datos reales
-            const project = projectsData.find(p => String(p.id) === String(realId));
-            
-            if (!project) {
-                console.error("Proyecto no encontrado:", realId);
-                return;
-            }
+            // LEE DE GLOBALDATA
+            const project = globalData.projects.find(p => String(p.id) === String(realId));
+            if (!project) return;
             
             const detailContainer = document.getElementById('project-detail-pages');
-            
-            // Usamos las imágenes del proyecto (project.images viene del backend)
             const images = project.images || [];
-            
-            const imagesHTML = images.length > 0 ? images.map(img => `
-                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6 group">
-                    <img src="${img.imageUrl}" alt="${project.title}" loading="lazy" class="w-full h-auto object-cover shadow-sm transition-transform duration-500 group-hover:scale-105">
-                    ${img.caption ? `<div class="absolute bottom-0 left-0 w-full p-2 bg-black/50 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">${img.caption}</div>` : ''}
-                </div>
-            `).join('') : '<p class="text-center col-span-full text-gray-400">Sin imágenes adicionales.</p>';
             
             detailContainer.innerHTML = `
                 <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
                     <div class="container mx-auto px-6">
                         <div class="max-w-6xl mx-auto">
-                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-flex items-center gap-2">
-                                <i class="fas fa-arrow-left"></i> Volver a Proyectos
-                            </a>
+                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-flex items-center gap-2"><i class="fas fa-arrow-left"></i> Volver a Proyectos</a>
                             <div class="text-center mb-16 reveal">
                                 <h2 class="text-4xl md:text-6xl font-display text-reveal mb-4">${project.title}</h2>
                                 <p class="text-lg text-gray-600 mt-4 max-w-3xl mx-auto text-reveal text-center leading-relaxed">${project.description}</p>
                             </div>
                             <div class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 reveal">
-                                ${imagesHTML}
+                                ${images.length ? images.map(img => `<div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6 group"><img src="${img.imageUrl}" loading="lazy" class="w-full h-auto object-cover shadow-sm transition-transform duration-500 group-hover:scale-105">
+                                ${img.caption ? `<div class="absolute bottom-0 left-0 w-full p-2 bg-black/50 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">${img.caption}</div>` : ''}
+                                </div>`).join('') : '<p>Sin fotos.</p>'}
                             </div>
                         </div>
                     </div>
                 </section>`;
-            
             navigateTo(targetId);
         };
 
@@ -1630,18 +1674,22 @@
             `).join('');
         };
 
-        const renderServicesGrid = () => {
-            const servicesGrid = document.getElementById('services-grid');
-            if(servicesGrid) {
-                servicesGrid.innerHTML = servicesData.map(service => `
-                    <a href="#" data-target="service-detail-${service.id}" class="nav-link service-grid-item items-center justify-center text-center py-12">
-                        <div class="service-icon-wrapper">
-                            <i class="${service.icon} service-icon"></i>
-                        </div>
-                        <h3 class="text-2xl font-display text-gray-900">${service.title}</h3>
-                    </a>
-                `).join('');
+         const renderServicesGrid = () => {
+            const container = document.getElementById('services-grid');
+            if(!container) return;
+            const data = globalData.services;
+            
+            if (data.length === 0) {
+                // Estado de carga o vacío
+                container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando servicios...</div>';
+                return;
             }
+            container.innerHTML = data.map(s => `
+                <a href="#" data-target="service-detail-${s.id}" class="nav-link service-grid-item items-center justify-center text-center py-12">
+                    <div class="service-icon-wrapper"><i class="${s.iconClass || 'fas fa-camera'} service-icon"></i></div>
+                    <h3 class="text-2xl font-display text-gray-900">${s.title}</h3>
+                </a>
+            `).join('');
         };
 
         const renderRentalPage = () => {
