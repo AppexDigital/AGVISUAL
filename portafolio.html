@@ -1315,57 +1315,25 @@
 
 
             
-            const renderServicesGrid = (filterText = '') => {
+            const renderServicesGrid = () => {
                 const container = document.getElementById('services-grid');
                 if(!container) return;
+                
+                // Si por error se creó el buscador antes, lo eliminamos del DOM
+                const searchBar = document.getElementById('service-search-container');
+                if (searchBar) searchBar.remove();
     
-                // 1. INYECCIÓN DEL BUSCADOR (Solo si no existe)
-                // Lo insertamos justo antes de la cuadrícula de servicios
-                if (!document.getElementById('service-search-bar')) {
-                    const searchHTML = `
-                        <div id="service-search-container" class="col-span-full mb-12 flex justify-center w-full reveal visible">
-                            <div class="relative w-full max-w-md">
-                                <input type="text" id="service-search-bar" 
-                                    placeholder="Buscar servicio (ej: Bodas, Dron...)" 
-                                    class="w-full py-3 px-6 rounded-full border border-gray-300 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all text-sm shadow-sm"
-                                >
-                                <i class="fas fa-search absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                            </div>
-                        </div>
-                    `;
-                    container.insertAdjacentHTML('beforebegin', searchHTML);
-                    
-                    // Event Listener para filtrar en tiempo real
-                    document.getElementById('service-search-bar').addEventListener('input', (e) => {
-                        renderServicesGrid(e.target.value);
-                    });
-                }
-    
-                // 2. LÓGICA DE FILTRADO
-                // Si hay texto, filtramos. Si no, mostramos todo.
-                const term = filterText.toLowerCase().trim();
-                const visibleServices = globalData.services.filter(s => 
-                    s.title.toLowerCase().includes(term)
-                );
-    
-                // 3. RENDERIZADO DE RESULTADOS
                 if (globalData.services.length === 0) { 
                     container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando servicios...</div>'; 
                     return; 
                 }
     
-                if (visibleServices.length === 0) {
-                    container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400 italic">No se encontraron servicios con ese nombre.</div>';
-                    return;
-                }
-    
-                container.innerHTML = visibleServices.map(s => `
+                container.innerHTML = globalData.services.map(s => `
                     <a href="#" data-target="service-detail-${s.id}" class="nav-link service-grid-item items-center justify-center text-center py-12 reveal">
                         <div class="service-icon-wrapper"><i class="${s.iconClass || 'fas fa-camera'} service-icon"></i></div>
                         <h3 class="text-2xl font-display text-gray-900">${s.title}</h3>
                     </a>`).join('');
                 
-                // Reactivar animaciones para los nuevos elementos
                 observeElements(container);
             };
 
@@ -1375,20 +1343,58 @@
             const renderRentalPage = () => {
                 const filtersContainer = document.getElementById('rental-filters');
                 const gridContainer = document.getElementById('rental-grid-categorized');
+                const wrapper = document.getElementById('rental-filters-wrapper'); // Contenedor padre de filtros
+                
                 if (!filtersContainer || !gridContainer) return;
+    
+                // 1. INYECCIÓN DEL BUSCADOR (Solo si no existe)
+                let searchInput = document.getElementById('rental-search-input');
+                if (!searchInput && wrapper) {
+                    const searchHTML = `
+                        <div class="w-full max-w-md mx-auto mb-8 relative reveal">
+                            <input type="text" id="rental-search-input" placeholder="Buscar equipo (ej: Sony, Lente...)" class="w-full py-3 px-6 rounded-full border border-gray-300 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all text-sm shadow-sm">
+                            <i class="fas fa-search absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    `;
+                    // Insertamos ANTES de los botones de filtro
+                    wrapper.insertAdjacentHTML('afterbegin', searchHTML);
+                    searchInput = document.getElementById('rental-search-input');
+                }
+    
                 if (globalData.rentals.categories.length === 0) { gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando equipos...</p>'; return; }
     
                 const cats = globalData.rentals.categories;
                 filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
                     cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
     
-                const renderItems = (catId) => {
+                // Variable de estado para saber qué categoría está activa
+                let activeCategory = 'Todo';
+    
+                // Función de Renderizado Inteligente (Combina Categoría + Texto)
+                const renderItems = () => {
+                    const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
                     let items = globalData.rentals.items;
-                    if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
+    
+                    // Paso 1: Filtrar por Categoría
+                    if(activeCategory !== 'Todo') {
+                        items = items.filter(i => i.categoryId === activeCategory);
+                    }
+    
+                    // Paso 2: Filtrar por Texto (Nombre o Descripción)
+                    if (term) {
+                        items = items.filter(i => 
+                            i.name.toLowerCase().includes(term) || 
+                            (i.description && i.description.toLowerCase().includes(term))
+                        );
+                    }
+                    
+                    if (items.length === 0) {
+                        gridContainer.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400 italic">No se encontraron equipos.</div>';
+                        return;
+                    }
                     
                     gridContainer.innerHTML = items.map(item => {
                         const imgs = item.images || [];
-                        // AJUSTE 1: Altura aumentada de h-64 a h-80 (320px)
                         const trackHTML = imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full h-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">Sin foto</div>';
                         
                         return `
@@ -1412,11 +1418,21 @@
                     observeElements(gridContainer);
                 };
                 
+                // Listener de Filtros (Actualiza categoría y repinta)
                 filtersContainer.onclick = (e) => { 
                     if (e.target.matches('.rental-category-btn')) { 
-                        filtersContainer.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); renderItems(e.target.dataset.category); 
+                        filtersContainer.querySelector('.active').classList.remove('active'); 
+                        e.target.classList.add('active'); 
+                        activeCategory = e.target.dataset.category; // Guardamos la selección
+                        renderItems(); 
                     }
                 };
+    
+                // Listener de Buscador (Repinta al escribir)
+                if(searchInput) {
+                    searchInput.oninput = () => renderItems();
+                }
+    
                 gridContainer.onclick = (e) => { 
                     const btn = e.target.closest('.rental-carousel-button');
                     if(btn) { 
@@ -1429,8 +1445,15 @@
                         track.dataset.currentIndex = idx;
                     }
                 };
-                renderItems('Todo');
+                
+                // Render inicial
+                renderItems();
             };
+
+
+
+
+            
     
             const renderProjectDetail = (targetId) => {
                 const realId = targetId.substring(15);
