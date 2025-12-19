@@ -403,17 +403,27 @@
             transform: translateY(-8px);
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
+        /* --- AJUSTE TIENDA: Dimensiones Fijas para Carruseles --- */
         .carousel-container {
+            width: 100%;
             overflow: hidden;
             position: relative;
+            background-color: #f3f4f6; /* Fondo gris pálido por si la imagen no carga */
         }
         .carousel-track {
             display: flex;
             transition: transform 0.5s ease-in-out;
         }
-        .carousel-item {
+       .carousel-item {
             min-width: 100%;
+            height: 100%; /* Forzar altura del padre */
         }
+        .carousel-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* "cover" recorta para llenar, "contain" ajusta para ver completa */
+        }
+        
         .carousel-button {
             position: absolute;
             top: 50%;
@@ -1331,22 +1341,28 @@
                     if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
                     
                     gridContainer.innerHTML = items.map(item => {
+                        // FIX RENTAL LIST: .map(img => img.imageUrl)
                         const imgs = item.images || [];
+                        // AJUSTE: Altura fija (h-full) dentro de un contenedor fijo
+                        const trackHTML = imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full h-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">Sin foto</div>';
+                        
                         return `
-                        <div class="rental-card reveal">
-                             <div class="carousel-container aspect-w-4 aspect-h-3">
-                                <div class="carousel-track flex" data-current-index="0">${imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200"></div>'}</div>
+                        <div class="rental-card reveal flex flex-col h-full"> <div class="carousel-container h-64 w-full relative group">
+                                <div class="carousel-track flex h-full" data-current-index="0">${trackHTML}</div>
                                 ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
-                                <div class="flex justify-between items-baseline"><h3 class="font-display text-2xl">${item.name}</h3><p class="font-bold text-xl">$${item.pricePerDay}<span class="text-sm font-normal">/día</span></p></div>
-                                <p class="text-gray-600 text-sm my-4 flex-grow line-clamp-3">${item.description}</p>
-                                <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group mt-auto">Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span></a>
+                                <div class="flex justify-between items-baseline mb-2">
+                                    <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
+                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.price}<span class="text-sm font-normal text-gray-500">/día</span></p>
+                                </div>
+                                <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.description}</p>
+                                <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
+                                    Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
+                                </a>
                             </div>
                         </div>`;
                     }).join('');
-                    observeElements(gridContainer);
-                };
                 
                 // Listeners locales
                 filtersContainer.onclick = (e) => { 
@@ -1468,19 +1484,28 @@
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
-                const trackHTML = item.images.map(img=>`<div class="carousel-item"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
+                // AJUSTE: Asegurar clases de altura completa (h-full) en los items
+                const trackHTML = item.images.map(img=>`<div class="carousel-item w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
                 
                 document.getElementById('rental-detail-pages').innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
                         <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
                             <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo</a>
+                            
                             <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
-                                <div class="lg:col-span-3"><div class="carousel-container sticky top-28"><div class="carousel-track">${trackHTML}</div><button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next"><i class="fas fa-chevron-right"></i></button></div></div>
+                                <div class="lg:col-span-3">
+                                    <div class="carousel-container h-[400px] md:h-[500px] w-full relative rounded-none border border-gray-100 shadow-sm sticky top-28">
+                                        <div class="carousel-track flex h-full">${trackHTML}</div>
+                                        <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                </div>
+                                
                                 <div class="lg:col-span-2 reveal">
                                     <h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2>
                                     <p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p>
-                                    <p class="text-gray-600 text-justify text-reveal mb-8">${item.description}</p>
-                                    <button id="calendar-btn-${item.id}" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300">
+                                    <p class="text-gray-600 text-justify text-reveal mb-8 leading-relaxed">${item.description}</p>
+                                    <button id="calendar-btn-${item.id}" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300 transition-transform hover:-translate-y-1 shadow-lg">
                                         <i class="fas fa-calendar-alt mr-2"></i> Consultar Disponibilidad
                                     </button>
                                 </div>
@@ -1488,10 +1513,9 @@
                         </div></div>
                     </section>`;
                 
+                // ... (Resto de la lógica del slider y navegación igual que antes) ...
                 const section = document.getElementById(targetId);
-                // Pasamos item.bookedDates que ya viene filtrado desde loadSection
                 section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates || []);
-                
                 const track = section.querySelector('.carousel-track');
                 let idx = 0;
                 section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
