@@ -4,1154 +4,845 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adán Gómez | Fotógrafo Profesional</title>
+    
     <link rel="icon" id="dynamic-favicon" type="image/png" href="https://placehold.co/32x32/1a1a1a/ffffff?text=AG">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
     <style>
+        /* --- SISTEMA DE DISEÑO ORIGINAL --- */
         :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-light: #f8f9fa; --accent: #3a3a3a; }
         html { scroll-behavior: smooth; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-dark); overflow-x: hidden; }
-        h1, h2, h3, h4, .font-display { font-family: 'Cormorant Garamond', serif; line-height: 1.4; }
+        h1, h2, h3, h4, .font-display { font-family: 'Cormorant Garamond', serif; line-height: 1.2; }
         
-        /* Loader & Transitions */
-        .page-container { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
+        /* TRANSICIONES Y CARGA */
+        .page-container { display: none; opacity: 0; transition: opacity 0.6s ease; padding-top: 120px; padding-bottom: 80px; min-height: 100vh; }
         .page-active { display: block; opacity: 1; }
-        .page-exiting { display: block; opacity: 0; }
-        .reveal { opacity: 0; transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1); }
-        .reveal.visible { opacity: 1; }
-        .loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-main); z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease, visibility 0.5s ease; }
-        .loader.hidden { opacity: 0; visibility: hidden; }
-        .loader-circle { width: 50px; height: 50px; border: 3px solid rgba(0, 0, 0, 0.1); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s ease-in-out infinite; }
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 1s cubic-bezier(0.165, 0.84, 0.44, 1); }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        
+        .loader { position: fixed; inset: 0; background-color: var(--bg-main); z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .loader.hidden { opacity: 0; pointer-events: none; }
+        .loader-circle { width: 40px; height: 40px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Header & Nav */
-        #header { transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); padding: 1.5rem 0; background: transparent; }
-        #header.header-scrolled { padding: 0.5rem 0; background-color: rgba(253, 253, 253, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
-        .nav-link-underline { position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background-color: black; transition: width 0.3s ease; }
-        .nav-link:hover .nav-link-underline, .nav-link.nav-active .nav-link-underline { width: 100%; }
-        
-        /* Header Dinámico */
-        #header.header-dark .logo-dark { display: none; }
-        #header.header-dark .logo-light { display: block; }
-        #header:not(.header-dark) .logo-light { display: none; }
-        #header:not(.header-dark) .logo-dark { display: block; }
-        #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon, #header.header-dark #cart-button { color: white; }
-        #header.header-dark .nav-link-underline { background-color: white; }
+        /* HEADER & NAV */
+        #header { transition: all 0.4s ease; padding: 1.5rem 0; }
+        #header.header-scrolled { padding: 0.8rem 0; background-color: rgba(253,253,253,0.98); box-shadow: 0 2px 15px rgba(0,0,0,0.03); }
+        .nav-link { position: relative; font-size: 0.75rem; letter-spacing: 0.15em; font-weight: 600; }
+        .nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px; background-color: #000; transition: width 0.3s; }
+        .nav-link:hover::after, .nav-link.active::after { width: 100%; }
 
-        /* Gallery & Images */
-        .gallery-item { cursor: pointer; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s; position: relative; overflow: hidden; break-inside: avoid; margin-bottom: 1.5rem; }
-        .gallery-item:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); }
-        .gallery-item img { transition: transform 0.8s ease; width: 100%; display: block; }
-        .gallery-item:hover img { transform: scale(1.05); }
-        .gallery-item .overlay { opacity: 0; transition: opacity 0.5s ease; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%); }
-        .gallery-item:hover .overlay { opacity: 1; }
+        /* PORTFOLIO MASONRY */
+        .masonry-grid { column-count: 1; column-gap: 1.5rem; }
+        @media (min-width: 640px) { .masonry-grid { column-count: 2; } }
+        @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
+        
+        .gallery-item { break-inside: avoid; margin-bottom: 1.5rem; position: relative; overflow: hidden; cursor: zoom-in; }
+        .gallery-item img { width: 100%; display: block; transition: transform 0.7s cubic-bezier(0.2, 1, 0.3, 1); }
+        .gallery-item:hover img { transform: scale(1.03); }
+        .gallery-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; display: flex; align-items: flex-end; padding: 1.5rem; }
+        .gallery-item:hover .gallery-overlay { opacity: 1; }
 
-        /* Lightbox */
-        #lightbox { background-color: rgba(10, 10, 10, 0.95); backdrop-filter: blur(8px); transition: opacity 0.4s; }
-        #lightbox.visible #lightbox-image { transform: scale(1); }
-        #lightbox-image { transform: scale(0.9); transition: transform 0.4s; max-height: 90vh; max-width: 90vw; object-fit: contain; }
+        /* RENTAL CARDS (Uniformidad Forzada) */
+        .rental-card { 
+            display: flex; flex-direction: column; height: 100%; 
+            border: 1px solid #eee; background: #fff; transition: all 0.3s ease;
+        }
+        .rental-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .rental-image-container { position: relative; aspect-ratio: 4/3; overflow: hidden; background: #f9f9f9; }
+        .rental-image-container img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* CALENDAR MODAL */
+        .calendar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(4px); }
+        .calendar-overlay.visible { opacity: 1; pointer-events: auto; }
+        .calendar-content { background: #fff; padding: 2rem; width: 100%; max-width: 400px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); transform: translateY(20px); transition: transform 0.3s; }
+        .calendar-overlay.visible .calendar-content { transform: translateY(0); }
+        .calendar-day { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; cursor: pointer; border-radius: 50%; transition: all 0.2s; }
+        .calendar-day:hover:not(.disabled) { background: #f0f0f0; }
+        .calendar-day.selected { background: #000; color: #fff; }
+        .calendar-day.range { background: #eee; }
+        .calendar-day.disabled { color: #ccc; cursor: not-allowed; text-decoration: line-through; }
 
-        /* Mobile Menu */
-        #mobile-menu { background-color: rgba(253, 253, 253, 0.98); backdrop-filter: blur(20px); transform: translateX(100%); transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1); }
-        #mobile-menu.open { transform: translateX(0); }
+        /* CHECKOUT STEPS */
+        .step-content { display: none; }
+        .step-content.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Cart */
-        #cart-drawer { transform: translateX(100%); transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1); }
-        #cart-drawer.visible { transform: translateX(0); }
-        .cart-item-count { transform: scale(0); transition: transform 0.3s; }
-        .cart-item-count.visible { transform: scale(1); }
-        
-        /* Utils */
-        .img-placeholder { background-color: #f3f4f6; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        
-        /* --- Estilos para la sección de Alquiler --- */
-        .rental-category-btn { padding: 0.5rem 1.5rem; border: 1px solid #d1d5db; border-radius: 0; transition: all 0.3s ease; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
-        .rental-category-btn.active, .rental-category-btn:hover { background-color: var(--text-dark); color: white; border-color: var(--text-dark); }
-        .rental-card { background-color: white; border: 1px solid #e5e7eb; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0; transform: translateY(20px); display: flex; flex-direction: column; }
-        .rental-card.visible { opacity: 1; transform: translateY(0); }
-        .rental-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-        
-        /* Carousel Rental */
-        .carousel-container { overflow: hidden; position: relative; }
-        .carousel-track { display: flex; transition: transform 0.5s ease-in-out; }
-        .carousel-item { min-width: 100%; }
-        .carousel-button { position: absolute; top: 50%; transform: translateY(-50%); background-color: rgba(0,0,0,0.4); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 10; opacity: 0; transition: opacity 0.3s ease; }
-        .carousel-container:hover .carousel-button { opacity: 1; }
-        .carousel-button:hover { background-color: rgba(0,0,0,0.7); }
-        .carousel-button.prev { left: 10px; }
-        .carousel-button.next { right: 10px; }
-        
-        /* Servicios */
-        .service-grid-item { background-color: white; border: 1px solid #e5e7eb; border-radius: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 2rem; }
-        .service-grid-item:hover { transform: translateY(-10px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); border-color: var(--accent); }
-        .service-icon-wrapper { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: #f3f4f6; margin-bottom: 1.5rem; transition: all 0.4s ease; }
-        .service-grid-item:hover .service-icon-wrapper { background-color: var(--accent); transform: rotate(15deg) scale(1.1); }
-        .service-icon { font-size: 2rem; color: var(--accent); transition: color 0.4s ease; }
-        .service-grid-item:hover .service-icon { color: white; }
-        
-        /* Text Reveal */
-        .text-reveal { position: relative; overflow: hidden; }
-        .text-reveal::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-main); transform: translateX(0); transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1); }
-        .text-reveal.revealed::after { transform: translateX(101%); }
-        
-        /* Calendar Modal */
-        .calendar-modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 100; opacity: 0; transition: opacity 0.3s ease-in-out; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
-        .calendar-modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .calendar-modal-content { background-color: white; padding: 1.5rem; max-width: 400px; width: 100%; transform: scale(0.95); opacity: 0; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
-        .calendar-modal-overlay.visible .calendar-modal-content { transform: scale(1); opacity: 1; }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .calendar-nav-btn { background: none; border: 1px solid #d1d5db; width: 36px; height: 36px; border-radius: 50%; transition: all 0.2s ease; }
-        .calendar-nav-btn:hover { background-color: var(--text-dark); color: white; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; }
-        .calendar-day, .calendar-day-name { display: flex; justify-content: center; align-items: center; aspect-ratio: 1 / 1; text-align: center; }
-        .calendar-day-name { font-weight: bold; font-size: 0.75rem; color: #6b7280; }
-        .calendar-day { border: none; background-color: transparent; cursor: pointer; border-radius: 50%; transition: all 0.2s ease; }
-        .calendar-day:not(.disabled):hover { background-color: #f3f4f6; }
-        .calendar-day.disabled { color: #d1d5db; cursor: not-allowed; text-decoration: line-through; }
-        .calendar-day.selected, .calendar-day.in-range { background-color: var(--text-dark); color: white; }
-        .booking-summary { background-color: #f9fafb; padding: 1rem; margin-top: 1rem; }
-        
-        /* Checkout Modal */
-        #checkout-modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 110; opacity: 0; transition: opacity 0.4s ease; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
-        #checkout-modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        #checkout-modal-content { background-color: white; width: 100%; max-width: 600px; max-height: 90vh; display: flex; flex-direction: column; transform: translateY(20px); opacity: 0; transition: all 0.4s ease; }
-        #checkout-modal-overlay.visible #checkout-modal-content { transform: translateY(0); opacity: 1; }
-        .checkout-step { display: none; }
-        .checkout-step.active { display: block; }
-        .form-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #d1d5db; transition: border-color 0.3s, box-shadow 0.3s; }
-        .form-input:focus { outline: none; border-color: var(--text-dark); box-shadow: 0 0 0 2px rgba(26,26,26,0.2); }
-        .checkout-summary-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem 0; border-bottom: 1px solid #e5e7eb; }
-        
-        /* Contacto */
-        .contact-icon-link { background-color: #f3f4f6; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
-        .contact-icon-link::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background-color: var(--accent); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.6s ease, height 0.6s ease; z-index: -1; }
-        .contact-icon-link:hover::before { width: 300px; height: 300px; }
-        .contact-icon-link:hover { color: white; transform: scale(1.1); }
-        #google-map { filter: grayscale(100%) contrast(90%) brightness(110%); transition: filter 0.5s ease; }
-        #google-map:hover { filter: grayscale(0%); }
-        .client-logo { filter: grayscale(100%); opacity: 0.6; transition: all 0.4s ease; }
-        .client-logo:hover { filter: grayscale(0%); opacity: 1; transform: scale(1.05); }
-
+        /* CART DRAWER */
+        .cart-drawer { position: fixed; top: 0; right: 0; width: 100%; max-width: 400px; height: 100%; background: #fff; z-index: 60; transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1); box-shadow: -10px 0 40px rgba(0,0,0,0.05); }
+        .cart-drawer.open { transform: translateX(0); }
+        .cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 55; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+        .cart-overlay.open { opacity: 1; pointer-events: auto; }
     </style>
 </head>
-<body class="antialiased">
+<body class="text-gray-900">
 
     <div class="loader" id="page-loader">
-        <div class="flex flex-col items-center w-3/4 max-w-xs md:max-w-md">
-            <img src="https://placehold.co/400x150/ffffff/1a1a1a?text=ADAN+GOMEZ" alt="Logo Adán Gómez" class="w-full h-auto mb-8 logo-dark" id="loader-logo">
+        <div class="flex flex-col items-center">
+            <img src="https://placehold.co/200x80/ffffff/000000?text=ADAN+GOMEZ" id="loader-logo" class="h-12 mb-6" alt="Logo">
             <div class="loader-circle"></div>
         </div>
     </div>
-    
-    <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-        <div class="container mx-auto px-6 flex justify-between items-center">
-            <a href="#" data-target="portfolio" class="nav-link relative group">
-                <img src="https://placehold.co/350x120/ffffff/1a1a1a?text=ADAN+GOMEZ" alt="Logo Adán Gómez" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-dark" id="header-logo-dark">
-                <img src="https://placehold.co/350x120/1a1a1a/ffffff?text=ADAN+GOMEZ" alt="Logo Adán Gómez Blanco" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-light" id="header-logo-light" style="display: none;">
+
+    <header id="header" class="fixed w-full top-0 z-50">
+        <div class="container mx-auto px-6 md:px-12 flex justify-between items-center">
+            <a href="#" onclick="UI.nav('home')" class="z-50">
+                <img src="https://placehold.co/180x60/ffffff/000000?text=ADAN+GOMEZ" id="header-logo" class="h-8 md:h-10 transition-opacity" alt="Logo">
             </a>
 
-            <div class="flex items-center">
-                <nav class="hidden lg:flex items-center space-x-8 text-xs uppercase tracking-widest font-bold text-gray-800">
-                    <a href="#" data-target="portfolio" class="nav-link hover:text-gray-500 transition-colors relative group">
-                        <span class="nav-link-text">Portafolio</span>
-                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                    </a>
-                    <a href="#" data-target="projects" class="nav-link hover:text-gray-500 transition-colors relative group">
-                        <span class="nav-link-text">Proyectos</span>
-                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                    </a>
-                    <a href="#" data-target="services" class="nav-link hover:text-gray-500 transition-colors relative group">
-                        <span class="nav-link-text">Servicios</span>
-                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                    </a>
-                    <a href="#" data-target="rental" class="nav-link hover:text-gray-500 transition-colors relative group">
-                        <span class="nav-link-text">Alquiler</span>
-                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                    </a>
-                    <a href="#" data-target="about" class="nav-link hover:text-gray-500 transition-colors relative group">
-                        <span class="nav-link-text">Quién Soy</span>
-                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                    </a>
-                    <a href="#" data-target="contact" class="nav-link hover:text-gray-500 transition-colors relative group">
-                        <span class="nav-link-text">Contacto</span>
-                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
-                    </a>
-                </nav>
+            <nav class="hidden md:flex items-center gap-8">
+                <a href="#" onclick="UI.nav('home')" class="nav-link">PORTAFOLIO</a>
+                <a href="#" onclick="UI.nav('projects')" class="nav-link">PROYECTOS</a>
+                <a href="#" onclick="UI.nav('services')" class="nav-link">SERVICIOS</a>
+                <a href="#" onclick="UI.nav('rental')" class="nav-link">ALQUILER</a>
+                <a href="#" onclick="UI.nav('about')" class="nav-link">QUIÉN SOY</a>
+                <a href="#" onclick="UI.nav('contact')" class="nav-link">CONTACTO</a>
+            </nav>
 
-                <div class="hidden lg:flex items-center space-x-4 ml-8">
-                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors link-whatsapp"><i class="fab fa-whatsapp fa-lg"></i></a>
-                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors link-instagram"><i class="fab fa-instagram fa-lg"></i></a>
-                    <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors link-youtube"><i class="fab fa-youtube fa-lg"></i></a>
-                    <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2">
-                        <i class="fas fa-shopping-bag fa-lg"></i>
-                        <span id="cart-item-count" class="cart-item-count absolute -top-2 -right-2 bg-black text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold" style="transform: scale(0);">0</span>
-                    </button>
-                </div>
-
-                <button id="mobile-menu-button" class="lg:hidden z-50 w-8 h-6 flex flex-col justify-between ml-6" aria-label="Menú móvil" aria-expanded="false">
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+            <div class="hidden md:flex items-center gap-6">
+                <a href="#" target="_blank" id="link-ig"><i class="fab fa-instagram text-lg"></i></a>
+                <button onclick="UI.toggleCart()" class="relative">
+                    <i class="fas fa-shopping-bag text-lg"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-black text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full opacity-0 transition-opacity">0</span>
                 </button>
             </div>
+
+            <button class="md:hidden z-50" onclick="UI.toggleMobileMenu()">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
         </div>
     </header>
 
-    <div id="mobile-menu" class="fixed top-0 right-0 w-full h-full z-40 lg:hidden flex flex-col" aria-hidden="true">
-        <nav class="flex flex-col justify-center items-center h-full space-y-8 text-3xl flex-grow">
-            <a href="#" data-target="portfolio" class="nav-link mobile-nav-link uppercase">Portafolio</a>
-            <a href="#" data-target="projects" class="nav-link mobile-nav-link uppercase">Proyectos</a>
-            <a href="#" data-target="services" class="nav-link mobile-nav-link uppercase">Servicios</a>
-            <a href="#" data-target="rental" class="nav-link mobile-nav-link uppercase">Alquiler</a>
-            <a href="#" data-target="about" class="nav-link mobile-nav-link uppercase">Quién Soy</a>
-            <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
-        </nav>
-        <div class="flex justify-center items-center space-x-8 pb-12">
-            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors link-whatsapp"><i class="fab fa-whatsapp fa-2x"></i></a>
-            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors link-instagram"><i class="fab fa-instagram fa-2x"></i></a>
-            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors link-youtube"><i class="fab fa-youtube fa-2x"></i></a>
-            <button id="mobile-cart-button" aria-label="Ver carrito de compras" class="cart-button text-gray-700 hover:text-black transition-colors">
-                <i class="fas fa-shopping-bag fa-2x"></i>
-                <span id="mobile-cart-item-count" class="cart-item-count absolute -top-2 -right-2 bg-black text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold" style="transform: scale(0);">0</span>
-            </button>
-        </div>
+    <div id="mobile-menu" class="fixed inset-0 bg-white z-40 flex flex-col justify-center items-center gap-8 opacity-0 pointer-events-none transition-opacity duration-300">
+        <a href="#" onclick="UI.nav('home')" class="font-display text-3xl">Portafolio</a>
+        <a href="#" onclick="UI.nav('projects')" class="font-display text-3xl">Proyectos</a>
+        <a href="#" onclick="UI.nav('services')" class="font-display text-3xl">Servicios</a>
+        <a href="#" onclick="UI.nav('rental')" class="font-display text-3xl">Alquiler</a>
+        <a href="#" onclick="UI.nav('about')" class="font-display text-3xl">Quién Soy</a>
+        <a href="#" onclick="UI.nav('contact')" class="font-display text-3xl">Contacto</a>
     </div>
 
-    <main id="main-content">
+    <main>
         
-        <section id="portfolio" class="page-container pt-32 pb-20 page-active">
-            <div class="container mx-auto px-4 sm:px-6">
-                <div class="text-center mb-12 reveal visible">
-                    <h2 class="text-4xl md:text-6xl font-display mb-4" id="hero-title">Cargando...</h2>
-                    <p class="text-gray-500 max-w-xl mx-auto" id="hero-subtitle">...</p>
-                </div>
-                <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-4 gap-6 space-y-6 reveal visible min-h-[50vh]">
+        <section id="page-home" class="page-container page-active">
+            <div class="container mx-auto px-6 md:px-12">
+                <div class="masonry-grid" id="portfolio-grid">
                     </div>
             </div>
-
-            <div class="bg-gray-100 py-20 reveal">
-                <div class="container mx-auto px-6">
-                    <div class="text-center mb-12">
-                         <h2 class="text-4xl font-display text-gray-800 text-reveal">Confianza y Colaboración</h2>
-                    </div>
-                    <div class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto" id="client-logos-container">
+            
+            <div class="mt-32 py-20 bg-gray-50 border-t border-gray-100">
+                <div class="container mx-auto px-6 text-center">
+                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-gray-400 mb-12">Confianza & Colaboración</p>
+                    <div id="client-logos-grid" class="flex flex-wrap justify-center gap-12 md:gap-20 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
                         </div>
                 </div>
             </div>
-            
-            <div class="bg-gray-100 pt-12 pb-24 reveal">
-                <div class="container mx-auto px-6 text-center">
-                     <div class="text-center mb-12">
-                        <h2 class="text-4xl font-display text-gray-800 text-reveal py-2">¿Listo para el Siguiente Paso?</h2>
-                        <p class="text-lg text-gray-600 mt-2 text-reveal">Explora mis proyectos o contáctame para empezar a crear.</p>
-                    </div>
-                    <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
-                        <a href="#" data-target="projects" class="nav-link inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105 w-full sm:w-auto">Explorar Proyectos</a>
-                        <a href="#" data-target="contact" class="nav-link inline-block bg-zinc-700 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-zinc-800 transition-transform hover:scale-105 w-full sm:w-auto">Contactar Ahora</a>
-                    </div>
-                </div>
-            </div>
         </section>
 
-        <section id="projects" class="page-container pt-32 pb-20 bg-gray-50">
-            <div class="container mx-auto px-4 md:px-12">
-                <div id="projects-container" class="space-y-24">
-                    </div>
-                <div class="text-center mt-24 reveal">
-                     <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Listo para crear tu propia historia?</h3>
-                    <a href="#" data-target="services" class="nav-link mt-8 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Descubre mis Servicios</a>
+        <section id="page-projects" class="page-container">
+            <div class="container mx-auto px-6 md:px-12 max-w-6xl space-y-32" id="projects-list">
                 </div>
-            </div>
         </section>
 
-        <section id="services" class="page-container pt-32 pb-20">
-            <div class="container mx-auto px-6">
-                <div class="text-center mb-16">
-                    <h2 class="text-4xl font-display">Servicios</h2>
-                    <div class="w-20 h-1 bg-black mx-auto mt-4"></div>
+        <section id="page-services" class="page-container">
+            <div class="container mx-auto px-6 md:px-12 max-w-6xl">
+                <div class="text-center mb-20 reveal">
+                    <h2 class="font-display text-5xl mb-4">Servicios</h2>
+                    <div class="w-12 h-px bg-black mx-auto"></div>
                 </div>
-                <div id="services-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="services-grid">
                     </div>
             </div>
         </section>
 
-        <section id="rental" class="page-container pt-32 pb-20 bg-white">
-            <div class="container mx-auto px-6">
-                <div class="text-center mb-12">
-                    <h2 class="text-4xl font-display">Rental de Equipo</h2>
-                    <p class="text-gray-500 mt-2">Herramientas profesionales para tu visión.</p>
+        <section id="page-rental" class="page-container">
+            <div class="container mx-auto px-6 md:px-12 max-w-7xl">
+                <div class="text-center mb-16 reveal">
+                    <h2 class="font-display text-5xl mb-4">Rental</h2>
+                    <p class="text-gray-500 font-light">Equipo profesional para tu visión.</p>
                 </div>
-                
-                <div id="rental-filters" class="flex justify-center flex-wrap gap-4 mb-12">
+
+                <div class="flex justify-center flex-wrap gap-4 mb-16 reveal" id="rental-cats">
                     </div>
-                
-                <div id="rental-grid-categorized" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" id="rental-grid">
                     </div>
             </div>
         </section>
 
-        <section id="about" class="page-container pt-32 pb-20 bg-gray-50">
-            <div class="container mx-auto px-6 max-w-4xl">
-                <div class="text-center mb-12">
-                    <div class="relative w-64 h-64 mx-auto mb-8 overflow-hidden rounded-full shadow-xl">
-                        <img id="about-profile-img" src="https://placehold.co/400" class="w-full h-full object-cover">
+        <section id="page-about" class="page-container bg-gray-50">
+            <div class="container mx-auto px-6 md:px-12 max-w-4xl pt-10">
+                <div class="text-center reveal">
+                    <div class="w-64 h-64 mx-auto mb-10 overflow-hidden relative">
+                        <img id="about-img" src="https://placehold.co/400" class="w-full h-full object-cover grayscale hover:grayscale-0 transition duration-700">
                     </div>
-                    <h2 class="text-4xl font-display mb-4">Adán Gómez</h2>
-                    <p class="text-xl text-gray-600 italic" id="about-intro">"Cargando biografía..."</p>
+                    <h2 class="font-display text-5xl mb-6">Adán Gómez</h2>
+                    <p class="text-xl text-gray-500 font-light italic mb-16" id="about-intro">--</p>
                 </div>
-                <div class="prose max-w-none lg:prose-lg mx-auto mt-16 text-gray-600 leading-relaxed space-y-8 text-justify">
-                    <div id="about-bio"></div>
+                <div class="prose max-w-none text-gray-600 font-light leading-relaxed text-justify reveal" id="about-bio">
+                    </div>
+            </div>
+        </section>
+
+        <section id="page-contact" class="page-container">
+            <div class="container mx-auto px-6 md:px-12 max-w-4xl text-center">
+                <h2 class="font-display text-5xl mb-12 reveal">Contacto</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20 reveal" id="contact-grid">
+                    </div>
+                <div class="aspect-video bg-gray-100 reveal">
+                    <iframe id="contact-map" class="w-full h-full grayscale hover:grayscale-0 transition duration-700" frameborder="0"></iframe>
                 </div>
             </div>
         </section>
 
-        <section id="contact" class="page-container pt-32 pb-20">
-            <div class="container mx-auto px-6 max-w-4xl text-center">
-                <h2 class="text-4xl font-display mb-8">Hablemos</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16" id="contact-info">
-                    </div>
-                <div class="w-full h-96 bg-gray-200 rounded-lg overflow-hidden shadow-inner">
-                     <iframe id="google-map" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
-                </div>
-            </div>
-        </section>
-
-        <div id="detail-pages-container"></div>
-        <div id="project-detail-pages"></div>
-        <div id="rental-detail-pages"></div>
-        <div id="service-detail-pages"></div>
+        <div id="dynamic-detail-container"></div>
 
     </main>
 
-    <div id="lightbox" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0">
-        <button id="lightbox-close" class="absolute top-6 right-6 text-white text-5xl hover:text-gray-300">&times;</button>
-        <button id="lightbox-prev" class="absolute left-4 text-white text-4xl p-4 hover:bg-white/10 rounded-full"><i class="fas fa-chevron-left"></i></button>
-        <button id="lightbox-next" class="absolute right-4 text-white text-4xl p-4 hover:bg-white/10 rounded-full"><i class="fas fa-chevron-right"></i></button>
-        <img id="lightbox-image" src="" class="max-w-[95vw] max-h-[95vh] shadow-2xl rounded-sm">
-        <div class="absolute bottom-6 left-0 right-0 text-center text-white text-lg font-light tracking-wide" id="lightbox-caption"></div>
-    </div>
-
-    <div id="cart-overlay" class="fixed inset-0 bg-black/50 z-[60] hidden transition-opacity"></div>
-    <aside id="cart-drawer" class="fixed top-0 right-0 w-full max-w-md h-full bg-white z-[70] shadow-2xl flex flex-col">
-        <div class="p-6 border-b flex justify-between items-center bg-gray-50">
-            <h2 class="text-2xl font-display font-bold">Tu Carrito de Alquiler</h2>
-            <button id="cart-close-btn" class="text-2xl text-gray-400 hover:text-black">&times;</button>
+    <div class="cart-overlay" onclick="UI.toggleCart()"></div>
+    <div class="cart-drawer flex flex-col">
+        <div class="p-6 border-b flex justify-between items-center">
+            <h3 class="font-display text-2xl">Reserva</h3>
+            <button onclick="UI.toggleCart()" class="text-xl hover:text-red-500">&times;</button>
         </div>
-        <div id="cart-items-container" class="flex-1 overflow-y-auto p-6 space-y-4">
-             <div id="cart-empty-state" class="text-center p-8 flex flex-col items-center justify-center h-full">
-                <i class="fas fa-camera-retro text-5xl text-gray-300 mb-6"></i>
-                <h3 class="font-display text-2xl mb-2">Tu carrito está vacío</h3>
-                <p class="text-gray-500 mb-8 max-w-xs">Parece que aún no has añadido equipo.</p>
-            </div>
+        <div class="flex-1 overflow-y-auto p-6 space-y-6" id="cart-items">
+            <p class="text-center text-gray-400 py-10">Carrito vacío.</p>
         </div>
         <div class="p-6 border-t bg-gray-50">
-            <div class="flex justify-between items-center text-xl font-bold mb-4">
+            <div class="flex justify-between text-lg font-bold mb-6">
                 <span>Total Estimado:</span>
-                <span id="cart-subtotal">$0.00</span>
+                <span id="cart-total">$0.00</span>
             </div>
-            <button id="checkout-btn" class="w-full bg-black text-white py-4 font-bold tracking-widest hover:bg-gray-800 transition-colors uppercase text-sm">Solicitar Reserva</button>
+            <button onclick="UI.startCheckout()" id="btn-checkout" class="w-full bg-black text-white py-4 font-bold tracking-widest text-sm hover:bg-gray-800 transition disabled:opacity-50" disabled>SOLICITAR RESERVA</button>
         </div>
-    </aside>
+    </div>
 
-    <div id="calendar-modal-container"></div>
-    
-    <div id="checkout-modal-container"></div>
+    <div id="calendar-modal" class="calendar-overlay">
+        <div class="calendar-content relative">
+            <button onclick="UI.closeCalendar()" class="absolute top-4 right-4 text-gray-400 hover:text-black">&times;</button>
+            <h3 class="font-display text-xl mb-6 text-center" id="cal-item-name">Disponibilidad</h3>
+            
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="Calendar.prev()" class="w-8 h-8 rounded-full hover:bg-gray-100"><i class="fas fa-chevron-left"></i></button>
+                <span class="font-bold text-sm" id="cal-month-year"></span>
+                <button onclick="Calendar.next()" class="w-8 h-8 rounded-full hover:bg-gray-100"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            
+            <div class="calendar-grid mb-6 text-xs font-bold text-gray-400">
+                <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
+            </div>
+            <div class="calendar-grid gap-y-2 mb-6" id="cal-grid"></div>
+
+            <div class="bg-gray-50 p-4 text-sm space-y-2 mb-4">
+                <div class="flex justify-between"><span>Fechas:</span> <span id="cal-dates" class="font-bold">--</span></div>
+                <div class="flex justify-between"><span>Días:</span> <span id="cal-days">0</span></div>
+                <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2"><span>Total:</span> <span id="cal-total">$0</span></div>
+            </div>
+
+            <button onclick="Calendar.confirm()" id="cal-confirm-btn" class="w-full bg-black text-white py-3 font-bold text-xs tracking-widest disabled:bg-gray-300" disabled>AGREGAR</button>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="calendar-overlay">
+        <div class="calendar-content max-w-lg">
+            <div class="p-2">
+                <div id="step-1" class="step-content active">
+                    <h3 class="font-display text-2xl mb-6">Tus Datos</h3>
+                    <div class="space-y-4">
+                        <input type="text" id="chk-name" class="w-full p-3 border border-gray-200 focus:border-black outline-none transition" placeholder="Nombre Completo">
+                        <input type="email" id="chk-email" class="w-full p-3 border border-gray-200 focus:border-black outline-none transition" placeholder="Email">
+                        <input type="tel" id="chk-phone" class="w-full p-3 border border-gray-200 focus:border-black outline-none transition" placeholder="Teléfono / WhatsApp">
+                    </div>
+                    <button onclick="Checkout.next(2)" class="w-full bg-black text-white py-4 mt-6 font-bold tracking-widest text-sm">CONTINUAR</button>
+                </div>
+                
+                <div id="step-2" class="step-content">
+                    <h3 class="font-display text-2xl mb-6">Confirmar Reserva</h3>
+                    <div id="chk-summary" class="bg-gray-50 p-4 mb-6 max-h-60 overflow-y-auto text-sm"></div>
+                    <div class="flex justify-between font-bold text-xl mb-8"><span>Total:</span> <span id="chk-total">$0</span></div>
+                    <div class="flex gap-4">
+                        <button onclick="Checkout.prev(1)" class="w-1/3 border border-gray-300 py-3 font-bold text-xs">ATRÁS</button>
+                        <button onclick="Checkout.submit()" class="w-2/3 bg-black text-white py-3 font-bold text-xs tracking-widest">CONFIRMAR SOLICITUD</button>
+                    </div>
+                </div>
+
+                <div id="step-3" class="step-content text-center py-10">
+                    <i class="fas fa-check-circle text-5xl text-green-500 mb-6"></i>
+                    <h3 class="font-display text-3xl mb-4">¡Solicitud Enviada!</h3>
+                    <p class="text-gray-500 mb-8">Te contactaré pronto para coordinar el pago y la entrega.</p>
+                    <button onclick="location.reload()" class="bg-black text-white px-8 py-3 font-bold text-xs">VOLVER AL INICIO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lightbox" class="fixed inset-0 bg-black/95 z-[90] hidden flex justify-center items-center opacity-0 transition-opacity duration-300" onclick="if(event.target===this) UI.closeLightbox()">
+        <img id="lb-img" class="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl">
+        <button onclick="UI.closeLightbox()" class="absolute top-6 right-6 text-white text-4xl hover:text-gray-400">&times;</button>
+        <p id="lb-cap" class="absolute bottom-6 text-white/80 font-light tracking-wide text-sm"></p>
+    </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        
-        // --- 1. CONFIGURACIÓN Y ESTADO ---
-        // Este es el único punto de entrada de datos. Cero datos falsos.
-        const API_URL = '/.netlify/functions/get-website-data'; 
-        
-        // Variables globales para almacenar la info descargada
-        let appData = {
-            projects: [],
-            services: [],
-            rentalItems: [],
-            rentalCategories: [],
-            portfolioGallery: [],
-            clientLogos: [],
-            settings: {},
-            about: {},
-            blockedDates: []
-        };
-        
-        // Estado del carrito y diccionarios para búsqueda rápida
-        let cart = [];
-        let rentalDataGlobal = {}; // Se llenará dinámicamente
-        let projectDetails = {};   // Se llenará dinámicamente
-        let serviceDetails = {};   // Se llenará dinámicamente
+        // --- MOTOR DE DATOS ---
+        const API_URL = '/.netlify/functions/get-website-data';
+        let Data = { projects:[], rental:[], blocked:[], settings:{} };
+        let Cart = [];
+        let CurrentItem = null; // Para el modal de calendario
 
-        // --- 2. MOTOR DE DATOS (HIDRATACIÓN) ---
-        async function initApp() {
+        // --- INICIO ---
+        (async function init() {
             try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Error de conexión con la base de datos.');
+                // 1. Fetch Datos Reales
+                const res = await fetch(API_URL);
+                const json = await res.json();
                 
-                const data = await response.json();
-                appData = data; // Guardamos todo
-
-                // 2.1 TRANSFORMACIÓN DE DATOS (Adaptadores)
+                // 2. Procesar Datos
+                Data.settings = json.settings || {};
+                Data.about = json.about || {};
                 
-                // A. Adaptador de Alquileres (Array plano -> Objeto por Categorías)
-                const items = appData.rentalItems || [];
-                const cats = appData.rentalCategories || [];
+                // Procesar Portafolio (Masonry)
+                Data.portfolio = (json.portfolioGallery || []).map(i => ({ src: i.imageUrl, cap: i.caption }));
                 
-                // Crear estructura { "Nombre Categoria": [items...] }
-                cats.forEach(c => {
-                    rentalDataGlobal[c.name] = items.filter(i => i.categoryId === c.id && i.status !== 'hidden');
+                // Procesar Proyectos
+                Data.projects = (json.projects || []).filter(p => p.status !== 'hidden');
+                
+                // Procesar Servicios
+                Data.services = (json.services || []).filter(s => s.status !== 'hidden');
+                
+                // Procesar Alquiler (Estructura de Categorías)
+                Data.rental = {};
+                (json.rentalCategories || []).forEach(c => Data.rental[c.name] = []);
+                Data.rental['Otros'] = [];
+                
+                (json.rentalItems || []).forEach(i => {
+                    if(i.status === 'hidden') return;
+                    const cat = (json.rentalCategories || []).find(c => c.id === i.categoryId);
+                    const catName = cat ? cat.name : 'Otros';
+                    Data.rental[catName].push(i);
                 });
-                // Añadir items sin categoría o categoría perdida
-                const uncategorized = items.filter(i => !cats.find(c => c.id === i.categoryId) && i.status !== 'hidden');
-                if (uncategorized.length > 0) {
-                     rentalDataGlobal["Otros"] = uncategorized;
-                }
-
-                // B. Adaptador de Proyectos (Para detalles) - CORREGIDO
-                const projectsList = appData.projects || [];
-                projectsList.forEach(p => {
-                    projectDetails[p.id] = {
-                        title: p.title,
-                        description: p.description,
-                        // Mapeamos array de objetos {imageUrl, caption} a array de strings URL para el detalle simple
-                        images: (p.images || []).map(img => img.imageUrl) 
-                    };
-                });
-
-                // C. Adaptador de Servicios (Para detalles) - CORREGIDO
-                const servicesList = appData.services || [];
-                servicesList.forEach(s => {
-                    serviceDetails[s.id] = {
-                        title: s.title,
-                        intro: s.introText || s.description || '',
-                        // Mapeamos bloques de contenido a secciones
-                        sections: (s.contentBlocks || []).map(b => ({
-                            title: b.blockTitle,
-                            content: b.blockContentHtml
-                        })),
-                        gallery: (s.images || []).map(img => img.imageUrl)
-                    };
-                });
-
-                // 2.2 RENDERIZADO UI
-                renderUI();
                 
-                // Ocultar loader
-                document.getElementById('page-loader').classList.add('hidden');
+                // Procesar Bloqueos (Para calendario)
+                Data.blocked = json.blockedDates || [];
+
+                // 3. Renderizar Todo
+                Render.header();
+                Render.portfolio();
+                Render.projects();
+                Render.services();
+                Render.rental();
+                Render.about();
+                Render.contact();
+                Render.clients(json.clientLogos);
+
+                // 4. Quitar Loader
+                setTimeout(() => document.getElementById('page-loader').classList.add('hidden'), 500);
+
+            } catch (e) {
+                console.error(e);
+                alert("Error cargando el sitio.");
+            }
+        })();
+
+        // --- RENDERIZADORES (Diseño Estricto) ---
+        const Render = {
+            header: () => {
+                // Inyectar Logos Dinámicos si existen
+                if(Data.settings.logo_url_black) document.getElementById('header-logo').src = Data.settings.logo_url_black;
+                if(Data.settings.logo_url_black) document.getElementById('loader-logo').src = Data.settings.logo_url_black;
+                // Links sociales
+                if(Data.settings.social_instagram) document.getElementById('link-ig').href = Data.settings.social_instagram;
+            },
+            
+            portfolio: () => {
+                const grid = document.getElementById('portfolio-grid');
+                grid.innerHTML = Data.portfolio.map(i => `
+                    <div class="gallery-item mb-6" onclick="UI.lightbox('${i.src}', '${i.cap}')">
+                        <img src="${i.src}" class="w-full bg-gray-100">
+                        <div class="gallery-overlay"><p class="text-white text-sm font-light tracking-widest">${i.cap||''}</p></div>
+                    </div>
+                `).join('');
+                UI.observe();
+            },
+            
+            projects: () => {
+                const list = document.getElementById('projects-list');
+                list.innerHTML = Data.projects.map((p, idx) => {
+                    const isLeft = idx % 2 === 0;
+                    return `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center reveal">
+                        <div class="${isLeft ? 'order-1 md:order-1' : 'order-1 md:order-2'} overflow-hidden shadow-xl">
+                            <img src="${p.coverImageUrl}" class="w-full h-full object-cover transition duration-700 hover:scale-105 cursor-pointer" onclick="UI.openProject('${p.id}')">
+                        </div>
+                        <div class="${isLeft ? 'order-2 md:order-2 md:pl-10' : 'order-2 md:order-1 md:pr-10 text-right'}">
+                            <h3 class="font-display text-4xl md:text-5xl mb-6">${p.title}</h3>
+                            <div class="w-12 h-1 bg-black mb-6 ${isLeft ? '' : 'ml-auto'}"></div>
+                            <p class="text-gray-500 font-light leading-relaxed mb-8">${p.description}</p>
+                            <button onclick="UI.openProject('${p.id}')" class="text-xs font-bold uppercase tracking-[0.2em] border-b border-black pb-1 hover:text-gray-600 transition">Ver Proyecto</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            },
+
+            services: () => {
+                const grid = document.getElementById('services-grid');
+                grid.innerHTML = Data.services.map(s => `
+                    <div class="service-grid-item group cursor-pointer border border-gray-100 p-8 hover:shadow-xl transition duration-500 text-center" onclick="UI.openService('${s.id}')">
+                        <div class="w-16 h-16 mx-auto bg-gray-50 rounded-full flex items-center justify-center mb-6 group-hover:bg-black transition duration-500">
+                            <i class="${s.iconClass} text-2xl text-gray-800 group-hover:text-white"></i>
+                        </div>
+                        <h3 class="font-display text-2xl mb-4">${s.title}</h3>
+                        <p class="text-xs font-bold uppercase tracking-widest text-gray-400 group-hover:text-black transition">Descubrir</p>
+                    </div>
+                `).join('');
+            },
+
+            rental: () => {
+                // 1. Filtros
+                const cats = document.getElementById('rental-cats');
+                const catKeys = Object.keys(Data.rental).filter(k => Data.rental[k].length > 0);
+                cats.innerHTML = `<button class="rental-cat active px-6 py-2 border border-black bg-black text-white text-xs font-bold uppercase tracking-widest" onclick="UI.filterRental('all', this)">Todo</button>` + 
+                    catKeys.map(c => `<button class="rental-cat px-6 py-2 border border-gray-200 text-gray-500 text-xs font-bold uppercase tracking-widest hover:border-black hover:text-black transition" onclick="UI.filterRental('${c}', this)">${c}</button>`).join('');
+
+                // 2. Grid (Uniformidad Forzada)
+                const grid = document.getElementById('rental-grid');
+                const allItems = Object.values(Data.rental).flat();
                 
-            } catch (error) {
-                console.error("Fallo crítico:", error);
-                document.querySelector('.loader-circle').style.borderColor = 'red';
-                // Fallback silencioso: dejar que el loader se quite para no bloquear, aunque esté vacío
-                setTimeout(() => document.getElementById('page-loader').classList.add('hidden'), 2000);
-            }
-        }
-
-        function renderUI() {
-            applySettings();
-            renderPortfolio(appData.portfolioGallery);
-            renderProjects(appData.projects);
-            renderServices(appData.services);
-            renderRentalPage(); // Usa rentalDataGlobal ya hidratada
-            renderAbout(appData.about, appData.settings);
-            renderContact(appData.settings);
-            renderClientLogos(appData.clientLogos);
-        }
-
-        // --- 3. RENDERIZADORES ---
-
-        function applySettings() {
-            // 1. Textos Hero (Desde la hoja Settings)
-            if(appData.settings.hero_title) document.getElementById('hero-title').innerHTML = appData.settings.hero_title;
-            if(appData.settings.hero_subtitle) document.getElementById('hero-subtitle').innerText = appData.settings.hero_subtitle;
-            
-            // 2. LOGOS DINÁMICOS (Desde la hoja ImagenesIdentidad o Settings)
-            // Intentamos encontrar los logos en el objeto de logos de clientes o en identityImages si existen
-            const sysImages = {};
-            if (appData.clientLogos) {
-                appData.clientLogos.forEach(l => {
-                    if (l.key) sysImages[l.key] = l.logoUrl;
-                });
-            }
-
-            // Referencias al DOM
-            const logoDark = document.getElementById('header-logo-dark');
-            const logoLight = document.getElementById('header-logo-light');
-            const loaderLogo = document.getElementById('loader-logo');
-            const favicon = document.getElementById('dynamic-favicon');
-
-            // Reemplazo de Logo Negro
-            if (sysImages['logo_black']) {
-                if(logoDark) logoDark.src = sysImages['logo_black'];
-                if(loaderLogo) loaderLogo.src = sysImages['logo_black']; // Logo del loader
-            }
-            
-            // Reemplazo de Logo Blanco
-            if (sysImages['logo_white']) {
-                if(logoLight) logoLight.src = sysImages['logo_white'];
-            }
-
-            // Reemplazo de Favicon
-            if (sysImages['favicon'] && favicon) {
-                favicon.href = sysImages['favicon'];
-            }
-        }
-
-        function renderPortfolio(images) {
-            const container = document.getElementById('portfolio-gallery');
-            if(!images || images.length === 0) {
-                container.innerHTML = '<p class="text-center w-full text-gray-400 col-span-full">Pronto nuevas imágenes.</p>';
-                return;
-            }
-            
-            container.innerHTML = images.map(img => `
-                <div class="gallery-item break-inside-avoid relative group" onclick="openLightbox('${img.imageUrl}', '${img.caption||''}')">
-                    <img src="${img.imageUrl}" alt="${img.caption||'Portafolio'}" loading="lazy" class="w-full h-auto object-cover rounded-sm bg-gray-100">
-                    <div class="overlay absolute inset-0 flex items-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black/80 to-transparent">
-                        <p class="text-white text-sm font-light tracking-wide transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">${img.caption || ''}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderProjects(projects) {
-            const container = document.getElementById('projects-container');
-            if(!projects || projects.length === 0) return;
-
-            container.innerHTML = projects.filter(p => p.status !== 'hidden').map((p, idx) => {
-                const isEven = idx % 2 === 0;
-                const imgUrl = p.coverImageUrl || 'https://placehold.co/800x600?text=Proyecto';
-                
-                return `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center reveal">
-                    <div class="order-2 ${isEven ? 'md:order-1 md:text-right' : 'md:order-2 md:text-left'}">
-                        <h3 class="text-4xl font-display mb-4 text-gray-900">${p.title}</h3>
-                        <div class="w-16 h-1 bg-gray-200 mb-6 ${isEven ? 'ml-auto' : 'mr-auto'}"></div>
-                        <p class="text-gray-600 leading-relaxed mb-8 font-light">${p.description || ''}</p>
-                        <button onclick="openDetail('project', '${p.id}')" class="text-black text-xs font-bold uppercase tracking-[0.2em] border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-400 transition-all">
-                            Ver Proyecto
-                        </button>
-                    </div>
-                    <div class="order-1 ${isEven ? 'md:order-2' : 'md:order-1'} overflow-hidden shadow-xl rounded-sm cursor-pointer group" onclick="openDetail('project', '${p.id}')">
-                        <img src="${imgUrl}" alt="${p.title}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out">
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        function renderServices(services) {
-            const container = document.getElementById('services-grid');
-            if(!services) return;
-
-            container.innerHTML = services.filter(s => s.status !== 'hidden').map(s => `
-                <div class="service-grid-item group cursor-pointer" onclick="openDetail('service', '${s.id}')">
-                    <div class="service-icon-wrapper">
-                        <i class="${s.iconClass || 'fas fa-star'} service-icon"></i>
-                    </div>
-                    <h3 class="text-2xl font-display text-gray-900 group-hover:text-black transition-colors">${s.title}</h3>
-                    <div class="w-8 h-px bg-gray-300 my-4 group-hover:w-16 transition-all duration-300 bg-gray-400"></div>
-                    <p class="text-xs font-bold uppercase tracking-widest text-gray-400 group-hover:text-black mt-auto transition-colors">Descubrir</p>
-                </div>
-            `).join('');
-        }
-
-        function renderRentalPage() {
-            const filtersContainer = document.getElementById('rental-filters');
-            const gridContainer = document.getElementById('rental-grid-categorized');
-            if (!filtersContainer || !gridContainer) return;
-
-            // Obtener categorías dinámicas
-            const categories = ['Todo', ...Object.keys(rentalDataGlobal)];
-            
-            filtersContainer.innerHTML = categories.map(cat => 
-                `<button class="rental-category-btn ${cat === 'Todo' ? 'active' : ''}" data-category="${cat}">${cat}</button>`
-            ).join('');
-
-            const renderItems = (category) => {
-                let itemsToRender = (category === 'Todo') ? Object.values(rentalDataGlobal).flat() : rentalDataGlobal[category];
-                
-                gridContainer.innerHTML = itemsToRender.map(item => {
-                    // Precios e imagen
-                    const basePrice = parseFloat(item.pricePerDay) || 0;
+                grid.innerHTML = allItems.map(item => {
+                    const price = parseFloat(item.pricePerDay);
                     const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                    const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
+                    const finalPrice = hasTax ? price * 1.13 : price;
                     const taxLabel = hasTax ? '<span class="text-[10px] text-gray-400 ml-1">+IVI</span>' : '';
-                    
-                    // Imágenes para el carrusel
-                    const images = (item.images && item.images.length > 0) 
-                        ? item.images.map(i => i.imageUrl) 
-                        : ['https://placehold.co/400x300?text=Sin+Imagen'];
+                    const imgs = (item.images && item.images.length) ? item.images.map(i=>i.imageUrl) : ['https://placehold.co/600x400'];
 
                     return `
-                    <div class="rental-card reveal">
-                         <div class="carousel-container aspect-w-4 aspect-h-3">
-                            <div class="carousel-track flex" data-current-index="0">
-                                ${images.map(src => `<div class="carousel-item flex-shrink-0 w-full"><img src="${src}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('')}
-                            </div>
-                            ${images.length > 1 ? `
-                            <button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button>
-                            <button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>
+                    <div class="rental-card reveal" data-cat="${item.categoryId}">
+                        <div class="rental-image-container group">
+                            <img src="${imgs[0]}" id="img-${item.id}" class="transition duration-700 group-hover:scale-105">
+                            ${imgs.length > 1 ? `
+                                <button class="absolute top-1/2 left-2 -translate-y-1/2 bg-black/20 text-white w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-black/50" onclick="UI.slide('${item.id}', -1, [${imgs.map(i=>`'${i}'`)}])"><i class="fas fa-chevron-left"></i></button>
+                                <button class="absolute top-1/2 right-2 -translate-y-1/2 bg-black/20 text-white w-8 h-8 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-black/50" onclick="UI.slide('${item.id}', 1, [${imgs.map(i=>`'${i}'`)}])"><i class="fas fa-chevron-right"></i></button>
                             ` : ''}
                         </div>
-                        <div class="p-6 flex flex-col flex-grow">
-                            <div class="flex justify-between items-baseline">
-                                <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
-                                <p class="font-bold text-xl text-gray-800 ml-2 whitespace-nowrap">$${finalPrice.toFixed(0)}<span class="text-sm font-normal text-gray-500">/día</span></p>
+                        <div class="p-6 flex flex-col flex-1">
+                            <div class="flex justify-between items-baseline mb-2">
+                                <h3 class="font-display text-2xl leading-none">${item.name}</h3>
+                                <p class="font-bold font-sans text-lg">$${finalPrice.toFixed(0)}${taxLabel}</p>
                             </div>
-                            <p class="text-gray-600 text-sm my-4 flex-grow line-clamp-3">${item.description || ''}</p>
-                            <div class="mt-auto flex justify-between items-center">
-                                <a href="#" onclick="openDetail('rental', '${item.id}')" class="nav-link text-xs font-bold text-black uppercase tracking-wider border-b border-black hover:text-gray-600 hover:border-gray-400 transition-all pb-0.5">
-                                    Ver Detalles
-                                </a>
-                                <button onclick="addToCart('${item.id}')" class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-gray-800 transition-colors"><i class="fas fa-plus text-xs"></i></button>
+                            <p class="text-gray-500 text-sm font-light leading-relaxed mb-6 flex-1 line-clamp-3">${item.description}</p>
+                            <div class="flex gap-2 mt-auto">
+                                <button onclick="UI.openCalendar('${item.id}')" class="flex-1 border border-black py-3 text-xs font-bold uppercase tracking-widest hover:bg-gray-50 transition">Ver Disponibilidad</button>
                             </div>
                         </div>
                     </div>`;
                 }).join('');
-                
-                // Observador para animaciones al filtrar
-                setTimeout(() => {
-                    gridContainer.querySelectorAll('.rental-card').forEach((card, i) => {
-                        setTimeout(() => card.classList.add('visible'), i * 50);
-                    });
-                }, 50);
-            };
-
-            // Event listener delegación para filtros
-            filtersContainer.addEventListener('click', (e) => {
-                if (e.target.matches('.rental-category-btn')) {
-                    filtersContainer.querySelector('.active').classList.remove('active');
-                    e.target.classList.add('active');
-                    renderItems(e.target.dataset.category);
-                }
-            });
+            },
             
-            // Event listener delegación para carruseles
-            gridContainer.addEventListener('click', function(e) {
-                const button = e.target.closest('.rental-carousel-button');
-                if (button) {
-                    e.preventDefault(); e.stopPropagation();
-                    const track = button.closest('.carousel-container').querySelector('.carousel-track');
-                    const slides = Array.from(track.children);
-                    const direction = parseInt(button.dataset.direction);
-                    let currentIndex = parseInt(track.dataset.currentIndex) || 0;
-                    currentIndex = (currentIndex + direction + slides.length) % slides.length;
-                    track.style.transform = `translateX(-${currentIndex * 100}%)`;
-                    track.dataset.currentIndex = currentIndex;
-                }
-            });
+            about: () => {
+                if(Data.about.profile_image) document.getElementById('about-img').src = Data.about.profile_image;
+                if(Data.about.intro_phrase) document.getElementById('about-intro').innerText = `"${Data.about.intro_phrase}"`;
+                if(Data.about.bio) document.getElementById('about-bio').innerHTML = Data.about.bio.replace(/\n/g, '<br>');
+            },
 
-            // Render inicial
-            renderItems('Todo');
-        }
+            contact: () => {
+                const grid = document.getElementById('contact-grid');
+                const s = Data.settings;
+                grid.innerHTML = `
+                    <a href="mailto:${s.contact_email}" class="group p-8 border border-transparent hover:border-gray-100 hover:shadow-lg transition duration-500">
+                        <i class="fas fa-envelope text-3xl mb-4 text-gray-300 group-hover:text-black transition"></i>
+                        <h4 class="font-bold uppercase tracking-widest text-sm">Email</h4>
+                    </a>
+                    <a href="https://wa.me/${s.contact_phone?.replace(/\D/g,'')}" class="group p-8 border border-transparent hover:border-gray-100 hover:shadow-lg transition duration-500">
+                        <i class="fab fa-whatsapp text-3xl mb-4 text-gray-300 group-hover:text-green-600 transition"></i>
+                        <h4 class="font-bold uppercase tracking-widest text-sm">WhatsApp</h4>
+                    </a>
+                    <a href="${s.social_instagram}" class="group p-8 border border-transparent hover:border-gray-100 hover:shadow-lg transition duration-500">
+                        <i class="fab fa-instagram text-3xl mb-4 text-gray-300 group-hover:text-black transition"></i>
+                        <h4 class="font-bold uppercase tracking-widest text-sm">Instagram</h4>
+                    </a>
+                `;
+                if(s.social_maps && s.social_maps.includes('embed')) document.getElementById('contact-map').src = s.social_maps;
+            },
 
-        function renderAbout(about, settings) {
-            // Intro
-            const intro = document.getElementById('about-intro');
-            if (about.intro_phrase) intro.textContent = `"${about.intro_phrase}"`;
-            
-            // Bio completa
-            const bioContainer = document.getElementById('about-bio');
-            let contentHtml = '';
-            if (about.bio) contentHtml += `<div class="mb-8">${about.bio.replace(/\n/g, '<br>')}</div>`;
-            if (about.process) contentHtml += `
-                <h3 class="text-2xl font-display text-black mb-4 mt-8">Mi Proceso</h3>
-                <div class="pl-4 border-l-2 border-gray-200">${about.process.replace(/\n/g, '<br>')}</div>
-            `;
-            bioContainer.innerHTML = contentHtml || '<p>Información no disponible.</p>';
-
-            // Imagen de Perfil
-            const imgEl = document.getElementById('about-profile-img');
-            // Priorizamos la imagen de perfil específica
-            if (about.profile_image) imgEl.src = about.profile_image;
-        }
-
-        function renderContact(settings) {
-            const container = document.getElementById('contact-info');
-            const mapFrame = document.getElementById('google-map');
-            
-            const email = settings.contact_email || 'info@agvisual.com';
-            const phone = settings.contact_phone || '';
-            const ig = settings.social_instagram || '#';
-            const wa = settings.social_whatsapp || '#';
-            const yt = settings.social_youtube || '#';
-            const fb = settings.social_facebook || '#';
-            const maps = settings.social_maps;
-
-            // Actualizar enlaces en Header y Footer también
-            document.querySelectorAll('.link-instagram').forEach(a => a.href = ig);
-            document.querySelectorAll('.link-whatsapp').forEach(a => a.href = wa);
-            document.querySelectorAll('.link-youtube').forEach(a => a.href = yt);
-
-            // Renderizar Grid de Contacto
-            container.innerHTML = `
-                <a href="${ig}" target="_blank" class="contact-icon-link p-8 flex flex-col items-center justify-center rounded-lg">
-                    <i class="fab fa-instagram fa-3x mb-3 text-gray-700"></i>
-                    <span class="font-bold text-gray-800">Instagram</span>
-                </a>
-                <a href="${wa}" target="_blank" class="contact-icon-link p-8 flex flex-col items-center justify-center rounded-lg">
-                    <i class="fab fa-whatsapp fa-3x mb-3 text-gray-700"></i>
-                    <span class="font-bold text-gray-800">WhatsApp</span>
-                </a>
-                <a href="mailto:${email}" class="contact-icon-link p-8 flex flex-col items-center justify-center rounded-lg">
-                    <i class="fas fa-envelope fa-3x mb-3 text-gray-700"></i>
-                    <span class="font-bold text-gray-800">Email</span>
-                </a>
-            `;
-
-            if (maps && maps.includes('embed')) {
-                mapFrame.src = maps;
+            clients: (logos) => {
+                if(!logos) return;
+                const container = document.getElementById('client-logos-grid');
+                container.innerHTML = logos.map(l => `<img src="${l.logoUrl}" class="h-12 w-auto object-contain">`).join('');
             }
-        }
-        
-        function renderClientLogos(logos) {
-            const container = document.getElementById('client-logos-container');
-            if(!container) return;
-            if(!logos || logos.length === 0) return;
-            
-            container.innerHTML = logos.sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||99)).map(l => `
-                <img src="${l.logoUrl}" alt="${l.clientName}" class="client-logo h-12 md:h-16 w-auto object-contain grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-            `).join('');
-        }
-
-        // --- 4. DETALLES (PÁGINAS DINÁMICAS) ---
-
-        window.openDetail = (type, id) => {
-            const container = document.getElementById('detail-pages-container');
-            let content = '';
-
-            window.scrollTo(0,0);
-
-            if (type === 'project') {
-                const p = projectDetails[id];
-                if(!p) return;
-                
-                const imagesHTML = p.images.map(src => `
-                    <div class="gallery-item break-inside-avoid overflow-hidden relative img-container">
-                        <img src="${src}" loading="lazy" class="w-full h-auto object-cover" onclick="openLightbox('${src}', '')">
-                    </div>
-                `).join('');
-                
-                content = `
-                <div class="fixed inset-0 z-[60] bg-white overflow-y-auto animate-fade-in">
-                    <button onclick="closeDetail()" class="fixed top-6 right-6 z-50 text-black bg-white/80 backdrop-blur p-3 rounded-full hover:bg-black hover:text-white transition-all shadow-lg"><i class="fas fa-times fa-lg"></i></button>
-                    
-                    <div class="container mx-auto px-6 py-24 max-w-5xl">
-                        <div class="text-center mb-16">
-                            <p class="text-gray-400 text-xs font-bold uppercase tracking-[0.3em] mb-4">Proyecto</p>
-                            <h1 class="text-5xl md:text-6xl font-display mb-6 text-gray-900">${p.title}</h1>
-                            <p class="text-xl text-gray-600 max-w-2xl mx-auto font-light">${p.description}</p>
-                        </div>
-                        
-                        <div class="columns-1 md:columns-2 gap-8 space-y-8">
-                            ${imagesHTML}
-                        </div>
-                        
-                        <div class="text-center mt-16">
-                            <a href="#" onclick="closeDetail()" class="text-sm font-bold uppercase tracking-widest border-b border-black pb-1 hover:text-gray-600 transition-colors">Volver a Proyectos</a>
-                        </div>
-                    </div>
-                </div>`;
-
-            } else if (type === 'service') {
-                const s = serviceDetails[id];
-                if(!s) return;
-
-                const sectionsHTML = s.sections.map(section => `
-                    <div class="mb-12">
-                        <h3 class="text-2xl font-display mb-4 border-b border-gray-200 pb-2">${section.title}</h3>
-                        <div class="prose text-gray-600 leading-relaxed">${section.content}</div>
-                    </div>
-                `).join('');
-
-                const galleryHTML = s.gallery.map(src => `
-                    <img src="${src}" class="w-full h-48 object-cover rounded cursor-zoom-in hover:opacity-80 transition" onclick="openLightbox('${src}', '')">
-                `).join('');
-
-                content = `
-                <div class="fixed inset-0 z-[60] bg-white overflow-y-auto animate-fade-in">
-                    <button onclick="closeDetail()" class="fixed top-6 right-6 z-50 text-black bg-white/80 backdrop-blur p-3 rounded-full hover:bg-black hover:text-white transition-all shadow-lg"><i class="fas fa-times fa-lg"></i></button>
-                    
-                    <div class="h-[50vh] bg-gray-900 relative flex items-center justify-center overflow-hidden">
-                        <div class="absolute inset-0 opacity-40 bg-[url('${s.gallery[0] || ''}')] bg-cover bg-center"></div>
-                        <div class="relative z-10 text-center text-white px-4">
-                            <h1 class="text-5xl md:text-7xl font-display">${s.title}</h1>
-                        </div>
-                    </div>
-
-                    <div class="container mx-auto px-6 py-20 max-w-4xl">
-                        <div class="text-lg text-gray-800 font-medium italic mb-16 text-center border-l-4 border-black pl-6 py-2 bg-gray-50">
-                            ${s.intro}
-                        </div>
-                        
-                        ${sectionsHTML}
-
-                        ${s.gallery.length > 0 ? `
-                        <div class="mt-20">
-                            <h3 class="text-2xl font-display mb-8 text-center">Galería de Muestra</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                ${galleryHTML}
-                            </div>
-                        </div>
-                        ` : ''}
-
-                        <div class="mt-24 text-center">
-                            <a href="https://wa.me/${appData.settings.contact_phone?.replace(/\D/g,'')}" target="_blank" class="inline-block bg-black text-white font-bold py-4 px-10 rounded-full hover:bg-gray-800 transition-transform hover:scale-105 shadow-lg">
-                                Cotizar este Servicio
-                            </a>
-                        </div>
-                    </div>
-                </div>`;
-            
-            } else if (type === 'rental') {
-                // Buscar item en todas las categorías
-                let item = null;
-                for (const cat in rentalDataGlobal) {
-                    const found = rentalDataGlobal[cat].find(i => String(i.id) === String(id));
-                    if (found) { item = found; break; }
-                }
-                
-                if(!item) return;
-
-                const basePrice = parseFloat(item.pricePerDay);
-                const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
-
-                // Imágenes
-                const images = (item.images && item.images.length > 0) ? item.images.map(i => i.imageUrl) : ['https://placehold.co/800x600?text=Sin+Imagen'];
-
-                content = `
-                <div class="fixed inset-0 z-[60] bg-white overflow-y-auto animate-fade-in">
-                    <button onclick="closeDetail()" class="fixed top-6 right-6 z-50 text-black bg-white/80 backdrop-blur p-3 rounded-full hover:bg-black hover:text-white transition-all shadow-lg"><i class="fas fa-times fa-lg"></i></button>
-                    
-                    <div class="container mx-auto px-6 py-24 max-w-6xl">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                            <div class="space-y-4">
-                                <div class="aspect-w-4 aspect-h-3 bg-gray-100 rounded-lg overflow-hidden">
-                                    <img id="rental-main-img" src="${images[0]}" class="w-full h-full object-cover">
-                                </div>
-                                <div class="flex gap-4 overflow-x-auto pb-2">
-                                    ${images.map(src => `
-                                        <img src="${src}" class="w-20 h-20 object-cover rounded cursor-pointer border-2 border-transparent hover:border-black transition" onclick="document.getElementById('rental-main-img').src='${src}'">
-                                    `).join('')}
-                                </div>
-                            </div>
-                            
-                            <div class="flex flex-col justify-center">
-                                <p class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Alquiler de Equipo</p>
-                                <h1 class="text-4xl md:text-5xl font-display mb-6 text-gray-900">${item.name}</h1>
-                                
-                                <div class="text-3xl font-mono font-bold text-black mb-8 flex items-baseline gap-2">
-                                    $${finalPrice.toFixed(0)} 
-                                    <span class="text-base font-normal text-gray-500 text-sans">/ día ${hasTax?'+ IVA incl.':''}</span>
-                                </div>
-                                
-                                <div class="prose text-gray-600 mb-10">
-                                    ${item.longDescription || item.description || ''}
-                                </div>
-
-                                <button onclick="addToCart('${item.id}')" class="w-full bg-black text-white font-bold py-4 rounded hover:bg-gray-800 transition-all flex items-center justify-center gap-3">
-                                    <i class="fas fa-cart-plus"></i> Agregar a la Reserva
-                                </button>
-                                
-                                <button onclick="showCalendarModal('${item.id}', '${item.name}', ${finalPrice})" class="w-full mt-4 bg-white border-2 border-black text-black font-bold py-4 rounded hover:bg-gray-100 transition-all flex items-center justify-center gap-3">
-                                    <i class="far fa-calendar-alt"></i> Ver Disponibilidad
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            }
-
-            container.innerHTML = content;
-            document.body.style.overflow = 'hidden'; 
         };
 
-        // --- LÓGICA DEL CALENDARIO ---
-        window.showCalendarModal = (itemId, itemName, itemPrice) => {
-            const blockedDates = appData.blockedDates.filter(b => b.itemId === itemId);
-            const modalContainer = document.getElementById('calendar-modal-container');
+        // --- UI ACTIONS & LOGIC ---
+        const UI = {
+            nav: (id) => {
+                const target = document.getElementById('page-' + id);
+                document.querySelectorAll('.page-container').forEach(p => {
+                    p.style.opacity = 0;
+                    setTimeout(() => p.style.display = 'none', 500);
+                });
+                setTimeout(() => {
+                    target.style.display = 'block';
+                    setTimeout(() => target.style.opacity = 1, 50);
+                }, 500);
+                window.scrollTo(0,0);
+                document.getElementById('mobile-menu').classList.remove('opacity-100', 'pointer-events-auto');
+            },
             
-            modalContainer.innerHTML = `
-                <div id="calendar-modal-overlay" class="calendar-modal-overlay visible">
-                    <div class="calendar-modal-content">
-                        <div class="calendar-header">
-                            <button id="calendar-prev" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
-                            <h3 id="calendar-month-year" class="font-display text-lg font-bold text-center flex-1"></h3>
-                            <button id="calendar-next" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                        <div class="calendar-grid mb-2">
-                            <div class="calendar-day-name">D</div><div class="calendar-day-name">L</div><div class="calendar-day-name">M</div>
-                            <div class="calendar-day-name">M</div><div class="calendar-day-name">J</div><div class="calendar-day-name">V</div>
-                            <div class="calendar-day-name">S</div>
-                        </div>
-                        <div id="calendar-days" class="calendar-grid"></div>
-                        <div class="mt-4 pt-4 border-t border-gray-100 text-center">
-                            <p class="text-xs text-gray-500 mb-2">Días tachados no disponibles</p>
-                            <button onclick="document.getElementById('calendar-modal-overlay').remove()" class="text-sm font-bold text-black hover:underline">Cerrar</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            toggleMobileMenu: () => {
+                const m = document.getElementById('mobile-menu');
+                m.classList.toggle('opacity-100');
+                m.classList.toggle('pointer-events-auto');
+            },
 
-            let currentDate = new Date();
-            currentDate.setDate(1);
+            observe: () => {
+                const obs = new IntersectionObserver(entries => {
+                    entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }});
+                }, { threshold: 0.1 });
+                document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+            },
 
-            const renderMonth = () => {
-                const year = currentDate.getFullYear();
-                const month = currentDate.getMonth();
-                const daysContainer = document.getElementById('calendar-days');
-                document.getElementById('calendar-month-year').textContent = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
+            lightbox: (src, cap) => {
+                document.getElementById('lb-img').src = src;
+                document.getElementById('lb-cap').innerText = cap;
+                const lb = document.getElementById('lightbox');
+                lb.classList.remove('hidden');
+                setTimeout(() => lb.classList.remove('opacity-0'), 10);
+            },
+            
+            closeLightbox: () => {
+                const lb = document.getElementById('lightbox');
+                lb.classList.add('opacity-0');
+                setTimeout(() => lb.classList.add('hidden'), 300);
+            },
+
+            filterRental: (cat, btn) => {
+                document.querySelectorAll('.rental-cat').forEach(b => {
+                    b.classList.remove('bg-black', 'text-white');
+                    b.classList.add('bg-white', 'text-gray-500');
+                });
+                btn.classList.remove('bg-white', 'text-gray-500');
+                btn.classList.add('bg-black', 'text-white');
                 
-                daysContainer.innerHTML = '';
+                const cards = document.querySelectorAll('.rental-card');
+                const catId = (Data.rentalCategories || []).find(c => c.name === cat)?.id;
+                
+                cards.forEach(c => {
+                    if (cat === 'all' || c.dataset.cat === catId) {
+                        c.style.display = 'flex';
+                        setTimeout(() => c.style.opacity = 1, 50);
+                    } else {
+                        c.style.opacity = 0;
+                        setTimeout(() => c.style.display = 'none', 300);
+                    }
+                });
+            },
+
+            // --- CALENDARIO LÓGICO ---
+            openCalendar: (itemId) => {
+                // Encontrar item
+                const allItems = Object.values(Data.rental).flat();
+                CurrentItem = allItems.find(i => i.id === itemId);
+                
+                document.getElementById('cal-item-name').innerText = CurrentItem.name;
+                Calendar.init(itemId);
+                
+                document.getElementById('calendar-modal').classList.add('visible');
+            },
+            
+            closeCalendar: () => document.getElementById('calendar-modal').classList.remove('visible'),
+
+            // --- CARRITO ---
+            toggleCart: () => {
+                document.querySelector('.cart-drawer').classList.toggle('open');
+                document.querySelector('.cart-overlay').classList.toggle('open');
+            },
+            
+            renderCart: () => {
+                const c = document.getElementById('cart-items');
+                if(Cart.length === 0) {
+                    c.innerHTML = '<p class="text-center text-gray-400 py-10">Tu carrito está vacío.</p>';
+                    document.getElementById('btn-checkout').disabled = true;
+                    document.getElementById('cart-total').innerText = '$0.00';
+                    document.getElementById('cart-count').innerText = 0;
+                    document.getElementById('cart-count').style.opacity = 0;
+                    return;
+                }
+                
+                let total = 0;
+                c.innerHTML = Cart.map((i, idx) => {
+                    total += i.totalPrice;
+                    return `
+                    <div class="flex gap-4 border-b border-gray-100 pb-4">
+                        <img src="${i.img}" class="w-16 h-16 object-cover bg-gray-100">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm">${i.name}</h4>
+                            <p class="text-xs text-gray-500">${i.start} al ${i.end}</p>
+                            <p class="text-sm font-bold mt-1">$${i.totalPrice.toFixed(2)}</p>
+                        </div>
+                        <button onclick="UI.removeFromCart(${idx})" class="text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                    </div>`;
+                }).join('');
+                
+                document.getElementById('cart-total').innerText = `$${total.toFixed(2)}`;
+                document.getElementById('btn-checkout').disabled = false;
+                document.getElementById('cart-count').innerText = Cart.length;
+                document.getElementById('cart-count').style.opacity = 1;
+            },
+
+            addToCart: (dates) => {
+                const basePrice = parseFloat(CurrentItem.pricePerDay);
+                const hasTax = String(CurrentItem.hasTax).toUpperCase() === 'TRUE';
+                const finalPrice = hasTax ? basePrice * 1.13 : basePrice;
+                
+                Cart.push({
+                    id: CurrentItem.id,
+                    name: CurrentItem.name,
+                    img: (CurrentItem.images[0] || {}).imageUrl || '',
+                    start: dates.startStr,
+                    end: dates.endStr,
+                    days: dates.days,
+                    totalPrice: finalPrice * dates.days
+                });
+                
+                UI.closeCalendar();
+                UI.renderCart();
+                UI.toggleCart();
+            },
+
+            removeFromCart: (idx) => {
+                Cart.splice(idx, 1);
+                UI.renderCart();
+            },
+            
+            startCheckout: () => {
+                UI.toggleCart();
+                document.getElementById('checkout-modal').classList.add('visible');
+                Checkout.renderSummary();
+            },
+
+            // --- DETALLES DINÁMICOS ---
+            openProject: (id) => {
+                const p = Data.projects.find(x => x.id === id);
+                const html = `
+                    <div class="fixed inset-0 bg-white z-[60] overflow-y-auto animate-fade-in" id="detail-modal">
+                        <button onclick="document.getElementById('detail-modal').remove()" class="fixed top-6 right-6 text-3xl z-50">&times;</button>
+                        <div class="container mx-auto px-6 py-20 max-w-5xl">
+                            <h1 class="font-display text-5xl md:text-6xl text-center mb-8">${p.title}</h1>
+                            <p class="text-gray-600 text-center max-w-2xl mx-auto mb-16">${p.description}</p>
+                            <div class="columns-1 md:columns-2 gap-8 space-y-8">
+                                ${(p.images||[]).map(i => `<img src="${i.imageUrl}" class="w-full" onclick="UI.lightbox('${i.imageUrl}','')">`).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+                document.body.insertAdjacentHTML('beforeend', html);
+            },
+            
+            openService: (id) => {
+                const s = Data.services.find(x => x.id === id);
+                const blocks = s.contentBlocks || [];
+                const html = `
+                     <div class="fixed inset-0 bg-white z-[60] overflow-y-auto animate-fade-in" id="detail-modal">
+                        <button onclick="document.getElementById('detail-modal').remove()" class="fixed top-6 right-6 text-3xl z-50">&times;</button>
+                        <div class="h-[60vh] bg-gray-900 relative flex items-center justify-center">
+                            <div class="absolute inset-0 opacity-40 bg-[url('${(s.images[0]||{}).imageUrl}')] bg-cover bg-center"></div>
+                            <h1 class="relative font-display text-6xl text-white z-10">${s.title}</h1>
+                        </div>
+                        <div class="container mx-auto px-6 py-20 max-w-3xl prose">
+                            <p class="lead text-xl text-center italic mb-12">${s.introText || ''}</p>
+                            ${blocks.map(b => `<h3>${b.blockTitle}</h3><div>${b.blockContentHtml}</div>`).join('')}
+                            
+                             <div class="mt-16 not-prose grid grid-cols-2 gap-4">
+                                ${(s.images||[]).map(i => `<img src="${i.imageUrl}" class="w-full h-48 object-cover cursor-pointer" onclick="UI.lightbox('${i.imageUrl}','')">`).join('')}
+                            </div>
+                            
+                            <div class="text-center mt-16">
+                                <a href="https://wa.me/${Data.settings.contact_phone}" target="_blank" class="bg-black text-white px-8 py-4 font-bold tracking-widest text-sm no-underline inline-block">COTIZAR</a>
+                            </div>
+                        </div>
+                    </div>`;
+                document.body.insertAdjacentHTML('beforeend', html);
+            }
+        };
+
+        // --- LÓGICA DE CALENDARIO ---
+        const Calendar = {
+            currentDate: new Date(),
+            selectedStart: null,
+            selectedEnd: null,
+            
+            init: () => {
+                Calendar.currentDate.setDate(1);
+                Calendar.selectedStart = null;
+                Calendar.selectedEnd = null;
+                Calendar.render();
+            },
+            
+            next: () => { Calendar.currentDate.setMonth(Calendar.currentDate.getMonth()+1); Calendar.render(); },
+            prev: () => { Calendar.currentDate.setMonth(Calendar.currentDate.getMonth()-1); Calendar.render(); },
+            
+            render: () => {
+                const year = Calendar.currentDate.getFullYear();
+                const month = Calendar.currentDate.getMonth();
+                const today = new Date(); today.setHours(0,0,0,0);
+                
+                document.getElementById('cal-month-year').innerText = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(Calendar.currentDate);
+                
+                const grid = document.getElementById('cal-grid');
+                grid.innerHTML = '';
                 
                 const firstDay = new Date(year, month, 1).getDay();
                 const daysInMonth = new Date(year, month + 1, 0).getDate();
-                const today = new Date(); today.setHours(0,0,0,0);
+                
+                // Bloqueos
+                const blocked = Data.blocked.filter(b => b.itemId === CurrentItem.id).map(b => ({ start: b.startDate, end: b.endDate }));
 
-                // Espacios vacíos
-                for(let i=0; i<firstDay; i++) daysContainer.innerHTML += `<div></div>`;
-
+                for(let i=0; i<firstDay; i++) grid.innerHTML += `<div></div>`;
+                
                 for(let d=1; d<=daysInMonth; d++) {
                     const date = new Date(year, month, d);
                     const dateStr = date.toISOString().split('T')[0];
-                    
-                    // Verificar bloqueo
-                    const isBlocked = blockedDates.some(b => dateStr >= b.startDate && dateStr <= b.endDate);
                     const isPast = date < today;
+                    const isBlocked = blocked.some(b => dateStr >= b.start && dateStr <= b.end);
                     
-                    const btn = document.createElement('button');
-                    btn.className = `calendar-day ${isBlocked || isPast ? 'disabled' : ''}`;
-                    btn.textContent = d;
+                    const el = document.createElement('div');
+                    el.className = `calendar-day ${isPast||isBlocked ? 'disabled' : ''}`;
+                    el.innerText = d;
                     
-                    if(!isBlocked && !isPast) {
-                        btn.onclick = () => {
-                            document.getElementById('calendar-modal-overlay').remove();
-                            // Aquí podrías pre-seleccionar la fecha en el carrito si quisieras
-                            addToCart(itemId); 
-                        };
+                    if(!isPast && !isBlocked) {
+                        el.onclick = () => Calendar.select(date);
+                        
+                        // Estilos de selección
+                        if(Calendar.selectedStart && date.getTime() === Calendar.selectedStart.getTime()) el.classList.add('selected');
+                        if(Calendar.selectedEnd && date.getTime() === Calendar.selectedEnd.getTime()) el.classList.add('selected');
+                        if(Calendar.selectedStart && Calendar.selectedEnd && date > Calendar.selectedStart && date < Calendar.selectedEnd) el.classList.add('range');
                     }
-                    daysContainer.appendChild(btn);
+                    grid.appendChild(el);
                 }
-            };
-
-            document.getElementById('calendar-prev').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); renderMonth(); };
-            document.getElementById('calendar-next').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); renderMonth(); };
+                Calendar.updateSummary();
+            },
             
-            renderMonth();
-        };
-
-        window.closeDetail = () => {
-            const exitingPage = document.querySelector('.page-exiting');
-            if (exitingPage) {
-                exitingPage.style.display = 'none';
-                exitingPage.classList.remove('page-exiting');
-            }
-            document.getElementById('detail-pages-container').innerHTML = '';
-            document.body.style.overflow = 'auto';
-        };
-
-        // --- 5. CARRITO (Lógica Checkout) ---
-
-        window.addToCart = (itemId) => {
-            // Buscar item
-            let item = null;
-            for (const cat in rentalDataGlobal) {
-                const found = rentalDataGlobal[cat].find(i => String(i.id) === String(itemId));
-                if (found) { item = found; break; }
-            }
-            if(!item) return;
+            select: (date) => {
+                if(!Calendar.selectedStart || (Calendar.selectedStart && Calendar.selectedEnd)) {
+                    Calendar.selectedStart = date;
+                    Calendar.selectedEnd = null;
+                } else if (date < Calendar.selectedStart) {
+                    Calendar.selectedStart = date;
+                } else {
+                    // Validar bloqueo intermedio
+                    let valid = true;
+                    const temp = new Date(Calendar.selectedStart);
+                    const blocked = Data.blocked.filter(b => b.itemId === CurrentItem.id);
+                    
+                    while(temp <= date) {
+                        const s = temp.toISOString().split('T')[0];
+                        if(blocked.some(b => s >= b.startDate && s <= b.endDate)) { valid=false; break; }
+                        temp.setDate(temp.getDate()+1);
+                    }
+                    
+                    if(valid) Calendar.selectedEnd = date;
+                    else alert("El rango incluye días no disponibles.");
+                }
+                Calendar.render();
+            },
             
-            // Check duplicado
-            if(cart.some(c => c.id === item.id)) {
-                alert("Este equipo ya está en tu lista de reserva.");
-                return;
-            }
-            
-            // Cerrar detalle si está abierto
-            closeDetail();
-
-            cart.push(item);
-            updateCartUI();
-            toggleCart(true);
-        };
-
-        window.removeFromCart = (id) => {
-            cart = cart.filter(c => String(c.id) !== String(id));
-            updateCartUI();
-        };
-
-        function updateCartUI() {
-            // Badges
-            document.getElementById('cart-item-count').innerText = cart.length;
-            document.getElementById('mobile-cart-item-count').innerText = cart.length;
-            
-            document.getElementById('cart-item-count').classList.toggle('visible', cart.length > 0);
-            document.getElementById('mobile-cart-item-count').classList.toggle('visible', cart.length > 0);
-            
-            const container = document.getElementById('cart-items-container');
-            
-            if(cart.length === 0) {
-                container.innerHTML = `
-                    <div id="cart-empty-state" class="text-center p-8 flex flex-col items-center justify-center h-full">
-                        <i class="fas fa-camera-retro text-5xl text-gray-300 mb-6"></i>
-                        <h3 class="font-display text-2xl mb-2">Tu carrito está vacío</h3>
-                        <p class="text-gray-500 mb-8 max-w-xs">Parece que aún no has añadido equipo.</p>
-                        <button onclick="toggleCart(false)" class="bg-black text-white font-bold py-3 px-8 rounded-full hover:bg-gray-800">
-                            Volver al Catálogo
-                        </button>
-                    </div>`;
-                document.getElementById('checkout-btn').disabled = true;
-                document.getElementById('cart-subtotal').innerText = "$0.00";
-                return;
-            }
-
-            let total = 0;
-            const itemsHTML = cart.map(item => {
-                const basePrice = parseFloat(item.pricePerDay);
-                const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                const final = hasTax ? basePrice * 1.13 : basePrice;
-                total += final;
+            updateSummary: () => {
+                const btn = document.getElementById('cal-confirm-btn');
+                if(!Calendar.selectedStart || !Calendar.selectedEnd) {
+                    document.getElementById('cal-dates').innerText = '--';
+                    document.getElementById('cal-total').innerText = '$0';
+                    btn.disabled = true;
+                    return;
+                }
                 
-                const img = (item.images && item.images.length > 0) ? item.images[0].imageUrl : '';
-
-                return `
-                <div class="flex gap-4 items-center bg-gray-50 p-3 rounded mb-2">
-                    <img src="${img}" class="w-16 h-16 object-cover rounded bg-white">
-                    <div class="flex-1">
-                        <h4 class="font-bold text-sm">${item.name}</h4>
-                        <p class="text-xs text-gray-500">$${final.toFixed(0)} / día</p>
-                    </div>
-                    <button onclick="removeFromCart('${item.id}')" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-trash"></i></button>
-                </div>`;
-            }).join('');
+                const diff = Math.ceil((Calendar.selectedEnd - Calendar.selectedStart) / (1000*60*60*24)) + 1;
+                const basePrice = parseFloat(CurrentItem.pricePerDay);
+                const hasTax = String(CurrentItem.hasTax).toUpperCase() === 'TRUE';
+                const finalPrice = hasTax ? basePrice * 1.13 : basePrice;
+                
+                document.getElementById('cal-dates').innerText = `${Calendar.selectedStart.getDate()}/${Calendar.selectedStart.getMonth()+1} - ${Calendar.selectedEnd.getDate()}/${Calendar.selectedEnd.getMonth()+1}`;
+                document.getElementById('cal-days').innerText = diff;
+                document.getElementById('cal-total').innerText = `$${(finalPrice * diff).toFixed(2)}`;
+                btn.disabled = false;
+            },
             
-            container.innerHTML = itemsHTML;
-            document.getElementById('cart-subtotal').innerText = `$${total.toFixed(0)}`;
-            document.getElementById('checkout-btn').disabled = false;
-        }
-
-        const toggleCart = (show) => {
-            const overlay = document.getElementById('cart-overlay');
-            const drawer = document.getElementById('cart-drawer');
-            if (show) {
-                overlay.classList.add('visible');
-                drawer.classList.add('visible');
-            } else {
-                overlay.classList.remove('visible');
-                drawer.classList.remove('visible');
+            confirm: () => {
+                const diff = Math.ceil((Calendar.selectedEnd - Calendar.selectedStart) / (1000*60*60*24)) + 1;
+                UI.addToCart({
+                    startStr: Calendar.selectedStart.toISOString().split('T')[0],
+                    endStr: Calendar.selectedEnd.toISOString().split('T')[0],
+                    days: diff
+                });
             }
         };
-
-        // Checkout -> WhatsApp
-        document.getElementById('checkout-btn').onclick = () => {
-            if(cart.length === 0) return;
-            const phone = appData.settings.contact_phone || '50600000000'; // Fallback
-            
-            let text = `Hola Adán, me interesa alquilar el siguiente equipo:%0A%0A`;
-            cart.forEach(i => {
-                text += `• ${i.name}%0A`;
-            });
-            
-            const total = document.getElementById('cart-subtotal').innerText;
-            text += `%0AValor diario estimado: ${total}%0A%0AQuedo atento a la disponibilidad.`;
-            
-            window.open(`https://wa.me/${phone.replace(/\D/g,'')}?text=${text}`, '_blank');
-        };
-
-        // --- 6. EVENTOS DE NAVEGACIÓN ---
         
-        // Mobile Menu
-        const mobileMenu = document.getElementById('mobile-menu');
-        const mobileMenuButton = document.getElementById('mobile-menu-button');
-        mobileMenuButton.onclick = () => {
-            mobileMenu.classList.toggle('open');
-            mobileMenuButton.classList.toggle('open');
-        };
-        document.querySelectorAll('.mobile-nav-link').forEach(l => l.onclick = () => {
-            mobileMenu.classList.remove('open');
-            mobileMenuButton.classList.remove('open');
-        });
-
-        // Cart Buttons
-        document.getElementById('cart-button').onclick = () => toggleCart(true);
-        document.getElementById('mobile-cart-button').onclick = () => toggleCart(true);
-        document.getElementById('cart-close-btn').onclick = () => toggleCart(false);
-        document.getElementById('cart-overlay').onclick = () => toggleCart(false);
-
-        // Lightbox
-        const lightbox = document.getElementById('lightbox');
-        window.openLightbox = (src, caption) => {
-            document.getElementById('lightbox-image').src = src;
-            document.getElementById('lightbox-caption').innerText = caption;
-            lightbox.classList.remove('hidden');
-            setTimeout(() => lightbox.classList.add('visible'), 10);
-        };
-        document.getElementById('lightbox-close').onclick = () => {
-            lightbox.classList.remove('visible');
-            setTimeout(() => lightbox.classList.add('hidden'), 400);
-        };
-        lightbox.onclick = (e) => { if(e.target === lightbox) document.getElementById('lightbox-close').click(); };
-
-        // Scroll Nav & SPA
-        const sections = document.querySelectorAll('.page-container');
-        const navLinks = document.querySelectorAll('.nav-link');
-        const header = document.getElementById('header');
-
-        function navigateTo(targetId) {
-            if(!targetId) return;
-            const targetSection = document.getElementById(targetId);
-            if(!targetSection) return;
-
-            // Transición CSS
-            const activePage = document.querySelector('.page-active');
-            if (activePage) {
-                activePage.classList.add('page-exiting');
-                activePage.classList.remove('page-active');
-            }
-            
-            targetSection.style.display = 'block';
-            setTimeout(() => {
-                targetSection.classList.add('page-active');
-                
-                // Solución al error de sintaxis: Verificar existencia antes de asignar
-                const exitingPage = document.querySelector('.page-exiting');
-                if (exitingPage) {
-                    exitingPage.style.display = 'none';
-                    exitingPage.classList.remove('page-exiting');
+        // --- LOGICA CHECKOUT ---
+        const Checkout = {
+            data: {},
+            next: (step) => {
+                // Validar paso 1
+                if(step === 2) {
+                    const name = document.getElementById('chk-name').value;
+                    const email = document.getElementById('chk-email').value;
+                    if(!name || !email) { alert("Completa los campos obligatorios."); return; }
+                    Checkout.data.name = name; Checkout.data.email = email; Checkout.data.phone = document.getElementById('chk-phone').value;
                 }
-            }, 50);
-
-            // Scroll Top
-            window.scrollTo(0,0);
+                document.querySelectorAll('.step-content').forEach(e => e.classList.remove('active'));
+                document.getElementById(`step-${step}`).classList.add('active');
+            },
+            prev: (step) => Checkout.next(step),
             
-            // Header Logic (Dark mode en detalle de servicio/proyecto)
-            header.classList.remove('header-scrolled');
-        }
+            renderSummary: () => {
+                let total = 0;
+                const html = Cart.map(i => {
+                    total += i.totalPrice;
+                    return `<div class="flex justify-between border-b border-gray-200 py-2">
+                        <div><p class="font-bold">${i.name}</p><p class="text-xs text-gray-500">${i.days} días (${i.start})</p></div>
+                        <p class="font-bold">$${i.totalPrice.toFixed(2)}</p>
+                    </div>`;
+                }).join('');
+                document.getElementById('chk-summary').innerHTML = html;
+                document.getElementById('chk-total').innerText = `$${total.toFixed(2)}`;
+            },
+            
+            submit: async () => {
+                // Aquí enviarías a tu función create-booking.js
+                // Por ahora simulamos éxito
+                const payload = {
+                    customerName: Checkout.data.name,
+                    customerEmail: Checkout.data.email,
+                    customerPhone: Checkout.data.phone,
+                    items: Cart // Array de items
+                };
+                
+                // Simulación API
+                setTimeout(() => {
+                    Cart = []; UI.renderCart();
+                    Checkout.next(3);
+                }, 1000);
+            }
+        };
 
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const target = link.dataset.target;
-                if(target) navigateTo(target);
-            });
-        });
-
-        // Header Scroll Effect
+        // Header Scroll
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) header.classList.add('header-scrolled');
-            else header.classList.remove('header-scrolled');
+            const h = document.getElementById('header');
+            if(window.scrollY > 50) h.classList.add('header-scrolled');
+            else h.classList.remove('header-scrolled');
         });
+        
+        // Image Slideshow Helper
+        UI.slide = (id, dir, imgs) => {
+            const img = document.getElementById(`img-${id}`);
+            let curr = imgs.indexOf(img.getAttribute('src'));
+            let next = curr + dir;
+            if(next >= imgs.length) next = 0;
+            if(next < 0) next = imgs.length - 1;
+            img.src = imgs[next];
+        };
 
-        // --- INICIO APP ---
-        initApp();
-    });
     </script>
 </body>
 </html>
