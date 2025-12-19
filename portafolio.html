@@ -1207,7 +1207,37 @@
                 lightbox.classList.remove('visible');
                 setTimeout(() => { lightbox.classList.add('hidden'); lightboxImage.src = ''; }, 300);
             };
-    
+
+
+            // --- GESTIÓN DE MEMORIA DEL CARRITO ---
+            const saveCartToMemory = () => localStorage.setItem('ag_rental_cart', JSON.stringify(cart));
+
+            const loadCartFromMemory = () => {
+                const saved = localStorage.getItem('ag_rental_cart');
+                if (saved) {
+                    try { cart = JSON.parse(saved); renderCart(); updateCartIcon(); } 
+                    catch (e) { console.error(e); cart = []; }
+                }
+            };
+
+            const syncCartWithFreshData = () => {
+                if (cart.length === 0 || globalData.rentals.items.length === 0) return;
+                let updated = false;
+                cart = cart.map(cItem => {
+                    const fresh = globalData.rentals.items.find(i => i.id === cItem.id);
+                    if (fresh) {
+                        const freshPrice = parseFloat(fresh.pricePerDay);
+                        if (cItem.price !== freshPrice || cItem.name !== fresh.name) {
+                            cItem.price = freshPrice; cItem.name = fresh.name;
+                            cItem.hasTax = String(fresh.hasTax).toLowerCase() === 'true';
+                            updated = true;
+                        }
+                    }
+                    return cItem;
+                });
+                if (updated) { saveCartToMemory(); renderCart(); }
+            };
+            
             // =================================================================
             // 5. RENDERIZADORES (PINTAR HTML)
             // =================================================================
@@ -1331,10 +1361,11 @@
                     image: thumbUrl // Ahora sí es un string (URL), no un objeto
                 });
 
-            renderCart(); 
-            updateCartIcon(); 
-            toggleCart(true);
-        };;
+                saveCartToMemory();
+                renderCart(); 
+                updateCartIcon(); 
+                toggleCart(true);
+            };;
     
             const renderPortfolio = () => {
                 const gallery = document.getElementById('portfolio-gallery');
@@ -1357,6 +1388,11 @@
                     let src = v.embedUrl || "";
                     if (src.includes('watch?v=')) src = src.replace('watch?v=', 'embed/');
                     else if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/');
+                    
+                    // AJUSTE: Activar API de YouTube
+                    const separator = src.includes('?') ? '&' : '?';
+                    src += `${separator}enablejsapi=1`;
+
                     return `<div class="w-full aspect-video overflow-hidden shadow-lg gallery-item group bg-black rounded-none border border-gray-800 relative"><iframe src="${src}" title="${v.title}" class="w-full h-full object-cover" allowfullscreen></iframe></div>`;
                 }).join('');
             };
@@ -1728,10 +1764,17 @@
                             }));
                     });
                     renderRentalPage();
+                    syncCartWithFreshData();
                 }
             };
     
             const navigateTo = (targetId) => {
+
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+                });
+                
                 // A. CARGA INTELIGENTE
                 if (['projects', 'services', 'rental'].includes(targetId)) loadSection(targetId);
                 
@@ -1937,6 +1980,7 @@
                 renderVideos(globalData.videos); 
                 renderClientLogos(globalData.logos); 
                 renderCart(); 
+                loadCartFromMemory();
                 updateCartIcon();
                 
                 setTimeout(() => pageLoader.classList.add('hidden'), 1500);
@@ -1966,13 +2010,70 @@
             const showCheckoutModal = () => {
                 const container = document.getElementById('checkout-modal-container');
                 const total = cart.reduce((t,i)=>t+(i.price*i.totalDays),0);
+                // DENTRO DE showCheckoutModal
                 container.innerHTML = `
-                <div id="checkout-modal-overlay" class="checkout-modal-overlay"><div id="checkout-modal-content" class="checkout-modal-content">
-                    <div class="p-6 border-b flex justify-between items-center"><h2 class="text-2xl font-display">Reserva</h2><button id="close-co" class="text-2xl">×</button></div>
-                    <div id="step-1" class="checkout-step active"><div class="p-6"><form id="co-form" class="space-y-4"><div><label class="block text-sm">Nombre</label><input type="text" required class="form-input mt-1"></div><div><label class="block text-sm">Email</label><input type="email" required class="form-input mt-1"></div><div><label class="block text-sm">Teléfono</label><input type="tel" required class="form-input mt-1"></div></form></div><div class="p-6 bg-gray-50 flex justify-end"><button id="btn-next-1" class="bg-black text-white py-3 px-6 font-bold">Siguiente</button></div></div>
-                    <div id="step-2" class="checkout-step"><div class="p-6"><h3>Resumen</h3>${cart.map(i=>`<div class="flex justify-between py-2 border-b"><span>${i.name}</span><span>$${(i.price*i.totalDays).toFixed(2)}</span></div>`).join('')}<div class="font-bold text-xl mt-4 text-right">Total: $${total.toFixed(2)}</div></div><div class="p-6 bg-gray-50 flex justify-between"><button id="btn-back-2" class="bg-gray-200 py-3 px-6">Atrás</button><button id="btn-pay" class="bg-black text-white py-3 px-6 font-bold">Confirmar</button></div></div>
-                    <div id="step-3" class="checkout-step"><div class="p-8 text-center"><div class="text-green-600 text-4xl mb-4"><i class="fas fa-check-circle"></i></div><h3>¡Listo!</h3><p>Reserva: ADG-${Math.floor(Math.random()*9000)}</p><button id="btn-finish" class="mt-4 bg-black text-white py-2 px-6">Cerrar</button></div></div>
-                </div></div>`;
+                <div id="checkout-modal-overlay" class="checkout-modal-overlay visible">
+                    <div id="checkout-modal-content" class="checkout-modal-content">
+                        <div class="p-6 border-b flex justify-between items-center"><h2 class="text-2xl font-display">Reserva</h2><button id="close-co" class="text-2xl">×</button></div>
+                        
+                        <div id="step-1" class="checkout-step active">
+                            <div class="p-6">
+                                <form id="co-form" class="space-y-4">
+                                    <div><label class="block text-sm font-bold">Nombre Completo</label><input type="text" id="co-name" required class="form-input mt-1" placeholder="Tu nombre"></div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="block text-sm font-bold">Cédula / ID</label><input type="text" id="co-cedula" required class="form-input mt-1" placeholder="Requerido"></div>
+                                        <div><label class="block text-sm font-bold">Teléfono</label><input type="tel" id="co-phone" required class="form-input mt-1" placeholder="8888-8888"></div>
+                                    </div>
+                                    <div><label class="block text-sm font-bold">Email</label><input type="email" id="co-email" required class="form-input mt-1" placeholder="contacto@email.com"></div>
+                                    <div><label class="block text-sm font-bold">Dirección Exacta</label><textarea id="co-address" required class="form-input mt-1" rows="2" placeholder="Provincia, Cantón, Distrito y señas..."></textarea></div>
+                                </form>
+                            </div>
+                            <div class="p-6 bg-gray-50 flex justify-end"><button id="btn-next-1" class="bg-black text-white py-3 px-6 font-bold hover:bg-gray-800">Siguiente</button></div>
+                        </div>
+
+                        <div id="step-2" class="checkout-step">
+                            <div class="p-6">
+                                <h3 class="font-bold text-lg mb-4">Resumen de Solicitud</h3>
+                                <div class="max-h-60 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                                    ${cart.map(i => `
+                                        <div class="flex justify-between text-sm border-b pb-2">
+                                            <div>
+                                                <span class="font-bold block">${i.name}</span>
+                                                <span class="text-xs text-gray-500">${i.totalDays} días (${new Date(i.startDate).toLocaleDateString()} - ${new Date(i.endDate).toLocaleDateString()})</span>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="font-bold">$${((i.price * i.totalDays) * (i.hasTax ? 1.13 : 1)).toFixed(2)}</span>
+                                            </div>
+                                        </div>`).join('')}
+                                </div>
+                                <div class="flex justify-between items-center font-bold text-xl mt-6 pt-4 border-t border-black">
+                                    <span>Total Estimado:</span>
+                                    <span>$${total.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div class="p-6 bg-gray-50 flex justify-between">
+                                <button id="btn-back-2" class="bg-gray-200 py-3 px-6 font-bold hover:bg-gray-300 rounded text-sm">Atrás</button>
+                                <button id="btn-pay" class="bg-black text-white py-3 px-8 font-bold hover:bg-gray-800 rounded shadow-lg flex items-center gap-2">
+                                    <span>Confirmar Reserva</span>
+                                    <div id="co-spinner" class="loader-circle w-4 h-4 border-2 border-white border-t-transparent hidden"></div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="step-3" class="checkout-step">
+                            <div class="p-12 text-center">
+                                <div class="text-green-600 text-6xl mb-6"><i class="fas fa-check-circle"></i></div>
+                                <h3 class="text-3xl font-display font-bold mb-2">¡Solicitud Recibida!</h3>
+                                <p class="text-gray-600 mb-6">Tu código de reserva es:</p>
+                                <div class="bg-gray-100 py-4 rounded-lg border border-dashed border-gray-400 mb-8">
+                                    <span id="final-res-id" class="text-3xl font-mono font-bold tracking-widest text-black">---</span>
+                                </div>
+                                <p class="text-sm text-gray-500 mb-6">Te hemos enviado un correo con los detalles. Nos pondremos en contacto pronto.</p>
+                                <button id="btn-finish" class="bg-black text-white py-3 px-8 rounded-full font-bold hover:bg-gray-800 transition-transform hover:scale-105">Volver al Inicio</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
                 
                 const overlay = document.getElementById('checkout-modal-overlay');
                 const step1 = document.getElementById('step-1'); const step2 = document.getElementById('step-2'); const step3 = document.getElementById('step-3');
@@ -1982,7 +2083,131 @@
                 document.getElementById('close-co').onclick = close;
                 document.getElementById('btn-next-1').onclick = () => { if(document.getElementById('co-form').checkValidity()) { step1.classList.remove('active'); step2.classList.add('active'); } else document.getElementById('co-form').reportValidity(); };
                 document.getElementById('btn-back-2').onclick = () => { step2.classList.remove('active'); step1.classList.add('active'); };
-                document.getElementById('btn-pay').onclick = () => { step2.classList.remove('active'); step3.classList.add('active'); cart=[]; renderCart(); updateCartIcon(); };
+                
+                // Lógica de Envío Real
+                document.getElementById('btn-pay').onclick = async () => {
+                    const btn = document.getElementById('btn-pay');
+                    const spinner = document.getElementById('co-spinner');
+                    
+                    // 1. Bloquear UI
+                    btn.disabled = true;
+                    btn.querySelector('span').textContent = 'Procesando...';
+                    spinner.classList.remove('hidden');
+    
+                    try {
+                        // 2. Preparar Datos
+                        const now = new Date();
+                        const bookingId = `RES-${now.getFullYear().toString().slice(-2)}${(now.getMonth()+1).toString().padStart(2,'0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+                        
+                        const customer = {
+                            name: document.getElementById('co-name').value,
+                            cedula: document.getElementById('co-cedula').value,
+                            phone: document.getElementById('co-phone').value,
+                            email: document.getElementById('co-email').value,
+                            address: document.getElementById('co-address').value
+                        };
+    
+                        // Resumen de items para la cabecera
+                        const itemNames = cart.map(i => i.name);
+                        const summaryName = itemNames.length > 1 ? `${itemNames[0]} + ${itemNames.length-1} más` : itemNames[0];
+                        
+                        // Calcular fechas globales
+                        const starts = cart.map(i => new Date(i.startDate));
+                        const ends = cart.map(i => new Date(i.endDate));
+                        const minDate = new Date(Math.min(...starts)).toISOString().split('T')[0];
+                        const maxDate = new Date(Math.max(...ends)).toISOString().split('T')[0];
+    
+                        const batch = [];
+    
+                        // A. Cabecera Reserva
+                        batch.push({
+                            sheet: 'Bookings',
+                            action: 'add',
+                            data: {
+                                id: bookingId,
+                                customerName: customer.name,
+                                customerCedula: customer.cedula,
+                                customerPhone: customer.phone,
+                                customerEmail: customer.email,
+                                customerAddress: customer.address,
+                                itemName: summaryName,
+                                totalPrice: total,
+                                status: 'Pendiente', // Por defecto
+                                startDate: minDate,
+                                endDate: maxDate,
+                                bookingTimestamp: now.toISOString(),
+                                globalDiscountVal: 0,
+                                globalNotes: 'Reserva Web'
+                            }
+                        });
+    
+                        // B. Detalles y Bloqueos por cada item
+                        cart.forEach((item, idx) => {
+                            const detailId = `bd_${Date.now()}_${idx}`;
+                            
+                            // Detalle
+                            batch.push({
+                                sheet: 'BookingsDetails',
+                                action: 'add',
+                                data: {
+                                    id: detailId,
+                                    bookingId: bookingId,
+                                    itemId: item.id,
+                                    itemName: item.name,
+                                    startDate: item.startDate,
+                                    endDate: item.endDate,
+                                    basePrice: item.price,
+                                    lineTotal: (item.price * item.totalDays) * (item.hasTax ? 1.13 : 1),
+                                    lineNote: 'Web'
+                                }
+                            });
+    
+                            // Bloqueo
+                            batch.push({
+                                sheet: 'BlockedDates',
+                                action: 'add',
+                                data: {
+                                    blockId: `blk_${detailId}`,
+                                    bookingId: bookingId,
+                                    itemId: item.id,
+                                    startDate: item.startDate,
+                                    endDate: item.endDate,
+                                    reason: `Reserva Web: ${customer.name}`
+                                }
+                            });
+                        });
+    
+                        // 3. Enviar al Backend
+                        const response = await fetch('/.netlify/functions/update-sheet-data', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(batch)
+                        });
+    
+                        if (!response.ok) throw new Error('Error de red');
+    
+                        // 4. Éxito
+                        document.getElementById('final-res-id').textContent = bookingId;
+                        
+                        // Limpiar Carrito y Memoria
+                        cart = [];
+                        saveCartToMemory(); // Limpia localStorage
+                        renderCart();
+                        updateCartIcon();
+    
+                        // Pasar al paso 3
+                        document.getElementById('step-2').classList.remove('active');
+                        document.getElementById('step-3').classList.add('active');
+    
+                    } catch (error) {
+                        console.error(error);
+                        alert("Hubo un error procesando tu solicitud. Por favor intenta de nuevo o contáctanos.");
+                        btn.disabled = false;
+                        btn.querySelector('span').textContent = 'Confirmar Reserva';
+                        spinner.classList.add('hidden');
+                    }
+                };
+                
                 document.getElementById('btn-finish').onclick = close;
             };
     
@@ -2221,6 +2446,7 @@
                 if (e.target.closest('.cart-item-remove-btn')) {
                     const id = e.target.closest('.cart-item-remove-btn').dataset.cartId;
                     cart = cart.filter(i => i.cartId !== id);
+                    saveCartToMemory();
                     renderCart(); updateCartIcon();
                 }
             });
