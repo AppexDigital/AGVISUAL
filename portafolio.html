@@ -1221,8 +1221,6 @@
             const renderProjects = () => {
                 const container = document.getElementById('projects-container');
                 if(!container) return;
-                container.style.display = 'block';
-                
                 if (globalData.projects.length === 0) { container.innerHTML = '<div class="text-center py-20"><div class="loader-circle mx-auto mb-4"></div><p class="text-gray-400">Cargando proyectos...</p></div>'; return; }
                 container.innerHTML = globalData.projects.map((p, i) => `
                     <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal gap-8 md:gap-12">
@@ -1233,8 +1231,6 @@
                         </div>
                         <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl || 'https://placehold.co/600'}" alt="${p.title}" class="w-full h-full object-cover"></div>
                     </div>`).join('');
-
-                    observeElements(container);
             };
     
             const renderServicesGrid = () => {
@@ -1321,16 +1317,7 @@
                             </div>
                         </div></div>
                     </section>`;
-                
-                // IMPORTANTE: Eliminamos la línea 'navigateTo(targetId);' que causaba el bucle.
-                // Solo necesitamos activar la página manualmente si no está activa.
-                const page = document.getElementById(targetId);
-                if(page && !page.classList.contains('page-active')) {
-                    document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
-                    page.style.display='block';
-                    setTimeout(()=>page.classList.add('page-active'), 10);
-                    window.scrollTo(0,0);
-                }
+                navigateTo(targetId);
             };
     
             const renderServiceDetail = (targetId) => {
@@ -1350,15 +1337,7 @@
                             <div class="text-center mt-20 reveal"><a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full">Contáctame</a></div>
                         </div></div>
                     </section>`;
-    
-                // Eliminamos recursión y activamos vista
-                const page = document.getElementById(targetId);
-                if(page && !page.classList.contains('page-active')) {
-                    document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
-                    page.style.display='block';
-                    setTimeout(()=>page.classList.add('page-active'), 10);
-                    window.scrollTo(0,0);
-                }
+                navigateTo(targetId);
             };
     
             const renderRentalDetail = (targetId) => {
@@ -1386,14 +1365,7 @@
                 section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 section.querySelector('.prev').onclick = () => { idx=(idx-1+item.images.length)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 
-                // Eliminamos recursión
-                const page = document.getElementById(targetId);
-                if(page && !page.classList.contains('page-active')) {
-                    document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
-                    page.style.display='block';
-                    setTimeout(()=>page.classList.add('page-active'), 10);
-                    window.scrollTo(0,0);
-                }
+                navigateTo(targetId);
             };
     
             // =================================================================
@@ -1605,24 +1577,17 @@
                 }
                 
                 // B. Lightbox
-                // B. Lightbox
-                // Simplificamos la detección: si es img dentro de gallery-item, abre lightbox
                 const galleryItem = e.target.closest('.gallery-item');
                 if(galleryItem && !galleryItem.closest('.rental-card') && !e.target.closest('iframe')) {
                     const img = galleryItem.querySelector('img');
-                    // IMPORTANTE: Detectamos si el click fue DIRECTAMENTE en la imagen o en el overlay
-                    if(img && (e.target === img || e.target.closest('.overlay'))) {
-                        // Recolectar todas las imagenes de la pagina actual para navegar
-                        const activePage = document.querySelector('.page-active');
-                        if(activePage) {
-                            const allItems = Array.from(activePage.querySelectorAll('.gallery-item img'));
-                            const imgs = allItems.map(i=>({
-                                src: i.src, 
-                                title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
-                            }));
-                            const idx = allItems.indexOf(img); 
-                            if(idx !== -1) openLightbox(img.src, imgs[idx].title, imgs, idx);
-                        }
+                    if(img) {
+                        const allItems = Array.from(document.querySelectorAll('.page-active .gallery-item img'));
+                        const imgs = allItems.map(i=>({
+                            src: i.src, 
+                            title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
+                        }));
+                        const idx = allItems.indexOf(img); 
+                        openLightbox(img.src, imgs[idx].title, imgs, idx);
                     }
                 }
                 
@@ -1664,6 +1629,14 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 
