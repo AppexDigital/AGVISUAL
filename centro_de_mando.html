@@ -1991,7 +1991,11 @@ const App = {
             if(need('ProjectImages')) sheets.push('ProjectImages'); 
         }
         else if (view === 'rentals') { if(need('RentalItems')) sheets.push('RentalItems','RentalCategories','RentalItemImages','BlockedDates'); }
-        else if (view === 'services') { if(need('Services')) sheets.push('Services','ServiceContentBlocks','ServiceImages'); }
+        else if (view === 'services') { 
+            if(need('Services')) sheets.push('Services');
+            if(need('ServiceContentBlocks')) sheets.push('ServiceContentBlocks');
+            if(need('ServiceImages')) sheets.push('ServiceImages');
+        }
         else if (view === 'videos') { if(need('Videos')) sheets.push('Videos'); }
         else if (view === 'bookings') { if(need('Bookings')) sheets.push('Bookings','BlockedDates','RentalItems'); }
         else if (view === 'client-logos') { if(need('LogosClientes')) sheets.push('LogosClientes'); }
@@ -2008,12 +2012,10 @@ const App = {
     },
     
     async loadData(mode = 'dashboard') { 
-        // DEFINICIÓN DE ESTRATEGIAS DE CARGA
         const loadStrategies = {
-            // A. Carga Pesada (Solo al inicio): Necesaria para que los contadores del Dashboard (KPIs) marquen los números correctos
-            'dashboard': 'Projects,Bookings,BookingsDetails,ProjectImages,Services,ServiceImages,Videos,RentalItems,RentalItemImages,RentalCategories,BlockedDates,LogosClientes,ImagenesIdentidad,Identidad',
+            // CORRECCIÓN: Agregamos ServiceContentBlocks a la lista de carga inicial
+            'dashboard': 'Projects,Bookings,BookingsDetails,ProjectImages,Services,ServiceContentBlocks,ServiceImages,Videos,RentalItems,RentalItemImages,RentalCategories,BlockedDates,LogosClientes,ImagenesIdentidad,Identidad',
             
-            // B. Carga Quirúrgica (Al guardar Reserva): Solo recarga reservas, detalles, bloqueos y datos legales (PDF)
             'bookings_refresh': 'Bookings,BookingsDetails,BlockedDates,Identidad'
         };
 
@@ -5115,6 +5117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
