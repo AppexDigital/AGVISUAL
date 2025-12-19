@@ -1373,7 +1373,8 @@
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
-                const trackHTML = item.images.map(src=>`<div class="carousel-item"><img src="${src}" class="w-full h-full object-cover"></div>`).join('');
+                // Corrección: Usamos img.imageUrl para obtener el link real
+                const trackHTML = item.images.map(img => `<div class="carousel-item"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
                 document.getElementById('rental-detail-pages').innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
                         <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
