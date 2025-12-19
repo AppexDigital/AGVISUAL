@@ -3,732 +3,2179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adán Gómez | Fotógrafo Profesional</title>
+    <!-- Versión actualizada a 12.4 -->
+    <title>Adán Gómez | Fotógrafo Profesional (v12.4)</title>
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="imagenes/Icon.png">
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (ACTUALIZADO) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
     <style>
-        :root { --bg-main: #FDFDFD; --text-dark: #1a1a1a; --text-light: #f8f9fa; --accent: #3a3a3a; }
-        html { scroll-behavior: smooth; }
-        body { font-family: 'Montserrat', sans-serif; background-color: var(--bg-main); color: var(--text-dark); overflow-x: hidden; }
-        h1, h2, h3, h4, .font-display { font-family: 'Cormorant Garamond', serif; line-height: 1.4; }
+        :root {
+            --bg-main: #FDFDFD;
+            --text-dark: #1a1a1a;
+            --text-light: #f8f9fa;
+            --accent: #3a3a3a;
+        }
+        html { 
+            scroll-behavior: smooth; 
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+        /* TIPOGRAFÍA DE TÍTULOS ACTUALIZADA */
+        h1, h2, h3, h4, .font-display { 
+            font-family: 'Cormorant Garamond', serif; 
+            line-height: 1.4; 
+        }
         
-        /* Loader & Transitions */
-        .page-container { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
-        .page-active { display: block; opacity: 1; }
-        .reveal { opacity: 0; transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1); }
-        .reveal.visible { opacity: 1; }
-        .loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-main); z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease, visibility 0.5s ease; }
-        .loader.hidden { opacity: 0; visibility: hidden; }
-        .loader-circle { width: 50px; height: 50px; border: 3px solid rgba(0, 0, 0, 0.1); border-radius: 50%; border-top-color: var(--accent); animation: spin 1s ease-in-out infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Header & Nav */
-        #header { transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); padding: 1.5rem 0; background: transparent; }
-        #header.header-scrolled { padding: 0.5rem 0; background-color: rgba(253, 253, 253, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
-        .nav-link-underline { position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background-color: black; transition: width 0.3s ease; }
-        .nav-link:hover .nav-link-underline, .nav-link.nav-active .nav-link-underline { width: 100%; }
-
-        /* Gallery & Images */
-        .gallery-item { cursor: pointer; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s; position: relative; overflow: hidden; break-inside: avoid; margin-bottom: 1.5rem; }
-        .gallery-item:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); }
-        .gallery-item img { transition: transform 0.8s ease; width: 100%; display: block; }
-        .gallery-item:hover img { transform: scale(1.05); }
-        .gallery-item .overlay { opacity: 0; transition: opacity 0.5s ease; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%); }
-        .gallery-item:hover .overlay { opacity: 1; }
-
-        /* Lightbox */
-        #lightbox { background-color: rgba(10, 10, 10, 0.95); backdrop-filter: blur(8px); transition: opacity 0.4s; }
-        #lightbox.visible #lightbox-image { transform: scale(1); }
-        #lightbox-image { transform: scale(0.9); transition: transform 0.4s; max-height: 90vh; max-width: 90vw; object-fit: contain; }
-
-        /* Mobile Menu */
-        #mobile-menu { background-color: rgba(253, 253, 253, 0.98); backdrop-filter: blur(20px); transform: translateX(100%); transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1); }
-        #mobile-menu.open { transform: translateX(0); }
-
-        /* Cart */
-        #cart-drawer { transform: translateX(100%); transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1); }
-        #cart-drawer.visible { transform: translateX(0); }
-        .cart-item-count { transform: scale(0); transition: transform 0.3s; }
-        .cart-item-count.visible { transform: scale(1); }
+        /* --- Arquitectura de Transición (Crossfade) --- */
+        .page-container { 
+            display: none; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out;
+        }
+        .page-active { 
+            display: block; 
+            opacity: 1;
+        }
+        .page-exiting {
+            display: block;
+            opacity: 0;
+        }
         
-        /* Utils */
-        .img-placeholder { background-color: #f3f4f6; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        /* --- Animación de carga de imágenes (Fade-in) --- */
+        .reveal {
+            opacity: 0;
+            transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+        }
+        
+        /* --- Indicador de carga --- */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loader-circle {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* --- Header Dinámico Mejorado --- */
+        #header {
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            padding-top: 1.5rem; 
+            padding-bottom: 1.5rem;
+            background-color: transparent;
+        }
+        #header.header-scrolled, #header.header-dark {
+            padding-top: 0.5rem; 
+            padding-bottom: 0.5rem;
+        }
+        #header.header-scrolled {
+            background-color: rgba(253, 253, 253, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+        #header.header-dark {
+            background-color: #52525b; /* bg-zinc-700 */
+            box-shadow: none;
+        }
+        #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon, #header.header-dark #cart-button {
+            color: white;
+        }
+         #header.header-dark .nav-link-underline {
+            background-color: white;
+        }
+         #header.header-dark .logo-dark {
+            display: none;
+        }
+        #header.header-dark .logo-light {
+            display: block;
+        }
+        #header:not(.header-dark) .logo-light {
+            display: none;
+        }
+        #header:not(.header-dark) .logo-dark {
+            display: block;
+        }
+        
+        /* --- Menú Móvil Mejorado --- */
+        #mobile-menu {
+            background-color: rgba(253, 253, 253, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transform: translateX(100%);
+            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+        }
+        #mobile-menu.open {
+            transform: translateX(0);
+        }
+        .mobile-nav-link {
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--text-dark);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            position: relative;
+        }
+        .mobile-nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent);
+            transition: width 0.4s ease;
+        }
+        .mobile-nav-link:hover::after, .mobile-nav-link.nav-active::after {
+            width: 100%;
+        }
+        #mobile-menu-button .icon-bar {
+            transition: all 0.3s ease-in-out;
+        }
+        #mobile-menu-button.open .icon-bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        #mobile-menu-button.open .icon-bar:nth-child(2) { opacity: 0; }
+        #mobile-menu-button.open .icon-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+        
+        /* --- Estilo para el enlace de navegación activo --- */
+        .nav-link.nav-active > .nav-link-underline {
+            width: 100%;
+        }
+
+        /* --- Galería Mejorada --- */
+        .gallery-item { 
+            cursor: pointer; 
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative;
+            overflow: hidden;
+        }
+        .gallery-item:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        .gallery-item img {
+            transition: transform 0.8s ease;
+        }
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+        .gallery-item .overlay { 
+            opacity: 0; 
+            transition: opacity 0.5s ease; 
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%);
+        }
+        .gallery-item:hover .overlay { 
+            opacity: 1; 
+        }
+        .gallery-item .overlay p {
+            transform: translateY(20px);
+            transition: transform 0.5s ease;
+        }
+        .gallery-item:hover .overlay p {
+            transform: translateY(0);
+        }
+        
+        /* --- Lightbox Mejorado --- */
+        #lightbox { 
+            background-color: rgba(10, 10, 10, 0.95); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: opacity 0.4s ease-in-out;
+        }
+        #lightbox-image { 
+            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); 
+            transform: scale(0.9);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            max-height: 80vh;
+        }
+        #lightbox.visible #lightbox-image { 
+            transform: scale(1); 
+        }
+        #lightbox-close {
+            transition: all 0.3s ease;
+        }
+        #lightbox-close:hover {
+            transform: rotate(90deg);
+            color: #ff5252;
+        }
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 101;
+        }
+        .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
+        #lightbox-prev { left: 20px; }
+        #lightbox-next { right: 20px; }
+        
+        /* --- Contacto y Mapa --- */
+        .contact-icon-link { 
+            background-color: #f3f4f6; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+        .contact-icon-link::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background-color: var(--accent);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+            z-index: -1;
+        }
+        .contact-icon-link:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        .contact-icon-link:hover { 
+            color: white; 
+            transform: scale(1.1);
+        }
+        #google-map { 
+            filter: grayscale(100%) contrast(90%) brightness(110%); 
+            transition: filter 0.5s ease;
+        }
+        #google-map:hover { 
+            filter: grayscale(0%);
+        }
+        
+        /* --- Logos de Marcas --- */
+        .client-logo {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            transition: all 0.4s ease;
+        }
+        .client-logo:hover {
+            filter: grayscale(0%);
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        
+        /* --- Botones y Enlaces Mejorados --- */
+        .btn-primary {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        /* --- Animación de aparición de texto --- */
+        .text-reveal {
+            position: relative;
+            overflow: hidden;
+        }
+        .text-reveal::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            transform: translateX(0);
+            transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .text-reveal.revealed::after {
+            transform: translateX(101%);
+        }
+        
+        /* --- Efecto parallax suave --- */
+        .parallax {
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* --- Mejoras de accesibilidad --- */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* --- Animación de carga de imágenes con placeholder --- */
+        .img-container {
+            position: relative;
+            overflow: hidden;
+            background-color: #f3f4f6;
+        }
+        .img-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+            animation: shimmer 1.5s infinite;
+            z-index: 1;
+        }
+        @keyframes shimmer {
+            100% { left: 100%; }
+        }
+        .img-container.loaded::before {
+            animation: none;
+            opacity: 0;
+        }
+
+        /* --- Estilos para la sección de Alquiler (Rediseño) --- */
+        .rental-category-btn {
+            padding: 0.5rem 1.5rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0; /* Cambio a esquinas cuadradas */
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap; /* Evita que el texto se parta */
+            flex-shrink: 0; 
+        }
+        .rental-category-btn.active, .rental-category-btn:hover {
+            background-color: var(--text-dark);
+            color: white;
+            border-color: var(--text-dark);
+        }
+        .rental-card {
+            background-color: white;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(20px);
+            display: flex;
+            flex-direction: column;
+        }
+         .rental-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .rental-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .carousel-container {
+            overflow: hidden;
+            position: relative;
+        }
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        .carousel-item {
+            min-width: 100%;
+        }
+        .carousel-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .carousel-container:hover .carousel-button {
+            opacity: 1;
+        }
+        .carousel-button:hover {
+            background-color: rgba(0,0,0,0.7);
+        }
+        .carousel-button.prev { left: 10px; }
+        .carousel-button.next { right: 10px; }
+        
+        /* --- Estilos para la nueva sección de Servicios (Reemplazo) --- */
+        .service-grid-item {
+            background-color: white;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0; /* Cambio de rounded-lg a esquinas cuadradas */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+        .service-grid-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            border-color: var(--accent);
+        }
+        .service-icon-wrapper {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f3f4f6; /* gray-100 */
+            margin-bottom: 1.5rem;
+            transition: all 0.4s ease;
+        }
+        .service-grid-item:hover .service-icon-wrapper {
+            background-color: var(--accent);
+            transform: rotate(15deg) scale(1.1);
+        }
+        .service-icon {
+            font-size: 2rem;
+            color: var(--accent);
+            transition: color 0.4s ease;
+        }
+        .service-grid-item:hover .service-icon {
+            color: white;
+        }
+        .service-grid-item h3 {
+            margin-bottom: 0.5rem;
+            transition: color 0.4s ease;
+        }
+
+        /* --- NUEVOS ESTILOS PARA EL MODAL DEL CALENDARIO --- */
+        .calendar-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            pointer-events: none;
+        }
+        .calendar-modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .calendar-modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 100%;
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        .calendar-modal-overlay.visible .calendar-modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .calendar-nav-btn {
+            background: none;
+            border: 1px solid #d1d5db;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .calendar-nav-btn:hover {
+            background-color: var(--text-dark);
+            color: white;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.25rem;
+        }
+        .calendar-day, .calendar-day-name {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            aspect-ratio: 1 / 1;
+            text-align: center;
+        }
+        .calendar-day-name {
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        .calendar-day {
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .calendar-day:not(.disabled):hover {
+            background-color: #f3f4f6;
+        }
+        .calendar-day.disabled {
+            color: #d1d5db;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+        .calendar-day.selected, .calendar-day.in-range {
+            background-color: var(--text-dark);
+            color: white;
+        }
+        .booking-summary {
+            background-color: #f9fafb;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* --- NUEVOS ESTILOS PARA EL CARRITO DE COMPRAS --- */
+        #cart-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 60;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+        #cart-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #cart-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            background-color: white;
+            z-index: 70;
+            transform: translateX(100%);
+            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+        }
+        #cart-drawer.visible {
+            transform: translateX(0);
+        }
+        .cart-button { /* Clase común para ambos botones de carrito */
+            position: relative;
+        }
+        .cart-item-count { /* Clase común para ambos contadores */
+            position: absolute;
+            top: -5px;
+            right: -10px;
+            background-color: var(--text-dark);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            transform: scale(0);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #cart-item-count { /* Escritorio */
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+        }
+        #mobile-cart-item-count { /* Móvil */
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            top: -8px;
+            right: -12px;
+        }
+        .cart-item-count.visible {
+            transform: scale(1);
+        }
+        .cart-item-remove-btn {
+            color: #9ca3af;
+            transition: color 0.2s;
+        }
+        .cart-item-remove-btn:hover {
+            color: #ef4444;
+        }
+        #cart-empty-state {
+            display: none; /* Oculto por defecto */
+        }
+        
+        /* --- NUEVOS ESTILOS PARA EL MODAL DE CHECKOUT --- */
+        #checkout-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 110;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            pointer-events: none;
+        }
+        #checkout-modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #checkout-modal-content {
+            background-color: white;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+        #checkout-modal-overlay.visible #checkout-modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .checkout-step {
+            display: none;
+        }
+        .checkout-step.active {
+            display: block;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--text-dark);
+            box-shadow: 0 0 0 2px rgba(26,26,26,0.2);
+        }
+        .checkout-summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 1rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
     </style>
 </head>
 <body class="antialiased">
-
+    <!-- Indicador de carga -->
     <div class="loader" id="page-loader">
         <div class="flex flex-col items-center w-3/4 max-w-xs md:max-w-md">
-            <h1 class="text-3xl font-display font-bold mb-4 tracking-widest">AG VISUAL</h1>
+            <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-full h-auto mb-8 logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/200x64/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+            <img src="imagenes/LogoBlanco.png" alt="Logo Adán Gómez" class="w-full h-auto mb-8 logo-light" style="display: none;" onerror="this.onerror=null;this.src='https://placehold.co/200x64/ffffff/1a1a1a?text=ADAN+GOMEZ';">
             <div class="loader-circle"></div>
         </div>
     </div>
     
-    <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+    <!-- ===== HEADER ===== -->
+    <header id="header" class="fixed top-0 left-0 right-0 z-50">
         <div class="container mx-auto px-6 flex justify-between items-center">
-            <a href="#" data-target="portfolio" class="nav-link text-2xl font-display font-bold tracking-tighter">AG VISUAL</a>
+            <a href="#" data-target="portfolio" class="nav-link relative group">
+                <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/350x144/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+                <img src="imagenes/LogoBlanco.png" alt="Logo Adán Gómez Blanco" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-light" style="display: none;" onerror="this.onerror=null;this.src='https://placehold.co/350x144/ffffff/1a1a1a?text=ADAN+GOMEZ';">
+            </a>
 
             <div class="flex items-center">
-                <nav class="hidden lg:flex items-center space-x-8 text-xs uppercase tracking-widest font-bold text-gray-800">
-                    <a href="#" data-target="portfolio" class="nav-link relative group">Portafolio<span class="nav-link-underline"></span></a>
-                    <a href="#" data-target="projects" class="nav-link relative group">Proyectos<span class="nav-link-underline"></span></a>
-                    <a href="#" data-target="services" class="nav-link relative group">Servicios<span class="nav-link-underline"></span></a>
-                    <a href="#" data-target="rental" class="nav-link relative group">Alquiler<span class="nav-link-underline"></span></a>
-                    <a href="#" data-target="about" class="nav-link relative group">Quién Soy<span class="nav-link-underline"></span></a>
-                    <a href="#" data-target="contact" class="nav-link relative group">Contacto<span class="nav-link-underline"></span></a>
+                <nav class="hidden lg:flex items-center space-x-8 text-sm uppercase tracking-widest">
+                    <a href="#" data-target="portfolio" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Portafolio</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="projects" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Proyectos</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="services" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Servicios</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="rental" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Alquiler</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="about" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Quién Soy</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="#" data-target="contact" class="nav-link hover:text-gray-500 transition-colors relative group">
+                        <span class="nav-link-text">Contacto</span>
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
+                    </a>
                 </nav>
 
                 <div class="hidden lg:flex items-center space-x-4 ml-8">
-                    <a href="#" class="text-gray-600 hover:text-black"><i class="fab fa-instagram fa-lg"></i></a>
-                    <button id="cart-button" class="relative text-gray-600 hover:text-black ml-2">
+                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
+                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
+                    <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
+                    <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2">
                         <i class="fas fa-shopping-bag fa-lg"></i>
-                        <span id="cart-item-count" class="cart-item-count absolute -top-2 -right-2 bg-black text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">0</span>
+                        <span id="cart-item-count" class="cart-item-count">0</span>
                     </button>
                 </div>
 
-                <button id="mobile-menu-button" class="lg:hidden z-50 ml-4 focus:outline-none">
-                    <i class="fas fa-bars fa-lg"></i>
+                <button id="mobile-menu-button" class="lg:hidden z-50 w-8 h-6 flex flex-col justify-between ml-6" aria-label="Menú móvil" aria-expanded="false">
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
                 </button>
             </div>
         </div>
     </header>
-
-    <div id="mobile-menu" class="fixed inset-0 z-40 flex flex-col justify-center items-center space-y-8 text-2xl font-display">
-        <a href="#" data-target="portfolio" class="mobile-nav-link">Portafolio</a>
-        <a href="#" data-target="projects" class="mobile-nav-link">Proyectos</a>
-        <a href="#" data-target="services" class="mobile-nav-link">Servicios</a>
-        <a href="#" data-target="rental" class="mobile-nav-link">Alquiler</a>
-        <a href="#" data-target="about" class="mobile-nav-link">Quién Soy</a>
-        <a href="#" data-target="contact" class="mobile-nav-link">Contacto</a>
-    </div>
-
-    <main id="main-content">
-        
-        <section id="portfolio" class="page-container pt-32 pb-20 page-active">
-            <div class="container mx-auto px-4 sm:px-6">
-                <div class="text-center mb-12 reveal visible">
-                    <h2 class="text-4xl md:text-6xl font-display mb-4" id="hero-title">Visual Storytelling</h2>
-                    <p class="text-gray-500 max-w-xl mx-auto" id="hero-subtitle">Capturando momentos, creando legados.</p>
-                </div>
-                <div id="portfolio-gallery" class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 reveal visible min-h-[50vh]">
-                    </div>
-            </div>
-        </section>
-
-        <section id="projects" class="page-container pt-32 pb-20 bg-gray-50">
-            <div class="container mx-auto px-4 md:px-12">
-                <div id="projects-container" class="space-y-24">
-                    </div>
-            </div>
-        </section>
-
-        <section id="services" class="page-container pt-32 pb-20">
-            <div class="container mx-auto px-6">
-                <div class="text-center mb-16">
-                    <h2 class="text-4xl font-display">Servicios</h2>
-                    <div class="w-20 h-1 bg-black mx-auto mt-4"></div>
-                </div>
-                <div id="services-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 max-w-6xl mx-auto">
-                    </div>
-            </div>
-        </section>
-
-        <section id="rental" class="page-container pt-32 pb-20 bg-white">
-            <div class="container mx-auto px-6">
-                <div class="text-center mb-12">
-                    <h2 class="text-4xl font-display">Rental de Equipo</h2>
-                    <p class="text-gray-500 mt-2">Herramientas profesionales para tu visión.</p>
-                </div>
-                
-                <div id="rental-filters" class="flex justify-center flex-wrap gap-4 mb-12">
-                    </div>
-                
-                <div id="rental-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    </div>
-            </div>
-        </section>
-
-        <section id="about" class="page-container pt-32 pb-20 bg-gray-50">
-            <div class="container mx-auto px-6 max-w-4xl">
-                <div class="text-center mb-12">
-                    <div class="relative w-64 h-64 mx-auto mb-8 overflow-hidden rounded-full shadow-xl">
-                        <img id="about-profile-img" src="https://placehold.co/400" class="w-full h-full object-cover">
-                    </div>
-                    <h2 class="text-4xl font-display mb-4">Adán Gómez</h2>
-                    <p class="text-xl text-gray-600 italic" id="about-intro">"Cargando biografía..."</p>
-                </div>
-                <div class="prose max-w-none text-gray-600 space-y-8 text-justify leading-relaxed">
-                    <div id="about-bio"></div>
-                </div>
-            </div>
-        </section>
-
-        <section id="contact" class="page-container pt-32 pb-20">
-            <div class="container mx-auto px-6 max-w-4xl text-center">
-                <h2 class="text-4xl font-display mb-8">Hablemos</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16" id="contact-info">
-                    </div>
-                <div class="w-full h-96 bg-gray-200 rounded-lg overflow-hidden shadow-inner">
-                     <iframe id="google-map" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
-                </div>
-            </div>
-        </section>
-
-        <div id="detail-pages-container"></div>
-
-    </main>
-
-    <div id="lightbox" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0">
-        <button id="lightbox-close" class="absolute top-6 right-6 text-white text-5xl hover:text-gray-300">&times;</button>
-        <button id="lightbox-prev" class="absolute left-4 text-white text-4xl p-4 hover:bg-white/10 rounded-full"><i class="fas fa-chevron-left"></i></button>
-        <button id="lightbox-next" class="absolute right-4 text-white text-4xl p-4 hover:bg-white/10 rounded-full"><i class="fas fa-chevron-right"></i></button>
-        <img id="lightbox-image" src="" class="max-w-[95vw] max-h-[95vh] shadow-2xl rounded-sm">
-        <div class="absolute bottom-6 left-0 right-0 text-center text-white text-lg font-light tracking-wide" id="lightbox-caption"></div>
-    </div>
-
-    <div id="cart-overlay" class="fixed inset-0 bg-black/50 z-[60] hidden transition-opacity"></div>
-    <aside id="cart-drawer" class="fixed top-0 right-0 w-full max-w-md h-full bg-white z-[70] shadow-2xl flex flex-col">
-        <div class="p-6 border-b flex justify-between items-center bg-gray-50">
-            <h2 class="text-2xl font-display font-bold">Tu Reserva</h2>
-            <button id="cart-close-btn" class="text-2xl text-gray-400 hover:text-black">&times;</button>
+    <!-- Menú Móvil Overlay (Rediseñado) -->
+    <div id="mobile-menu" class="fixed top-0 right-0 w-full h-full z-40 lg:hidden flex flex-col" aria-hidden="true">
+        <nav class="flex flex-col justify-center items-center h-full space-y-8 text-3xl flex-grow">
+            <a href="#" data-target="portfolio" class="nav-link mobile-nav-link uppercase">Portafolio</a>
+            <a href="#" data-target="projects" class="nav-link mobile-nav-link uppercase">Proyectos</a>
+            <a href="#" data-target="services" class="nav-link mobile-nav-link uppercase">Servicios</a>
+            <a href="#" data-target="rental" class="nav-link mobile-nav-link uppercase">Alquiler</a>
+            <a href="#" data-target="about" class="nav-link mobile-nav-link uppercase">Quién Soy</a>
+            <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
+        </nav>
+        <div class="flex justify-center items-center space-x-8 pb-12">
+            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-2x"></i></a>
+            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-2x"></i></a>
+            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-2x"></i></a>
+            <button id="mobile-cart-button" aria-label="Ver carrito de compras" class="cart-button text-gray-700 hover:text-black transition-colors">
+                <i class="fas fa-shopping-bag fa-2x"></i>
+                <span id="mobile-cart-item-count" class="cart-item-count">0</span>
+            </button>
         </div>
-        <div id="cart-items" class="flex-1 overflow-y-auto p-6 space-y-4">
-            <div id="cart-empty" class="text-center text-gray-400 py-10">Tu carrito está vacío.</div>
+    </div>
+    <main id="main-content">
+        <!-- ===== PORTFOLIO PAGE ===== -->
+        <section id="portfolio" class="page-container pt-28 md:pt-36 pb-0" aria-label="Portafolio">
+            <div class="container mx-auto px-4 sm:px-6">
+                <!-- El contenedor de la galería ahora es el elemento principal -->
+                <div class="reveal">
+                    <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-4 gap-6 space-y-6">
+                        <!-- Las ~200 imágenes se insertan aquí desde JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-zinc-700 text-white py-20 mt-24 reveal">
+                <div class="container mx-auto px-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
+                            <img src="https://placehold.co/1280x720/333333/ffffff?text=Cinematic+Wedding+Film" class="w-full h-full object-cover" alt="Cinematic Wedding Film">
+                        </div>
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
+                            <img src="https://placehold.co/1280x720/cccccc/333333?text=Branding+Short+Film" class="w-full h-full object-cover" alt="Branding Short Film">
+                        </div>
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
+                            <img src="https://placehold.co/1280x720/444444/ffffff?text=Travel+Diary" class="w-full h-full object-cover" alt="Travel Diary">
+                        </div>
+                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
+                            <img src="https://placehold.co/1280x720/bbbbbb/333333?text=Product+Reel" class="w-full h-full object-cover" alt="Product Reel">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-100 py-20 reveal">
+                <div class="container mx-auto px-6">
+                    <div class="text-center mb-12">
+                         <h2 class="text-4xl font-display text-gray-800 text-reveal">Confianza y Colaboración</h2>
+                    </div>
+                    <div class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto">
+                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+1" alt="Logo Cliente 1" class="client-logo">
+                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+2" alt="Logo Cliente 2" class="client-logo">
+                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+3" alt="Logo Cliente 3" class="client-logo">
+                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+4" alt="Logo Cliente 4" class="client-logo">
+                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+5" alt="Logo Cliente 5" class="client-logo">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-100 pt-12 pb-24 reveal">
+                <div class="container mx-auto px-6 text-center">
+                     <div class="text-center mb-12">
+                        <h2 class="text-4xl font-display text-gray-800 text-reveal py-2">¿Listo para el Siguiente Paso?</h2>
+                        <p class="text-lg text-gray-600 mt-2 text-reveal">Explora mis proyectos o contáctame para empezar a crear.</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                        <a href="#" data-target="projects" class="nav-link btn-primary inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105 w-full sm:w-auto">Explorar Proyectos</a>
+                        <a href="#" data-target="contact" class="nav-link btn-primary inline-block bg-zinc-700 text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-zinc-800 transition-transform hover:scale-105 w-full sm:w-auto">Contactar Ahora</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ===== PROJECTS PAGE ===== -->
+        <section id="projects" class="page-container pt-28 md:pt-36 pb-20 md:pb-24 bg-gray-50" aria-label="Proyectos">
+            <div class="container mx-auto px-4 md:px-12">
+                <div id="projects-container" class="space-y-20">
+                    <!-- Los 7 proyectos se insertan aquí desde JS -->
+                </div>
+                <div class="text-center mt-24 reveal">
+                     <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Listo para crear tu propia historia?</h3>
+                    <a href="#" data-target="services" class="nav-link btn-primary mt-8 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Descubre mis Servicios</a>
+                </div>
+            </div>
+        </section>
+        <!-- ===== SERVICES PAGE (REDESIGNED) ===== -->
+        <section id="services" class="page-container pt-28 md:pt-36 pb-20 md:pb-24" aria-label="Servicios">
+            <div class="container mx-auto px-6">
+                <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto reveal">
+                    <!-- Los servicios se insertan aquí desde JS -->
+                </div>
+            </div>
+        </section>
+        <!-- ===== RENTAL PAGE (REDESIGNED) ===== -->
+        <section id="rental" class="page-container pt-28 md:pt-36 pb-20 md:pb-24 bg-white" aria-label="Alquiler de Equipo">
+            <div class="container mx-auto px-6">
+                <div id="rental-filters-wrapper" class="reveal mb-12">
+                    <div id="rental-filters" class="flex justify-center flex-wrap gap-4">
+                        <!-- Filtros de categoría se insertan aquí -->
+                    </div>
+                </div>
+                <div id="rental-grid-categorized" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Las tarjetas de alquiler se insertan aquí -->
+                </div>
+            </div>
+        </section>
+        <!-- ===== ABOUT ME PAGE (REDESIGNED) ===== -->
+        <section id="about" class="page-container pt-24 md:pt-32 pb-20 md:pb-24 bg-gray-50" aria-label="Sobre mí">
+            <div class="container mx-auto px-6">
+                <div class="max-w-4xl mx-auto">
+                    <div class="text-center reveal">
+                        <div class="relative inline-block">
+                            <img src="imagenes/FotoPerfil.png" alt="Adán" class="shadow-xl w-72 h-72 mx-auto mb-8 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/288x288/999999/FFFFFF?text=Ad%C3%A1n';">
+                            <div class="absolute inset-0 border-4 border-white border-opacity-30 animate-ping"></div>
+                        </div>
+                        <p class="text-xl text-gray-700 leading-relaxed max-w-2xl mx-auto italic text-reveal mt-8">"No hago fotos para vivir, vivo para hacer fotos. Mi cámara no es una herramienta, es una extensión de mi curiosidad por el mundo y las historias que la gente tiene que contar."</p>
+                    </div>
+                    <div class="prose max-w-none lg:prose-lg mx-auto mt-16 text-gray-600 leading-relaxed space-y-8 reveal text-justify">
+                        <h3 class="text-3xl font-display text-black !mb-4 text-reveal">Mi Filosofía</h3>
+                        <p class="text-reveal">Hola, soy Adán Gómez. Desde que tomé una cámara por primera vez hace más de diez años, me enamoré de la capacidad de congelar un instante y contar una historia sin palabras. Mi estilo se define por la naturalidad, la luz y la emoción. Busco la belleza en lo cotidiano y la autenticidad en cada retrato.</p>
+                        <p class="text-reveal">Para mí, la fotografía no es solo técnica, es conexión. Es crear un espacio de confianza donde puedas ser tú mismo, para que juntos podamos crear algo verdaderamente memorable. Mi objetivo es que te veas en mis fotos y no solo reconozcas tu imagen, sino que sientas la emoción de ese momento una y otra vez.</p>
+                        
+                        <h3 class="text-3xl font-display text-black !mt-16 !mb-4 text-reveal">Mi Proceso Creativo</h3>
+                        <p class="text-reveal">Cada proyecto es un viaje colaborativo. Comienza con una conversación, no con una sesión. Me sumerjo en tu visión para entender qué historia queremos contar. Durante la sesión, mi enfoque es crear una atmósfera relajada donde la magia pueda suceder de forma orgánica. Finalmente, en la postproducción, cada imagen es tratada con el mimo de un artesano para asegurar que el resultado final sea atemporal.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ===== CONTACT PAGE (REDESIGNED) ===== -->
+        <section id="contact" class="page-container pt-28 md:pt-36" aria-label="Contacto">
+             <div class="container mx-auto px-6 pb-20 md:pb-24">
+                <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-instagram fa-3x mb-3"></i>
+                        <span class="font-bold">Instagram</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-whatsapp fa-3x mb-3"></i>
+                        <span class="font-bold">WhatsApp</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fas fa-envelope fa-3x mb-3"></i>
+                        <span class="font-bold">Email</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-facebook-f fa-3x mb-3"></i>
+                        <span class="font-bold">Facebook</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fab fa-youtube fa-3x mb-3"></i>
+                        <span class="font-bold">Youtube</span>
+                    </a>
+                    <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
+                        <i class="fas fa-phone fa-3x mb-3"></i>
+                        <span class="font-bold">Teléfono</span>
+                    </a>
+                </div>
+            </div>
+            <div class="container mx-auto px-6 text-center mb-12 reveal">
+                <h2 class="text-4xl font-display text-gray-800 text-reveal">Mi Estudio</h2>
+                <p class="text-lg text-gray-600 mt-2 text-reveal">Ubicado en el corazón de Coronado, listo para dar vida a tu proyecto.</p>
+             </div>
+            <div class="reveal">
+                <iframe id="google-map" src="https://www.google.com/maps/embed?pb=!1m18!m12!1m3!1d31431.83101261831!2d-84.0101680513672!3d10.023880900000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8fa0f3c43dd70743%3A0x18258b381d58552a!2sV%C3%A1squez%20de%20Coronado!5e0!3m2!1ses-419!2scr!4v1722547858413!5m2!1ses-419!2scr" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+        </section>
+        <!-- PROJECT DETAIL PAGES CONTAINER -->
+        <div id="project-detail-pages"></div>
+        <!-- RENTAL DETAIL PAGES CONTAINER -->
+        <div id="rental-detail-pages"></div>
+        <!-- SERVICE DETAIL PAGES CONTAINER -->
+        <div id="service-detail-pages"></div>
+    </main>
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="fixed inset-0 z-[100] flex items-center justify-center hidden opacity-0" role="dialog" aria-modal="true" aria-label="Vista ampliada de imagen">
+        <button id="lightbox-close" class="absolute top-6 right-6 text-white text-5xl font-light hover:opacity-75 transition-opacity" aria-label="Cerrar vista ampliada">×</button>
+        <button id="lightbox-prev" class="lightbox-nav" aria-label="Imagen anterior">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button id="lightbox-next" class="lightbox-nav" aria-label="Imagen siguiente">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="text-white text-center absolute bottom-6 left-0 right-0">
+            <p id="lightbox-caption" class="text-lg"></p>
+        </div>
+        <img id="lightbox-image" src="" alt="Vista ampliada" class="max-w-[90vw] max-h-[85vh] shadow-2xl">
+    </div>
+
+    <!-- Contenedor del Modal del Calendario (se añade al final del body) -->
+    <div id="calendar-modal-container"></div>
+    
+    <!-- NUEVA ESTRUCTURA DEL CARRITO -->
+    <div id="cart-overlay"></div>
+    <aside id="cart-drawer" aria-labelledby="cart-heading">
+        <div class="p-6 border-b flex justify-between items-center">
+            <h2 id="cart-heading" class="text-2xl font-display">Tu Carrito de Alquiler</h2>
+            <button id="cart-close-btn" class="text-2xl text-gray-500 hover:text-black">&times;</button>
+        </div>
+        <div id="cart-items-container" class="flex-grow overflow-y-auto p-6">
+            <!-- Los artículos del carrito se renderizarán aquí -->
+            <div id="cart-empty-state" class="text-center p-8 flex flex-col items-center justify-center h-full">
+                <i class="fas fa-camera-retro text-5xl text-gray-300 mb-6"></i>
+                <h3 class="font-display text-2xl mb-2">Tu carrito está vacío</h3>
+                <p class="text-gray-500 mb-8 max-w-xs">Parece que aún no has añadido equipo. ¡Explora nuestro catálogo!</p>
+                <a href="#" data-target="rental" class="nav-link btn-primary inline-block bg-black text-white font-bold py-3 px-8 rounded-full hover:bg-gray-800">
+                    Explorar Equipo
+                </a>
+            </div>
         </div>
         <div class="p-6 border-t bg-gray-50">
-            <div class="flex justify-between items-center text-xl font-bold mb-4">
-                <span>Total Estimado:</span>
-                <span id="cart-total">$0.00</span>
+            <div class="flex justify-between items-center font-bold text-lg mb-4">
+                <span>Subtotal:</span>
+                <span id="cart-subtotal">$0.00</span>
             </div>
-            <button id="checkout-btn" class="w-full bg-black text-white py-4 font-bold tracking-widest hover:bg-gray-800 transition-colors uppercase text-sm">Solicitar Reserva</button>
+            <button id="checkout-btn" class="w-full bg-black text-white py-4 font-bold hover:bg-gray-800 transition-colors disabled:bg-gray-300">Finalizar Reserva</button>
         </div>
     </aside>
+    
+    <!-- NUEVA ESTRUCTURA PARA EL MODAL DE CHECKOUT -->
+    <div id="checkout-modal-container"></div>
+
 
     <script>
-        // --- 1. CONFIGURACIÓN Y ESTADO ---
-        const API_URL = '/.netlify/functions/get-website-data'; 
-        let appData = {
-            projects: [],
-            services: [],
-            rentalItems: [],
-            rentalCategories: [],
-            portfolioGallery: [],
-            clientLogos: [],
-            settings: {},
-            about: {}
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- DATOS ---
+        const rentalData = {
+            "Cámaras": [
+                { id: 1, name: "Canon EOS R5", price: 120, description: "Sensor 45MP, video 8K. Ideal para máxima resolución.", long_desc: "La Canon EOS R5 es ideal para profesionales que necesitan la máxima calidad de imagen. Con su sensor de 45MP, grabación de video 8K y un sistema de autoenfoque de vanguardia, es la herramienta perfecta para bodas, retratos y producciones de video.", images: ["https://placehold.co/800x600/333/fff?text=EOS+R5+Front", "https://placehold.co/800x600/444/fff?text=EOS+R5+Back"], bookedDates: ["2025-09-15", "2025-09-16", "2025-10-01", "2025-10-18", "2025-10-19", "2025-10-20"] },
+                { id: 11, name: "Canon EOS R6 Mark II", price: 90, description: "Cámara híbrida veloz, 4K/60p. Perfecta para eventos.", long_desc: "Excelente para fotografía de acción y video. Ofrece ráfagas de 40fps, video 4K/60p y un autoenfoque mejorado que sigue a los sujetos con tenacidad.", images: ["https://placehold.co/800x600/333/fff?text=R6+II"], bookedDates: ["2025-09-20", "2025-09-21", "2025-09-22"] },
+                { id: 16, name: "GoPro HERO12 Black", price: 40, description: "Video 5.3K, estabilización HyperSmooth 6.0.", long_desc: "Captura tus aventuras en impresionante video 5.3K. Con estabilización HyperSmooth 6.0 y una construcción resistente al agua, está lista para cualquier desafío.", images: ["https://placehold.co/800x600/333/fff?text=GoPro+12"], bookedDates: ["2025-11-01", "2025-11-02", "2025-11-03"] }
+            ],
+            "Lentes": [
+                { id: 3, name: "Canon RF 24-70mm f/2.8", price: 60, description: "El zoom estándar profesional por excelencia. Versátil y luminoso.", long_desc: "Un lente versátil y luminoso que cubre desde gran angular hasta teleobjetivo corto. Perfecto para eventos, retratos y viajes, ofreciendo una nitidez excepcional en todo su rango.", images: ["https://placehold.co/800x600/333/fff?text=RF+24-70mm"], bookedDates: ["2025-09-18", "2025-09-28", "2025-09-29", "2025-09-30"] },
+                { id: 7, name: "Sigma 85mm f/1.4 ART", price: 55, description: "El lente definitivo para retratos con bokeh espectacular.", long_desc: "Con una apertura de f/1.4, este lente produce un bokeh increíblemente suave y una nitidez asombrosa, haciendo que los sujetos resalten de manera espectacular. Disponible para monturas Sony E y Canon EF.", images: ["https://placehold.co/800x600/333/fff?text=Sigma+85mm"], bookedDates: [] },
+                { id: 22, name: "Canon RF 15-35mm f/2.8", price: 50, description: "Zoom ultra gran angular para paisajes y arquitectura.", long_desc: "Perfecto para arquitectura, interiores y paisajes espectaculares. Su estabilización de imagen y su apertura f/2.8 lo hacen increíblemente versátil.", images: ["https://placehold.co/800x600/333/fff?text=RF+15-35mm"], bookedDates: ["2025-10-10", "2025-10-11"] }
+            ],
+            "Estabilización": [
+                 { id: 4, name: "DJI Ronin-S", price: 70, description: "Estabilizador de 3 ejes para tomas de cine fluidas.", long_desc: "Consigue tomas cinematográficas y sin vibraciones con el DJI Ronin-S. Compatible con una amplia gama de cámaras, es esencial para producciones de video profesionales.", images: ["https://placehold.co/800x600/333/fff?text=Ronin-S"], bookedDates: ["2025-10-04", "2025-10-05"] },
+                 { id: 23, name: "Slider Motorizado Edelkrone", price: 65, description: "Crea travellings y timelapses dinámicos con precisión.", long_desc: "Crea travellings y timelapses dinámicos con precisión. Controlable a través de una aplicación móvil para movimientos complejos y repetibles.", images: ["https://placehold.co/800x600/333/fff?text=edelkrone+Slider"], bookedDates: ["2025-09-25"] },
+                 { id: 9, name: "Trípode Manfrotto 055", price: 25, description: "Trípode de aluminio robusto y estable para todo uso.", long_desc: "Un trípode confiable para fotografía y video. Su columna central de 90° permite ángulos creativos, y su construcción robusta soporta equipos pesados con total seguridad.", images: ["https://placehold.co/800x600/333/fff?text=Manfrotto+055"], bookedDates: ["2025-11-11", "2025-11-12"] }
+            ]
         };
+        let rentalDataGlobal = JSON.parse(JSON.stringify(rentalData)); // Clon profundo para simulación
+        
+        // --- SELECTORES GLOBALES ---
+        const mainContent = document.getElementById('main-content');
+        const header = document.getElementById('header');
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const allNavLinks = document.querySelectorAll('.nav-link');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImage = document.getElementById('lightbox-image');
+        const lightboxClose = document.getElementById('lightbox-close');
+        const lightboxPrev = document.getElementById('lightbox-prev');
+        const lightboxNext = document.getElementById('lightbox-next');
+        const lightboxCaption = document.getElementById('lightbox-caption');
+        const pageLoader = document.getElementById('page-loader');
+        
+        // --- Selectores del Carrito (Actualizados) ---
+        const cartButton = document.getElementById('cart-button');
+        const mobileCartButton = document.getElementById('mobile-cart-button');
+        const cartItemCount = document.getElementById('cart-item-count');
+        const mobileCartItemCount = document.getElementById('mobile-cart-item-count');
+        const cartOverlay = document.getElementById('cart-overlay');
+        const cartDrawer = document.getElementById('cart-drawer');
+        const cartCloseBtn = document.getElementById('cart-close-btn');
+        const cartItemsContainer = document.getElementById('cart-items-container');
+        const cartEmptyState = document.getElementById('cart-empty-state');
+        const cartSubtotalEl = document.getElementById('cart-subtotal');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        
+        // --- ESTADO DEL CARRITO ---
         let cart = [];
-
-        // --- 2. MOTOR DE DATOS (Hidratación) ---
-        async function initApp() {
-            try {
-                // Fetch de datos reales
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error('Error de conexión');
-                const data = await response.json();
-                
-                // Asignar datos al estado global
-                appData = data;
-                
-                // Renderizar la UI con datos reales
-                renderUI();
-                
-                // Ocultar loader
-                document.getElementById('page-loader').classList.add('hidden');
-                
-            } catch (error) {
-                console.error("Fallo crítico:", error);
-                document.querySelector('.loader-circle').style.borderColor = 'red';
-                alert("Hubo un problema cargando el sitio. Por favor recarga.");
+        
+        const categoryColors = {
+            bodas: { bg: 'a3b18a', text: '344e41' }, 
+            retratos: { bg: 'bc6c25', text: 'fefae0' },
+            producto: { bg: '606c38', text: 'dda15e' }, 
+            eventos: { bg: '283618', text: 'fefae0' },
+            naturaleza: { bg: '588157', text: 'dad7cd' }
+        };
+        
+        const getRandomSize = () => {
+            const sizes = ['600x800', '800x600', '600x600', '600x900', '700x500', '600x700'];
+            return sizes[Math.floor(Math.random() * sizes.length)];
+        };
+        
+        const generatePortfolioData = (count) => {
+            const data = [];
+            const categories = Object.keys(categoryColors);
+            for (let i = 1; i <= count; i++) {
+                const category = categories[i % categories.length];
+                const colors = categoryColors[category];
+                const size = getRandomSize();
+                data.push({
+                    src: `https://placehold.co/${size}/${colors.bg}/${colors.text}?text=${category}+${Math.ceil(i/categories.length)}`,
+                    title: `${category.charAt(0).toUpperCase() + category.slice(1)} #${Math.ceil(i/categories.length)}`,
+                    category: category
+                });
             }
-        }
+            return data;
+        };
+        
+        const portfolioData = generatePortfolioData(40);
+        
+        const generateProjectImages = (count, colorTheme) => {
+            const images = [];
+            for (let i = 0; i < count; i++) {
+                const size = getRandomSize();
+                images.push(`https://placehold.co/${size}/${colorTheme.bg}/${colorTheme.text}?text=Detalle+${i+1}`);
+            }
+            return images;
+        };
+        
+        const projectDetails = {
+            "project-detail-1": { 
+                title: "Boda de Ana y Carlos", 
+                description: "Un día mágico en los viñedos de la Toscana.", 
+                images: generateProjectImages(30, categoryColors.bodas) 
+            },
+            "project-detail-2": { 
+                title: 'Colección "NEÓN"', 
+                description: "Campaña de moda urbana con luces de la ciudad.", 
+                images: generateProjectImages(30, {bg: '333333', text: 'E2E2E2'}) 
+            },
+            "project-detail-3": { 
+                title: 'Retrato Corporativo', 
+                description: "Sesiones para equipos ejecutivos, enfocadas en profesionalismo.", 
+                images: generateProjectImages(30, categoryColors.retratos) 
+            },
+            "project-detail-4": { 
+                title: 'Sabor & Textura', 
+                description: "Fotografía de alimentos para restaurantes y marcas.", 
+                images: generateProjectImages(30, categoryColors.producto) 
+            },
+            "project-detail-5": { 
+                title: 'Noche de Gala', 
+                description: "Cobertura completa de eventos sociales y corporativos.", 
+                images: generateProjectImages(30, categoryColors.eventos) 
+            },
+            "project-detail-6": { 
+                title: 'Aventura en la Montaña', 
+                description: "Documentando la belleza salvaje de nuestros paisajes.", 
+                images: generateProjectImages(30, categoryColors.naturaleza) 
+            },
+            "project-detail-7": { 
+                title: 'Espacios que Inspiran', 
+                description: "Fotografía de arquitectura e interiores.", 
+                images: generateProjectImages(30, {bg: 'dad7cd', text: '588157'}) 
+            }
+        };
+        
+        const projectsData = [
+            { id: 1, title: "Boda de Ana y Carlos", img: "https://placehold.co/800x600/a3b18a/344e41?text=Boda", description: "Un día mágico en los viñedos de la Toscana." },
+            { id: 2, title: 'Colección "NEÓN"', img: "https://placehold.co/800x600/344e41/a3b18a?text=Moda", description: "Campaña de moda para una marca emergente." },
+            { id: 3, title: "Retrato Corporativo", img: "https://placehold.co/800x600/bc6c25/fefae0?text=Corporativo", description: "Sesiones de retrato para equipos ejecutivos." },
+            { id: 4, title: "Sabor & Textura", img: "https://placehold.co/800x600/606c38/dda15e?text=Alimentos", description: "Fotografía de alimentos para restaurantes y marcas." },
+            { id: 5, title: "Noche de Gala", img: "https://placehold.co/800x600/283618/fefae0?text=Gala", description: "Cobertura completa de eventos sociales y corporativos." },
+            { id: 6, "title": "Aventura en la Montaña", img: "https://placehold.co/800x600/588157/dad7cd?text=Aventura", description: "Documentando la belleza salvaje de nuestros paisajes." },
+            { id: 7, title: "Espacios que Inspiran", img: "https://placehold.co/800x600/dad7cd/588157?text=Arquitectura", description: "Fotografía de arquitectura e interiores." }
+        ];
 
-        function renderUI() {
-            // A. Configuración Global (Logos, Textos)
-            applySettings();
-            
-            // B. Renderizar Secciones Principales
-            renderPortfolio(appData.portfolioGallery);
-            renderProjects(appData.projects);
-            renderServices(appData.services);
-            renderRentals(appData.rentalItems, appData.rentalCategories);
-            renderAbout(appData.about, appData.settings); // About usa settings para foto perfil
-            renderContact(appData.settings);
-        }
+        const servicesData = [
+            { id: 1, title: "Fotografía de Bodas", icon: "fas fa-ring" },
+            { id: 2, title: "Retratos y Books", icon: "fas fa-portrait" },
+            { id: 3, title: "Producto y Marcas", icon: "fas fa-camera-retro" },
+            { id: 4, title: "Producción de Video", icon: "fas fa-video" },
+            { id: 5, title: "Fotografía con Dron", icon: "fa-solid fa-helicopter" },
+            { id: 6, title: "Álbumes y Libros", icon: "fas fa-book-open" }
+        ];
 
-        // --- 3. RENDERIZADORES ---
+        const serviceDetails = {
+            "service-detail-1": {
+                title: "Fotografía de Bodas",
+                intro: "Más que un evento, tu boda es el primer capítulo de una nueva historia. Mi misión es capturar cada risa, cada lágrima de alegría y cada mirada cómplice con un enfoque artístico y documental, creando un legado visual que atesorarás para siempre.",
+                sections: [
+                    { 
+                        title: "Mi Enfoque Cinematográfico", 
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Reunión de planificación pre-boda.</li><li>Cobertura completa del día, desde los preparativos hasta la fiesta.</li><li>Galería online privada y protegida con contraseña para compartir.</li><li>Entrega de 500+ imágenes editadas en alta resolución.</li><li>Opción de añadir sesiones de compromiso, álbumes de lujo y segundo fotógrafo.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.bodas)
+            },
+            "service-detail-2": {
+                title: "Retratos y Books",
+                intro: "Un buen retrato es más que una simple imagen; es una declaración de quién eres. Ya sea para tu marca personal, tu perfil profesional o un recuerdo familiar, creo un ambiente de confianza para capturar tu esencia de una manera auténtica y poderosa.",
+                sections: [
+                    { 
+                        title: "Una Sesión a Tu Medida", 
+                        content: "Cada sesión de retratos es una colaboración. Antes de disparar, conversamos sobre tus objetivos, tu estilo y la historia que quieres contar. Podemos trabajar en mi estudio para un look clásico y controlado, o en exteriores para aprovechar la luz natural y el entorno, creando imágenes que realmente te representen."
+                    },
+                    {
+                        title: "Tipos de Sesiones",
+                        content: "<ul class='list-disc list-inside space-y-2'><li><strong>Marca Personal:</strong> Para emprendedores, ejecutivos y creativos que necesitan una imagen profesional.</li><li><strong>Books para Artistas:</strong> Sesiones para actores, modelos y músicos.</li><li><strong>Familia y Parejas:</strong> Capturando la conexión y el amor en momentos especiales.</li><li><strong>Maternidad:</strong> Celebrando la belleza de la espera.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.retratos)
+            },
+             "service-detail-3": {
+                title: "Producto y Marcas",
+                intro: "En un mercado saturado, la calidad visual no es una opción, es una necesidad. Produzco imágenes limpias, atractivas y profesionales que elevan la percepción de tu marca y convierten visitantes en clientes.",
+                sections: [
+                    { 
+                        title: "Fotografía que Vende", 
+                        content: "Mi proceso se centra en entender tu producto y tu cliente ideal. Planifico cada detalle, desde la iluminación hasta el estilismo, para crear imágenes que no solo muestren tu producto, sino que también comuniquen sus valores y beneficios. El resultado son fotografías que se integran perfectamente en tu e-commerce, redes sociales y campañas de marketing."
+                    },
+                    {
+                        title: "Servicios para Marcas",
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Fotografía de producto para e-commerce (fondo blanco/color).</li><li>Fotografía de lifestyle con modelos y en contexto.</li><li>Fotografía publicitaria para campañas.</li><li>Creación de contenido visual para redes sociales.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.producto)
+            },
+            "service-detail-4": {
+                title: "Producción de Video",
+                intro: "Del guion a la pantalla final, produzco videos cinematográficos que comunican tu mensaje de manera efectiva y emocional. Ya sea un comercial, un video corporativo o un cortometraje, mi enfoque es contar historias que resuenen.",
+                sections: [
+                    { 
+                        title: "Un Proceso Integral", 
+                        content: "Manejo todas las fases de la producción: preproducción (conceptualización, guion), producción (rodaje con equipo de cine digital) y postproducción (edición, colorización, sonido). Este enfoque integral asegura una visión cohesiva y un producto final de la más alta calidad."
+                    },
+                    {
+                        title: "Tipos de Producción",
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Videos de Marca (Brand Films).</li><li>Comerciales para TV y Redes Sociales.</li><li>Videos Corporativos e Institucionales.</li><li>Documentales y Cortometrajes.</li><li>Videos Musicales.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, {bg: '3a3a3a', text: 'fdfdfd'})
+            },
+            "service-detail-5": {
+                title: "Fotografía con Dron",
+                intro: "Eleva tu perspectiva y muestra tu proyecto desde un punto de vista imposible de alcanzar desde tierra. Ofrezco fotografía y videografía aérea de alta resolución para realzar la escala, la belleza y el contexto de tu sujeto.",
+                sections: [
+                    { 
+                        title: "Calidad y Seguridad Profesional", 
+                        content: "Como piloto certificado, opero con los más altos estándares de seguridad y cumpliendo con toda la normativa vigente. Utilizo drones de última generación equipados con cámaras Hasselblad para garantizar una calidad de imagen excepcional, con colores vivos y un detalle asombroso."
+                    },
+                    {
+                        title: "Aplicaciones Aéreas",
+                        content: "<ul class='list-disc list-inside space-y-2'><li><strong>Inmobiliaria:</strong> Muestra propiedades, terrenos y desarrollos desde el aire.</li><li><strong>Eventos:</strong> Captura la magnitud de conciertos, bodas y eventos deportivos.</li><li><strong>Cinematografía:</strong> Tomas aéreas espectaculares para producciones de video.</li><li><strong>Inspección:</strong> Seguimiento de obras y revisión de infraestructuras.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.naturaleza)
+            },
+            "service-detail-6": {
+                title: "Álbumes y Libros",
+                intro: "Tus fotografías merecen algo más que una pantalla. Diseño y produzco álbumes de lujo y libros de autor que transforman tus recuerdos en una obra de arte tangible, un tesoro familiar que pasará de generación en generación.",
+                sections: [
+                    { 
+                        title: "Artesanía y Calidad de Museo", 
+                        content: "Trabajo con los mejores encuadernadores y laboratorios de impresión para asegurar una calidad excepcional. Cada álbum se diseña a medida, contando la historia de tu día de una manera fluida y emotiva. Utilizamos papeles de archivo y materiales de la más alta calidad para garantizar su durabilidad y belleza."
+                    },
+                    {
+                        title: "Opciones de Personalización",
+                        content: "<ul class='list-disc list-inside space-y-2'><li>Amplia selección de cubiertas: lino, cuero, madera.</li><li>Grabado personalizado de nombres y fechas.</li><li>Diferentes tamaños y tipos de papel (mate, lustre).</li><li>Cajas de presentación a juego para proteger tu álbum.</li></ul>"
+                    }
+                ],
+                gallery: generateProjectImages(6, categoryColors.bodas)
+            },
+        };
 
-        function applySettings() {
-            // Textos Hero
-            if(appData.settings.hero_title) document.getElementById('hero-title').innerHTML = appData.settings.hero_title;
-            if(appData.settings.hero_subtitle) document.getElementById('hero-subtitle').innerText = appData.settings.hero_subtitle;
-            
-            // Logos Navbar (Si hay URL en settings, úsala)
-            // (Opcional, si quieres dinamizar el logo del header)
-        }
+        
+        // --- FUNCIONES DEL CARRITO ---
+        const toggleCart = (show) => {
+            if (show) {
+                cartOverlay.classList.add('visible');
+                cartDrawer.classList.add('visible');
+            } else {
+                cartOverlay.classList.remove('visible');
+                cartDrawer.classList.remove('visible');
+            }
+        };
 
-        function renderPortfolio(images) {
-            const container = document.getElementById('portfolio-gallery');
-            if(!images || images.length === 0) {
-                container.innerHTML = '<p class="text-center w-full text-gray-400">Pronto nuevas imágenes.</p>';
+        const updateCartIcon = () => {
+            const count = cart.length;
+            // Escritorio
+            cartItemCount.textContent = count;
+            cartItemCount.classList.toggle('visible', count > 0);
+            // Móvil
+            mobileCartItemCount.textContent = count;
+            mobileCartItemCount.classList.toggle('visible', count > 0);
+        };
+
+        const renderCart = () => {
+            // Limpia el contenedor de items, pero mantiene el 'empty state'
+            const items = cartItemsContainer.querySelectorAll('.cart-item');
+            items.forEach(item => item.remove());
+
+            if (cart.length === 0) {
+                cartEmptyState.style.display = 'flex';
+                checkoutBtn.disabled = true;
+            } else {
+                cartEmptyState.style.display = 'none';
+                checkoutBtn.disabled = false;
+                cart.forEach(item => {
+                    const cartItemEl = document.createElement('div');
+                    cartItemEl.className = 'cart-item flex items-start space-x-4 py-4 border-b';
+                    cartItemEl.innerHTML = `
+                        <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover">
+                        <div class="flex-grow">
+                            <h4 class="font-bold">${item.name}</h4>
+                            <p class="text-sm text-gray-500">
+                                ${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}
+                            </p>
+                            <p class="text-sm text-gray-500">${item.totalDays} día(s)</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
+                            <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}">
+                                <i class="fas fa-trash-alt mr-1"></i>Eliminar
+                            </button>
+                        </div>
+                    `;
+                    cartItemsContainer.appendChild(cartItemEl);
+                });
+            }
+
+            const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
+            cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+        };
+
+        const addToCart = (item, startDate, endDate) => {
+            const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+            const cartId = `${item.id}-${startDate}`; // ID único para el artículo y fecha
+
+            // Evitar duplicados
+            if (cart.some(cartItem => cartItem.cartId === cartId)) {
+                alert('Este artículo ya está en tu carrito para estas fechas.');
                 return;
             }
             
-            container.innerHTML = images.map(img => `
-                <div class="gallery-item break-inside-avoid relative group" onclick="openLightbox('${img.imageUrl}', '${img.caption||''}')">
-                    <img src="${img.imageUrl}" alt="${img.caption||'Portafolio'}" loading="lazy" class="w-full h-auto object-cover rounded-sm bg-gray-100">
-                    <div class="overlay absolute inset-0 flex items-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black/80 to-transparent">
-                        <p class="text-white text-sm font-light tracking-wide transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">${img.caption || ''}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
+            cart.push({
+                ...item,
+                cartId: cartId,
+                startDate: startDate,
+                endDate: endDate,
+                totalDays: totalDays,
+                image: item.images[0] // Usar la primera imagen para el carrito
+            });
 
-        function renderProjects(projects) {
-            const container = document.getElementById('projects-container');
-            if(!projects || projects.length === 0) return;
+            renderCart();
+            updateCartIcon();
+            toggleCart(true);
+        };
+        
+        cartItemsContainer.addEventListener('click', (e) => {
+            if (e.target.closest('.cart-item-remove-btn')) {
+                const cartIdToRemove = e.target.closest('.cart-item-remove-btn').dataset.cartId;
+                cart = cart.filter(item => item.cartId !== cartIdToRemove);
+                renderCart();
+                updateCartIcon();
+            }
+        });
+        
+        // --- FUNCIONES DE CHECKOUT ---
+        const showCheckoutModal = () => {
+            const checkoutModalContainer = document.getElementById('checkout-modal-container');
+            const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
 
-            container.innerHTML = projects.filter(p => p.status !== 'hidden').map((p, idx) => {
-                const isEven = idx % 2 === 0;
-                // Usamos coverImageUrl que ya viene procesada del backend
-                const imgUrl = p.coverImageUrl || 'https://placehold.co/800x600?text=Proyecto';
-                
-                return `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center reveal">
-                    <div class="order-2 ${isEven ? 'md:order-1 md:text-right' : 'md:order-2 md:text-left'}">
-                        <h3 class="text-4xl font-display mb-4 text-gray-900">${p.title}</h3>
-                        <div class="w-16 h-1 bg-gray-200 mb-6 ${isEven ? 'ml-auto' : 'mr-auto'}"></div>
-                        <p class="text-gray-600 leading-relaxed mb-8 font-light">${p.description || ''}</p>
-                        <button onclick="openDetail('project', '${p.id}')" class="text-black text-xs font-bold uppercase tracking-[0.2em] border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-400 transition-all">
-                            Ver Proyecto
-                        </button>
-                    </div>
-                    <div class="order-1 ${isEven ? 'md:order-2' : 'md:order-1'} overflow-hidden shadow-xl rounded-sm cursor-pointer group" onclick="openDetail('project', '${p.id}')">
-                        <img src="${imgUrl}" alt="${p.title}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out">
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        function renderServices(services) {
-            const container = document.getElementById('services-grid');
-            if(!services) return;
-
-            container.innerHTML = services.filter(s => s.status !== 'hidden').map(s => `
-                <div class="group p-8 border border-gray-100 hover:border-gray-300 transition-all duration-500 hover:shadow-lg bg-white cursor-pointer flex flex-col items-center text-center" onclick="openDetail('service', '${s.id}')">
-                    <div class="w-16 h-16 mb-6 rounded-full bg-gray-50 flex items-center justify-center text-2xl text-gray-700 group-hover:bg-black group-hover:text-white transition-colors duration-300">
-                        <i class="${s.iconClass || 'fas fa-star'}"></i>
-                    </div>
-                    <h3 class="text-2xl font-display mb-3 text-gray-900">${s.title}</h3>
-                    <div class="w-8 h-px bg-gray-300 my-4 group-hover:w-16 transition-all duration-300"></div>
-                    <p class="text-xs font-bold uppercase tracking-widest text-gray-400 group-hover:text-black mt-auto">Descubrir</p>
-                </div>
-            `).join('');
-        }
-
-        function renderRentals(items, categories) {
-            // 1. Filtros
-            const filterContainer = document.getElementById('rental-filters');
-            const cats = categories || [];
-            
-            filterContainer.innerHTML = `
-                <button class="rental-filter-btn active px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all bg-black text-white" onclick="filterRentals('all', this)">Todo</button>
-                ${cats.map(c => `
-                    <button class="rental-filter-btn px-6 py-2 rounded-full text-sm font-bold uppercase tracking-wider transition-all bg-white text-gray-500 border border-gray-200 hover:border-black hover:text-black" onclick="filterRentals('${c.id}', this)">${c.name}</button>
-                `).join('')}
-            `;
-
-            // 2. Grid de Items
-            const grid = document.getElementById('rental-grid');
-            grid.innerHTML = items.filter(i => i.status !== 'hidden').map(item => {
-                // Buscar imagen portada
-                const cover = item.images && item.images.find(img => String(img.isCover).toLowerCase() === 'si');
-                const imgUrl = cover ? cover.imageUrl : (item.images && item.images[0] ? item.images[0].imageUrl : 'https://placehold.co/400x300?text=Equipo');
-                
-                // Calcular precio con IVA si aplica
-                const basePrice = parseFloat(item.pricePerDay);
-                const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
-                const taxLabel = hasTax ? '<span class="text-[10px] text-gray-400 ml-1">+IVI</span>' : '';
-
-                return `
-                <div class="rental-card group bg-white border border-gray-100 hover:shadow-xl transition-all duration-300" data-cat="${item.categoryId}">
-                    <div class="relative overflow-hidden aspect-[4/3] bg-gray-50 cursor-pointer" onclick="openDetail('rental', '${item.id}')">
-                        <img src="${imgUrl}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
-                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-display font-bold mb-2 text-gray-900">${item.name}</h3>
-                        <p class="text-sm text-gray-500 line-clamp-2 mb-4 h-10">${item.description || ''}</p>
-                        <div class="flex justify-between items-end border-t border-gray-100 pt-4">
-                            <div class="flex flex-col">
-                                <span class="text-xs text-gray-400 uppercase font-bold">Tarifa Diaria</span>
-                                <span class="text-xl font-bold text-black font-mono">$${finalPrice.toFixed(2)}${taxLabel}</span>
-                            </div>
-                            <button onclick="addToCart('${item.id}')" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-black hover:text-white transition-colors">
-                                <i class="fas fa-plus"></i>
-                            </button>
+            const summaryItemsHTML = cart.map(item => `
+                <div class="checkout-summary-item">
+                    <div class="flex items-start space-x-4">
+                        <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover">
+                        <div>
+                            <p class="font-bold">${item.name}</p>
+                            <p class="text-sm text-gray-500">${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}</p>
                         </div>
                     </div>
-                </div>`;
-            }).join('');
-        }
+                    <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
+                </div>
+            `).join('');
 
-        window.filterRentals = (catId, btn) => {
-            document.querySelectorAll('.rental-filter-btn').forEach(b => {
-                b.classList.remove('bg-black', 'text-white');
-                b.classList.add('bg-white', 'text-gray-500', 'border');
-            });
-            btn.classList.remove('bg-white', 'text-gray-500', 'border');
-            btn.classList.add('bg-black', 'text-white');
+            checkoutModalContainer.innerHTML = `
+                <div id="checkout-modal-overlay" class="checkout-modal-overlay">
+                    <div id="checkout-modal-content" class="checkout-modal-content">
+                        <div class="p-6 border-b flex justify-between items-center">
+                            <h2 class="text-2xl font-display">Finalizar Reserva</h2>
+                            <button id="checkout-close-btn" class="text-2xl text-gray-500 hover:text-black">&times;</button>
+                        </div>
+                        
+                        <!-- Step 1: Contact Details -->
+                        <div id="checkout-step-1" class="checkout-step active">
+                            <div class="p-6">
+                                <h3 class="font-bold mb-4">1. Detalles de Contacto</h3>
+                                <form id="contact-form" class="space-y-4">
+                                    <div>
+                                        <label for="name" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
+                                        <input type="text" id="name" name="name" required class="form-input mt-1">
+                                    </div>
+                                    <div>
+                                        <label for="email" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                                        <input type="email" id="email" name="email" required class="form-input mt-1">
+                                    </div>
+                                    <div>
+                                        <label for="phone" class="block text-sm font-medium text-gray-700">Teléfono</label>
+                                        <input type="tel" id="phone" name="phone" required class="form-input mt-1">
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="p-6 bg-gray-50 border-t flex justify-end">
+                                <button id="to-step-2-btn" class="bg-black text-white py-3 px-6 font-bold">Siguiente</button>
+                            </div>
+                        </div>
 
-            const cards = document.querySelectorAll('.rental-card');
-            cards.forEach(c => {
-                if (catId === 'all' || c.dataset.cat === catId) {
-                    c.style.display = 'block';
-                    setTimeout(() => c.style.opacity = 1, 50);
+                        <!-- Step 2: Summary -->
+                        <div id="checkout-step-2" class="checkout-step">
+                            <div class="p-6 overflow-y-auto">
+                                <h3 class="font-bold mb-4">2. Resumen y Confirmación</h3>
+                                <div id="checkout-summary-container">
+                                    ${summaryItemsHTML}
+                                </div>
+                                <div class="flex justify-between font-bold text-xl pt-4 mt-4 border-t">
+                                    <span>Total:</span>
+                                    <span>$${subtotal.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div class="p-6 bg-gray-50 border-t flex justify-between">
+                                <button id="back-to-step-1-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button>
+                                <button id="to-step-3-btn" class="bg-black text-white py-3 px-6 font-bold">Continuar al Pago</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Payment Simulation -->
+                        <div id="checkout-step-3" class="checkout-step">
+                             <div class="p-6">
+                                <h3 class="font-bold mb-4">3. Ingreso de Pago Seguro</h3>
+                                <form id="payment-form" class="space-y-4">
+                                    <div>
+                                        <label for="card-number" class="block text-sm font-medium text-gray-700">Número de Tarjeta</label>
+                                        <input type="text" id="card-number" name="card-number" placeholder="0000 0000 0000 0000" required class="form-input mt-1" pattern="[0-9]{13,16}" title="Ingrese un número de tarjeta válido.">
+                                    </div>
+                                    <div>
+                                        <label for="card-name" class="block text-sm font-medium text-gray-700">Nombre en la Tarjeta</label>
+                                        <input type="text" id="card-name" name="card-name" placeholder="Nombre Apellido" required class="form-input mt-1">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="card-expiry" class="block text-sm font-medium text-gray-700">Vencimiento (MM/AA)</label>
+                                            <input type="text" id="card-expiry" name="card-expiry" placeholder="MM/AA" required class="form-input mt-1" pattern="(0[1-9]|1[0-2])\/([0-9]{2})" title="Use el formato MM/AA.">
+                                        </div>
+                                        <div>
+                                            <label for="card-cvc" class="block text-sm font-medium text-gray-700">CVC</label>
+                                            <input type="text" id="card-cvc" name="card-cvc" placeholder="123" required class="form-input mt-1" pattern="[0-9]{3,4}" title="Ingrese 3 o 4 dígitos.">
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="p-6 bg-gray-50 border-t flex justify-between">
+                                <button id="back-to-step-2-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button>
+                                <button id="pay-now-btn" class="bg-black text-white py-3 px-6 font-bold">Pagar $${subtotal.toFixed(2)}</button>
+                            </div>
+                        </div>
+
+
+                        <!-- Step 4: Confirmation -->
+                        <div id="checkout-step-4" class="checkout-step">
+                            <div class="p-8 text-center flex flex-col items-center justify-center">
+                                <div id="payment-processing" class="flex flex-col items-center justify-center p-8">
+                                    <div class="loader-circle mb-4"></div>
+                                    <p class="text-lg">Procesando tu reserva...</p>
+                                </div>
+                                <div id="payment-success" class="hidden">
+                                     <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
+                                        <i class="fas fa-check text-4xl text-green-600"></i>
+                                    </div>
+                                    <h3 class="font-display text-3xl mb-2">¡Reserva Confirmada!</h3>
+                                    <p class="text-gray-600">Hemos recibido tu solicitud. Recibirás un correo electrónico de confirmación en breve.</p>
+                                    <p class="mt-4 font-bold">Número de Reserva: <span id="reservation-id"></span></p>
+                                    <button id="finish-checkout-btn" class="mt-8 bg-black text-white py-3 px-8 font-bold">Aceptar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const overlay = document.getElementById('checkout-modal-overlay');
+            const closeBtn = document.getElementById('checkout-close-btn');
+            
+            const toStep2Btn = document.getElementById('to-step-2-btn');
+            const backToStep1Btn = document.getElementById('back-to-step-1-btn');
+            const toStep3Btn = document.getElementById('to-step-3-btn');
+            const backToStep2Btn = document.getElementById('back-to-step-2-btn');
+            const payNowBtn = document.getElementById('pay-now-btn');
+            
+            const finishCheckoutBtn = document.getElementById('finish-checkout-btn');
+
+            const steps = document.querySelectorAll('.checkout-step');
+            const goToStep = (stepNumber) => {
+                steps.forEach(step => step.classList.remove('active'));
+                document.getElementById(`checkout-step-${stepNumber}`).classList.add('active');
+            };
+
+            const close = () => {
+                overlay.classList.remove('visible');
+                setTimeout(() => checkoutModalContainer.innerHTML = '', 400);
+            };
+
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            closeBtn.addEventListener('click', close);
+            
+            toStep2Btn.addEventListener('click', () => {
+                const form = document.getElementById('contact-form');
+                if (form.checkValidity()) {
+                    goToStep(2);
                 } else {
-                    c.style.display = 'none';
-                    c.style.opacity = 0;
+                    form.reportValidity();
                 }
             });
+            
+            backToStep1Btn.addEventListener('click', () => goToStep(1));
+            toStep3Btn.addEventListener('click', () => goToStep(3));
+            backToStep2Btn.addEventListener('click', () => goToStep(2));
+            
+            payNowBtn.addEventListener('click', () => {
+                 const form = document.getElementById('payment-form');
+                if (form.checkValidity()) {
+                    goToStep(4);
+                    const processing = document.getElementById('payment-processing');
+                    const success = document.getElementById('payment-success');
+                    setTimeout(() => {
+                        processing.style.display = 'none';
+                        success.classList.remove('hidden');
+                        document.getElementById('reservation-id').textContent = `ADG-${Math.floor(Math.random() * 90000) + 10000}`;
+                        
+                        cart.forEach(cartItem => {
+                             for (const category in rentalDataGlobal) {
+                                const item = rentalDataGlobal[category].find(r => r.id === cartItem.id);
+                                if (item) {
+                                    let currentDate = new Date(cartItem.startDate + 'T00:00:00');
+                                    const endDate = new Date(cartItem.endDate + 'T00:00:00');
+                                    while(currentDate <= endDate) {
+                                        const dateString = currentDate.toISOString().split('T')[0];
+                                        if (!item.bookedDates.includes(dateString)) {
+                                            item.bookedDates.push(dateString);
+                                        }
+                                        currentDate.setDate(currentDate.getDate() + 1);
+                                    }
+                                    break;
+                                }
+                            }
+                        });
+
+                        cart = [];
+                        renderCart();
+                        updateCartIcon();
+                    }, 2000);
+                } else {
+                    form.reportValidity();
+                }
+            });
+
+            finishCheckoutBtn.addEventListener('click', close);
+
+            setTimeout(() => overlay.classList.add('visible'), 10);
         };
 
-        function renderAbout(about, settings) {
-            // Intro
-            const intro = document.getElementById('about-intro');
-            if (about.intro_phrase) intro.textContent = `"${about.intro_phrase}"`;
+
+        // --- FUNCIONES DE RENDERIZADO Y NAVEGACIÓN ---
+        const navigateTo = (targetId) => {
+            const currentPage = document.querySelector('.page-active');
+            const targetPage = document.getElementById(targetId);
             
-            // Bio completa (HTML)
-            const bioContainer = document.getElementById('about-bio');
-            // Combinamos Bio y Process en HTML si existen
-            let contentHtml = '';
-            if (about.bio) contentHtml += `<div class="mb-8">${about.bio.replace(/\n/g, '<br>')}</div>`;
-            if (about.process) contentHtml += `
-                <h3 class="text-2xl font-display text-black mb-4 mt-8">Mi Proceso</h3>
-                <div class="pl-4 border-l-2 border-gray-200">${about.process.replace(/\n/g, '<br>')}</div>
-            `;
-            bioContainer.innerHTML = contentHtml || '<p>Información no disponible.</p>';
+            if (!targetPage || currentPage === targetPage) return;
 
-            // Imagen de Perfil
-            const imgEl = document.getElementById('about-profile-img');
-            // Buscamos si hay una imagen específica en ImagenesIdentidad
-            const profileImg = (appData.clientLogos||[]).find(i => i.key === 'profile_pic'); // Nota: clientLogos no es el lugar, es ImagenesIdentidad.
-            // Corrección: appData ya trae ImagenesIdentidad dentro de clientLogos? No, la API devuelve todo.
-            // Vamos a buscar en appData.about.profile_image (si se guardó texto) o usar el endpoint de identidad.
-            // Mejor estrategia: Usar lo que venga en about.profile_image (URL)
-            if (about.profile_image) imgEl.src = about.profile_image;
-        }
-
-        function renderContact(settings) {
-            const container = document.getElementById('contact-info');
-            const mapFrame = document.getElementById('google-map');
-            
-            // Datos de settings
-            const email = settings.contact_email || 'info@agvisual.com';
-            const phone = settings.contact_phone || '';
-            const ig = settings.social_instagram || '#';
-            const wa = settings.social_whatsapp || '#';
-            const maps = settings.social_maps;
-
-            container.innerHTML = `
-                <a href="${ig}" target="_blank" class="p-8 bg-gray-50 hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-lg transition-all rounded-lg flex flex-col items-center group">
-                    <i class="fab fa-instagram text-3xl mb-4 text-gray-400 group-hover:text-black transition-colors"></i>
-                    <span class="font-bold text-sm uppercase tracking-widest">Instagram</span>
-                </a>
-                <a href="https://wa.me/${phone.replace(/\D/g,'')}" target="_blank" class="p-8 bg-gray-50 hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-lg transition-all rounded-lg flex flex-col items-center group">
-                    <i class="fab fa-whatsapp text-3xl mb-4 text-gray-400 group-hover:text-green-600 transition-colors"></i>
-                    <span class="font-bold text-sm uppercase tracking-widest">WhatsApp</span>
-                </a>
-                <a href="mailto:${email}" class="p-8 bg-gray-50 hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-lg transition-all rounded-lg flex flex-col items-center group">
-                    <i class="fas fa-envelope text-3xl mb-4 text-gray-400 group-hover:text-black transition-colors"></i>
-                    <span class="font-bold text-sm uppercase tracking-widest">Email</span>
-                </a>
-            `;
-
-            if (maps) {
-                // Convertir link normal a embed si es necesario (simple check)
-                if (maps.includes('embed')) mapFrame.src = maps;
+            if (currentPage) {
+                currentPage.classList.add('page-exiting');
+                currentPage.classList.remove('page-active');
             }
-        }
 
-        // --- 4. DETALLES (Dynamic Pages) ---
+            targetPage.style.display = 'block';
+            setTimeout(() => {
+                targetPage.classList.add('page-active');
+                handleScrollHeader(); // Única llamada, en el momento correcto.
+            }, 10);
+            
+            if (currentPage) {
+                setTimeout(() => {
+                    currentPage.classList.remove('page-exiting');
+                    currentPage.style.display = 'none';
+                }, 500);
+            }
+
+            let activeTarget = targetId;
+             if (targetId.startsWith('project-detail-')) {
+                activeTarget = 'projects';
+            } else if (targetId.startsWith('rental-detail-')) {
+                activeTarget = 'rental';
+            } else if (targetId.startsWith('service-detail-')) {
+                activeTarget = 'services';
+            }
+            allNavLinks.forEach(link => {
+                link.classList.remove('nav-active');
+                if (link.dataset.target === activeTarget) {
+                    link.classList.add('nav-active');
+                }
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            observeElements(targetPage);
+        };
         
-        window.openDetail = (type, id) => {
-            const container = document.getElementById('detail-pages-container');
-            let content = '';
-
-            // Scroll Top
-            window.scrollTo(0,0);
-
-            if (type === 'project') {
-                const p = appData.projects.find(x => String(x.id) === String(id));
-                if(!p) return;
-                
-                content = `
-                <div class="fixed inset-0 z-[60] bg-white overflow-y-auto animate-fade-in">
-                    <button onclick="closeDetail()" class="fixed top-6 right-6 z-50 text-black bg-white/80 backdrop-blur p-3 rounded-full hover:bg-black hover:text-white transition-all shadow-lg"><i class="fas fa-times fa-lg"></i></button>
-                    
-                    <div class="container mx-auto px-6 py-24 max-w-5xl">
-                        <div class="text-center mb-16">
-                            <p class="text-gray-400 text-xs font-bold uppercase tracking-[0.3em] mb-4">Proyecto</p>
-                            <h1 class="text-5xl md:text-6xl font-display mb-6 text-gray-900">${p.title}</h1>
-                            <p class="text-xl text-gray-600 max-w-2xl mx-auto font-light">${p.description}</p>
-                        </div>
-                        
-                        <div class="columns-1 md:columns-2 gap-8 space-y-8">
-                            ${(p.images||[]).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||99)).map(img => `
-                                <img src="${img.imageUrl}" class="w-full h-auto rounded-sm cursor-zoom-in hover:opacity-90 transition" onclick="openLightbox('${img.imageUrl}', '${img.caption||''}')">
-                            `).join('')}
+        const renderProjectDetail = (projectId) => {
+            const detailContainer = document.getElementById('project-detail-pages');
+            const project = projectDetails[projectId];
+            if (!project) return;
+            
+            const imagesHTML = project.images.map(src => `
+                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container">
+                    <img src="${src}" alt="${project.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
+                </div>
+            `).join('');
+            
+            detailContainer.innerHTML = `
+                <section id="${projectId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
+                    <div class="container mx-auto px-6">
+                        <div class="max-w-6xl mx-auto">
+                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block">
+                                <i class="fas fa-arrow-left mr-2"></i> Volver a Proyectos
+                            </a>
+                            <div class="text-center mb-16 reveal">
+                                <h2 class="text-4xl md:text-5xl font-display text-reveal">${project.title}</h2>
+                                <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto text-reveal text-center">${project.description}</p>
+                            </div>
+                            <div class="columns-2 md:columns-3 gap-8 space-y-8 reveal">${imagesHTML}</div>
                         </div>
                     </div>
-                </div>`;
+                </section>`;
+            
+            navigateTo(projectId);
+        };
 
-            } else if (type === 'service') {
-                const s = appData.services.find(x => String(x.id) === String(id));
-                if(!s) return;
+        const renderServiceDetail = (serviceId) => {
+            const detailContainer = document.getElementById('service-detail-pages');
+            const service = serviceDetails[serviceId];
+            if (!service) return;
 
-                // Contenido HTML de bloques
-                const blocksHtml = (s.contentBlocks||[]).map(b => `
-                    <div class="mb-12 reveal visible">
-                        <h3 class="text-2xl font-display mb-4 border-b border-gray-200 pb-2">${b.blockTitle}</h3>
-                        <div class="prose text-gray-600 leading-relaxed">${b.blockContentHtml}</div>
-                    </div>
-                `).join('');
+            const sectionsHTML = service.sections.map(section => `
+                <div class="reveal">
+                    <h3 class="text-3xl font-display text-black mb-4 text-reveal">${section.title}</h3>
+                    <div class="prose max-w-none lg:prose-lg text-gray-600 leading-relaxed text-reveal text-justify">${section.content}</div>
+                </div>
+            `).join('');
 
-                content = `
-                <div class="fixed inset-0 z-[60] bg-white overflow-y-auto animate-fade-in">
-                    <button onclick="closeDetail()" class="fixed top-6 right-6 z-50 text-black bg-white/80 backdrop-blur p-3 rounded-full hover:bg-black hover:text-white transition-all shadow-lg"><i class="fas fa-times fa-lg"></i></button>
-                    
-                    <div class="h-[50vh] bg-gray-900 relative flex items-center justify-center overflow-hidden">
-                        <div class="absolute inset-0 opacity-40 bg-[url('${s.images && s.images[0] ? s.images[0].imageUrl : ''}')] bg-cover bg-center"></div>
-                        <div class="relative z-10 text-center text-white px-4">
-                            <div class="w-20 h-20 mx-auto mb-6 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-3xl"><i class="${s.iconClass}"></i></div>
-                            <h1 class="text-5xl md:text-7xl font-display">${s.title}</h1>
+            const galleryHTML = service.gallery.map(src => `
+                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container">
+                    <img src="${src}" alt="${service.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
+                </div>
+            `).join('');
+
+            detailContainer.innerHTML = `
+                <section id="${serviceId}" class="page-container">
+                     <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-28 md:pt-36 pb-16">
+                        <div class="text-center reveal">
+                            <h1 class="text-5xl md:text-7xl font-display text-reveal py-2">${service.title}</h1>
                         </div>
                     </div>
-
-                    <div class="container mx-auto px-6 py-20 max-w-4xl">
-                        <div class="text-lg text-gray-800 font-medium italic mb-16 text-center border-l-4 border-black pl-6 py-2 bg-gray-50">
-                            ${s.introText || 'Descripción del servicio...'}
-                        </div>
-                        
-                        ${blocksHtml}
-
-                        <div class="mt-20">
-                            <h3 class="text-2xl font-display mb-8 text-center">Galería de Muestra</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                ${(s.images||[]).map(img => `<img src="${img.imageUrl}" class="w-full h-48 object-cover rounded cursor-zoom-in hover:opacity-80 transition" onclick="openLightbox('${img.imageUrl}')">`).join('')}
+                    <div class="container mx-auto px-6 py-20 md:py-24">
+                        <div class="max-w-4xl mx-auto">
+                             <a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block">
+                                <i class="fas fa-arrow-left mr-2"></i> Volver a Servicios
+                            </a>
+                            <div class="reveal">
+                                <p class="text-xl text-gray-700 leading-relaxed italic text-center mb-16 text-reveal">${service.intro}</p>
+                            </div>
+                            <div class="space-y-16">
+                                ${sectionsHTML}
+                            </div>
+                             <div class="mt-20 reveal">
+                                <h3 class="text-3xl font-display text-black mb-8 text-center text-reveal">Galería de Muestra</h3>
+                                <div class="columns-2 md:columns-3 gap-6 space-y-6">${galleryHTML}</div>
+                            </div>
+                            <div class="text-center mt-20 reveal">
+                                <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Interesado en este servicio?</h3>
+                                <a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Hablemos de tu Proyecto</a>
                             </div>
                         </div>
+                    </div>
+                </section>
+            `;
+            navigateTo(serviceId);
+        };
 
-                        <div class="mt-24 text-center">
-                            <a href="https://wa.me/${appData.settings.contact_phone?.replace(/\D/g,'')}" target="_blank" class="inline-block bg-black text-white font-bold py-4 px-10 rounded-full hover:bg-gray-800 transition-transform hover:scale-105 shadow-lg">
-                                Cotizar este Servicio
+        const renderRentalDetail = (rentalId) => {
+            const detailContainer = document.getElementById('rental-detail-pages');
+            let item;
+            let itemCategory;
+            for (const category in rentalDataGlobal) {
+                const found = rentalDataGlobal[category].find(r => r.id == rentalId.split('-')[2]);
+                if (found) {
+                    item = found;
+                    itemCategory = category;
+                    break;
+                }
+            }
+            if (!item) return;
+
+            const carouselItemsHTML = item.images.map(src => `<div class="carousel-item"><img src="${src}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('');
+
+            detailContainer.innerHTML = `
+                <section id="${rentalId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
+                    <div class="container mx-auto px-6">
+                        <div class="max-w-6xl mx-auto">
+                            <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block">
+                                <i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo
+                            </a>
+                            <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
+                                <div class="lg:col-span-3">
+                                    <div class="carousel-container sticky top-28">
+                                        <div class="carousel-track">${carouselItemsHTML}</div>
+                                        <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
+                                    </div>
+                                </div>
+                                <div class="lg:col-span-2 reveal">
+                                    <h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2>
+                                    <p class="text-3xl font-bold text-gray-800 mb-6 text-reveal">$${item.price}<span class="text-lg font-normal text-gray-500"> / día</span></p>
+                                    <p class="text-gray-600 leading-relaxed text-justify text-reveal mb-8">${item.long_desc}</p>
+                                    
+                                    <button id="open-calendar-modal-btn" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300">
+                                        <i class="fas fa-calendar-alt mr-2"></i> Consultar Disponibilidad
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+            
+            navigateTo(rentalId);
+
+            document.getElementById('open-calendar-modal-btn').addEventListener('click', () => {
+                showCalendarModal(item, item.bookedDates);
+            });
+
+            const track = detailContainer.querySelector('.carousel-track');
+            const slides = Array.from(track.children);
+            const nextButton = detailContainer.querySelector('.next');
+            const prevButton = detailContainer.querySelector('.prev');
+            let currentIndex = 0;
+            const updateSlidePosition = () => {
+                if (track) track.style.transform = `translateX(${-100 * currentIndex}%)`;
+            };
+            if(nextButton) nextButton.addEventListener('click', () => { currentIndex = (currentIndex + 1) % slides.length; updateSlidePosition(); });
+            if(prevButton) prevButton.addEventListener('click', () => { currentIndex = (currentIndex - 1 + slides.length) % slides.length; updateSlidePosition(); });
+        };
+        
+        const renderPortfolio = () => {
+            const portfolioGallery = document.getElementById('portfolio-gallery');
+            if(portfolioGallery) {
+                portfolioGallery.innerHTML = portfolioData.map(item => `
+                    <div class="gallery-item break-inside-avoid overflow-hidden relative img-container" data-category="${item.category}">
+                        <img src="${item.src}" alt="${item.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
+                        <div class="overlay absolute inset-0 flex items-end p-4">
+                            <p class="text-white text-lg font-bold">${item.title}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        };
+
+        const renderServicesGrid = () => {
+            const servicesGrid = document.getElementById('services-grid');
+            if(servicesGrid) {
+                servicesGrid.innerHTML = servicesData.map(service => `
+                    <a href="#" data-target="service-detail-${service.id}" class="nav-link service-grid-item items-center justify-center text-center py-12">
+                        <div class="service-icon-wrapper">
+                            <i class="${service.icon} service-icon"></i>
+                        </div>
+                        <h3 class="text-2xl font-display text-gray-900">${service.title}</h3>
+                    </a>
+                `).join('');
+            }
+        };
+
+        const renderRentalPage = () => {
+            const filtersContainer = document.getElementById('rental-filters');
+            const gridContainer = document.getElementById('rental-grid-categorized');
+            if (!filtersContainer || !gridContainer) return;
+
+            const categories = ['Todo', ...Object.keys(rentalDataGlobal)];
+            filtersContainer.innerHTML = categories.map(cat => `<button class="rental-category-btn ${cat === 'Todo' ? 'active' : ''}" data-category="${cat}">${cat}</button>`).join('');
+
+            const renderItems = (category) => {
+                let itemsToRender = (category === 'Todo') ? Object.values(rentalDataGlobal).flat() : rentalDataGlobal[category];
+                gridContainer.innerHTML = itemsToRender.map(item => `
+                    <div class="rental-card reveal">
+                         <div class="carousel-container aspect-w-4 aspect-h-3">
+                            <div class="carousel-track flex" data-current-index="0">
+                                ${item.images.map(src => `<div class="carousel-item flex-shrink-0 w-full"><img src="${src}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('')}
+                            </div>
+                            <button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button>
+                            <button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <div class="flex justify-between items-baseline">
+                                <h3 class="font-display text-2xl">${item.name}</h3>
+                                <p class="font-bold text-xl text-gray-800">$${item.price}<span class="text-sm font-normal text-gray-500">/día</span></p>
+                            </div>
+                            <p class="text-gray-600 text-sm my-4 flex-grow">${item.description}</p>
+                            <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
+                                Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
                             </a>
                         </div>
                     </div>
-                </div>`;
-            
-            } else if (type === 'rental') {
-                const item = appData.rentalItems.find(x => String(x.id) === String(id));
-                if(!item) return;
-
-                const basePrice = parseFloat(item.pricePerDay);
-                const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                const finalPrice = hasTax ? (basePrice * 1.13) : basePrice;
-
-                content = `
-                <div class="fixed inset-0 z-[60] bg-white overflow-y-auto animate-fade-in">
-                    <button onclick="closeDetail()" class="fixed top-6 right-6 z-50 text-black bg-white/80 backdrop-blur p-3 rounded-full hover:bg-black hover:text-white transition-all shadow-lg"><i class="fas fa-times fa-lg"></i></button>
-                    
-                    <div class="container mx-auto px-6 py-24 max-w-6xl">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                            <div class="space-y-4">
-                                <div class="aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden relative group">
-                                    <img id="rental-main-img" src="${item.images && item.images[0] ? item.images[0].imageUrl : ''}" class="w-full h-full object-contain">
-                                </div>
-                                <div class="flex gap-4 overflow-x-auto pb-2">
-                                    ${(item.images||[]).map(img => `
-                                        <img src="${img.imageUrl}" class="w-20 h-20 object-cover rounded cursor-pointer border-2 border-transparent hover:border-black transition" onclick="document.getElementById('rental-main-img').src='${img.imageUrl}'">
-                                    `).join('')}
-                                </div>
-                            </div>
-                            
-                            <div class="flex flex-col justify-center">
-                                <p class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Alquiler de Equipo</p>
-                                <h1 class="text-4xl md:text-5xl font-display mb-6 text-gray-900">${item.name}</h1>
-                                
-                                <div class="text-3xl font-mono font-bold text-black mb-8 flex items-baseline gap-2">
-                                    $${finalPrice.toFixed(2)} 
-                                    <span class="text-base font-normal text-gray-500 text-sans">/ día ${hasTax?'+ IVA incl.':''}</span>
-                                </div>
-                                
-                                <div class="prose text-gray-600 mb-10">
-                                    ${item.longDescription || item.description || ''}
-                                </div>
-
-                                <button onclick="addToCart('${item.id}')" class="w-full bg-black text-white font-bold py-4 rounded hover:bg-gray-800 transition-all flex items-center justify-center gap-3">
-                                    <i class="fas fa-cart-plus"></i> Agregar a la Reserva
-                                </button>
-                                
-                                <div class="mt-8 p-4 bg-gray-50 rounded text-xs text-gray-500 flex gap-4">
-                                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i> Verificado</div>
-                                    <div class="flex items-center gap-2"><i class="fas fa-bolt text-yellow-500"></i> Entrega Rápida</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            }
-
-            container.innerHTML = content;
-            document.body.style.overflow = 'hidden'; // Bloquear scroll base
-        };
-
-        window.closeDetail = () => {
-            document.getElementById('detail-pages-container').innerHTML = '';
-            document.body.style.overflow = 'auto';
-        };
-
-        // --- 5. CARRITO Y LIGHTBOX ---
-
-        window.addToCart = (itemId) => {
-            const item = appData.rentalItems.find(i => String(i.id) === String(itemId));
-            if(!item) return;
-            
-            // Check duplicado
-            if(cart.some(c => c.id === item.id)) {
-                alert("Este equipo ya está en tu lista de reserva.");
-                return;
-            }
-            
-            cart.push(item);
-            updateCartUI();
-            
-            // Abrir drawer
-            document.getElementById('cart-overlay').classList.remove('hidden');
-            document.getElementById('cart-drawer').classList.add('visible');
-        };
-
-        function updateCartUI() {
-            // Badges
-            document.getElementById('cart-item-count').innerText = cart.length;
-            
-            const container = document.getElementById('cart-items');
-            if(cart.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-10">Tu carrito está vacío.</div>';
-                document.getElementById('cart-total').innerText = "$0.00";
-                return;
-            }
-
-            let total = 0;
-            container.innerHTML = cart.map(item => {
-                const price = parseFloat(item.pricePerDay);
-                const hasTax = String(item.hasTax).toUpperCase() === 'TRUE';
-                const final = hasTax ? price * 1.13 : price;
-                total += final;
+                `).join('');
                 
-                const img = item.images && item.images[0] ? item.images[0].imageUrl : '';
+                const cardObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach((entry, index) => {
+                        if (entry.isIntersecting) {
+                            setTimeout(() => entry.target.classList.add('visible'), index * 75);
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1 });
+                gridContainer.querySelectorAll('.rental-card').forEach(card => cardObserver.observe(card));
+            };
 
-                return `
-                <div class="flex gap-4 items-center bg-gray-50 p-3 rounded mb-2">
-                    <img src="${img}" class="w-16 h-16 object-cover rounded bg-white">
-                    <div class="flex-1">
-                        <h4 class="font-bold text-sm">${item.name}</h4>
-                        <p class="text-xs text-gray-500">$${final.toFixed(2)} / día</p>
-                    </div>
-                    <button onclick="removeFromCart('${item.id}')" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                </div>`;
-            }).join('');
-            
-            document.getElementById('cart-total').innerText = `$${total.toFixed(2)}`;
-        }
-
-        window.removeFromCart = (id) => {
-            cart = cart.filter(c => String(c.id) !== String(id));
-            updateCartUI();
-        };
-
-        // Lightbox Global
-        window.openLightbox = (src, caption) => {
-            const lb = document.getElementById('lightbox');
-            document.getElementById('lightbox-image').src = src;
-            document.getElementById('lightbox-caption').innerText = caption;
-            lb.classList.remove('hidden');
-            setTimeout(() => lb.classList.remove('opacity-0'), 10);
-        };
-
-        // Event Listeners UI
-        document.getElementById('lightbox-close').onclick = () => {
-            document.getElementById('lightbox').classList.add('opacity-0');
-            setTimeout(() => document.getElementById('lightbox').classList.add('hidden'), 400);
-        };
-        
-        // Menú Móvil
-        const mobileMenu = document.getElementById('mobile-menu');
-        document.getElementById('mobile-menu-button').onclick = () => mobileMenu.classList.toggle('open');
-        document.querySelectorAll('.mobile-nav-link').forEach(l => l.onclick = () => mobileMenu.classList.remove('open'));
-
-        // Carrito Drawer
-        const cartOverlay = document.getElementById('cart-overlay');
-        const cartDrawer = document.getElementById('cart-drawer');
-        const toggleCart = () => {
-            const isOpen = !cartOverlay.classList.contains('hidden');
-            if(isOpen) {
-                cartDrawer.classList.remove('visible');
-                setTimeout(() => cartOverlay.classList.add('hidden'), 300);
-            } else {
-                cartOverlay.classList.remove('hidden');
-                setTimeout(() => cartDrawer.classList.add('visible'), 10);
-            }
-        };
-        document.getElementById('cart-button').onclick = toggleCart;
-        document.getElementById('cart-close-btn').onclick = toggleCart;
-        cartOverlay.onclick = toggleCart;
-
-        // Navegación SPA
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const target = link.dataset.target;
-                
-                // Ocultar todas las páginas
-                document.querySelectorAll('.page-container').forEach(p => p.classList.remove('page-active'));
-                
-                // Mostrar target
-                const page = document.getElementById(target);
-                if(page) {
-                    page.classList.add('page-active');
-                    window.scrollTo(0,0);
-                    // Close mobile menu if open
-                    mobileMenu.classList.remove('open');
+            filtersContainer.addEventListener('click', (e) => {
+                if (e.target.matches('.rental-category-btn')) {
+                    filtersContainer.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    renderItems(e.target.dataset.category);
                 }
             });
-        });
-
-        // Checkout Button (WhatsApp)
-        document.getElementById('checkout-btn').onclick = () => {
-            if(cart.length === 0) return;
-            const phone = appData.settings.contact_phone || ''; 
-            const itemsList = cart.map(i => `- ${i.name}`).join('%0A');
-            const total = document.getElementById('cart-total').innerText;
-            const text = `Hola! Me interesa alquilar el siguiente equipo:%0A${itemsList}%0A%0AValor estimado: ${total}%0A%0AQuedo atento a la disponibilidad.`;
-            window.open(`https://wa.me/${phone.replace(/\D/g,'')}?text=${text}`, '_blank');
+            gridContainer.addEventListener('click', function(e) {
+                const button = e.target.closest('.rental-carousel-button');
+                if (button) {
+                    e.preventDefault(); e.stopPropagation();
+                    const track = button.closest('.carousel-container').querySelector('.carousel-track');
+                    const slides = Array.from(track.children);
+                    const direction = parseInt(button.dataset.direction);
+                    let currentIndex = parseInt(track.dataset.currentIndex);
+                    currentIndex = (currentIndex + direction + slides.length) % slides.length;
+                    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+                    track.dataset.currentIndex = currentIndex;
+                }
+            });
+            renderItems('Todo');
+        };
+        
+        const renderProjects = () => {
+            const projectsContainer = document.getElementById('projects-container');
+            if(projectsContainer) {
+                projectsContainer.innerHTML = projectsData.map((project, index) => `
+                    <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal">
+                        <div class="p-8 ${index % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
+                            <h3 class="text-4xl font-display mb-4 text-reveal">${project.title}</h3>
+                            <p class="text-gray-600 leading-relaxed mb-6 text-reveal">${project.description}</p>
+                            <a href="#" data-target="project-detail-${project.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block">
+                                Ver Galería Completa <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
+                            </a>
+                        </div>
+                        <div class="overflow-hidden gallery-item img-container h-full">
+                            <img src="${project.img}" alt="${project.title}" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                `).join('');
+            }
         };
 
-        // --- INICIO ---
-        initApp();
+        // --- LÓGICA DEL MODAL DEL CALENDARIO ---
+        const showCalendarModal = (item, bookedDates) => {
+            const modalContainer = document.getElementById('calendar-modal-container');
+            modalContainer.innerHTML = `
+                <div id="calendar-modal-overlay" class="calendar-modal-overlay">
+                    <div class="calendar-modal-content">
+                        <div class="calendar-header">
+                            <button id="calendar-prev" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
+                            <h3 id="calendar-month-year" class="font-display text-2xl"></h3>
+                            <button id="calendar-next" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="calendar-grid">
+                            <div class="calendar-day-name">D</div><div class="calendar-day-name">L</div><div class="calendar-day-name">M</div>
+                            <div class="calendar-day-name">M</div><div class="calendar-day-name">J</div><div class="calendar-day-name">V</div>
+                            <div class="calendar-day-name">S</div>
+                        </div>
+                        <div id="calendar-days" class="calendar-grid"></div>
+                        <div class="booking-summary">
+                            <div class="flex justify-between items-center text-sm"><span>Desde:</span><span id="summary-start-date">--/--/----</span></div>
+                            <div class="flex justify-between items-center text-sm"><span>Hasta:</span><span id="summary-end-date">--/--/----</span></div>
+                            <div class="flex justify-between items-center text-sm border-t mt-2 pt-2"><span>Total Días:</span><span id="summary-total-days">0</span></div>
+                            <div class="flex justify-between items-center text-xl font-bold mt-2"><span>Total a Pagar:</span><span id="summary-total-price">$0</span></div>
+                        </div>
+                        <button id="add-to-cart-btn" class="w-full mt-4 bg-black text-white py-3 disabled:bg-gray-400" disabled>Agregar al Carrito</button>
+                    </div>
+                </div>
+            `;
+            
+            const overlay = document.getElementById('calendar-modal-overlay');
+            const prevBtn = document.getElementById('calendar-prev');
+            const nextBtn = document.getElementById('calendar-next');
+            const monthYearEl = document.getElementById('calendar-month-year');
+            const daysContainer = document.getElementById('calendar-days');
+            const summaryStartDate = document.getElementById('summary-start-date');
+            const summaryEndDate = document.getElementById('summary-end-date');
+            const summaryTotalDays = document.getElementById('summary-total-days');
+            const summaryTotalPrice = document.getElementById('summary-total-price');
+            const addToCartBtn = document.getElementById('add-to-cart-btn');
+            
+            const close = () => {
+                overlay.classList.remove('visible');
+                setTimeout(() => modalContainer.innerHTML = '', 300);
+            };
 
+            setTimeout(() => overlay.classList.add('visible'), 10);
+
+            let currentDate = new Date();
+            currentDate.setDate(1);
+            let selectedStartDate = null;
+            let selectedEndDate = null;
+
+            const renderMonth = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const today = new Date(); today.setHours(0,0,0,0);
+                monthYearEl.textContent = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
+                daysContainer.innerHTML = '';
+                const firstDayOfMonth = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                for (let i = 0; i < firstDayOfMonth; i++) daysContainer.innerHTML += `<div></div>`;
+                
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dayEl = document.createElement('button');
+                    dayEl.textContent = day;
+                    dayEl.classList.add('calendar-day');
+                    const dayDate = new Date(year, month, day);
+                    const dateString = dayDate.toISOString().split('T')[0];
+                    if (dayDate < today || bookedDates.includes(dateString)) dayEl.classList.add('disabled');
+                    else dayEl.dataset.date = dateString;
+                    
+                    if (selectedStartDate && dateString === selectedStartDate.toISOString().split('T')[0]) dayEl.classList.add('selected');
+                    if (selectedEndDate && dateString === selectedEndDate.toISOString().split('T')[0]) dayEl.classList.add('selected');
+                    if (selectedStartDate && selectedEndDate && dayDate > selectedStartDate && dayDate < selectedEndDate) dayEl.classList.add('in-range');
+                    daysContainer.appendChild(dayEl);
+                }
+            };
+            
+            const updateSummary = () => {
+                addToCartBtn.disabled = !(selectedStartDate && selectedEndDate);
+                if (selectedStartDate && selectedEndDate) {
+                    summaryStartDate.textContent = selectedStartDate.toLocaleDateString('es-ES');
+                    summaryEndDate.textContent = selectedEndDate.toLocaleDateString('es-ES');
+                    const diffDays = Math.ceil(Math.abs(selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+                    summaryTotalDays.textContent = diffDays;
+                    summaryTotalPrice.textContent = `$${(diffDays * item.price).toFixed(2)}`;
+                } else if (selectedStartDate) {
+                    summaryStartDate.textContent = selectedStartDate.toLocaleDateString('es-ES');
+                    summaryEndDate.textContent = '--/--/----';
+                    summaryTotalDays.textContent = '1';
+                    summaryTotalPrice.textContent = `$${item.price.toFixed(2)}`;
+                } else {
+                     summaryStartDate.textContent = '--/--/----'; summaryEndDate.textContent = '--/--/----';
+                     summaryTotalDays.textContent = '0'; summaryTotalPrice.textContent = '$0';
+                }
+            };
+            
+            daysContainer.addEventListener('click', (e) => {
+                if (e.target.matches('.calendar-day') && !e.target.classList.contains('disabled')) {
+                    const clickedDate = new Date(e.target.dataset.date + 'T00:00:00');
+                    if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+                        selectedStartDate = clickedDate; selectedEndDate = null;
+                    } else if (clickedDate < selectedStartDate) {
+                        selectedStartDate = clickedDate;
+                    } else {
+                        selectedEndDate = clickedDate;
+                        let validRange = true;
+                        const tempDate = new Date(selectedStartDate);
+                        while(tempDate <= selectedEndDate) {
+                            if(bookedDates.includes(tempDate.toISOString().split('T')[0])) {
+                                validRange = false; break;
+                            }
+                            tempDate.setDate(tempDate.getDate() + 1);
+                        }
+                        if(!validRange) {
+                            alert("El rango seleccionado incluye días no disponibles. Por favor, elige otro rango.");
+                            selectedStartDate = null; selectedEndDate = null;
+                        }
+                    }
+                    renderMonth(); updateSummary();
+                }
+            });
+            
+            addToCartBtn.addEventListener('click', () => {
+                if (selectedStartDate && selectedEndDate) {
+                    addToCart(item, selectedStartDate.toISOString().split('T')[0], selectedEndDate.toISOString().split('T')[0]);
+                    close();
+                }
+            });
+
+            prevBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderMonth(); });
+            nextBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderMonth(); });
+            overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
+            renderMonth();
+        };
+
+        const observeElements = (container) => {
+            if(!container) return;
+            
+            const revealElements = container.querySelectorAll('.reveal:not(.visible)');
+            const revealObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                        
+                        const textElements = entry.target.querySelectorAll('.text-reveal:not(.revealed)');
+                        textElements.forEach(textEl => {
+                            setTimeout(() => textEl.classList.add('revealed'), 200);
+                        });
+                    }
+                });
+            }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
+            revealElements.forEach(el => revealObserver.observe(el));
+            
+            const imgContainers = container.querySelectorAll('.img-container:not(.loaded)');
+            const imgObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target.querySelector('img');
+                        if (img && img.complete) {
+                            entry.target.classList.add('loaded'); observer.unobserve(entry.target);
+                        } else if (img) {
+                            img.addEventListener('load', () => {
+                                entry.target.classList.add('loaded'); observer.unobserve(entry.target);
+                            });
+                        }
+                    }
+                });
+            }, { threshold: 0.1 });
+            imgContainers.forEach(container => imgObserver.observe(container));
+        };
+        
+        // Lightbox mejorado con navegación entre imágenes
+        let currentLightboxIndex = 0;
+        let lightboxImages = [];
+        
+        const openLightbox = (src, caption = '', imagesArray = [], index = 0) => {
+            lightboxImages = imagesArray; currentLightboxIndex = index;
+            lightboxImage.src = src; lightboxCaption.textContent = caption;
+            lightboxPrev.style.display = imagesArray.length > 1 ? 'flex' : 'none';
+            lightboxNext.style.display = imagesArray.length > 1 ? 'flex' : 'none';
+            lightbox.classList.remove('hidden');
+            setTimeout(() => { lightbox.classList.add('visible'); lightbox.classList.remove('opacity-0'); }, 10);
+        };
+        
+        const closeLightbox = () => { 
+            lightbox.classList.add('opacity-0'); 
+            setTimeout(() => { lightbox.classList.add('hidden'); lightbox.classList.remove('visible'); lightboxImage.src = ''; }, 300); 
+        };
+        
+        const navigateLightbox = (direction) => {
+            if (lightboxImages.length === 0) return;
+            currentLightboxIndex = (direction === 'next') ? (currentLightboxIndex + 1) % lightboxImages.length : (currentLightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+            const newImage = lightboxImages[currentLightboxIndex];
+            lightboxImage.style.opacity = '0';
+            setTimeout(() => {
+                lightboxImage.src = newImage.src;
+                lightboxCaption.textContent = newImage.title || '';
+                lightboxImage.style.opacity = '1';
+            }, 200);
+        };
+        
+        // --- MANEJADORES DE EVENTOS ---
+        document.addEventListener('click', function(e) {
+            const navLink = e.target.closest('.nav-link');
+            if (navLink) {
+                e.preventDefault();
+                const targetId = navLink.dataset.target;
+
+                if (cartDrawer.classList.contains('visible')) {
+                    toggleCart(false);
+                }
+                
+                if (targetId.startsWith('project-detail-')) renderProjectDetail(targetId);
+                else if (targetId.startsWith('rental-detail-')) renderRentalDetail(targetId);
+                else if (targetId.startsWith('service-detail-')) renderServiceDetail(targetId);
+                else navigateTo(targetId);
+
+                if (mobileMenu.classList.contains('open')) toggleMobileMenu(false);
+            }
+            
+            const galleryItem = e.target.closest('.gallery-item');
+            if(galleryItem) {
+                const clickedImg = galleryItem.querySelector('img');
+                const allVisibleItems = Array.from(document.querySelectorAll('.page-active .gallery-item'));
+                const imagesArray = allVisibleItems.map(item => ({
+                    src: item.querySelector('img').src,
+                    title: item.querySelector('.overlay p')?.textContent || item.querySelector('img').alt
+                }));
+                const currentIndex = allVisibleItems.indexOf(galleryItem);
+                openLightbox(clickedImg.src, imagesArray[currentIndex].title, imagesArray, currentIndex);
+            }
+        });
+        
+        const handleScrollHeader = () => {
+            const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
+            
+            if (window.scrollY > 50) {
+                header.classList.add('header-scrolled');
+                header.classList.remove('header-dark'); 
+            } else { // At top of page
+                header.classList.remove('header-scrolled');
+                if (isServicePage) {
+                    header.classList.add('header-dark');
+                } else {
+                    header.classList.remove('header-dark');
+                }
+            }
+        };
+
+        window.addEventListener('scroll', handleScrollHeader, { passive: true });
+        
+        const toggleMobileMenu = (open) => {
+            mobileMenu.classList.toggle('open', open);
+            mobileMenuButton.classList.toggle('open', open);
+            mobileMenuButton.setAttribute('aria-expanded', open);
+            mobileMenu.setAttribute('aria-hidden', !open);
+            mobileMenu.querySelectorAll('.mobile-nav-link').forEach((link, index) => {
+                setTimeout(() => {
+                    link.style.opacity = open ? '1' : '0';
+                    link.style.transform = open ? 'translateY(0)' : 'translateY(30px)';
+                }, 150 + index * 50);
+            });
+        };
+        
+        mobileMenuButton.addEventListener('click', () => toggleMobileMenu(!mobileMenu.classList.contains('open')));
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+        lightboxPrev.addEventListener('click', () => navigateLightbox('prev'));
+        lightboxNext.addEventListener('click', () => navigateLightbox('next'));
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('hidden')) {
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowLeft') navigateLightbox('prev');
+                if (e.key === 'ArrowRight') navigateLightbox('next');
+            }
+        });
+
+        // Eventos del Carrito (Actualizados)
+        cartButton.addEventListener('click', () => toggleCart(true));
+        mobileCartButton.addEventListener('click', () => {
+            toggleCart(true);
+            toggleMobileMenu(false);
+        });
+        checkoutBtn.addEventListener('click', () => {
+            if (cart.length > 0) {
+                toggleCart(false);
+                // Espera a que el carrito se cierre para abrir el checkout
+                setTimeout(showCheckoutModal, 500);
+            }
+        });
+        cartCloseBtn.addEventListener('click', () => toggleCart(false));
+        cartOverlay.addEventListener('click', () => toggleCart(false));
+        
+        // --- INICIALIZACIÓN ---
+        const initialize = () => {
+            renderPortfolio(); renderProjects(); renderServicesGrid(); renderRentalPage();
+            setTimeout(() => pageLoader.classList.add('hidden'), 1500);
+            const initialPage = document.getElementById('portfolio');
+            if(initialPage) {
+                initialPage.classList.add('page-active');
+                observeElements(initialPage);
+                document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
+            }
+            renderCart(); // Renderiza el carrito vacío al inicio
+            updateCartIcon(); // Actualiza el ícono del carrito
+        };
+        
+        initialize();
+    });
     </script>
 </body>
 </html>
+
+
+
 
 
 
