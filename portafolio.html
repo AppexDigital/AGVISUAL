@@ -1763,43 +1763,62 @@
     
             const initialize = async () => {
                 const apiData = await fetchSectionData('home');
+                
+                // Función auxiliar para convertir Lista de Sheets [{key: 'x', value: 'y'}] -> Objeto {x: 'y'}
+                const arrayToObject = (arr) => {
+                    if (Array.isArray(arr)) {
+                        return arr.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    }
+                    return arr || {};
+                };
+
                 if (apiData) {
-                    const imgs = apiData.sysImages || {};
-                    const ident = apiData.identity || {};
-                    const about = apiData.about || {};
+                    const imgs = arrayToObject(apiData.sysImages); // Usamos el convertidor por seguridad
+                    const ident = arrayToObject(apiData.identity); // Usamos el convertidor
+                    const about = arrayToObject(apiData.about);    // AQUÍ ESTABA EL PROBLEMA
                     
                     // --- 1. IDENTIDAD VISUAL (Logos) ---
-                    if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
-                    if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
-                    if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
-                    
-                    // --- 2. SECCIÓN: QUIÉN SOY (CORREGIDA) ---
-                    
-                    // A. Frase de Introducción (Texto Simple)
-                    if(about.intro_phrase) { 
-                        const el = document.getElementById('about-intro-phrase'); 
-                        if(el) el.textContent = `"${about.intro_phrase}"`; 
+                    // Nota: En sysImages la estructura suele ser key:'logo_black', imageUrl:'...'
+                    // Si apiData.sysImages viene con 'imageUrl' en vez de 'value', hacemos un map manual rápido:
+                    let imagesObj = {};
+                    if(Array.isArray(apiData.sysImages)) {
+                        apiData.sysImages.forEach(i => imagesObj[i.key] = i.imageUrl);
+                    } else {
+                        imagesObj = apiData.sysImages || {};
                     }
 
-                    // B. Mi Filosofía (Texto Rico HTML)
+                    if(imagesObj.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imagesObj.logo_black);
+                    if(imagesObj.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imagesObj.logo_white);
+                    if(imagesObj.favicon) document.querySelector("link[rel*='icon']").href=imagesObj.favicon;
+                    
+                    // --- 2. SECCIÓN: QUIÉN SOY ---
+                    
+                    // A. Frase de Introducción
+                    if(about.intro_phrase) { 
+                        const el = document.getElementById('about-intro-phrase'); 
+                        if(el) {
+                            // Limpiamos comillas dobles extras si vienen del sheet o del HTML
+                            el.textContent = `"${about.intro_phrase.replace(/^"|"$/g, '')}"`; 
+                        }
+                    }
+
+                    // B. Mi Filosofía (Texto Rico)
                     if(about.bio) { 
                         const el = document.getElementById('about-bio'); 
-                        // Agregamos clase rich-text-content para mantener estilos
                         if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.bio}</div>`;
                     }
 
-                    // C. Mi Proceso (Texto Rico HTML)
+                    // C. Mi Proceso (Texto Rico)
                     if(about.process) { 
                         const el = document.getElementById('about-process'); 
                         if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.process}</div>`;
                     }
 
-                    // D. Foto de Perfil (CORRECCIÓN: Viene de imgs.profile_pic)
-                    if(imgs.profile_pic) { 
+                    // D. Foto de Perfil
+                    if(imagesObj.profile_pic) { 
                         const el = document.querySelector('#about img'); 
                         if(el) {
-                            el.src = imgs.profile_pic;
-                            // Quitamos atributos que puedan bloquear la carga
+                            el.src = imagesObj.profile_pic;
                             el.removeAttribute('srcset'); 
                         }
                     }
