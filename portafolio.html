@@ -1204,17 +1204,42 @@
             // =================================================================
             
             const renderCart = () => {
+                // 1. Limpiar items visuales
                 const items = cartItemsContainer.querySelectorAll('.cart-item');
                 items.forEach(item => item.remove());
-    
+
+                // 2. PREPARACIÓN DEL FOOTER (CRÍTICO: Hacemos esto SIEMPRE, esté vacío o lleno)
+                const footerContainer = document.querySelector('#cart-drawer .border-t.bg-gray-50');
+                let detailsDiv = document.getElementById('cart-footer-details');
+
+                // Si no existe el contenedor dinámico de totales, lo creamos ahora
+                if (!detailsDiv) {
+                    detailsDiv = document.createElement('div');
+                    detailsDiv.id = 'cart-footer-details';
+                    
+                    // Lo insertamos antes del botón de Checkout
+                    if (checkoutBtn && footerContainer) {
+                        footerContainer.insertBefore(detailsDiv, checkoutBtn);
+                        
+                        // Eliminamos el HTML estático viejo (el que venía por defecto en el HTML)
+                        // para que no salga duplicado el "Subtotal".
+                        const oldStaticTotal = footerContainer.querySelector('.flex.justify-between.items-center.font-bold');
+                        if (oldStaticTotal) oldStaticTotal.remove();
+                    }
+                }
+
+                // 3. Lógica de Estado (Vacío vs Lleno)
                 if (cart.length === 0) {
                     cartEmptyState.style.display = 'flex';
                     checkoutBtn.disabled = true;
-                    // Resetear montos visuales
-                    document.getElementById('cart-footer-details').innerHTML = `
-                        <div class="flex justify-between items-center font-bold text-lg mb-4">
-                            <span>Total:</span><span>$0.00</span>
-                        </div>`;
+                    
+                    // AHORA SÍ: El contenedor existe seguro, podemos escribir
+                    if (detailsDiv) {
+                        detailsDiv.innerHTML = `
+                            <div class="flex justify-between items-center font-bold text-lg mb-4">
+                                <span>Total:</span><span>$0.00</span>
+                            </div>`;
+                    }
                 } else {
                     cartEmptyState.style.display = 'none';
                     checkoutBtn.disabled = false;
@@ -1253,22 +1278,7 @@
                         cartItemsContainer.appendChild(cartItemEl);
                     });
     
-                    // ACTUALIZACIÓN DEL FOOTER DEL CARRITO (Desglose)
-                    const footerContainer = document.querySelector('#cart-drawer .border-t.bg-gray-50');
-                    
-                    // Nos aseguramos de tener un contenedor limpio para los totales
-                    let detailsDiv = document.getElementById('cart-footer-details');
-                    if (!detailsDiv) {
-                        detailsDiv = document.createElement('div');
-                        detailsDiv.id = 'cart-footer-details';
-                        // Insertamos antes del botón de checkout
-                        footerContainer.insertBefore(detailsDiv, checkoutBtn);
-                        // Eliminamos cualquier total viejo que existiera hardcodeado
-                        const oldTotal = footerContainer.querySelector('.flex.justify-between.font-bold');
-                        if(oldTotal) oldTotal.remove();
-                    }
-    
-                    // Renderizamos los totales
+                    // Renderizamos los totales en el contenedor seguro
                     const totalGlobal = subtotalGlobal + taxGlobal;
                     if (taxGlobal > 0) {
                         detailsDiv.innerHTML = `
