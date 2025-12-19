@@ -1005,1201 +1005,627 @@
     
     <!-- NUEVA ESTRUCTURA PARA EL MODAL DE CHECKOUT -->
     <div id="checkout-modal-container"></div>
-
-
-    <script>
     
-    document.addEventListener('DOMContentLoaded', function () {
-        
-        // --- MEMORIA GLOBAL ---
-        let globalData = {
-            portfolio: [],
-            videos: [],
-            logos: [],
-            allProjectImages: [], // Caché de fotos
-            projects: [],         // Se llena al entrar a Proyectos
-            services: [],         // Se llena al entrar a Servicios
-            rentals: { items: [], categories: [], dates: [] } // Se llena al entrar a Alquiler
-        };
-        let rentalDataGlobal = {}; // Auxiliar para calendario
-
-        // --- SELECTORES (Asegúrate de tener este bloque completo) ---
-        const mainContent = document.getElementById('main-content');
-        const header = document.getElementById('header');
-        const mobileMenuButton = document.getElementById('mobile-menu-button');
-        const mobileMenu = document.getElementById('mobile-menu');
-        const allNavLinks = document.querySelectorAll('.nav-link');
-        const lightbox = document.getElementById('lightbox');
-        const lightboxImage = document.getElementById('lightbox-image');
-        const lightboxClose = document.getElementById('lightbox-close');
-        const lightboxPrev = document.getElementById('lightbox-prev');
-        const lightboxNext = document.getElementById('lightbox-next');
-        const lightboxCaption = document.getElementById('lightbox-caption');
-        const pageLoader = document.getElementById('page-loader');
-        
-        // --- Selectores del Carrito (CRUCIALES PARA EL ERROR ACTUAL) ---
-        const cartButton = document.getElementById('cart-button');
-        const mobileCartButton = document.getElementById('mobile-cart-button');
-        const cartItemCount = document.getElementById('cart-item-count');
-        const mobileCartItemCount = document.getElementById('mobile-cart-item-count');
-        const cartOverlay = document.getElementById('cart-overlay');
-        const cartDrawer = document.getElementById('cart-drawer');
-        const cartCloseBtn = document.getElementById('cart-close-btn');
-        const cartItemsContainer = document.getElementById('cart-items-container');
-        const cartEmptyState = document.getElementById('cart-empty-state');
-        const cartSubtotalEl = document.getElementById('cart-subtotal');
-        const checkoutBtn = document.getElementById('checkout-btn');
-        
-        // --- ESTADO DEL CARRITO ---
-        let cart = [];
-        
-
-        // --- FUNCIÓN DE CONEXIÓN POR SECCIÓN ---
-        const fetchSectionData = async (section) => {
-            try {
-                console.log(`📡 Descargando sección: ${section}...`);
-                const res = await fetch(`/.netlify/functions/get-website-data?section=${section}`);
-                if (!res.ok) throw new Error('Error API');
-                return await res.json();
-            } catch (e) {
-                console.error(`Error cargando ${section}:`, e);
-                return null;
-            }
-        };
-
-        // --- GESTOR DE CARGA (LAZY LOAD) ---
-        const loadSection = async (sectionName) => {
-            // 1. Si ya tenemos los datos en memoria, NO llamamos al robot (Ahorro total)
-            if (sectionName === 'projects' && globalData.projects.length > 0) return;
-            if (sectionName === 'services' && globalData.services.length > 0) return;
-            if (sectionName === 'rental' && globalData.rentals.items.length > 0) return;
-
-            // 2. Si no los tenemos, llamamos al robot
-            const apiParam = sectionName === 'rental' ? 'rentals' : sectionName; 
-            const data = await fetchSectionData(apiParam);
-            if (!data) return;
-
-            // 3. Guardamos en memoria según lo que llegó
-            if (sectionName === 'projects') {
-                // Combinamos proyectos con las fotos que ya bajamos en Home (¡Eficiencia!)
-                globalData.projects = (data.projects || []).map(p => {
-                    const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
-                    const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
-                    return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // =================================================================
+            // 1. VARIABLES GLOBALES Y MEMORIA
+            // =================================================================
+            let globalData = {
+                portfolio: [],
+                videos: [],
+                logos: [],
+                allProjectImages: [], // Caché de fotos
+                projects: [],         // Se llena al entrar a Proyectos
+                services: [],         // Se llena al entrar a Servicios
+                rentals: { items: [], categories: [], dates: [] } // Se llena al entrar a Alquiler
+            };
+            let rentalDataGlobal = {}; // Auxiliar para calendario
+            let cart = []; // Estado del carrito
+    
+            // =================================================================
+            // 2. SELECTORES DEL DOM
+            // =================================================================
+            const mainContent = document.getElementById('main-content');
+            const header = document.getElementById('header');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const allNavLinks = document.querySelectorAll('.nav-link');
+            
+            // Lightbox
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightbox-image');
+            const lightboxClose = document.getElementById('lightbox-close');
+            const lightboxPrev = document.getElementById('lightbox-prev');
+            const lightboxNext = document.getElementById('lightbox-next');
+            const lightboxCaption = document.getElementById('lightbox-caption');
+            const pageLoader = document.getElementById('page-loader');
+            
+            // Carrito
+            const cartButton = document.getElementById('cart-button');
+            const mobileCartButton = document.getElementById('mobile-cart-button');
+            const cartItemCount = document.getElementById('cart-item-count');
+            const mobileCartItemCount = document.getElementById('mobile-cart-item-count');
+            const cartOverlay = document.getElementById('cart-overlay');
+            const cartDrawer = document.getElementById('cart-drawer');
+            const cartCloseBtn = document.getElementById('cart-close-btn');
+            const cartItemsContainer = document.getElementById('cart-items-container');
+            const cartEmptyState = document.getElementById('cart-empty-state');
+            const cartSubtotalEl = document.getElementById('cart-subtotal');
+            const checkoutBtn = document.getElementById('checkout-btn');
+    
+            // =================================================================
+            // 3. API FETCH (CONEXIÓN)
+            // =================================================================
+            const fetchSectionData = async (section) => {
+                try {
+                    console.log(`📡 Descargando sección: ${section}...`);
+                    const res = await fetch(`/.netlify/functions/get-website-data?section=${section}`);
+                    if (!res.ok) throw new Error('Error API');
+                    return await res.json();
+                } catch (e) {
+                    console.error(`Error cargando ${section}:`, e);
+                    return null;
+                }
+            };
+    
+            // =================================================================
+            // 4. LÓGICA DEL CARRITO Y CHECKOUT
+            // =================================================================
+            const toggleCart = (show) => {
+                if (show) {
+                    cartOverlay.classList.add('visible');
+                    cartDrawer.classList.add('visible');
+                } else {
+                    cartOverlay.classList.remove('visible');
+                    cartDrawer.classList.remove('visible');
+                }
+            };
+    
+            const updateCartIcon = () => {
+                const count = cart.length;
+                cartItemCount.textContent = count;
+                cartItemCount.classList.toggle('visible', count > 0);
+                mobileCartItemCount.textContent = count;
+                mobileCartItemCount.classList.toggle('visible', count > 0);
+            };
+    
+            const renderCart = () => {
+                const items = cartItemsContainer.querySelectorAll('.cart-item');
+                items.forEach(item => item.remove());
+    
+                if (cart.length === 0) {
+                    cartEmptyState.style.display = 'flex';
+                    checkoutBtn.disabled = true;
+                } else {
+                    cartEmptyState.style.display = 'none';
+                    checkoutBtn.disabled = false;
+                    cart.forEach(item => {
+                        const cartItemEl = document.createElement('div');
+                        cartItemEl.className = 'cart-item flex items-start space-x-4 py-4 border-b';
+                        cartItemEl.innerHTML = `
+                            <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover">
+                            <div class="flex-grow">
+                                <h4 class="font-bold">${item.name}</h4>
+                                <p class="text-sm text-gray-500">
+                                    ${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}
+                                </p>
+                                <p class="text-sm text-gray-500">${item.totalDays} día(s)</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
+                                <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}">
+                                    <i class="fas fa-trash-alt mr-1"></i>Eliminar
+                                </button>
+                            </div>
+                        `;
+                        cartItemsContainer.appendChild(cartItemEl);
+                    });
+                }
+                const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
+                cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+            };
+    
+            const addToCart = (item, startDate, endDate) => {
+                const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+                const cartId = `${item.id}-${startDate}`; 
+                if (cart.some(cartItem => cartItem.cartId === cartId)) {
+                    alert('Este artículo ya está en tu carrito para estas fechas.');
+                    return;
+                }
+                cart.push({
+                    ...item,
+                    cartId: cartId,
+                    startDate: startDate,
+                    endDate: endDate,
+                    totalDays: totalDays,
+                    image: item.images[0] 
                 });
-                renderProjects();
-            } 
-            else if (sectionName === 'services') {
-                globalData.services = data.services || [];
-                renderServicesGrid();
-            } 
-            else if (sectionName === 'rental') {
-                globalData.rentals.items = data.rentalItems || [];
-                globalData.rentals.categories = data.rentalCategories || [];
-                globalData.rentals.dates = data.blockedDates || [];
-                
-                // Mapeo especial para el calendario
-                rentalDataGlobal = {}; 
-                data.rentalCategories.forEach(cat => {
-                    rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
-                        ...i, 
-                        price: parseFloat(i.pricePerDay),
-                        bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
-                    }));
-                });
-                renderRentalPage();
-            }
-        };
-
-        
-        // --- FUNCIÓN DE CONEXIÓN (API) ---
-        const fetchWebsiteData = async () => {
-            try {
-                console.log("Conectando con el sistema...");
-                // 1. Llamada a tu función de Netlify
-                const res = await fetch('/.netlify/functions/get-website-data');
-                if (!res.ok) throw new Error('Error de red');
-                const data = await res.json();
-                return data;
-            } catch (e) {
-                console.error("Error cargando datos:", e);
-                return null;
-            }
-        };
-
-
-        // --- FUNCIONES DEL CARRITO ---
-        
-
-        
-
-       
-
-        
-        
-        cartItemsContainer.addEventListener('click', (e) => {
-            if (e.target.closest('.cart-item-remove-btn')) {
-                const cartIdToRemove = e.target.closest('.cart-item-remove-btn').dataset.cartId;
-                cart = cart.filter(item => item.cartId !== cartIdToRemove);
                 renderCart();
                 updateCartIcon();
-            }
-        });
-        
-        // --- FUNCIONES DE CHECKOUT ---
-        const showCheckoutModal = () => {
-            const checkoutModalContainer = document.getElementById('checkout-modal-container');
-            const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
-
-            const summaryItemsHTML = cart.map(item => `
-                <div class="checkout-summary-item">
-                    <div class="flex items-start space-x-4">
-                        <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover">
-                        <div>
-                            <p class="font-bold">${item.name}</p>
-                            <p class="text-sm text-gray-500">${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}</p>
-                        </div>
-                    </div>
-                    <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
-                </div>
-            `).join('');
-
-            checkoutModalContainer.innerHTML = `
-                <div id="checkout-modal-overlay" class="checkout-modal-overlay">
-                    <div id="checkout-modal-content" class="checkout-modal-content">
-                        <div class="p-6 border-b flex justify-between items-center">
-                            <h2 class="text-2xl font-display">Finalizar Reserva</h2>
-                            <button id="checkout-close-btn" class="text-2xl text-gray-500 hover:text-black">&times;</button>
-                        </div>
-                        
-                        <!-- Step 1: Contact Details -->
-                        <div id="checkout-step-1" class="checkout-step active">
-                            <div class="p-6">
-                                <h3 class="font-bold mb-4">1. Detalles de Contacto</h3>
-                                <form id="contact-form" class="space-y-4">
-                                    <div>
-                                        <label for="name" class="block text-sm font-medium text-gray-700">Nombre Completo</label>
-                                        <input type="text" id="name" name="name" required class="form-input mt-1">
-                                    </div>
-                                    <div>
-                                        <label for="email" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
-                                        <input type="email" id="email" name="email" required class="form-input mt-1">
-                                    </div>
-                                    <div>
-                                        <label for="phone" class="block text-sm font-medium text-gray-700">Teléfono</label>
-                                        <input type="tel" id="phone" name="phone" required class="form-input mt-1">
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="p-6 bg-gray-50 border-t flex justify-end">
-                                <button id="to-step-2-btn" class="bg-black text-white py-3 px-6 font-bold">Siguiente</button>
-                            </div>
-                        </div>
-
-                        <!-- Step 2: Summary -->
-                        <div id="checkout-step-2" class="checkout-step">
-                            <div class="p-6 overflow-y-auto">
-                                <h3 class="font-bold mb-4">2. Resumen y Confirmación</h3>
-                                <div id="checkout-summary-container">
-                                    ${summaryItemsHTML}
-                                </div>
-                                <div class="flex justify-between font-bold text-xl pt-4 mt-4 border-t">
-                                    <span>Total:</span>
-                                    <span>$${subtotal.toFixed(2)}</span>
-                                </div>
-                            </div>
-                            <div class="p-6 bg-gray-50 border-t flex justify-between">
-                                <button id="back-to-step-1-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button>
-                                <button id="to-step-3-btn" class="bg-black text-white py-3 px-6 font-bold">Continuar al Pago</button>
-                            </div>
-                        </div>
-
-                        <!-- Step 3: Payment Simulation -->
-                        <div id="checkout-step-3" class="checkout-step">
-                             <div class="p-6">
-                                <h3 class="font-bold mb-4">3. Ingreso de Pago Seguro</h3>
-                                <form id="payment-form" class="space-y-4">
-                                    <div>
-                                        <label for="card-number" class="block text-sm font-medium text-gray-700">Número de Tarjeta</label>
-                                        <input type="text" id="card-number" name="card-number" placeholder="0000 0000 0000 0000" required class="form-input mt-1" pattern="[0-9]{13,16}" title="Ingrese un número de tarjeta válido.">
-                                    </div>
-                                    <div>
-                                        <label for="card-name" class="block text-sm font-medium text-gray-700">Nombre en la Tarjeta</label>
-                                        <input type="text" id="card-name" name="card-name" placeholder="Nombre Apellido" required class="form-input mt-1">
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label for="card-expiry" class="block text-sm font-medium text-gray-700">Vencimiento (MM/AA)</label>
-                                            <input type="text" id="card-expiry" name="card-expiry" placeholder="MM/AA" required class="form-input mt-1" pattern="(0[1-9]|1[0-2])\/([0-9]{2})" title="Use el formato MM/AA.">
-                                        </div>
-                                        <div>
-                                            <label for="card-cvc" class="block text-sm font-medium text-gray-700">CVC</label>
-                                            <input type="text" id="card-cvc" name="card-cvc" placeholder="123" required class="form-input mt-1" pattern="[0-9]{3,4}" title="Ingrese 3 o 4 dígitos.">
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                            <div class="p-6 bg-gray-50 border-t flex justify-between">
-                                <button id="back-to-step-2-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button>
-                                <button id="pay-now-btn" class="bg-black text-white py-3 px-6 font-bold">Pagar $${subtotal.toFixed(2)}</button>
-                            </div>
-                        </div>
-
-
-                        <!-- Step 4: Confirmation -->
-                        <div id="checkout-step-4" class="checkout-step">
-                            <div class="p-8 text-center flex flex-col items-center justify-center">
-                                <div id="payment-processing" class="flex flex-col items-center justify-center p-8">
-                                    <div class="loader-circle mb-4"></div>
-                                    <p class="text-lg">Procesando tu reserva...</p>
-                                </div>
-                                <div id="payment-success" class="hidden">
-                                     <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-                                        <i class="fas fa-check text-4xl text-green-600"></i>
-                                    </div>
-                                    <h3 class="font-display text-3xl mb-2">¡Reserva Confirmada!</h3>
-                                    <p class="text-gray-600">Hemos recibido tu solicitud. Recibirás un correo electrónico de confirmación en breve.</p>
-                                    <p class="mt-4 font-bold">Número de Reserva: <span id="reservation-id"></span></p>
-                                    <button id="finish-checkout-btn" class="mt-8 bg-black text-white py-3 px-8 font-bold">Aceptar</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            const overlay = document.getElementById('checkout-modal-overlay');
-            const closeBtn = document.getElementById('checkout-close-btn');
-            
-            const toStep2Btn = document.getElementById('to-step-2-btn');
-            const backToStep1Btn = document.getElementById('back-to-step-1-btn');
-            const toStep3Btn = document.getElementById('to-step-3-btn');
-            const backToStep2Btn = document.getElementById('back-to-step-2-btn');
-            const payNowBtn = document.getElementById('pay-now-btn');
-            
-            const finishCheckoutBtn = document.getElementById('finish-checkout-btn');
-
-            const steps = document.querySelectorAll('.checkout-step');
-            const goToStep = (stepNumber) => {
-                steps.forEach(step => step.classList.remove('active'));
-                document.getElementById(`checkout-step-${stepNumber}`).classList.add('active');
+                toggleCart(true);
             };
-
-            const close = () => {
-                overlay.classList.remove('visible');
-                setTimeout(() => checkoutModalContainer.innerHTML = '', 400);
-            };
-
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-            closeBtn.addEventListener('click', close);
-            
-            toStep2Btn.addEventListener('click', () => {
-                const form = document.getElementById('contact-form');
-                if (form.checkValidity()) {
-                    goToStep(2);
-                } else {
-                    form.reportValidity();
-                }
-            });
-            
-            backToStep1Btn.addEventListener('click', () => goToStep(1));
-            toStep3Btn.addEventListener('click', () => goToStep(3));
-            backToStep2Btn.addEventListener('click', () => goToStep(2));
-            
-            payNowBtn.addEventListener('click', () => {
-                 const form = document.getElementById('payment-form');
-                if (form.checkValidity()) {
-                    goToStep(4);
-                    const processing = document.getElementById('payment-processing');
-                    const success = document.getElementById('payment-success');
-                    setTimeout(() => {
-                        processing.style.display = 'none';
-                        success.classList.remove('hidden');
-                        document.getElementById('reservation-id').textContent = `ADG-${Math.floor(Math.random() * 90000) + 10000}`;
-                        
-                        cart.forEach(cartItem => {
-                             for (const category in rentalDataGlobal) {
-                                const item = rentalDataGlobal[category].find(r => r.id === cartItem.id);
-                                if (item) {
-                                    let currentDate = new Date(cartItem.startDate + 'T00:00:00');
-                                    const endDate = new Date(cartItem.endDate + 'T00:00:00');
-                                    while(currentDate <= endDate) {
-                                        const dateString = currentDate.toISOString().split('T')[0];
-                                        if (!item.bookedDates.includes(dateString)) {
-                                            item.bookedDates.push(dateString);
-                                        }
-                                        currentDate.setDate(currentDate.getDate() + 1);
-                                    }
-                                    break;
-                                }
-                            }
-                        });
-
-                        cart = [];
-                        renderCart();
-                        updateCartIcon();
-                    }, 2000);
-                } else {
-                    form.reportValidity();
-                }
-            });
-
-            finishCheckoutBtn.addEventListener('click', close);
-
-            setTimeout(() => overlay.classList.add('visible'), 10);
-        };
-
-
-        // --- FUNCIONES DE RENDERIZADO Y NAVEGACIÓN ---
-        // --- FUNCIÓN DE NAVEGACIÓN COMPLETA (Visual + Carga de Datos) ---
-        const navigateTo = (targetId) => {
-            
-            // 1. LÓGICA DE CARGA DE DATOS (LAZY LOAD)
-            // Si vamos a una sección principal, intentamos cargar sus datos
-            if (['projects', 'services', 'rental'].includes(targetId)) {
-                loadSection(targetId);
-            }
-
-            // Si vamos a un DETALLE específico y no tenemos datos, los cargamos primero
-            // A. Servicios
-            if (targetId.startsWith('service-detail-') && globalData.services.length === 0) {
-                loadSection('services').then(() => renderServiceDetail(targetId));
-            }
-            
-            // B. Alquiler (ESTO ES LO QUE FALTABA)
-            if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) {
-                loadSection('rental').then(() => renderRentalDetail(targetId));
-            }
-
-            // C. Proyectos
-            if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) {
-                loadSection('projects').then(() => renderProjectDetail(targetId));
-            }
-
-            // 2. LÓGICA VISUAL (Transiciones)
-            const currentPage = document.querySelector('.page-active');
-            const targetPage = document.getElementById(targetId);
-            
-            if (!targetPage || currentPage === targetPage) return;
-
-            if (currentPage) {
-                currentPage.classList.add('page-exiting');
-                currentPage.classList.remove('page-active');
-            }
-
-            targetPage.style.display = 'block';
-            setTimeout(() => {
-                targetPage.classList.add('page-active');
-                handleScrollHeader(); // Única llamada, en el momento correcto.
-            }, 10);
-            
-            if (currentPage) {
-                setTimeout(() => {
-                    currentPage.classList.remove('page-exiting');
-                    currentPage.style.display = 'none';
-                }, 500);
-            }
-
-            // 3. ACTUALIZACIÓN DE MENÚ (Nav Links)
-            let activeTarget = targetId;
-             if (targetId.startsWith('project-detail-')) {
-                activeTarget = 'projects';
-            } else if (targetId.startsWith('rental-detail-')) {
-                activeTarget = 'rental';
-            } else if (targetId.startsWith('service-detail-')) {
-                activeTarget = 'services';
-            }
-            
-            allNavLinks.forEach(link => {
-                link.classList.remove('nav-active');
-                if (link.dataset.target === activeTarget) {
-                    link.classList.add('nav-active');
-                }
-            });
-
-            // 4. SCROLL Y OBSERVADORES
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            observeElements(targetPage);
-        };
-        
-        const renderProjectDetail = (targetId) => {
-            const realId = targetId.substring(15);
-            // LEE DE GLOBALDATA
-            const project = globalData.projects.find(p => String(p.id) === String(realId));
-            if (!project) return;
-            
-            const detailContainer = document.getElementById('project-detail-pages');
-            const images = project.images || [];
-            
-            detailContainer.innerHTML = `
-                <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
-                    <div class="container mx-auto px-6">
-                        <div class="max-w-6xl mx-auto">
-                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-flex items-center gap-2"><i class="fas fa-arrow-left"></i> Volver a Proyectos</a>
-                            <div class="text-center mb-16 reveal">
-                                <h2 class="text-4xl md:text-6xl font-display text-reveal mb-4">${project.title}</h2>
-                                <p class="text-lg text-gray-600 mt-4 max-w-3xl mx-auto text-reveal text-center leading-relaxed">${project.description}</p>
-                            </div>
-                            <div class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 reveal">
-                                ${images.length ? images.map(img => `<div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6 group"><img src="${img.imageUrl}" loading="lazy" class="w-full h-auto object-cover shadow-sm transition-transform duration-500 group-hover:scale-105">
-                                ${img.caption ? `<div class="absolute bottom-0 left-0 w-full p-2 bg-black/50 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">${img.caption}</div>` : ''}
-                                </div>`).join('') : '<p>Sin fotos.</p>'}
+    
+            const showCheckoutModal = () => {
+                const checkoutModalContainer = document.getElementById('checkout-modal-container');
+                const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
+                const summaryItemsHTML = cart.map(item => `
+                    <div class="checkout-summary-item">
+                        <div class="flex items-start space-x-4">
+                            <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover">
+                            <div>
+                                <p class="font-bold">${item.name}</p>
+                                <p class="text-sm text-gray-500">${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}</p>
                             </div>
                         </div>
+                        <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
                     </div>
-                </section>`;
-            navigateTo(targetId);
-        };
-
-        const renderServiceDetail = (serviceId) => {
-            const detailContainer = document.getElementById('service-detail-pages');
-            const service = serviceDetails[serviceId];
-            if (!service) return;
-
-            const sectionsHTML = service.sections.map(section => `
-                <div class="reveal">
-                    <h3 class="text-3xl font-display text-black mb-4 text-reveal">${section.title}</h3>
-                    <div class="prose max-w-none lg:prose-lg text-gray-600 leading-relaxed text-reveal text-justify">${section.content}</div>
-                </div>
-            `).join('');
-
-            const galleryHTML = service.gallery.map(src => `
-                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container">
-                    <img src="${src}" alt="${service.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
-                </div>
-            `).join('');
-
-            detailContainer.innerHTML = `
-                <section id="${serviceId}" class="page-container">
-                     <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-28 md:pt-36 pb-16">
-                        <div class="text-center reveal">
-                            <h1 class="text-5xl md:text-7xl font-display text-reveal py-2">${service.title}</h1>
-                        </div>
-                    </div>
-                    <div class="container mx-auto px-6 py-20 md:py-24">
-                        <div class="max-w-4xl mx-auto">
-                             <a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block">
-                                <i class="fas fa-arrow-left mr-2"></i> Volver a Servicios
-                            </a>
-                            <div class="reveal">
-                                <p class="text-xl text-gray-700 leading-relaxed italic text-center mb-16 text-reveal">${service.intro}</p>
+                `).join('');
+    
+                checkoutModalContainer.innerHTML = `
+                    <div id="checkout-modal-overlay" class="checkout-modal-overlay">
+                        <div id="checkout-modal-content" class="checkout-modal-content">
+                            <div class="p-6 border-b flex justify-between items-center">
+                                <h2 class="text-2xl font-display">Finalizar Reserva</h2>
+                                <button id="checkout-close-btn" class="text-2xl text-gray-500 hover:text-black">×</button>
                             </div>
-                            <div class="space-y-16">
-                                ${sectionsHTML}
-                            </div>
-                             <div class="mt-20 reveal">
-                                <h3 class="text-3xl font-display text-black mb-8 text-center text-reveal">Galería de Muestra</h3>
-                                <div class="columns-2 md:columns-3 gap-6 space-y-6">${galleryHTML}</div>
-                            </div>
-                            <div class="text-center mt-20 reveal">
-                                <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Interesado en este servicio?</h3>
-                                <a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800 transition-transform hover:scale-105">Hablemos de tu Proyecto</a>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            `;
-            navigateTo(serviceId);
-        };
-
-        const renderRentalDetail = (rentalId) => {
-            const detailContainer = document.getElementById('rental-detail-pages');
-            let item;
-            let itemCategory;
-            for (const category in rentalDataGlobal) {
-                const found = rentalDataGlobal[category].find(r => r.id == rentalId.split('-')[2]);
-                if (found) {
-                    item = found;
-                    itemCategory = category;
-                    break;
-                }
-            }
-            if (!item) return;
-
-            const carouselItemsHTML = item.images.map(src => `<div class="carousel-item"><img src="${src}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('');
-
-            detailContainer.innerHTML = `
-                <section id="${rentalId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
-                    <div class="container mx-auto px-6">
-                        <div class="max-w-6xl mx-auto">
-                            <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block">
-                                <i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo
-                            </a>
-                            <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
-                                <div class="lg:col-span-3">
-                                    <div class="carousel-container sticky top-28">
-                                        <div class="carousel-track">${carouselItemsHTML}</div>
-                                        <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
-                                        <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
-                                    </div>
+                            <div id="checkout-step-1" class="checkout-step active">
+                                <div class="p-6">
+                                    <h3 class="font-bold mb-4">1. Detalles de Contacto</h3>
+                                    <form id="contact-form" class="space-y-4">
+                                        <div><label class="block text-sm font-medium text-gray-700">Nombre Completo</label><input type="text" id="name" required class="form-input mt-1"></div>
+                                        <div><label class="block text-sm font-medium text-gray-700">Correo Electrónico</label><input type="email" id="email" required class="form-input mt-1"></div>
+                                        <div><label class="block text-sm font-medium text-gray-700">Teléfono</label><input type="tel" id="phone" required class="form-input mt-1"></div>
+                                    </form>
                                 </div>
-                                <div class="lg:col-span-2 reveal">
-                                    <h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2>
-                                    <p class="text-3xl font-bold text-gray-800 mb-6 text-reveal">$${item.price}<span class="text-lg font-normal text-gray-500"> / día</span></p>
-                                    <p class="text-gray-600 leading-relaxed text-justify text-reveal mb-8">${item.long_desc}</p>
-                                    
-                                    <button id="open-calendar-modal-btn" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300">
-                                        <i class="fas fa-calendar-alt mr-2"></i> Consultar Disponibilidad
-                                    </button>
+                                <div class="p-6 bg-gray-50 border-t flex justify-end"><button id="to-step-2-btn" class="bg-black text-white py-3 px-6 font-bold">Siguiente</button></div>
+                            </div>
+                            <div id="checkout-step-2" class="checkout-step">
+                                <div class="p-6 overflow-y-auto"><h3 class="font-bold mb-4">2. Resumen</h3><div id="checkout-summary-container">${summaryItemsHTML}</div><div class="flex justify-between font-bold text-xl pt-4 mt-4 border-t"><span>Total:</span><span>$${subtotal.toFixed(2)}</span></div></div>
+                                <div class="p-6 bg-gray-50 border-t flex justify-between"><button id="back-to-step-1-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button><button id="to-step-3-btn" class="bg-black text-white py-3 px-6 font-bold">Continuar al Pago</button></div>
+                            </div>
+                            <div id="checkout-step-3" class="checkout-step">
+                                 <div class="p-6"><h3 class="font-bold mb-4">3. Pago Seguro</h3><form id="payment-form" class="space-y-4"><div><label class="block text-sm font-medium text-gray-700">Tarjeta</label><input type="text" required class="form-input mt-1" placeholder="0000 0000 0000 0000"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700">Vence</label><input type="text" required class="form-input mt-1" placeholder="MM/AA"></div><div><label class="block text-sm font-medium text-gray-700">CVC</label><input type="text" required class="form-input mt-1" placeholder="123"></div></div></form></div>
+                                <div class="p-6 bg-gray-50 border-t flex justify-between"><button id="back-to-step-2-btn" class="bg-gray-200 text-black py-3 px-6 font-bold">Atrás</button><button id="pay-now-btn" class="bg-black text-white py-3 px-6 font-bold">Pagar $${subtotal.toFixed(2)}</button></div>
+                            </div>
+                            <div id="checkout-step-4" class="checkout-step">
+                                <div class="p-8 text-center flex flex-col items-center justify-center">
+                                    <div id="payment-processing" class="flex flex-col items-center justify-center p-8"><div class="loader-circle mb-4"></div><p>Procesando...</p></div>
+                                    <div id="payment-success" class="hidden"><div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6"><i class="fas fa-check text-4xl text-green-600"></i></div><h3 class="font-display text-3xl mb-2">¡Reserva Confirmada!</h3><p class="mt-4 font-bold">Reserva: <span id="reservation-id"></span></p><button id="finish-checkout-btn" class="mt-8 bg-black text-white py-3 px-8 font-bold">Aceptar</button></div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </section>
-            `;
-            
-            navigateTo(rentalId);
-
-            document.getElementById('open-calendar-modal-btn').addEventListener('click', () => {
-                showCalendarModal(item, item.bookedDates);
-            });
-
-            const track = detailContainer.querySelector('.carousel-track');
-            const slides = Array.from(track.children);
-            const nextButton = detailContainer.querySelector('.next');
-            const prevButton = detailContainer.querySelector('.prev');
-            let currentIndex = 0;
-            const updateSlidePosition = () => {
-                if (track) track.style.transform = `translateX(${-100 * currentIndex}%)`;
-            };
-            if(nextButton) nextButton.addEventListener('click', () => { currentIndex = (currentIndex + 1) % slides.length; updateSlidePosition(); });
-            if(prevButton) prevButton.addEventListener('click', () => { currentIndex = (currentIndex - 1 + slides.length) % slides.length; updateSlidePosition(); });
-        };
-        
-        
-        const renderVideos = (videosList) => {
-            const container = document.getElementById('videos-container');
-            if(!container) return;
-
-            if (!videosList || videosList.length === 0) {
-                container.parentElement.parentElement.style.display = 'none'; 
-                return;
-            }
-
-            container.innerHTML = videosList.map(video => {
-                let embedSrc = video.embedUrl || "";
-                if (embedSrc.includes('watch?v=')) {
-                    embedSrc = embedSrc.replace('watch?v=', 'embed/');
-                } else if (embedSrc.includes('youtu.be/')) {
-                    embedSrc = embedSrc.replace('youtu.be/', 'www.youtube.com/embed/');
-                }
-
-                // AJUSTES: h-[450px] (Altura fija alta), w-full, rounded-none (cuadrado)
-                return `
-                    <div class="w-full aspect-video overflow-hidden shadow-lg gallery-item group bg-black rounded-none border border-gray-800 relative">
-                        <iframe src="${embedSrc}" title="${video.title || 'Video'}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full object-cover"></iframe>
-                    </div>
-                    `;
-            }).join('');
-        };
-        
-        const renderClientLogos = (logosList) => {
-            const container = document.getElementById('client-logos-container');
-            if(!container) return;
-
-            if (!logosList || logosList.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-400 w-full">Nuestros clientes.</p>';
-                return;
-            }
-
-            container.innerHTML = logosList.map(logo => `
-                <img src="${logo.logoUrl}" alt="${logo.clientName}" class="client-logo h-24 md:h-32 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 hover:scale-110">
-            `).join('');
-        };
-        
-        
-        const renderPortfolio = () => {
-            const portfolioGallery = document.getElementById('portfolio-gallery');
-            if(!portfolioGallery) return;
-            
-            if (portfolioData.length === 0) {
-                portfolioGallery.innerHTML = '<p class="text-center col-span-full text-gray-400 py-10">Cargando portafolio...</p>';
-                return;
-            }
-
-            portfolioGallery.innerHTML = portfolioData.map(item => `
-                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6">
-                    <img src="${item.imageUrl}" alt="${item.caption || 'Foto Portafolio'}" loading="lazy" class="w-full h-auto object-cover hover:scale-105 transition-transform duration-700">
-                    <div class="overlay absolute inset-0 flex items-end p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-                        <p class="text-white text-lg font-bold translate-y-4 transition-transform duration-300">${item.caption || ''}</p>
-                    </div>
-                </div>
-            `).join('');
-        };
-
-         const renderServicesGrid = () => {
-            const container = document.getElementById('services-grid');
-            if(!container) return;
-            const data = globalData.services;
-            
-            if (data.length === 0) {
-                // Estado de carga o vacío
-                container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando servicios...</div>';
-                return;
-            }
-            container.innerHTML = data.map(s => `
-                <a href="#" data-target="service-detail-${s.id}" class="nav-link service-grid-item items-center justify-center text-center py-12">
-                    <div class="service-icon-wrapper"><i class="${s.iconClass || 'fas fa-camera'} service-icon"></i></div>
-                    <h3 class="text-2xl font-display text-gray-900">${s.title}</h3>
-                </a>
-            `).join('');
-        };
-
-        const renderServiceDetail = (targetId) => {
-            const realId = targetId.substring(15);
-            const service = globalData.services.find(s => String(s.id) === String(realId));
-            if (!service) return;
-
-            const detailContainer = document.getElementById('service-detail-pages');
-            const sectionsHTML = (service.contentBlocks || []).map(b => `
-                <div class="reveal">
-                    <h3 class="text-3xl font-display text-black mb-4 text-reveal">${b.blockTitle}</h3>
-                    <div class="prose max-w-none lg:prose-lg text-gray-600 leading-relaxed text-reveal text-justify">${b.blockContentHtml}</div>
-                </div>
-            `).join('');
-            
-            const galleryHTML = (service.images || []).map(img => `
-                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container"><img src="${img.imageUrl}" class="w-full h-auto object-cover"></div>
-            `).join('');
-
-            detailContainer.innerHTML = `
-                <section id="${targetId}" class="page-container">
-                     <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-28 md:pt-36 pb-16">
-                        <div class="text-center reveal"><h1 class="text-5xl md:text-7xl font-display text-reveal py-2">${service.title}</h1></div>
-                    </div>
-                    <div class="container mx-auto px-6 py-20 md:py-24">
-                        <div class="max-w-4xl mx-auto">
-                             <a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver a Servicios</a>
-                            <div class="reveal"><div class="text-xl text-gray-700 leading-relaxed italic text-center mb-16 text-reveal">${service.introText || ''}</div></div>
-                            <div class="space-y-16">${sectionsHTML}</div>
-                             ${galleryHTML ? `<div class="mt-20 reveal"><h3 class="text-3xl font-display text-black mb-8 text-center text-reveal">Galería</h3><div class="columns-2 md:columns-3 gap-6 space-y-6">${galleryHTML}</div></div>` : ''}
-                            <div class="text-center mt-20 reveal">
-                                <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Interesado?</h3>
-                                <a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800">Contáctame</a>
-                            </div>
-                        </div>
-                    </div>
-                </section>`;
-            navigateTo(targetId);
-        };
-
-
-        const renderRentalPage = () => {
-            const filtersContainer = document.getElementById('rental-filters');
-            const gridContainer = document.getElementById('rental-grid-categorized');
-            if (!filtersContainer || !gridContainer) return;
-            
-            if (globalData.rentals.categories.length === 0 && globalData.rentals.items.length === 0) {
-                gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando equipos...</p>';
-                return;
-            }
-
-            const cats = globalData.rentals.categories;
-            filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
-                cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
-
-            const renderItems = (catId) => {
-                let items = globalData.rentals.items;
-                if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
-                
-                gridContainer.innerHTML = items.map(item => {
-                    const imgs = item.images || [];
-                    return `
-                    <div class="rental-card reveal">
-                         <div class="carousel-container aspect-w-4 aspect-h-3">
-                            <div class="carousel-track flex" data-current-index="0">
-                                ${imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200 flex items-center justify-center">Sin foto</div>'}
-                            </div>
-                            ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
-                        </div>
-                        <div class="p-6 flex flex-col flex-grow">
-                            <div class="flex justify-between items-baseline">
-                                <h3 class="font-display text-2xl">${item.name}</h3>
-                                <p class="font-bold text-xl text-gray-800">$${item.pricePerDay}<span class="text-sm font-normal text-gray-500">/día</span></p>
-                            </div>
-                            <p class="text-gray-600 text-sm my-4 flex-grow line-clamp-3">${item.description}</p>
-                            <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
-                                Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
-                            </a>
                         </div>
                     </div>`;
-                }).join('');
                 
-                // Re-inicializar observadores para animaciones
-                observeElements(gridContainer);
-            };
-
-            // Eventos locales de alquiler
-            filtersContainer.onclick = (e) => {
-                if (e.target.matches('.rental-category-btn')) {
-                    filtersContainer.querySelector('.active').classList.remove('active');
-                    e.target.classList.add('active');
-                    renderItems(e.target.dataset.category);
-                }
-            };
-            
-            // Render inicial
-            renderItems('Todo');
-        };
-
-
-
-
-        
-        
-        const renderProjects = () => {
-            const projectsContainer = document.getElementById('projects-container');
-            if(!projectsContainer) return;
-
-            if (projectsData.length === 0) {
-                projectsContainer.innerHTML = '<p class="text-center text-gray-400 py-10">Pronto publicaremos nuevos proyectos.</p>';
-                return;
-            }
-
-            projectsContainer.innerHTML = projectsData.map((project, index) => `
-                <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal gap-8 md:gap-12">
-                    <div class="p-4 md:p-8 ${index % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
-                        <h3 class="text-3xl md:text-4xl font-display mb-4 text-reveal">${project.title}</h3>
-                        <p class="text-gray-600 leading-relaxed mb-6 text-reveal line-clamp-3">${project.description}</p>
-                        <a href="#" data-target="project-detail-${project.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-all">
-                            Ver Galería Completa
-                        </a>
-                    </div>
-                    <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg">
-                        <img src="${project.coverImageUrl}" alt="${project.title}" class="w-full h-full object-cover">
-                    </div>
-                </div>
-            `).join('');
-        };
-
-        // --- LÓGICA DEL MODAL DEL CALENDARIO ---
-        const showCalendarModal = (item, bookedDates) => {
-            const modalContainer = document.getElementById('calendar-modal-container');
-            modalContainer.innerHTML = `
-                <div id="calendar-modal-overlay" class="calendar-modal-overlay">
-                    <div class="calendar-modal-content">
-                        <div class="calendar-header">
-                            <button id="calendar-prev" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
-                            <h3 id="calendar-month-year" class="font-display text-2xl"></h3>
-                            <button id="calendar-next" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                        <div class="calendar-grid">
-                            <div class="calendar-day-name">D</div><div class="calendar-day-name">L</div><div class="calendar-day-name">M</div>
-                            <div class="calendar-day-name">M</div><div class="calendar-day-name">J</div><div class="calendar-day-name">V</div>
-                            <div class="calendar-day-name">S</div>
-                        </div>
-                        <div id="calendar-days" class="calendar-grid"></div>
-                        <div class="booking-summary">
-                            <div class="flex justify-between items-center text-sm"><span>Desde:</span><span id="summary-start-date">--/--/----</span></div>
-                            <div class="flex justify-between items-center text-sm"><span>Hasta:</span><span id="summary-end-date">--/--/----</span></div>
-                            <div class="flex justify-between items-center text-sm border-t mt-2 pt-2"><span>Total Días:</span><span id="summary-total-days">0</span></div>
-                            <div class="flex justify-between items-center text-xl font-bold mt-2"><span>Total a Pagar:</span><span id="summary-total-price">$0</span></div>
-                        </div>
-                        <button id="add-to-cart-btn" class="w-full mt-4 bg-black text-white py-3 disabled:bg-gray-400" disabled>Agregar al Carrito</button>
-                    </div>
-                </div>
-            `;
-            
-            const overlay = document.getElementById('calendar-modal-overlay');
-            const prevBtn = document.getElementById('calendar-prev');
-            const nextBtn = document.getElementById('calendar-next');
-            const monthYearEl = document.getElementById('calendar-month-year');
-            const daysContainer = document.getElementById('calendar-days');
-            const summaryStartDate = document.getElementById('summary-start-date');
-            const summaryEndDate = document.getElementById('summary-end-date');
-            const summaryTotalDays = document.getElementById('summary-total-days');
-            const summaryTotalPrice = document.getElementById('summary-total-price');
-            const addToCartBtn = document.getElementById('add-to-cart-btn');
-            
-            const close = () => {
-                overlay.classList.remove('visible');
-                setTimeout(() => modalContainer.innerHTML = '', 300);
-            };
-
-            setTimeout(() => overlay.classList.add('visible'), 10);
-
-            let currentDate = new Date();
-            currentDate.setDate(1);
-            let selectedStartDate = null;
-            let selectedEndDate = null;
-
-            const renderMonth = () => {
-                const year = currentDate.getFullYear();
-                const month = currentDate.getMonth();
-                const today = new Date(); today.setHours(0,0,0,0);
-                monthYearEl.textContent = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
-                daysContainer.innerHTML = '';
-                const firstDayOfMonth = new Date(year, month, 1).getDay();
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-                for (let i = 0; i < firstDayOfMonth; i++) daysContainer.innerHTML += `<div></div>`;
+                const overlay = document.getElementById('checkout-modal-overlay');
+                const closeBtn = document.getElementById('checkout-close-btn');
+                const steps = document.querySelectorAll('.checkout-step');
                 
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const dayEl = document.createElement('button');
-                    dayEl.textContent = day;
-                    dayEl.classList.add('calendar-day');
-                    const dayDate = new Date(year, month, day);
-                    const dateString = dayDate.toISOString().split('T')[0];
-                    if (dayDate < today || bookedDates.includes(dateString)) dayEl.classList.add('disabled');
-                    else dayEl.dataset.date = dateString;
+                const goToStep = (n) => { steps.forEach(s => s.classList.remove('active')); document.getElementById(`checkout-step-${n}`).classList.add('active'); };
+                const close = () => { overlay.classList.remove('visible'); setTimeout(() => checkoutModalContainer.innerHTML = '', 400); };
+    
+                overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+                closeBtn.addEventListener('click', close);
+                document.getElementById('to-step-2-btn').addEventListener('click', () => { document.getElementById('contact-form').checkValidity() ? goToStep(2) : document.getElementById('contact-form').reportValidity(); });
+                document.getElementById('back-to-step-1-btn').addEventListener('click', () => goToStep(1));
+                document.getElementById('to-step-3-btn').addEventListener('click', () => goToStep(3));
+                document.getElementById('back-to-step-2-btn').addEventListener('click', () => goToStep(2));
+                
+                document.getElementById('pay-now-btn').addEventListener('click', () => {
+                    if (document.getElementById('payment-form').checkValidity()) {
+                        goToStep(4);
+                        setTimeout(() => {
+                            document.getElementById('payment-processing').style.display = 'none';
+                            document.getElementById('payment-success').classList.remove('hidden');
+                            document.getElementById('reservation-id').textContent = `ADG-${Math.floor(Math.random() * 90000) + 10000}`;
+                            cart = []; renderCart(); updateCartIcon();
+                        }, 2000);
+                    } else { document.getElementById('payment-form').reportValidity(); }
+                });
+                document.getElementById('finish-checkout-btn').addEventListener('click', close);
+                setTimeout(() => overlay.classList.add('visible'), 10);
+            };
+    
+            const showCalendarModal = (item, bookedDates) => {
+                const modalContainer = document.getElementById('calendar-modal-container');
+                modalContainer.innerHTML = `
+                    <div id="calendar-modal-overlay" class="calendar-modal-overlay">
+                        <div class="calendar-modal-content">
+                            <div class="calendar-header">
+                                <button id="calendar-prev" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
+                                <h3 id="calendar-month-year" class="font-display text-2xl"></h3>
+                                <button id="calendar-next" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="calendar-grid"><div class="calendar-day-name">D</div><div class="calendar-day-name">L</div><div class="calendar-day-name">M</div><div class="calendar-day-name">M</div><div class="calendar-day-name">J</div><div class="calendar-day-name">V</div><div class="calendar-day-name">S</div></div>
+                            <div id="calendar-days" class="calendar-grid"></div>
+                            <div class="booking-summary">
+                                <div class="flex justify-between items-center text-sm"><span>Desde:</span><span id="summary-start-date">--/--/----</span></div>
+                                <div class="flex justify-between items-center text-sm"><span>Hasta:</span><span id="summary-end-date">--/--/----</span></div>
+                                <div class="flex justify-between items-center text-xl font-bold mt-2"><span>Total:</span><span id="summary-total-price">$0</span></div>
+                            </div>
+                            <button id="add-to-cart-btn" class="w-full mt-4 bg-black text-white py-3 disabled:bg-gray-400" disabled>Agregar al Carrito</button>
+                        </div>
+                    </div>`;
+                
+                const overlay = document.getElementById('calendar-modal-overlay');
+                const daysContainer = document.getElementById('calendar-days');
+                const monthYearEl = document.getElementById('calendar-month-year');
+                let currentDate = new Date(); currentDate.setDate(1);
+                let selectedStartDate = null; let selectedEndDate = null;
+    
+                const renderMonth = () => {
+                    const year = currentDate.getFullYear(); const month = currentDate.getMonth();
+                    monthYearEl.textContent = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
+                    daysContainer.innerHTML = '';
+                    const firstDay = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    for (let i = 0; i < firstDay; i++) daysContainer.innerHTML += `<div></div>`;
                     
-                    if (selectedStartDate && dateString === selectedStartDate.toISOString().split('T')[0]) dayEl.classList.add('selected');
-                    if (selectedEndDate && dateString === selectedEndDate.toISOString().split('T')[0]) dayEl.classList.add('selected');
-                    if (selectedStartDate && selectedEndDate && dayDate > selectedStartDate && dayDate < selectedEndDate) dayEl.classList.add('in-range');
-                    daysContainer.appendChild(dayEl);
-                }
-            };
-            
-            const updateSummary = () => {
-                addToCartBtn.disabled = !(selectedStartDate && selectedEndDate);
-                if (selectedStartDate && selectedEndDate) {
-                    summaryStartDate.textContent = selectedStartDate.toLocaleDateString('es-ES');
-                    summaryEndDate.textContent = selectedEndDate.toLocaleDateString('es-ES');
-                    const diffDays = Math.ceil(Math.abs(selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
-                    summaryTotalDays.textContent = diffDays;
-                    summaryTotalPrice.textContent = `$${(diffDays * item.price).toFixed(2)}`;
-                } else if (selectedStartDate) {
-                    summaryStartDate.textContent = selectedStartDate.toLocaleDateString('es-ES');
-                    summaryEndDate.textContent = '--/--/----';
-                    summaryTotalDays.textContent = '1';
-                    summaryTotalPrice.textContent = `$${item.price.toFixed(2)}`;
-                } else {
-                     summaryStartDate.textContent = '--/--/----'; summaryEndDate.textContent = '--/--/----';
-                     summaryTotalDays.textContent = '0'; summaryTotalPrice.textContent = '$0';
-                }
-            };
-            
-            daysContainer.addEventListener('click', (e) => {
-                if (e.target.matches('.calendar-day') && !e.target.classList.contains('disabled')) {
-                    const clickedDate = new Date(e.target.dataset.date + 'T00:00:00');
-                    if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
-                        selectedStartDate = clickedDate; selectedEndDate = null;
-                    } else if (clickedDate < selectedStartDate) {
-                        selectedStartDate = clickedDate;
-                    } else {
-                        selectedEndDate = clickedDate;
-                        let validRange = true;
-                        const tempDate = new Date(selectedStartDate);
-                        while(tempDate <= selectedEndDate) {
-                            if(bookedDates.includes(tempDate.toISOString().split('T')[0])) {
-                                validRange = false; break;
-                            }
-                            tempDate.setDate(tempDate.getDate() + 1);
-                        }
-                        if(!validRange) {
-                            alert("El rango seleccionado incluye días no disponibles. Por favor, elige otro rango.");
-                            selectedStartDate = null; selectedEndDate = null;
-                        }
-                    }
-                    renderMonth(); updateSummary();
-                }
-            });
-            
-            addToCartBtn.addEventListener('click', () => {
-                if (selectedStartDate && selectedEndDate) {
-                    addToCart(item, selectedStartDate.toISOString().split('T')[0], selectedEndDate.toISOString().split('T')[0]);
-                    close();
-                }
-            });
-
-            prevBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderMonth(); });
-            nextBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderMonth(); });
-            overlay.addEventListener('click', e => { if(e.target === overlay) close(); });
-            renderMonth();
-        };
-
-        const observeElements = (container) => {
-            if(!container) return;
-            
-            const revealElements = container.querySelectorAll('.reveal:not(.visible)');
-            const revealObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        observer.unobserve(entry.target);
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const btn = document.createElement('button'); btn.textContent = day; btn.className = 'calendar-day';
+                        const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+                        if (new Date(year, month, day) < new Date().setHours(0,0,0,0) || bookedDates.includes(dateStr)) btn.classList.add('disabled');
+                        else btn.dataset.date = dateStr;
                         
-                        const textElements = entry.target.querySelectorAll('.text-reveal:not(.revealed)');
-                        textElements.forEach(textEl => {
-                            setTimeout(() => textEl.classList.add('revealed'), 200);
-                        });
+                        if (selectedStartDate && dateStr === selectedStartDate.toISOString().split('T')[0]) btn.classList.add('selected');
+                        if (selectedEndDate && dateStr === selectedEndDate.toISOString().split('T')[0]) btn.classList.add('selected');
+                        if (selectedStartDate && selectedEndDate && new Date(dateStr) > selectedStartDate && new Date(dateStr) < selectedEndDate) btn.classList.add('in-range');
+                        daysContainer.appendChild(btn);
                     }
-                });
-            }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-            revealElements.forEach(el => revealObserver.observe(el));
-            
-            const imgContainers = container.querySelectorAll('.img-container:not(.loaded)');
-            const imgObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target.querySelector('img');
-                        if (img && img.complete) {
-                            entry.target.classList.add('loaded'); observer.unobserve(entry.target);
-                        } else if (img) {
-                            img.addEventListener('load', () => {
-                                entry.target.classList.add('loaded'); observer.unobserve(entry.target);
-                            });
+                };
+    
+                const updateSummary = () => {
+                    document.getElementById('add-to-cart-btn').disabled = !(selectedStartDate && selectedEndDate);
+                    if (selectedStartDate && selectedEndDate) {
+                        document.getElementById('summary-start-date').textContent = selectedStartDate.toLocaleDateString('es-ES');
+                        document.getElementById('summary-end-date').textContent = selectedEndDate.toLocaleDateString('es-ES');
+                        const days = Math.ceil(Math.abs(selectedEndDate - selectedStartDate) / (86400000)) + 1;
+                        document.getElementById('summary-total-price').textContent = `$${(days * item.price).toFixed(2)}`;
+                    }
+                };
+    
+                daysContainer.addEventListener('click', (e) => {
+                    if (e.target.matches('.calendar-day') && !e.target.classList.contains('disabled')) {
+                        const date = new Date(e.target.dataset.date + 'T00:00:00');
+                        if (!selectedStartDate || (selectedStartDate && selectedEndDate)) { selectedStartDate = date; selectedEndDate = null; }
+                        else if (date < selectedStartDate) selectedStartDate = date;
+                        else {
+                            selectedEndDate = date;
+                            let valid = true; let temp = new Date(selectedStartDate);
+                            while(temp <= selectedEndDate) { if(bookedDates.includes(temp.toISOString().split('T')[0])) valid = false; temp.setDate(temp.getDate()+1); }
+                            if(!valid) { alert("Rango no disponible"); selectedStartDate = null; selectedEndDate = null; }
                         }
+                        renderMonth(); updateSummary();
                     }
                 });
-            }, { threshold: 0.1 });
-            imgContainers.forEach(container => imgObserver.observe(container));
-        };
-        
-        // Lightbox mejorado con navegación entre imágenes
-        let currentLightboxIndex = 0;
-        let lightboxImages = [];
-        
-        const openLightbox = (src, caption = '', imagesArray = [], index = 0) => {
-            lightboxImages = imagesArray; currentLightboxIndex = index;
-            lightboxImage.src = src; lightboxCaption.textContent = caption;
-            lightboxPrev.style.display = imagesArray.length > 1 ? 'flex' : 'none';
-            lightboxNext.style.display = imagesArray.length > 1 ? 'flex' : 'none';
-            lightbox.classList.remove('hidden');
-            setTimeout(() => { lightbox.classList.add('visible'); lightbox.classList.remove('opacity-0'); }, 10);
-        };
-        
-        const closeLightbox = () => { 
-            lightbox.classList.add('opacity-0'); 
-            setTimeout(() => { lightbox.classList.add('hidden'); lightbox.classList.remove('visible'); lightboxImage.src = ''; }, 300); 
-        };
-        
-        const navigateLightbox = (direction) => {
-            if (lightboxImages.length === 0) return;
-            currentLightboxIndex = (direction === 'next') ? (currentLightboxIndex + 1) % lightboxImages.length : (currentLightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
-            const newImage = lightboxImages[currentLightboxIndex];
-            lightboxImage.style.opacity = '0';
-            setTimeout(() => {
-                lightboxImage.src = newImage.src;
-                lightboxCaption.textContent = newImage.title || '';
-                lightboxImage.style.opacity = '1';
-            }, 200);
-        };
-        
-
-        
-        
-
-        window.addEventListener('scroll', handleScrollHeader, { passive: true });
-        
-        
-        
-        mobileMenuButton.addEventListener('click', () => toggleMobileMenu(!mobileMenu.classList.contains('open')));
-        lightboxClose.addEventListener('click', closeLightbox);
-        lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
-        lightboxPrev.addEventListener('click', () => navigateLightbox('prev'));
-        lightboxNext.addEventListener('click', () => navigateLightbox('next'));
-        document.addEventListener('keydown', (e) => {
-            if (!lightbox.classList.contains('hidden')) {
-                if (e.key === 'Escape') closeLightbox();
-                if (e.key === 'ArrowLeft') navigateLightbox('prev');
-                if (e.key === 'ArrowRight') navigateLightbox('next');
-            }
-        });
-
-        
-        
-
-        // --- INICIALIZACIÓN MAESTRA (Modo Home) ---
-        const initialize = async () => {
-            const apiData = await fetchSectionData('home');
-            
-            if (apiData) {
-                // 1. Identidad
-                const imgs = apiData.sysImages || {};
-                const about = apiData.about || {};
-                const ident = apiData.identity || {};
-
-                if (imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(el => el.src = imgs.logo_black);
-                if (imgs.logo_white) document.querySelectorAll('.logo-light').forEach(el => el.src = imgs.logo_white);
-                if (imgs.favicon) document.querySelector("link[rel*='icon']").href = imgs.favicon;
-                if (about.intro_phrase) document.getElementById('about-intro-phrase').textContent = `"${about.intro_phrase}"`;
-                if (about.bio) document.getElementById('about-bio').innerHTML = about.bio;
-                if (about.process) document.getElementById('about-process').innerHTML = about.process;
-                if (about.profile_image) document.querySelector('#about img').src = about.profile_image;
-
-                // 2. Datos Home
-                globalData.portfolio = apiData.portfolioGallery || [];
-                globalData.videos = apiData.videos || [];
-                globalData.logos = apiData.clientLogos || [];
-                globalData.allProjectImages = apiData.allProjectImages || []; // CACHÉ IMPORTANTE
-            }
-
-            // Renderizar Home
-            renderPortfolio();
-            renderVideos(globalData.videos);
-            renderClientLogos(globalData.logos);
-            
-            renderCart(); 
-            updateCartIcon();
-
-            setTimeout(() => pageLoader.classList.add('hidden'), 1500);
-            
-            // Navegación profunda (Deep linking)
-            if(window.location.hash) {
-                const target = window.location.hash.substring(1);
-                navigateTo(target);
-            } else {
-                const initialPage = document.getElementById('portfolio');
-                if(initialPage) {
-                    initialPage.classList.add('page-active');
-                    observeElements(initialPage);
-                    document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
-                }
-            }
-        };
-
-        const handleScrollHeader = () => {
-            const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
-            
-            if (window.scrollY > 50) {
-                header.classList.add('header-scrolled');
-                header.classList.remove('header-dark'); 
-            } else { // At top of page
-                header.classList.remove('header-scrolled');
-                if (isServicePage) {
-                    header.classList.add('header-dark');
-                } else {
-                    header.classList.remove('header-dark');
-                }
-            }
-        };
-
-        const toggleMobileMenu = (open) => {
-            mobileMenu.classList.toggle('open', open);
-            mobileMenuButton.classList.toggle('open', open);
-            mobileMenuButton.setAttribute('aria-expanded', open);
-            mobileMenu.setAttribute('aria-hidden', !open);
-            mobileMenu.querySelectorAll('.mobile-nav-link').forEach((link, index) => {
-                setTimeout(() => {
-                    link.style.opacity = open ? '1' : '0';
-                    link.style.transform = open ? 'translateY(0)' : 'translateY(30px)';
-                }, 150 + index * 50);
-            });
-        };
-
-        const toggleCart = (show) => {
-            if (show) {
-                cartOverlay.classList.add('visible');
-                cartDrawer.classList.add('visible');
-            } else {
-                cartOverlay.classList.remove('visible');
-                cartDrawer.classList.remove('visible');
-            }
-        };
-
-        const updateCartIcon = () => {
-            const count = cart.length;
-            // Escritorio
-            cartItemCount.textContent = count;
-            cartItemCount.classList.toggle('visible', count > 0);
-            // Móvil
-            mobileCartItemCount.textContent = count;
-            mobileCartItemCount.classList.toggle('visible', count > 0);
-        };
-
-         const renderCart = () => {
-            // Limpia el contenedor de items, pero mantiene el 'empty state'
-            const items = cartItemsContainer.querySelectorAll('.cart-item');
-            items.forEach(item => item.remove());
-
-            if (cart.length === 0) {
-                cartEmptyState.style.display = 'flex';
-                checkoutBtn.disabled = true;
-            } else {
-                cartEmptyState.style.display = 'none';
-                checkoutBtn.disabled = false;
-                cart.forEach(item => {
-                    const cartItemEl = document.createElement('div');
-                    cartItemEl.className = 'cart-item flex items-start space-x-4 py-4 border-b';
-                    cartItemEl.innerHTML = `
-                        <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover">
-                        <div class="flex-grow">
-                            <h4 class="font-bold">${item.name}</h4>
-                            <p class="text-sm text-gray-500">
-                                ${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}
-                            </p>
-                            <p class="text-sm text-gray-500">${item.totalDays} día(s)</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
-                            <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}">
-                                <i class="fas fa-trash-alt mr-1"></i>Eliminar
-                            </button>
-                        </div>
-                    `;
-                    cartItemsContainer.appendChild(cartItemEl);
+    
+                document.getElementById('calendar-prev').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); renderMonth(); };
+                document.getElementById('calendar-next').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); renderMonth(); };
+                document.getElementById('add-to-cart-btn').onclick = () => { addToCart(item, selectedStartDate.toISOString().split('T')[0], selectedEndDate.toISOString().split('T')[0]); overlay.classList.remove('visible'); setTimeout(() => modalContainer.innerHTML='',300); };
+                overlay.onclick = (e) => { if(e.target===overlay) { overlay.classList.remove('visible'); setTimeout(() => modalContainer.innerHTML='',300); }};
+                setTimeout(() => overlay.classList.add('visible'), 10); renderMonth();
+            };
+    
+            // =================================================================
+            // 5. RENDERIZADORES (VISUALIZACIÓN)
+            // =================================================================
+            const observeElements = (container) => {
+                if(!container) return;
+                const observer = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            obs.unobserve(entry.target);
+                            entry.target.querySelectorAll('.text-reveal').forEach(el => setTimeout(() => el.classList.add('revealed'), 200));
+                        }
+                    });
+                }, { threshold: 0.1 });
+                container.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+                container.querySelectorAll('.img-container').forEach(el => {
+                    const img = el.querySelector('img');
+                    if (img && img.complete) el.classList.add('loaded');
+                    else if (img) img.onload = () => el.classList.add('loaded');
+                    observer.observe(el);
                 });
-            }
-
-            const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
-            cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-        };
-
-        
-        const addToCart = (item, startDate, endDate) => {
-            const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
-            const cartId = `${item.id}-${startDate}`; // ID único para el artículo y fecha
-
-            // Evitar duplicados
-            if (cart.some(cartItem => cartItem.cartId === cartId)) {
-                alert('Este artículo ya está en tu carrito para estas fechas.');
-                return;
-            }
-            
-            cart.push({
-                ...item,
-                cartId: cartId,
-                startDate: startDate,
-                endDate: endDate,
-                totalDays: totalDays,
-                image: item.images[0] // Usar la primera imagen para el carrito
-            });
-
-            renderCart();
-            updateCartIcon();
-            toggleCart(true);
-        };
-
-
-
-
-        
-
-        
-        // Arrancamos
-        initialize();
-
-       // Listeners Globales
-        document.addEventListener('click', function(e) {
-            const navLink = e.target.closest('.nav-link');
-            if (navLink) {
-                e.preventDefault();
-                const targetId = navLink.dataset.target;
-                if (cartDrawer.classList.contains('visible')) toggleCart(false);
-                if (mobileMenu.classList.contains('open')) toggleMobileMenu(false);
+            };
+    
+            const renderPortfolio = () => {
+                const gallery = document.getElementById('portfolio-gallery');
+                if(!gallery) return;
+                if (globalData.portfolio.length === 0) { gallery.innerHTML = '<p class="text-center col-span-full text-gray-400 py-10">Cargando portafolio...</p>'; return; }
+                gallery.innerHTML = globalData.portfolio.map(item => `
+                    <div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6">
+                        <img src="${item.imageUrl}" alt="${item.caption || 'Foto'}" loading="lazy" class="w-full h-auto object-cover hover:scale-105 transition-transform duration-700">
+                        <div class="overlay absolute inset-0 flex items-end p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+                            <p class="text-white text-lg font-bold translate-y-4 transition-transform duration-300">${item.caption || ''}</p>
+                        </div>
+                    </div>`).join('');
+            };
+    
+            const renderVideos = (list) => {
+                const container = document.getElementById('videos-container');
+                if(!container) return;
+                if (!list || list.length === 0) { container.parentElement.parentElement.style.display = 'none'; return; }
+                container.innerHTML = list.map(v => {
+                    let src = v.embedUrl || "";
+                    if (src.includes('watch?v=')) src = src.replace('watch?v=', 'embed/');
+                    else if (src.includes('youtu.be/')) src = src.replace('youtu.be/', 'www.youtube.com/embed/');
+                    return `<div class="w-full aspect-video overflow-hidden shadow-lg gallery-item group bg-black rounded-none border border-gray-800 relative"><iframe src="${src}" class="w-full h-full object-cover" allowfullscreen></iframe></div>`;
+                }).join('');
+            };
+    
+            const renderClientLogos = (list) => {
+                const container = document.getElementById('client-logos-container');
+                if(!container) return;
+                if (!list || list.length === 0) { container.innerHTML = ''; return; }
+                container.innerHTML = list.map(l => `<img src="${l.logoUrl}" class="client-logo h-24 md:h-32 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 hover:scale-110">`).join('');
+            };
+    
+            const renderProjects = () => {
+                const container = document.getElementById('projects-container');
+                if(!container) return;
+                if (globalData.projects.length === 0) { container.innerHTML = '<div class="text-center py-20"><div class="loader-circle mx-auto mb-4"></div><p class="text-gray-400">Cargando proyectos...</p></div>'; return; }
+                container.innerHTML = globalData.projects.map((p, i) => `
+                    <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal gap-8 md:gap-12">
+                        <div class="p-4 md:p-8 ${i % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
+                            <h3 class="text-3xl md:text-4xl font-display mb-4 text-reveal">${p.title}</h3>
+                            <p class="text-gray-600 leading-relaxed mb-6 text-reveal line-clamp-3">${p.description}</p>
+                            <a href="#" data-target="project-detail-${p.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-all">Ver Galería</a>
+                        </div>
+                        <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl || ''}" class="w-full h-full object-cover"></div>
+                    </div>`).join('');
+            };
+    
+            const renderServicesGrid = () => {
+                const container = document.getElementById('services-grid');
+                if(!container) return;
+                if (globalData.services.length === 0) { container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando servicios...</div>'; return; }
+                container.innerHTML = globalData.services.map(s => `
+                    <a href="#" data-target="service-detail-${s.id}" class="nav-link service-grid-item items-center justify-center text-center py-12">
+                        <div class="service-icon-wrapper"><i class="${s.iconClass || 'fas fa-camera'} service-icon"></i></div>
+                        <h3 class="text-2xl font-display text-gray-900">${s.title}</h3>
+                    </a>`).join('');
+            };
+    
+            const renderRentalPage = () => {
+                const filtersContainer = document.getElementById('rental-filters');
+                const gridContainer = document.getElementById('rental-grid-categorized');
+                if (!filtersContainer || !gridContainer) return;
+                if (globalData.rentals.categories.length === 0) { gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando equipos...</p>'; return; }
+    
+                filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
+                    globalData.rentals.categories.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
+    
+                const renderItems = (catId) => {
+                    let items = globalData.rentals.items;
+                    if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
+                    gridContainer.innerHTML = items.map(item => {
+                        const imgs = item.images || [];
+                        return `
+                        <div class="rental-card reveal">
+                             <div class="carousel-container aspect-w-4 aspect-h-3">
+                                <div class="carousel-track flex" data-current-index="0">${imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200"></div>'}</div>
+                                ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
+                            </div>
+                            <div class="p-6 flex flex-col flex-grow">
+                                <div class="flex justify-between items-baseline"><h3 class="font-display text-2xl">${item.name}</h3><p class="font-bold text-xl">$${item.pricePerDay}<span class="text-sm font-normal">/día</span></p></div>
+                                <p class="text-gray-600 text-sm my-4 flex-grow line-clamp-3">${item.description}</p>
+                                <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group mt-auto">Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span></a>
+                            </div>
+                        </div>`;
+                    }).join('');
+                    observeElements(gridContainer);
+                };
+                filtersContainer.onclick = (e) => { if (e.target.matches('.rental-category-btn')) { filtersContainer.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); renderItems(e.target.dataset.category); }};
+                gridContainer.onclick = (e) => { 
+                    const btn = e.target.closest('.rental-carousel-button');
+                    if(btn) { 
+                        e.preventDefault(); e.stopPropagation(); 
+                        const track = btn.closest('.carousel-container').querySelector('.carousel-track');
+                        const slides = Array.from(track.children);
+                        let idx = parseInt(track.dataset.currentIndex || 0);
+                        idx = (idx + parseInt(btn.dataset.direction) + slides.length) % slides.length;
+                        track.style.transform = `translateX(-${idx * 100}%)`;
+                        track.dataset.currentIndex = idx;
+                    }
+                };
+                renderItems('Todo');
+            };
+    
+            const renderProjectDetail = (targetId) => {
+                const project = globalData.projects.find(p => String(p.id) === targetId.substring(15));
+                if (!project) return;
+                const container = document.getElementById('project-detail-pages');
+                container.innerHTML = `
+                    <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
+                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto"><a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-flex items-center gap-2"><i class="fas fa-arrow-left"></i> Volver</a><div class="text-center mb-16 reveal"><h2 class="text-4xl md:text-6xl font-display text-reveal mb-4">${project.title}</h2><p class="text-lg text-gray-600 mt-4 max-w-3xl mx-auto text-reveal text-center">${project.description}</p></div><div class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 reveal">${(project.images||[]).map(img => `<div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6 group"><img src="${img.imageUrl}" loading="lazy" class="w-full h-auto object-cover shadow-sm transition-transform duration-500 group-hover:scale-105"></div>`).join('')}</div></div></div>
+                    </section>`;
                 navigateTo(targetId);
-            }
+            };
+    
+            const renderServiceDetail = (targetId) => {
+                const service = globalData.services.find(s => String(s.id) === targetId.substring(15));
+                if (!service) return;
+                document.getElementById('service-detail-pages').innerHTML = `
+                    <section id="${targetId}" class="page-container">
+                         <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-28 md:pt-36 pb-16"><div class="text-center reveal"><h1 class="text-5xl md:text-7xl font-display text-reveal py-2">${service.title}</h1></div></div>
+                        <div class="container mx-auto px-6 py-20 md:py-24"><div class="max-w-4xl mx-auto"><a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver</a><div class="reveal"><p class="text-xl text-gray-700 italic text-center mb-16 text-reveal">${service.introText||''}</p></div><div class="space-y-16">${(service.contentBlocks||[]).map(b=>`<div class="reveal"><h3 class="text-3xl font-display mb-4 text-reveal">${b.blockTitle}</h3><div class="prose max-w-none text-gray-600 text-reveal text-justify">${b.blockContentHtml}</div></div>`).join('')}</div><div class="text-center mt-20 reveal"><a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full">Contáctame</a></div></div></div>
+                    </section>`;
+                navigateTo(targetId);
+            };
+    
+            const renderRentalDetail = (targetId) => {
+                const itemId = targetId.substring(14);
+                let item;
+                for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
+                if(!item) return;
+                const trackHTML = item.images.map(src=>`<div class="carousel-item"><img src="${src}" class="w-full h-full object-cover"></div>`).join('');
+                document.getElementById('rental-detail-pages').innerHTML = `
+                    <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
+                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto"><a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver</a>
+                            <div class="grid grid-cols-1 lg:grid-cols-5 gap-12"><div class="lg:col-span-3"><div class="carousel-container sticky top-28"><div class="carousel-track">${trackHTML}</div><button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next"><i class="fas fa-chevron-right"></i></button></div></div>
+                            <div class="lg:col-span-2 reveal"><h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2><p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p><p class="text-gray-600 text-justify text-reveal mb-8">${item.long_desc}</p><button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white font-bold py-4 px-8 rounded-full border">Consultar Disponibilidad</button></div></div>
+                        </div></div>
+                    </section>`;
+                
+                const section = document.getElementById(targetId);
+                section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates);
+                const track = section.querySelector('.carousel-track');
+                let idx = 0;
+                section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
+                section.querySelector('.prev').onclick = () => { idx=(idx-1+item.images.length)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
+                navigateTo(targetId);
+            };
+    
+            // =================================================================
+            // 6. ORQUESTADORES DE LÓGICA (DEFINIDOS AL FINAL PARA SEGURIDAD)
+            // =================================================================
             
-            const galleryItem = e.target.closest('.gallery-item');
-            if(galleryItem) {
-                const clickedImg = galleryItem.querySelector('img');
-                const allVisibleItems = Array.from(document.querySelectorAll('.page-active .gallery-item'));
-                const imagesArray = allVisibleItems.map(item => ({
-                    src: item.querySelector('img').src,
-                    title: item.querySelector('.overlay p')?.textContent || item.querySelector('img').alt
-                }));
-                const currentIndex = allVisibleItems.indexOf(galleryItem);
-                openLightbox(clickedImg.src, imagesArray[currentIndex].title, imagesArray, currentIndex);
-            }
+            const loadSection = async (sectionName) => {
+                if (sectionName === 'projects' && globalData.projects.length > 0) return;
+                if (sectionName === 'services' && globalData.services.length > 0) return;
+                if (sectionName === 'rental' && globalData.rentals.items.length > 0) return;
+    
+                const apiParam = sectionName === 'rental' ? 'rentals' : sectionName; 
+                const data = await fetchSectionData(apiParam);
+                if (!data) return;
+    
+                if (sectionName === 'projects') {
+                    globalData.projects = (data.projects || []).map(p => {
+                        const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
+                        const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
+                        return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
+                    });
+                    renderProjects();
+                } 
+                else if (sectionName === 'services') {
+                    globalData.services = data.services || [];
+                    renderServicesGrid();
+                } 
+                else if (sectionName === 'rental') {
+                    globalData.rentals.items = data.rentalItems || [];
+                    globalData.rentals.categories = data.rentalCategories || [];
+                    globalData.rentals.dates = data.blockedDates || [];
+                    rentalDataGlobal = {}; 
+                    data.rentalCategories.forEach(cat => {
+                        rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
+                            ...i, price: parseFloat(i.pricePerDay), bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
+                        }));
+                    });
+                    renderRentalPage();
+                }
+            };
+    
+            const navigateTo = (targetId) => {
+                // 1. CARGA DE DATOS (Orden Correcto)
+                if (['projects', 'services', 'rental'].includes(targetId)) loadSection(targetId);
+                if (targetId.startsWith('service-detail-') && globalData.services.length === 0) loadSection('services').then(()=>renderServiceDetail(targetId));
+                if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) loadSection('rental').then(()=>renderRentalDetail(targetId));
+                if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) loadSection('projects').then(()=>renderProjectDetail(targetId));
+    
+                // 2. VISUAL
+                const currentPage = document.querySelector('.page-active');
+                const targetPage = document.getElementById(targetId);
+                if (!targetPage || currentPage === targetPage) return;
+    
+                if (currentPage) { currentPage.classList.add('page-exiting'); currentPage.classList.remove('page-active'); }
+                targetPage.style.display = 'block';
+                setTimeout(() => { targetPage.classList.add('page-active'); handleScrollHeader(); }, 10);
+                if (currentPage) setTimeout(() => { currentPage.classList.remove('page-exiting'); currentPage.style.display = 'none'; }, 500);
+    
+                // 3. MENU
+                let active = targetId;
+                if(targetId.startsWith('project-detail-')) active='projects';
+                if(targetId.startsWith('rental-detail-')) active='rental';
+                if(targetId.startsWith('service-detail-')) active='services';
+                allNavLinks.forEach(l => { l.classList.remove('nav-active'); if(l.dataset.target===active) l.classList.add('nav-active'); });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                observeElements(targetPage);
+            };
+    
+            const initialize = async () => {
+                const apiData = await fetchSectionData('home');
+                if (apiData) {
+                    const imgs = apiData.sysImages || {};
+                    const ident = apiData.identity || {};
+                    const about = apiData.about || {};
+                    
+                    if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
+                    if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
+                    if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
+                    if(about.intro_phrase) document.getElementById('about-intro-phrase').textContent = `"${about.intro_phrase}"`;
+                    if(about.bio) document.getElementById('about-bio').innerHTML = about.bio;
+                    if(about.process) document.getElementById('about-process').innerHTML = about.process;
+                    if(about.profile_image) document.querySelector('#about img').src = about.profile_image;
+    
+                    const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
+                    updateLink('Instagram', ident.social_instagram); updateLink('Facebook', ident.social_facebook); updateLink('YouTube', ident.social_youtube);
+                    updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
+                    if (ident.social_maps) { const map = document.getElementById('google-map'); if(map && ident.social_maps.includes('http')) map.src = ident.social_maps.match(/src="([^"]+)"/)?.[1] || ident.social_maps; }
+    
+                    globalData.portfolio = apiData.portfolioGallery || [];
+                    globalData.videos = apiData.videos || [];
+                    globalData.logos = apiData.clientLogos || [];
+                    globalData.allProjectImages = apiData.allProjectImages || [];
+                }
+                renderPortfolio(); renderVideos(globalData.videos); renderClientLogos(globalData.logos); renderCart(); updateCartIcon();
+                setTimeout(() => pageLoader.classList.add('hidden'), 1500);
+                
+                if(window.location.hash) navigateTo(window.location.hash.substring(1));
+                else { const initial = document.getElementById('portfolio'); if(initial) { initial.classList.add('page-active'); observeElements(initial); document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active')); } }
+            };
+    
+            // =================================================================
+            // 7. INICIO Y LISTENERS
+            // =================================================================
+            initialize();
+    
+            document.addEventListener('click', function(e) {
+                const navLink = e.target.closest('.nav-link');
+                if (navLink) { e.preventDefault(); const t = navLink.dataset.target; if(cartDrawer.classList.contains('visible')) toggleCart(false); if(mobileMenu.classList.contains('open')) toggleMobileMenu(!1); navigateTo(t); }
+                
+                const galleryItem = e.target.closest('.gallery-item');
+                if(galleryItem && !galleryItem.closest('.rental-card') && !e.target.closest('iframe')) {
+                    const img = galleryItem.querySelector('img');
+                    if(img) {
+                        const allItems = Array.from(document.querySelectorAll('.page-active .gallery-item img'));
+                        const imgs = allItems.map(i=>({src:i.src, title:i.closest('.gallery-item').querySelector('.overlay p')?.textContent||''}));
+                        let idx = allItems.indexOf(img); 
+                        // Lightbox logic
+                        const openL = (src, caption, arr, i) => { const lb=document.getElementById('lightbox'); const li=document.getElementById('lightbox-image'); const lc=document.getElementById('lightbox-caption'); 
+                            // Set globals for nav
+                            window.lbImages = arr; window.lbIndex = i;
+                            li.src=src; lc.textContent=caption; lb.classList.remove('hidden'); setTimeout(()=>lb.classList.add('visible'),10);
+                        };
+                        openL(img.src, imgs[idx].title, imgs, idx);
+                    }
+                }
+            });
+    
+            // Global Nav Logic helpers for lightbox (simplified in listener for brevity but robust)
+            const lbNext = () => { if(!window.lbImages) return; window.lbIndex=(window.lbIndex+1)%window.lbImages.length; document.getElementById('lightbox-image').src=window.lbImages[window.lbIndex].src; document.getElementById('lightbox-caption').textContent=window.lbImages[window.lbIndex].title; };
+            const lbPrev = () => { if(!window.lbImages) return; window.lbIndex=(window.lbIndex-1+window.lbImages.length)%window.lbImages.length; document.getElementById('lightbox-image').src=window.lbImages[window.lbIndex].src; document.getElementById('lightbox-caption').textContent=window.lbImages[window.lbIndex].title; };
+            document.getElementById('lightbox-next').onclick = lbNext;
+            document.getElementById('lightbox-prev').onclick = lbPrev;
+            document.getElementById('lightbox-close').onclick = () => { document.getElementById('lightbox').classList.remove('visible'); setTimeout(()=>document.getElementById('lightbox').classList.add('hidden'),300); };
+            document.getElementById('lightbox').onclick = (e) => { if(e.target.id==='lightbox') document.getElementById('lightbox-close').click(); };
+    
+            const handleScrollHeader = () => {
+                const isService = !!document.querySelector('.page-active[id^="service-detail-"]');
+                if (window.scrollY > 50) { header.classList.add('header-scrolled'); header.classList.remove('header-dark'); } 
+                else { header.classList.remove('header-scrolled'); if (isService) header.classList.add('header-dark'); else header.classList.remove('header-dark'); }
+            };
+            window.addEventListener('scroll', handleScrollHeader, { passive: true });
+    
+            const toggleMobileMenu = (open) => { mobileMenu.classList.toggle('open', open); mobileMenuButton.classList.toggle('open', open); };
+            mobileMenuButton.onclick = () => toggleMobileMenu(!mobileMenu.classList.contains('open'));
+            cartButton.onclick = () => toggleCart(true);
+            mobileCartButton.onclick = () => { toggleCart(true); toggleMobileMenu(false); };
+            cartCloseBtn.onclick = () => toggleCart(false);
+            cartOverlay.onclick = () => toggleCart(false);
+            checkoutBtn.onclick = () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }};
         });
-
-        // (Asegurar que los listeners de carrito y lightbox estén conectados)
-        cartButton.addEventListener('click', () => toggleCart(true));
-        mobileCartButton.addEventListener('click', () => { toggleCart(true); toggleMobileMenu(false); });
-        cartCloseBtn.addEventListener('click', () => toggleCart(false));
-        cartOverlay.addEventListener('click', () => toggleCart(false));
-        checkoutBtn.addEventListener('click', () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }});
-
-    });
     </script>
 </body>
 </html>
