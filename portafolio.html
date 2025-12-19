@@ -1589,10 +1589,10 @@
 
                 // AJUSTES: h-[450px] (Altura fija alta), w-full, rounded-none (cuadrado)
                 return `
-                <div class="w-full h-64 md:h-[350px] overflow-hidden shadow-lg gallery-item group bg-black rounded-none border border-gray-800 relative">
-                    <iframe src="${embedSrc}" title="${video.title || 'Video'}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full object-cover"></iframe>
-                </div>
-                `;
+                    <div class="w-full aspect-video overflow-hidden shadow-lg gallery-item group bg-black rounded-none border border-gray-800 relative">
+                        <iframe src="${embedSrc}" title="${video.title || 'Video'}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full object-cover"></iframe>
+                    </div>
+                    `;
             }).join('');
         };
         
