@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adán Gómez | Fotógrafo Profesional</title>
-    <link rel="icon" type="image/png" href="imagenes/Icon.png">
+    <link rel="icon" id="dynamic-favicon" type="image/png" href="https://placehold.co/32x32/1a1a1a/ffffff?text=AG">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -104,7 +104,7 @@
 
     <div class="loader" id="page-loader">
         <div class="flex flex-col items-center w-3/4 max-w-xs md:max-w-md">
-            <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-full h-auto mb-8 logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/400x150/ffffff/1a1a1a?text=ADAN+GOMEZ';">
+            <img src="https://placehold.co/400x150/ffffff/1a1a1a?text=ADAN+GOMEZ" alt="Logo Adán Gómez" class="w-full h-auto mb-8 logo-dark" id="loader-logo">
             <div class="loader-circle"></div>
         </div>
     </div>
@@ -112,8 +112,8 @@
     <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
         <div class="container mx-auto px-6 flex justify-between items-center">
             <a href="#" data-target="portfolio" class="nav-link relative group">
-                <img src="imagenes/LogoNegro.png" alt="Logo Adán Gómez" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-dark" id="header-logo-dark" onerror="this.onerror=null;this.src='https://placehold.co/350x120/ffffff/1a1a1a?text=ADAN+GOMEZ';">
-                <img src="imagenes/LogoBlanco.png" alt="Logo Adán Gómez Blanco" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-light" id="header-logo-light" style="display: none;" onerror="this.onerror=null;this.src='https://placehold.co/350x120/1a1a1a/ffffff?text=ADAN+GOMEZ';">
+                <img src="https://placehold.co/350x120/ffffff/1a1a1a?text=ADAN+GOMEZ" alt="Logo Adán Gómez" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-dark" id="header-logo-dark">
+                <img src="https://placehold.co/350x120/1a1a1a/ffffff?text=ADAN+GOMEZ" alt="Logo Adán Gómez Blanco" class="w-40 lg:w-[250px] h-auto transition-all duration-300 group-hover:scale-105 logo-light" id="header-logo-light" style="display: none;">
             </a>
 
             <div class="flex items-center">
@@ -340,7 +340,7 @@
         
         // Estado del carrito y diccionarios para búsqueda rápida
         let cart = [];
-        let rentalDataGlobal = {}; // Se llenará dinámicamente: { "Cámaras": [...], "Lentes": [...] }
+        let rentalDataGlobal = {}; // Se llenará dinámicamente
         let projectDetails = {};   // Se llenará dinámicamente
         let serviceDetails = {};   // Se llenará dinámicamente
 
@@ -369,7 +369,7 @@
                      rentalDataGlobal["Otros"] = uncategorized;
                 }
 
-                // B. Adaptador de Proyectos (Para detalles)
+                // B. Adaptador de Proyectos (Para detalles) - CORREGIDO
                 const projectsList = appData.projects || [];
                 projectsList.forEach(p => {
                     projectDetails[p.id] = {
@@ -380,7 +380,7 @@
                     };
                 });
 
-                // C. Adaptador de Servicios (Para detalles)
+                // C. Adaptador de Servicios (Para detalles) - CORREGIDO
                 const servicesList = appData.services || [];
                 servicesList.forEach(s => {
                     serviceDetails[s.id] = {
@@ -423,12 +423,45 @@
         // --- 3. RENDERIZADORES ---
 
         function applySettings() {
-            // Textos Hero
+            // 1. Textos Hero (Desde la hoja Settings)
             if(appData.settings.hero_title) document.getElementById('hero-title').innerHTML = appData.settings.hero_title;
             if(appData.settings.hero_subtitle) document.getElementById('hero-subtitle').innerText = appData.settings.hero_subtitle;
             
-            // Logos Navbar
-            // Intentamos cargar la URL de la hoja Settings o usamos el fallback del HTML
+            // 2. LOGOS DINÁMICOS (Desde la hoja ImagenesIdentidad o Settings)
+            // Intentamos encontrar los logos en el objeto de logos de clientes o en identityImages si existen
+            const sysImages = {};
+            // Si el backend devolvió 'identityImages' o 'ImagenesIdentidad' como array separado, úsalo aquí.
+            // Asumimos que pueden venir mezclados en clientLogos o en una propiedad específica si actualizas el backend
+            // Por ahora, buscamos en clientLogos por 'key'
+            if (appData.clientLogos) {
+                appData.clientLogos.forEach(l => {
+                    if (l.key) sysImages[l.key] = l.logoUrl;
+                });
+            }
+            // Si tienes una propiedad dedicada 'identityImages' en el JSON del backend, descomenta esto:
+            // if (appData.identityImages) { ... }
+
+            // Referencias al DOM
+            const logoDark = document.getElementById('header-logo-dark');
+            const logoLight = document.getElementById('header-logo-light');
+            const loaderLogo = document.getElementById('loader-logo');
+            const favicon = document.getElementById('dynamic-favicon');
+
+            // Reemplazo de Logo Negro
+            if (sysImages['logo_black']) {
+                if(logoDark) logoDark.src = sysImages['logo_black'];
+                if(loaderLogo) loaderLogo.src = sysImages['logo_black']; // Logo del loader
+            }
+            
+            // Reemplazo de Logo Blanco
+            if (sysImages['logo_white']) {
+                if(logoLight) logoLight.src = sysImages['logo_white'];
+            }
+
+            // Reemplazo de Favicon
+            if (sysImages['favicon'] && favicon) {
+                favicon.href = sysImages['favicon'];
+            }
         }
 
         function renderPortfolio(images) {
