@@ -1,5 +1,5 @@
 // functions/get-website-data.js
-// v15.0 - INCLUSIÓN DE BLOQUEOS PARA DISPONIBILIDAD REAL
+// v16.0 - INCLUSIÓN DE BLOQUEOS PARA DISPONIBILIDAD REAL y descarga fraccionada
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
@@ -20,15 +20,28 @@ exports.handler = async (event, context) => {
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
     await doc.loadInfo();
 
-    // 1. AGREGAMOS LAS HOJAS DE IDENTIDAD QUE FALTABAN
-    const sheetTitles = [
-        'Identidad', 'About', 'ImagenesIdentidad', 'Videos', 'LogosClientes', 'Projects', 'ProjectImages', 
-        'Services', 'ServiceContentBlocks', 'ServiceImages', 
-        'RentalCategories', 'RentalItems', 'RentalItemImages', 'BlockedDates',
-    ];
-    
+    // 1. DEFINIR PAQUETES DE CARGA
+    // El parámetro 'section' decide qué hojas descargar
+    const section = event.queryStringParameters?.section || 'home';
+    let sheetsToLoad = [];
+
+    if (section === 'home') {
+        // Carga inicial ligera: Identidad, Portafolio (Fotos), Videos y Logos
+        sheetsToLoad = ['Identidad', 'ImagenesIdentidad', 'About', 'Videos', 'LogosClientes', 'ProjectImages'];
+    } else if (section === 'projects') {
+        // Solo la lista de proyectos (Las fotos ya se cargaron en home con ProjectImages)
+        sheetsToLoad = ['Projects'];
+    } else if (section === 'services') {
+        // Datos exclusivos de servicios
+        sheetsToLoad = ['Services', 'ServiceContentBlocks', 'ServiceImages'];
+    } else if (section === 'rentals') {
+        // Datos exclusivos de alquiler
+        sheetsToLoad = ['RentalCategories', 'RentalItems', 'RentalItemImages', 'BlockedDates'];
+    }
+
     const sheetsData = {};
-    const promises = sheetTitles.map(async (title) => {
+    // Solo cargamos las hojas necesarias para esta sección
+    const promises = sheetsToLoad.map(async (title) => {
         try {
             const sheet = doc.sheetsByTitle[title];
             if (sheet) {
@@ -46,49 +59,46 @@ exports.handler = async (event, context) => {
 
     await Promise.all(promises);
 
-    // --- PROCESAMIENTO DE DATOS ---
+    // 2. PROCESAMIENTO SEGÚN SECCIÓN
+    const responseData = {};
 
-    // A. Identidad y Textos Globales
-    const identity = (sheetsData.Identidad||[]).reduce((acc, i) => { if(i.key) acc[i.key] = i.value; return acc; }, {});
-    const sysImages = (sheetsData.ImagenesIdentidad||[]).reduce((acc, i) => { if(i.key) acc[i.key] = i.imageUrl; return acc; }, {});
-    const aboutContent = (sheetsData.About||[]).reduce((acc, i) => { if(i.section) acc[i.section] = i.content; return acc; }, {});
+    if (section === 'home') {
+        responseData.identity = (sheetsData.Identidad||[]).reduce((acc, i) => { if(i.key) acc[i.key] = i.value; return acc; }, {});
+        responseData.sysImages = (sheetsData.ImagenesIdentidad||[]).reduce((acc, i) => { if(i.key) acc[i.key] = i.imageUrl; return acc; }, {});
+        responseData.about = (sheetsData.About||[]).reduce((acc, i) => { if(i.section) acc[i.section] = i.content; return acc; }, {});
+        
+        responseData.videos = (sheetsData.Videos||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0));
+        responseData.clientLogos = (sheetsData.LogosClientes||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0));
+        
+        // Filtramos fotos para el portafolio (ShowInPortfolio = Si)
+        responseData.portfolioGallery = (sheetsData.ProjectImages||[]).filter(i => String(i.showInPortfolio).toLowerCase() === 'si').sort((a,b)=>(parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
+        
+        // Enviamos TODAS las imágenes de proyectos aquí para tenerlas en caché (son ligeras comparadas con volver a llamar a la API)
+        responseData.allProjectImages = sheetsData.ProjectImages || [];
+    }
 
-    // B. Galerías y Listas
-    const portfolioImages = (sheetsData.ProjectImages||[]).filter(i => String(i.showInPortfolio).toLowerCase() === 'si').sort((a,b)=>(parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
-    
-    const servicesWithContent = (sheetsData.Services||[]).map(service => ({
-        ...service,
-        contentBlocks: (sheetsData.ServiceContentBlocks||[]).filter(b => b.serviceId === service.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
-        images: (sheetsData.ServiceImages||[]).filter(i => i.serviceId === service.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
-    })).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
+    if (section === 'projects') {
+        responseData.projects = (sheetsData.Projects||[]).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
+    }
 
-    const rentalItemsWithImages = (sheetsData.RentalItems||[]).map(item => ({
-        ...item,
-        images: (sheetsData.RentalItemImages||[]).filter(i => i.itemId === item.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
-    })).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
-    
-    const projectsWithImages = (sheetsData.Projects||[]).map(project => {
-        const pImages = (sheetsData.ProjectImages||[]).filter(i => i.projectId === project.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
-        const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si');
-        return { ...project, coverImageUrl: project.coverImageUrl || cover?.imageUrl || pImages[0]?.imageUrl || '', images: pImages };
-    }).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
+    if (section === 'services') {
+        responseData.services = (sheetsData.Services||[]).map(service => ({
+            ...service,
+            contentBlocks: (sheetsData.ServiceContentBlocks||[]).filter(b => b.serviceId === service.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
+            images: (sheetsData.ServiceImages||[]).filter(i => i.serviceId === service.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
+        })).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
+    }
 
-    // C. Empaquetado Final
-    const websiteData = {
-      identity,      // Datos de contacto, redes, legal
-      sysImages,     // Logos y foto de perfil
-      about: aboutContent, 
-      portfolioGallery: portfolioImages,
-      videos: (sheetsData.Videos||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
-      clientLogos: (sheetsData.LogosClientes||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
-      projects: projectsWithImages, 
-      services: servicesWithContent,
-      rentalCategories: (sheetsData.RentalCategories||[]).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
-      rentalItems: rentalItemsWithImages,
-      blockedDates: sheetsData.BlockedDates || [] 
-    };
+    if (section === 'rentals') {
+        responseData.rentalCategories = (sheetsData.RentalCategories||[]).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
+        responseData.blockedDates = sheetsData.BlockedDates || [];
+        responseData.rentalItems = (sheetsData.RentalItems||[]).map(item => ({
+            ...item,
+            images: (sheetsData.RentalItemImages||[]).filter(i => i.itemId === item.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
+        })).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
+    }
 
-    return { statusCode: 200, headers, body: JSON.stringify(websiteData) };
+    return { statusCode: 200, headers, body: JSON.stringify(responseData) };
 
   } catch (error) { return { statusCode: 500, headers, body: JSON.stringify({ error: error.message }) }; }
 };
