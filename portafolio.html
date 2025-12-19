@@ -1010,22 +1010,26 @@
         document.addEventListener('DOMContentLoaded', function () {
         
             // =================================================================
-            // 1. GESTIÓN DE ESTADO Y MEMORIA (GLOBAL DATA)
+            // 1. MEMORIA Y VARIABLES GLOBALES
             // =================================================================
             let globalData = {
                 portfolio: [],
                 videos: [],
                 logos: [],
-                allProjectImages: [], // Caché vital para armar proyectos sin re-pedir
+                allProjectImages: [], 
                 projects: [],         
                 services: [],         
                 rentals: { items: [], categories: [], dates: [] } 
             };
-            let rentalDataGlobal = {}; // Auxiliar para filtrado de alquiler
-            let cart = []; // Carrito de compras
+            let rentalDataGlobal = {}; 
+            let cart = [];
+            
+            // Variables para Lightbox
+            let lightboxImages = [];
+            let currentLbIndex = 0;
     
             // =================================================================
-            // 2. SELECTORES DEL DOM
+            // 2. SELECTORES DEL DOM (DEFINIDOS AL INICIO PARA EVITAR ERRORES)
             // =================================================================
             const header = document.getElementById('header');
             const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -1033,83 +1037,57 @@
             const allNavLinks = document.querySelectorAll('.nav-link');
             const pageLoader = document.getElementById('page-loader');
             
-            // Elementos de Lightbox
+            // Lightbox
             const lightbox = document.getElementById('lightbox');
             const lightboxImage = document.getElementById('lightbox-image');
             const lightboxCaption = document.getElementById('lightbox-caption');
+            const lightboxClose = document.getElementById('lightbox-close');
+            const lightboxPrev = document.getElementById('lightbox-prev');
+            const lightboxNext = document.getElementById('lightbox-next');
             
-            // Elementos del Carrito
-            const cartOverlay = document.getElementById('cart-overlay');
-            const cartDrawer = document.getElementById('cart-drawer');
-            const cartItemsContainer = document.getElementById('cart-items-container');
-            const cartEmptyState = document.getElementById('cart-empty-state');
-            const checkoutBtn = document.getElementById('checkout-btn');
+            // Carrito
+            const cartButton = document.getElementById('cart-button');
+            const mobileCartButton = document.getElementById('mobile-cart-button');
             const cartItemCount = document.getElementById('cart-item-count');
             const mobileCartItemCount = document.getElementById('mobile-cart-item-count');
+            const cartOverlay = document.getElementById('cart-overlay');
+            const cartDrawer = document.getElementById('cart-drawer');
+            const cartCloseBtn = document.getElementById('cart-close-btn');
+            const cartItemsContainer = document.getElementById('cart-items-container');
+            const cartEmptyState = document.getElementById('cart-empty-state');
+            const cartSubtotalEl = document.getElementById('cart-subtotal');
+            const checkoutBtn = document.getElementById('checkout-btn');
     
             // =================================================================
-            // 3. API Y CARGA DE DATOS (BACKEND CONNECTION)
+            // 3. API FETCH (CONEXIÓN)
             // =================================================================
             const fetchSectionData = async (section) => {
                 try {
-                    console.log(`📡 Descargando paquete: ${section}...`);
+                    // Solo logueamos si estamos en desarrollo para no ensuciar la consola
+                    // console.log(`📡 Descargando sección: ${section}...`);
                     const res = await fetch(`/.netlify/functions/get-website-data?section=${section}`);
                     if (!res.ok) throw new Error('Error API');
                     return await res.json();
                 } catch (e) {
-                    console.error(`Error cargando ${section}:`, e);
+                    console.warn(`Aviso: Esperando datos para ${section}...`);
                     return null;
                 }
             };
     
-            const loadSection = async (sectionName) => {
-                // 1. Verificar Caché (Si ya existe, no pedir)
-                if (sectionName === 'projects' && globalData.projects.length > 0) return;
-                if (sectionName === 'services' && globalData.services.length > 0) return;
-                if (sectionName === 'rental' && globalData.rentals.items.length > 0) return;
-    
-                // 2. Pedir Datos
-                // Mapeo: en HTML usamos 'rental', en API se llama 'rentals'
-                const apiParam = sectionName === 'rental' ? 'rentals' : sectionName; 
-                const data = await fetchSectionData(apiParam);
-                
-                if (!data) return;
-    
-                // 3. Guardar y Renderizar Inmediatamente
-                if (sectionName === 'projects') {
-                    globalData.projects = (data.projects || []).map(p => {
-                        // Unir con fotos cacheadas en Home
-                        const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
-                        const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
-                        return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
-                    });
-                    renderProjects(); // Pintar apenas llegan
-                } 
-                else if (sectionName === 'services') {
-                    globalData.services = data.services || [];
-                    renderServicesGrid(); // Pintar apenas llegan
-                } 
-                else if (sectionName === 'rental') {
-                    globalData.rentals.items = data.rentalItems || [];
-                    globalData.rentals.categories = data.rentalCategories || [];
-                    globalData.rentals.dates = data.blockedDates || [];
-                    
-                    // Preparar estructura para filtros
-                    rentalDataGlobal = {}; 
-                    data.rentalCategories.forEach(cat => {
-                        rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
-                            ...i, 
-                            price: parseFloat(i.pricePerDay),
-                            bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
-                        }));
-                    });
-                    renderRentalPage(); // Pintar apenas llegan
+            // =================================================================
+            // 4. FUNCIONES DE INTERFAZ (UI HELPERS)
+            // =================================================================
+            const handleScrollHeader = () => {
+                const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
+                if (window.scrollY > 50) {
+                    header.classList.add('header-scrolled'); header.classList.remove('header-dark'); 
+                } else { 
+                    header.classList.remove('header-scrolled');
+                    if (isServicePage) header.classList.add('header-dark');
+                    else header.classList.remove('header-dark');
                 }
             };
     
-            // =================================================================
-            // 4. FUNCIONES VISUALES (UI HELPERS)
-            // =================================================================
             const toggleMobileMenu = (forceState) => {
                 const isOpen = typeof forceState === 'boolean' ? forceState : !mobileMenu.classList.contains('open');
                 mobileMenu.classList.toggle('open', isOpen);
@@ -1118,24 +1096,26 @@
             };
     
             const toggleCart = (show) => {
-                const action = show ? 'add' : 'remove';
-                cartOverlay.classList[action]('visible');
-                cartDrawer.classList[action]('visible');
+                if (show) {
+                    cartOverlay.classList.add('visible');
+                    cartDrawer.classList.add('visible');
+                } else {
+                    cartOverlay.classList.remove('visible');
+                    cartDrawer.classList.remove('visible');
+                }
             };
     
-            const handleScrollHeader = () => {
-                const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
-                if (window.scrollY > 50) {
-                    header.classList.add('header-scrolled'); header.classList.remove('header-dark');
-                } else {
-                    header.classList.remove('header-scrolled');
-                    header.classList.toggle('header-dark', isServicePage);
-                }
+            const updateCartIcon = () => {
+                const count = cart.length;
+                cartItemCount.textContent = count;
+                cartItemCount.classList.toggle('visible', count > 0);
+                mobileCartItemCount.textContent = count;
+                mobileCartItemCount.classList.toggle('visible', count > 0);
             };
     
             const observeElements = (container) => {
                 if(!container) return;
-                const observer = new IntersectionObserver((entries, obs) => {
+                const revealObserver = new IntersectionObserver((entries, obs) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
                             entry.target.classList.add('visible');
@@ -1144,26 +1124,27 @@
                         }
                     });
                 }, { threshold: 0.1 });
+                container.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
                 
-                container.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-                container.querySelectorAll('.img-container').forEach(el => {
-                    const img = el.querySelector('img');
-                    if (img && img.complete) el.classList.add('loaded');
-                    else if (img) img.onload = () => el.classList.add('loaded');
-                    observer.observe(el);
-                });
+                const imgObserver = new IntersectionObserver((entries, obs) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target.querySelector('img');
+                            if (img && img.complete) el.classList.add('loaded');
+                            else if (img) img.onload = () => el.classList.add('loaded');
+                            obs.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.1 });
+                container.querySelectorAll('.img-container').forEach(el => imgObserver.observe(el));
             };
     
-            // --- LIGHTBOX LÓGICA ---
-            let lightboxImages = [];
-            let currentLbIndex = 0;
-    
+            // --- Lógica Lightbox ---
             const openLightbox = (src, caption, imagesArr, index) => {
                 lightboxImages = imagesArr; currentLbIndex = index;
                 lightboxImage.src = src; 
                 lightboxCaption.textContent = caption;
                 
-                // Mostrar flechas solo si hay más de 1 imagen
                 const hasMultiple = imagesArr.length > 1;
                 document.getElementById('lightbox-prev').style.display = hasMultiple ? 'flex' : 'none';
                 document.getElementById('lightbox-next').style.display = hasMultiple ? 'flex' : 'none';
@@ -1192,8 +1173,51 @@
             };
     
             // =================================================================
-            // 5. RENDERIZADORES (PINTAR HTML)
+            // 5. RENDERIZADORES (VISUALIZACIÓN)
             // =================================================================
+            
+            const renderCart = () => {
+                const items = cartItemsContainer.querySelectorAll('.cart-item');
+                items.forEach(item => item.remove());
+    
+                if (cart.length === 0) {
+                    cartEmptyState.style.display = 'flex';
+                    checkoutBtn.disabled = true;
+                } else {
+                    cartEmptyState.style.display = 'none';
+                    checkoutBtn.disabled = false;
+                    cart.forEach(item => {
+                        const el = document.createElement('div');
+                        el.className = 'cart-item flex items-start space-x-4 py-4 border-b';
+                        el.innerHTML = `
+                            <img src="${item.image}" class="w-20 h-20 object-cover">
+                            <div class="flex-grow">
+                                <h4 class="font-bold">${item.name}</h4>
+                                <p class="text-sm text-gray-500">${new Date(item.startDate+'T00:00:00').toLocaleDateString()} - ${new Date(item.endDate+'T00:00:00').toLocaleDateString()}</p>
+                                <p class="text-sm text-gray-500">${item.totalDays} días</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
+                                <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}"><i class="fas fa-trash-alt mr-1"></i> Eliminar</button>
+                            </div>`;
+                        cartItemsContainer.appendChild(el);
+                    });
+                }
+                const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
+                cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+            };
+    
+            const addToCart = (item, startDate, endDate) => {
+                const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (86400000)) + 1;
+                const cartId = `${item.id}-${startDate}`; 
+                if (cart.some(cartItem => cartItem.cartId === cartId)) {
+                    alert('Este artículo ya está en tu carrito para estas fechas.');
+                    return;
+                }
+                cart.push({ ...item, cartId: cartId, startDate: startDate, endDate: endDate, totalDays: totalDays, image: item.images[0] });
+                renderCart(); updateCartIcon(); toggleCart(true);
+            };
+    
             const renderPortfolio = () => {
                 const gallery = document.getElementById('portfolio-gallery');
                 if(!gallery) return;
@@ -1258,12 +1282,10 @@
                 if (!filtersContainer || !gridContainer) return;
                 if (globalData.rentals.categories.length === 0) { gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando equipos...</p>'; return; }
     
-                // Renderizar Filtros
                 const cats = globalData.rentals.categories;
                 filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
                     cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
     
-                // Renderizar Items (Lógica interna)
                 const renderItems = (catId) => {
                     let items = globalData.rentals.items;
                     if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
@@ -1286,13 +1308,12 @@
                     observeElements(gridContainer);
                 };
                 
-                // Event Listener para Filtros (Delegación local)
+                // Listeners locales
                 filtersContainer.onclick = (e) => { 
                     if (e.target.matches('.rental-category-btn')) { 
                         filtersContainer.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); renderItems(e.target.dataset.category); 
                     }
                 };
-                // Event Listener para Carrusel de Alquiler (Delegación local)
                 gridContainer.onclick = (e) => { 
                     const btn = e.target.closest('.rental-carousel-button');
                     if(btn) { 
@@ -1305,12 +1326,9 @@
                         track.dataset.currentIndex = idx;
                     }
                 };
-                
                 renderItems('Todo');
             };
     
-            // --- RENDERIZADORES DE DETALLE (Páginas internas) ---
-            
             const renderProjectDetail = (targetId) => {
                 const realId = targetId.substring(15);
                 const project = globalData.projects.find(p => String(p.id) === realId);
@@ -1357,7 +1375,6 @@
             const renderRentalDetail = (targetId) => {
                 const itemId = targetId.substring(14);
                 let item;
-                // Buscar item en las categorías cargadas
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
@@ -1373,7 +1390,6 @@
                         </div></div>
                     </section>`;
                 
-                // Listeners para este detalle
                 const section = document.getElementById(targetId);
                 section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates);
                 const track = section.querySelector('.carousel-track');
@@ -1385,25 +1401,57 @@
             };
     
             // =================================================================
-            // 6. NAVEGACIÓN Y ORQUESTACIÓN (LOGICA MAESTRA)
+            // 6. ORQUESTACIÓN DE DATOS Y NAVEGACIÓN
             // =================================================================
-            
+            const loadSection = async (sectionName) => {
+                if (sectionName === 'projects' && globalData.projects.length > 0) return;
+                if (sectionName === 'services' && globalData.services.length > 0) return;
+                if (sectionName === 'rental' && globalData.rentals.items.length > 0) return;
+    
+                const apiParam = sectionName === 'rental' ? 'rentals' : sectionName; 
+                const data = await fetchSectionData(apiParam);
+                if (!data) return;
+    
+                if (sectionName === 'projects') {
+                    globalData.projects = (data.projects || []).map(p => {
+                        const pImages = globalData.allProjectImages.filter(img => img.projectId === p.id);
+                        const cover = pImages.find(i => String(i.isCover).toLowerCase() === 'si') || pImages[0];
+                        return { ...p, coverImageUrl: cover?.imageUrl, images: pImages };
+                    });
+                    renderProjects();
+                } 
+                else if (sectionName === 'services') {
+                    globalData.services = data.services || [];
+                    renderServicesGrid();
+                } 
+                else if (sectionName === 'rental') {
+                    globalData.rentals.items = data.rentalItems || [];
+                    globalData.rentals.categories = data.rentalCategories || [];
+                    globalData.rentals.dates = data.blockedDates || [];
+                    
+                    rentalDataGlobal = {}; 
+                    data.rentalCategories.forEach(cat => {
+                        rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
+                            ...i, price: parseFloat(i.pricePerDay), bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
+                        }));
+                    });
+                    renderRentalPage();
+                }
+            };
+    
             const navigateTo = (targetId) => {
-                // A. PRE-CARGA DE DATOS (Lazy Loading)
-                // Si intento entrar a detalles sin datos, cargo la sección padre primero
-                if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) { loadSection('projects').then(() => renderProjectDetail(targetId)); return; }
-                if (targetId.startsWith('service-detail-') && globalData.services.length === 0) { loadSection('services').then(() => renderServiceDetail(targetId)); return; }
-                if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) { loadSection('rental').then(() => renderRentalDetail(targetId)); return; }
-                
-                // Si es sección principal, cargar si falta
+                // 1. CARGA DE DATOS (Lazy Load)
                 if (['projects', 'services', 'rental'].includes(targetId)) loadSection(targetId);
+                if (targetId.startsWith('service-detail-') && globalData.services.length === 0) loadSection('services').then(()=>renderServiceDetail(targetId));
+                if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) loadSection('rental').then(()=>renderRentalDetail(targetId));
+                if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) loadSection('projects').then(()=>renderProjectDetail(targetId));
     
-                // B. RENDERIZAR DETALLES SI YA TENGO DATOS
-                if (targetId.startsWith('project-detail-')) renderProjectDetail(targetId);
-                else if (targetId.startsWith('service-detail-')) renderServiceDetail(targetId);
-                else if (targetId.startsWith('rental-detail-')) renderRentalDetail(targetId);
+                // 2. RENDERIZADO INMEDIATO SI HAY DATOS
+                if (targetId.startsWith('project-detail-') && globalData.projects.length > 0) renderProjectDetail(targetId);
+                else if (targetId.startsWith('service-detail-') && globalData.services.length > 0) renderServiceDetail(targetId);
+                else if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length > 0) renderRentalDetail(targetId);
     
-                // C. TRANSICIÓN VISUAL
+                // 3. TRANSICIÓN VISUAL
                 const currentPage = document.querySelector('.page-active');
                 const targetPage = document.getElementById(targetId);
                 if (!targetPage || currentPage === targetPage) return;
@@ -1413,71 +1461,52 @@
                 setTimeout(() => { targetPage.classList.add('page-active'); handleScrollHeader(); }, 10);
                 if (currentPage) setTimeout(() => { currentPage.classList.remove('page-exiting'); currentPage.style.display = 'none'; }, 500);
     
-                // D. MENU ACTIVO
+                // 4. MENU
                 let active = targetId;
                 if(targetId.startsWith('project-detail-')) active='projects';
-                else if(targetId.startsWith('rental-detail-')) active='rental';
-                else if(targetId.startsWith('service-detail-')) active='services';
+                if(targetId.startsWith('rental-detail-')) active='rental';
+                if(targetId.startsWith('service-detail-')) active='services';
                 allNavLinks.forEach(l => { l.classList.remove('nav-active'); if(l.dataset.target===active) l.classList.add('nav-active'); });
-                
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 observeElements(targetPage);
             };
     
             const initialize = async () => {
-                // Cargar HOME
                 const apiData = await fetchSectionData('home');
                 if (apiData) {
                     const imgs = apiData.sysImages || {};
                     const ident = apiData.identity || {};
                     const about = apiData.about || {};
                     
-                    // Inyectar Identidad
+                    // Inyectar Identidad y Textos (Recuperado)
                     if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
                     if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
                     if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
-                    
-                    // Inyectar Textos ABOUT ME (Aquí estaba el fallo antes)
                     if(about.intro_phrase) { const el=document.getElementById('about-intro-phrase'); if(el) el.textContent=`"${about.intro_phrase}"`; }
                     if(about.bio) { const el=document.getElementById('about-bio'); if(el) el.innerHTML=about.bio; }
                     if(about.process) { const el=document.getElementById('about-process'); if(el) el.innerHTML=about.process; }
                     if(about.profile_image) { const el=document.querySelector('#about img'); if(el) el.src=about.profile_image; }
     
-                    // Inyectar Redes
                     const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
                     updateLink('Instagram', ident.social_instagram); updateLink('Facebook', ident.social_facebook); updateLink('YouTube', ident.social_youtube);
                     updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
                     
-                    // MAPA: Fix X-Frame-Options usando Embed URL si es necesario
+                    // Fix para Mapa (X-Frame-Options)
                     if (ident.social_maps) { 
                         const map = document.getElementById('google-map');
                         let mapUrl = ident.social_maps;
-                        // Intento simple de convertir link normal a embed si el usuario puso el link de compartir
-                        if (!mapUrl.includes('embed') && mapUrl.includes('maps')) {
-                           // Si no es embed explícito, mejor lo ocultamos o usamos placeholder para evitar error de consola
-                           // O le pedimos al usuario que ponga el embed code.
-                           // Por ahora, dejamos pasar si ya tiene "embed", sino, cuidado.
-                        }
+                        // Solo inyectar si es seguro
                         if(map && mapUrl.includes('http')) map.src = mapUrl.match(/src="([^"]+)"/)?.[1] || mapUrl; 
                     }
     
-                    // Guardar Datos Globales
                     globalData.portfolio = apiData.portfolioGallery || [];
                     globalData.videos = apiData.videos || [];
                     globalData.logos = apiData.clientLogos || [];
                     globalData.allProjectImages = apiData.allProjectImages || [];
                 }
-    
-                // Renderizar Home
-                renderPortfolio();
-                renderVideos(globalData.videos);
-                renderClientLogos(globalData.logos);
-                renderCart(); 
-                updateCartIcon();
-    
+                renderPortfolio(); renderVideos(globalData.videos); renderClientLogos(globalData.logos); renderCart(); updateCartIcon();
                 setTimeout(() => pageLoader.classList.add('hidden'), 1500);
                 
-                // Navegación Inicial
                 if(window.location.hash) {
                     const target = window.location.hash.substring(1);
                     navigateTo(target);
@@ -1488,97 +1517,8 @@
             };
     
             // =================================================================
-            // 7. LISTENERS GLOBALES (EL CEREBRO DE INTERACCIÓN)
+            // 7. MODALES (CALENDARIO Y CHECKOUT)
             // =================================================================
-            
-            // Delegación de Eventos (Click único para todo)
-            document.addEventListener('click', function(e) {
-                // A. Navegación
-                const navLink = e.target.closest('.nav-link');
-                if (navLink) { 
-                    e.preventDefault(); 
-                    const t = navLink.dataset.target; 
-                    if(cartDrawer.classList.contains('visible')) toggleCart(false); 
-                    if(mobileMenu.classList.contains('open')) toggleMobileMenu(false); 
-                    navigateTo(t); 
-                    return;
-                }
-                
-                // B. Lightbox (Imágenes de galería)
-                const galleryItem = e.target.closest('.gallery-item');
-                // Ignoramos si es dentro de rental-card (carrusel pequeño) o es un iframe (video)
-                if(galleryItem && !galleryItem.closest('.rental-card') && !e.target.closest('iframe')) {
-                    const img = galleryItem.querySelector('img');
-                    if(img) {
-                        const allItems = Array.from(document.querySelectorAll('.page-active .gallery-item img'));
-                        const imgs = allItems.map(i=>({
-                            src: i.src, 
-                            title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
-                        }));
-                        const idx = allItems.indexOf(img); 
-                        openLightbox(img.src, imgs[idx].title, imgs, idx);
-                    }
-                }
-                
-                // C. Carrito: Botón Eliminar
-                if (e.target.closest('.cart-item-remove-btn')) {
-                    const id = e.target.closest('.cart-item-remove-btn').dataset.cartId;
-                    cart = cart.filter(i => i.cartId !== id);
-                    renderCart(); updateCartIcon();
-                }
-            });
-    
-            // Listeners Específicos (Botones fijos)
-            mobileMenuButton.onclick = () => toggleMobileMenu();
-            cartButton.onclick = () => toggleCart(true);
-            mobileCartButton.onclick = () => { toggleCart(true); toggleMobileMenu(false); };
-            cartCloseBtn.onclick = () => toggleCart(false);
-            cartOverlay.onclick = () => toggleCart(false);
-            checkoutBtn.onclick = () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }};
-    
-            // Listeners Lightbox
-            lightboxClose.onclick = closeLightbox;
-            lightboxPrev.onclick = () => navigateLightbox('prev');
-            lightboxNext.onclick = () => navigateLightbox('next');
-            lightbox.onclick = (e) => { if (e.target === lightbox) closeLightbox(); };
-            document.onkeydown = (e) => {
-                if (lightbox.classList.contains('visible')) {
-                    if (e.key === 'Escape') closeLightbox();
-                    if (e.key === 'ArrowLeft') navigateLightbox('prev');
-                    if (e.key === 'ArrowRight') navigateLightbox('next');
-                }
-            };
-    
-            // Funciones del Carrito (Add y Modal)
-            const updateCartIcon = () => {
-                const c = cart.length;
-                cartItemCount.textContent = c; cartItemCount.classList.toggle('visible', c>0);
-                mobileCartItemCount.textContent = c; mobileCartItemCount.classList.toggle('visible', c>0);
-            };
-            
-            const renderCart = () => {
-                const items = cartItemsContainer.querySelectorAll('.cart-item'); items.forEach(i=>i.remove());
-                if (cart.length === 0) { cartEmptyState.style.display='flex'; checkoutBtn.disabled=true; }
-                else {
-                    cartEmptyState.style.display='none'; checkoutBtn.disabled=false;
-                    cart.forEach(i => {
-                        const d = document.createElement('div'); d.className='cart-item flex items-start space-x-4 py-4 border-b';
-                        d.innerHTML = `<img src="${i.image}" class="w-20 h-20 object-cover"><div class="flex-grow"><h4 class="font-bold">${i.name}</h4><p class="text-sm text-gray-500">${new Date(i.startDate+'T00:00:00').toLocaleDateString()} - ${new Date(i.endDate+'T00:00:00').toLocaleDateString()}</p><p class="text-sm text-gray-500">${i.totalDays} días</p></div><div class="text-right"><p class="font-bold">$${(i.price*i.totalDays).toFixed(2)}</p><button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${i.cartId}"><i class="fas fa-trash-alt mr-1"></i></button></div>`;
-                        cartItemsContainer.appendChild(d);
-                    });
-                }
-                cartSubtotalEl.textContent = `$${cart.reduce((t,i)=>t+(i.price*i.totalDays),0).toFixed(2)}`;
-            };
-    
-            const addToCart = (item, start, end) => {
-                const days = Math.ceil(Math.abs(new Date(end)-new Date(start))/(86400000))+1;
-                const cid = `${item.id}-${start}`;
-                if(cart.some(c=>c.cartId===cid)) { alert('Ya está en el carrito'); return; }
-                cart.push({ ...item, cartId: cid, startDate: start, endDate: end, totalDays: days, image: item.images[0] });
-                renderCart(); updateCartIcon(); toggleCart(true);
-            };
-    
-            // Modal Checkout
             const showCheckoutModal = () => {
                 const container = document.getElementById('checkout-modal-container');
                 const total = cart.reduce((t,i)=>t+(i.price*i.totalDays),0);
@@ -1594,14 +1534,14 @@
                 const step1 = document.getElementById('step-1'); const step2 = document.getElementById('step-2'); const step3 = document.getElementById('step-3');
                 
                 setTimeout(()=>overlay.classList.add('visible'),10);
-                document.getElementById('close-co').onclick = () => { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
+                const close = () => { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
+                document.getElementById('close-co').onclick = close;
                 document.getElementById('btn-next-1').onclick = () => { if(document.getElementById('co-form').checkValidity()) { step1.classList.remove('active'); step2.classList.add('active'); } else document.getElementById('co-form').reportValidity(); };
                 document.getElementById('btn-back-2').onclick = () => { step2.classList.remove('active'); step1.classList.add('active'); };
                 document.getElementById('btn-pay').onclick = () => { step2.classList.remove('active'); step3.classList.add('active'); cart=[]; renderCart(); updateCartIcon(); };
-                document.getElementById('btn-finish').onclick = document.getElementById('close-co').onclick;
+                document.getElementById('btn-finish').onclick = close;
             };
     
-            // Modal Calendario
             const showCalendarModal = (item, booked) => {
                 const container = document.getElementById('calendar-modal-container');
                 container.innerHTML = `<div id="cal-overlay" class="calendar-modal-overlay"><div class="calendar-modal-content"><div class="calendar-header"><button id="c-prev"> < </button><h3 id="c-title"></h3><button id="c-next"> > </button></div><div id="c-grid" class="calendar-grid"></div><div class="p-4 bg-gray-50 mt-4"><div class="flex justify-between"><span>Total:</span><span id="c-total">$0</span></div></div><button id="c-add" class="w-full bg-black text-white py-3 mt-4" disabled>Agregar</button></div></div>`;
@@ -1610,6 +1550,8 @@
                 let date = new Date(); date.setDate(1); let start=null, end=null;
                 
                 setTimeout(()=>overlay.classList.add('visible'),10);
+                const close = () => { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
+                
                 const render = () => {
                     document.getElementById('c-title').textContent = date.toLocaleDateString('es-ES',{month:'long',year:'numeric'});
                     grid.innerHTML = '';
@@ -1640,13 +1582,70 @@
                 render();
                 document.getElementById('c-prev').onclick = () => { date.setMonth(date.getMonth()-1); render(); };
                 document.getElementById('c-next').onclick = () => { date.setMonth(date.getMonth()+1); render(); };
-                document.getElementById('c-add').onclick = () => { addToCart(item, start.toISOString().split('T')[0], end.toISOString().split('T')[0]); overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); };
-                overlay.onclick = (e) => { if(e.target===overlay) { overlay.classList.remove('visible'); setTimeout(()=>container.innerHTML='',300); }};
+                document.getElementById('c-add').onclick = () => { addToCart(item, start.toISOString().split('T')[0], end.toISOString().split('T')[0]); close(); };
+                overlay.onclick = (e) => { if(e.target===overlay) close(); };
             };
     
-            // INICIAR
-            initialize();
+            // =================================================================
+            // 8. LISTENERS GLOBALES (Event Delegation)
+            // =================================================================
+            document.addEventListener('click', function(e) {
+                // A. Navegación Menú
+                const navLink = e.target.closest('.nav-link');
+                if (navLink) { 
+                    e.preventDefault(); 
+                    if(cartDrawer.classList.contains('visible')) toggleCart(false); 
+                    if(mobileMenu.classList.contains('open')) toggleMobileMenu(false); 
+                    navigateTo(navLink.dataset.target); 
+                    return;
+                }
+                
+                // B. Lightbox
+                const galleryItem = e.target.closest('.gallery-item');
+                if(galleryItem && !galleryItem.closest('.rental-card') && !e.target.closest('iframe')) {
+                    const img = galleryItem.querySelector('img');
+                    if(img) {
+                        const allItems = Array.from(document.querySelectorAll('.page-active .gallery-item img'));
+                        const imgs = allItems.map(i=>({
+                            src: i.src, 
+                            title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
+                        }));
+                        openLightbox(img.src, imgs[allItems.indexOf(img)].title, imgs, allItems.indexOf(img));
+                    }
+                }
+                
+                // C. Carrito Eliminar
+                if (e.target.closest('.cart-item-remove-btn')) {
+                    cart = cart.filter(i => i.cartId !== e.target.closest('.cart-item-remove-btn').dataset.cartId);
+                    renderCart(); updateCartIcon();
+                }
+            });
+    
+            // Listeners Fijos
+            mobileMenuButton.onclick = () => toggleMobileMenu();
+            cartButton.onclick = () => toggleCart(true);
+            mobileCartButton.onclick = () => { toggleCart(true); toggleMobileMenu(false); };
+            cartCloseBtn.onclick = () => toggleCart(false);
+            cartOverlay.onclick = () => toggleCart(false);
+            checkoutBtn.onclick = () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }};
+            
+            lightboxClose.onclick = closeLightbox;
+            lightboxPrev.onclick = () => navigateLightbox('prev');
+            lightboxNext.onclick = () => navigateLightbox('next');
+            lightbox.onclick = (e) => { if(e.target===lightbox) closeLightbox(); };
+            document.onkeydown = (e) => {
+                if (lightbox.classList.contains('visible')) {
+                    if(e.key==='Escape') closeLightbox();
+                    if(e.key==='ArrowLeft') navigateLightbox('prev');
+                    if(e.key==='ArrowRight') navigateLightbox('next');
+                }
+            };
+    
+            // Scroll
             window.addEventListener('scroll', handleScrollHeader, { passive: true });
+    
+            // ARRANCAR
+            initialize();
         });
     </script>
 </body>
