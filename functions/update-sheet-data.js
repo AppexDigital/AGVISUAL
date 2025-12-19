@@ -1,5 +1,5 @@
 // functions/update-sheet-data.js
-// v203.0 - FIX REFERENCE ERROR (Orden de Declaración Corregido)
+// v204.0 - PUBLIC BOOKING EXCEPTION (Basado en v203.0)
 
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -7,12 +7,15 @@ const { google } = require('googleapis');
 const { validateGoogleToken } = require('./google-auth-helper');
 
 // --- HELPERS ---
-async function getServices() {
+async function getServices(publicAuth = false) {
+  // Si es acceso público, usamos solo la cuenta de servicio (sin validar token de usuario)
   const auth = new JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'],
   });
+  
+  // Usamos auth para conectar a Sheets y Drive
   const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
   await doc.loadInfo();
   return { doc, drive: google.drive({ version: 'v3', auth }) };
@@ -48,14 +51,56 @@ async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValu
 
 
 exports.handler = async (event, context) => {
-  if (!(await validateGoogleToken(event))) return { statusCode: 401, body: JSON.stringify({ error: 'No autorizado.' }) };
+  // 1. MANEJO DE PREFLIGHT (CORS)
+  if (event.httpMethod === 'OPTIONS') {
+      return {
+          statusCode: 200,
+          headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS'
+          },
+          body: ''
+      };
+  }
+
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
     let body;
     try { body = JSON.parse(event.body); if (typeof body === 'string') body = JSON.parse(body); } catch (e) { throw new Error('JSON inválido.'); }
     const operations = Array.isArray(body) ? body : [body];
-    const { doc, drive } = await getServices();
+
+    // --- 2. LÓGICA DE SEGURIDAD HÍBRIDA (ADMIN VS PÚBLICO) ---
+    const hasAdminToken = await validateGoogleToken(event);
+    let services;
+
+    if (hasAdminToken) {
+        // A. ADMIN: Acceso Total
+        services = await getServices();
+    } else {
+        // B. PÚBLICO: Solo permitimos 'add' en tablas de Reserva
+        const allowedPublicSheets = ['Bookings', 'BookingsDetails', 'BlockedDates'];
+        
+        const isSafePublicRequest = operations.every(op => 
+            op.action === 'add' && allowedPublicSheets.includes(op.sheet)
+        );
+
+        if (!isSafePublicRequest) {
+            console.error("Acceso denegado a operación pública insegura:", operations);
+            return { 
+                statusCode: 401, 
+                headers: { 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ error: 'No autorizado. Se requiere inicio de sesión.' }) 
+            };
+        }
+        
+        // Si es seguro, obtenemos servicios con credenciales del servidor
+        services = await getServices(true);
+    }
+
+    const { doc, drive } = services;
+    // -----------------------------------------------------------
 
     // 1. Pre-procesar borrado de archivos (Drive)
     for (const op of operations) {
@@ -85,9 +130,7 @@ exports.handler = async (event, context) => {
         
         await sheet.loadHeaderRow();
         
-        // --- CORRECCIÓN CRÍTICA: Declarar sheetOps AQUÍ, antes de usarlo ---
         const sheetOps = opsBySheet[sheetName];
-        // ------------------------------------------------------------------
         
         // --- VALIDACIÓN ANTI-COLISIÓN (SOLO RESERVAS) ---
         if (sheetName === 'Bookings') {
@@ -132,8 +175,6 @@ exports.handler = async (event, context) => {
                             }
                         }
                     }
-                } else {
-                    console.warn("Aviso: Hoja 'BlockedDates' no detectada. Saltando validación anti-colisión.");
                 }
             }
         }
@@ -255,9 +296,9 @@ exports.handler = async (event, context) => {
             }
         }
     }
-    return { statusCode: 200, body: JSON.stringify({ message: 'OK' }) };
+    return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ message: 'OK' }) };
   } catch (error) {
     console.error('Error:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ error: error.message }) };
   }
 };
