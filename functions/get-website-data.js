@@ -1,5 +1,5 @@
 // functions/get-website-data.js
-// v14.0 - INCLUSIÓN DE BLOQUEOS PARA DISPONIBILIDAD REAL
+// v15.0 - INCLUSIÓN DE BLOQUEOS PARA DISPONIBILIDAD REAL
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
