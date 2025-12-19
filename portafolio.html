@@ -1129,87 +1129,13 @@
 
 
         // --- FUNCIONES DEL CARRITO ---
-        const toggleCart = (show) => {
-            if (show) {
-                cartOverlay.classList.add('visible');
-                cartDrawer.classList.add('visible');
-            } else {
-                cartOverlay.classList.remove('visible');
-                cartDrawer.classList.remove('visible');
-            }
-        };
+        
 
-        const updateCartIcon = () => {
-            const count = cart.length;
-            // Escritorio
-            cartItemCount.textContent = count;
-            cartItemCount.classList.toggle('visible', count > 0);
-            // Móvil
-            mobileCartItemCount.textContent = count;
-            mobileCartItemCount.classList.toggle('visible', count > 0);
-        };
+        
 
-        const renderCart = () => {
-            // Limpia el contenedor de items, pero mantiene el 'empty state'
-            const items = cartItemsContainer.querySelectorAll('.cart-item');
-            items.forEach(item => item.remove());
+       
 
-            if (cart.length === 0) {
-                cartEmptyState.style.display = 'flex';
-                checkoutBtn.disabled = true;
-            } else {
-                cartEmptyState.style.display = 'none';
-                checkoutBtn.disabled = false;
-                cart.forEach(item => {
-                    const cartItemEl = document.createElement('div');
-                    cartItemEl.className = 'cart-item flex items-start space-x-4 py-4 border-b';
-                    cartItemEl.innerHTML = `
-                        <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover">
-                        <div class="flex-grow">
-                            <h4 class="font-bold">${item.name}</h4>
-                            <p class="text-sm text-gray-500">
-                                ${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}
-                            </p>
-                            <p class="text-sm text-gray-500">${item.totalDays} día(s)</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
-                            <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}">
-                                <i class="fas fa-trash-alt mr-1"></i>Eliminar
-                            </button>
-                        </div>
-                    `;
-                    cartItemsContainer.appendChild(cartItemEl);
-                });
-            }
-
-            const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
-            cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-        };
-
-        const addToCart = (item, startDate, endDate) => {
-            const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
-            const cartId = `${item.id}-${startDate}`; // ID único para el artículo y fecha
-
-            // Evitar duplicados
-            if (cart.some(cartItem => cartItem.cartId === cartId)) {
-                alert('Este artículo ya está en tu carrito para estas fechas.');
-                return;
-            }
-            
-            cart.push({
-                ...item,
-                cartId: cartId,
-                startDate: startDate,
-                endDate: endDate,
-                totalDays: totalDays,
-                image: item.images[0] // Usar la primera imagen para el carrito
-            });
-
-            renderCart();
-            updateCartIcon();
-            toggleCart(true);
-        };
+        
         
         cartItemsContainer.addEventListener('click', (e) => {
             if (e.target.closest('.cart-item-remove-btn')) {
@@ -1425,7 +1351,32 @@
 
 
         // --- FUNCIONES DE RENDERIZADO Y NAVEGACIÓN ---
+        // --- FUNCIÓN DE NAVEGACIÓN COMPLETA (Visual + Carga de Datos) ---
         const navigateTo = (targetId) => {
+            
+            // 1. LÓGICA DE CARGA DE DATOS (LAZY LOAD)
+            // Si vamos a una sección principal, intentamos cargar sus datos
+            if (['projects', 'services', 'rental'].includes(targetId)) {
+                loadSection(targetId);
+            }
+
+            // Si vamos a un DETALLE específico y no tenemos datos, los cargamos primero
+            // A. Servicios
+            if (targetId.startsWith('service-detail-') && globalData.services.length === 0) {
+                loadSection('services').then(() => renderServiceDetail(targetId));
+            }
+            
+            // B. Alquiler (ESTO ES LO QUE FALTABA)
+            if (targetId.startsWith('rental-detail-') && globalData.rentals.items.length === 0) {
+                loadSection('rental').then(() => renderRentalDetail(targetId));
+            }
+
+            // C. Proyectos
+            if (targetId.startsWith('project-detail-') && globalData.projects.length === 0) {
+                loadSection('projects').then(() => renderProjectDetail(targetId));
+            }
+
+            // 2. LÓGICA VISUAL (Transiciones)
             const currentPage = document.querySelector('.page-active');
             const targetPage = document.getElementById(targetId);
             
@@ -1449,6 +1400,7 @@
                 }, 500);
             }
 
+            // 3. ACTUALIZACIÓN DE MENÚ (Nav Links)
             let activeTarget = targetId;
              if (targetId.startsWith('project-detail-')) {
                 activeTarget = 'projects';
@@ -1457,6 +1409,7 @@
             } else if (targetId.startsWith('service-detail-')) {
                 activeTarget = 'services';
             }
+            
             allNavLinks.forEach(link => {
                 link.classList.remove('nav-active');
                 if (link.dataset.target === activeTarget) {
@@ -1464,8 +1417,8 @@
                 }
             });
 
+            // 4. SCROLL Y OBSERVADORES
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            
             observeElements(targetPage);
         };
         
@@ -1692,71 +1645,107 @@
             `).join('');
         };
 
+        const renderServiceDetail = (targetId) => {
+            const realId = targetId.substring(15);
+            const service = globalData.services.find(s => String(s.id) === String(realId));
+            if (!service) return;
+
+            const detailContainer = document.getElementById('service-detail-pages');
+            const sectionsHTML = (service.contentBlocks || []).map(b => `
+                <div class="reveal">
+                    <h3 class="text-3xl font-display text-black mb-4 text-reveal">${b.blockTitle}</h3>
+                    <div class="prose max-w-none lg:prose-lg text-gray-600 leading-relaxed text-reveal text-justify">${b.blockContentHtml}</div>
+                </div>
+            `).join('');
+            
+            const galleryHTML = (service.images || []).map(img => `
+                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container"><img src="${img.imageUrl}" class="w-full h-auto object-cover"></div>
+            `).join('');
+
+            detailContainer.innerHTML = `
+                <section id="${targetId}" class="page-container">
+                     <div class="h-auto md:h-[60vh] bg-zinc-700 flex items-center justify-center text-white pt-28 md:pt-36 pb-16">
+                        <div class="text-center reveal"><h1 class="text-5xl md:text-7xl font-display text-reveal py-2">${service.title}</h1></div>
+                    </div>
+                    <div class="container mx-auto px-6 py-20 md:py-24">
+                        <div class="max-w-4xl mx-auto">
+                             <a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver a Servicios</a>
+                            <div class="reveal"><div class="text-xl text-gray-700 leading-relaxed italic text-center mb-16 text-reveal">${service.introText || ''}</div></div>
+                            <div class="space-y-16">${sectionsHTML}</div>
+                             ${galleryHTML ? `<div class="mt-20 reveal"><h3 class="text-3xl font-display text-black mb-8 text-center text-reveal">Galería</h3><div class="columns-2 md:columns-3 gap-6 space-y-6">${galleryHTML}</div></div>` : ''}
+                            <div class="text-center mt-20 reveal">
+                                <h3 class="text-3xl font-display text-gray-800 text-reveal">¿Interesado?</h3>
+                                <a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full text-lg hover:bg-gray-800">Contáctame</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>`;
+            navigateTo(targetId);
+        };
+
+
         const renderRentalPage = () => {
             const filtersContainer = document.getElementById('rental-filters');
             const gridContainer = document.getElementById('rental-grid-categorized');
             if (!filtersContainer || !gridContainer) return;
+            
+            if (globalData.rentals.categories.length === 0 && globalData.rentals.items.length === 0) {
+                gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando equipos...</p>';
+                return;
+            }
 
-            const categories = ['Todo', ...Object.keys(rentalDataGlobal)];
-            filtersContainer.innerHTML = categories.map(cat => `<button class="rental-category-btn ${cat === 'Todo' ? 'active' : ''}" data-category="${cat}">${cat}</button>`).join('');
+            const cats = globalData.rentals.categories;
+            filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
+                cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
 
-            const renderItems = (category) => {
-                let itemsToRender = (category === 'Todo') ? Object.values(rentalDataGlobal).flat() : rentalDataGlobal[category];
-                gridContainer.innerHTML = itemsToRender.map(item => `
+            const renderItems = (catId) => {
+                let items = globalData.rentals.items;
+                if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
+                
+                gridContainer.innerHTML = items.map(item => {
+                    const imgs = item.images || [];
+                    return `
                     <div class="rental-card reveal">
                          <div class="carousel-container aspect-w-4 aspect-h-3">
                             <div class="carousel-track flex" data-current-index="0">
-                                ${item.images.map(src => `<div class="carousel-item flex-shrink-0 w-full"><img src="${src}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('')}
+                                ${imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200 flex items-center justify-center">Sin foto</div>'}
                             </div>
-                            <button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button>
-                            <button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>
+                            ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
                         </div>
                         <div class="p-6 flex flex-col flex-grow">
                             <div class="flex justify-between items-baseline">
                                 <h3 class="font-display text-2xl">${item.name}</h3>
-                                <p class="font-bold text-xl text-gray-800">$${item.price}<span class="text-sm font-normal text-gray-500">/día</span></p>
+                                <p class="font-bold text-xl text-gray-800">$${item.pricePerDay}<span class="text-sm font-normal text-gray-500">/día</span></p>
                             </div>
-                            <p class="text-gray-600 text-sm my-4 flex-grow">${item.description}</p>
+                            <p class="text-gray-600 text-sm my-4 flex-grow line-clamp-3">${item.description}</p>
                             <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
                                 Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
                             </a>
                         </div>
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
                 
-                const cardObserver = new IntersectionObserver((entries, observer) => {
-                    entries.forEach((entry, index) => {
-                        if (entry.isIntersecting) {
-                            setTimeout(() => entry.target.classList.add('visible'), index * 75);
-                            observer.unobserve(entry.target);
-                        }
-                    });
-                }, { threshold: 0.1 });
-                gridContainer.querySelectorAll('.rental-card').forEach(card => cardObserver.observe(card));
+                // Re-inicializar observadores para animaciones
+                observeElements(gridContainer);
             };
 
-            filtersContainer.addEventListener('click', (e) => {
+            // Eventos locales de alquiler
+            filtersContainer.onclick = (e) => {
                 if (e.target.matches('.rental-category-btn')) {
                     filtersContainer.querySelector('.active').classList.remove('active');
                     e.target.classList.add('active');
                     renderItems(e.target.dataset.category);
                 }
-            });
-            gridContainer.addEventListener('click', function(e) {
-                const button = e.target.closest('.rental-carousel-button');
-                if (button) {
-                    e.preventDefault(); e.stopPropagation();
-                    const track = button.closest('.carousel-container').querySelector('.carousel-track');
-                    const slides = Array.from(track.children);
-                    const direction = parseInt(button.dataset.direction);
-                    let currentIndex = parseInt(track.dataset.currentIndex);
-                    currentIndex = (currentIndex + direction + slides.length) % slides.length;
-                    track.style.transform = `translateX(-${currentIndex * 100}%)`;
-                    track.dataset.currentIndex = currentIndex;
-                }
-            });
+            };
+            
+            // Render inicial
             renderItems('Todo');
         };
+
+
+
+
+        
         
         const renderProjects = () => {
             const projectsContainer = document.getElementById('projects-container');
@@ -1985,38 +1974,79 @@
             }, 200);
         };
         
-        // --- MANEJADORES DE EVENTOS ---
-        document.addEventListener('click', function(e) {
-            const navLink = e.target.closest('.nav-link');
-            if (navLink) {
-                e.preventDefault();
-                const targetId = navLink.dataset.target;
 
-                if (cartDrawer.classList.contains('visible')) {
-                    toggleCart(false);
-                }
-                
-                if (targetId.startsWith('project-detail-')) renderProjectDetail(targetId);
-                else if (targetId.startsWith('rental-detail-')) renderRentalDetail(targetId);
-                else if (targetId.startsWith('service-detail-')) renderServiceDetail(targetId);
-                else navigateTo(targetId);
+        
+        
 
-                if (mobileMenu.classList.contains('open')) toggleMobileMenu(false);
-            }
-            
-            const galleryItem = e.target.closest('.gallery-item');
-            if(galleryItem) {
-                const clickedImg = galleryItem.querySelector('img');
-                const allVisibleItems = Array.from(document.querySelectorAll('.page-active .gallery-item'));
-                const imagesArray = allVisibleItems.map(item => ({
-                    src: item.querySelector('img').src,
-                    title: item.querySelector('.overlay p')?.textContent || item.querySelector('img').alt
-                }));
-                const currentIndex = allVisibleItems.indexOf(galleryItem);
-                openLightbox(clickedImg.src, imagesArray[currentIndex].title, imagesArray, currentIndex);
+        window.addEventListener('scroll', handleScrollHeader, { passive: true });
+        
+        
+        
+        mobileMenuButton.addEventListener('click', () => toggleMobileMenu(!mobileMenu.classList.contains('open')));
+        lightboxClose.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+        lightboxPrev.addEventListener('click', () => navigateLightbox('prev'));
+        lightboxNext.addEventListener('click', () => navigateLightbox('next'));
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('hidden')) {
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowLeft') navigateLightbox('prev');
+                if (e.key === 'ArrowRight') navigateLightbox('next');
             }
         });
+
         
+        
+
+        // --- INICIALIZACIÓN MAESTRA (Modo Home) ---
+        const initialize = async () => {
+            const apiData = await fetchSectionData('home');
+            
+            if (apiData) {
+                // 1. Identidad
+                const imgs = apiData.sysImages || {};
+                const about = apiData.about || {};
+                const ident = apiData.identity || {};
+
+                if (imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(el => el.src = imgs.logo_black);
+                if (imgs.logo_white) document.querySelectorAll('.logo-light').forEach(el => el.src = imgs.logo_white);
+                if (imgs.favicon) document.querySelector("link[rel*='icon']").href = imgs.favicon;
+                if (about.intro_phrase) document.getElementById('about-intro-phrase').textContent = `"${about.intro_phrase}"`;
+                if (about.bio) document.getElementById('about-bio').innerHTML = about.bio;
+                if (about.process) document.getElementById('about-process').innerHTML = about.process;
+                if (about.profile_image) document.querySelector('#about img').src = about.profile_image;
+
+                // 2. Datos Home
+                globalData.portfolio = apiData.portfolioGallery || [];
+                globalData.videos = apiData.videos || [];
+                globalData.logos = apiData.clientLogos || [];
+                globalData.allProjectImages = apiData.allProjectImages || []; // CACHÉ IMPORTANTE
+            }
+
+            // Renderizar Home
+            renderPortfolio();
+            renderVideos(globalData.videos);
+            renderClientLogos(globalData.logos);
+            
+            renderCart(); 
+            updateCartIcon();
+
+            setTimeout(() => pageLoader.classList.add('hidden'), 1500);
+            
+            // Navegación profunda (Deep linking)
+            if(window.location.hash) {
+                const target = window.location.hash.substring(1);
+                navigateTo(target);
+            } else {
+                const initialPage = document.getElementById('portfolio');
+                if(initialPage) {
+                    initialPage.classList.add('page-active');
+                    observeElements(initialPage);
+                    document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
+                }
+            }
+        };
+
         const handleScrollHeader = () => {
             const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
             
@@ -2033,8 +2063,6 @@
             }
         };
 
-        window.addEventListener('scroll', handleScrollHeader, { passive: true });
-        
         const toggleMobileMenu = (open) => {
             mobileMenu.classList.toggle('open', open);
             mobileMenuButton.classList.toggle('open', open);
@@ -2047,109 +2075,129 @@
                 }, 150 + index * 50);
             });
         };
-        
-        mobileMenuButton.addEventListener('click', () => toggleMobileMenu(!mobileMenu.classList.contains('open')));
-        lightboxClose.addEventListener('click', closeLightbox);
-        lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
-        lightboxPrev.addEventListener('click', () => navigateLightbox('prev'));
-        lightboxNext.addEventListener('click', () => navigateLightbox('next'));
-        document.addEventListener('keydown', (e) => {
-            if (!lightbox.classList.contains('hidden')) {
-                if (e.key === 'Escape') closeLightbox();
-                if (e.key === 'ArrowLeft') navigateLightbox('prev');
-                if (e.key === 'ArrowRight') navigateLightbox('next');
-            }
-        });
 
-        // Eventos del Carrito (Actualizados)
-        cartButton.addEventListener('click', () => toggleCart(true));
-        mobileCartButton.addEventListener('click', () => {
-            toggleCart(true);
-            toggleMobileMenu(false);
-        });
-        checkoutBtn.addEventListener('click', () => {
-            if (cart.length > 0) {
-                toggleCart(false);
-                // Espera a que el carrito se cierre para abrir el checkout
-                setTimeout(showCheckoutModal, 500);
-            }
-        });
-        cartCloseBtn.addEventListener('click', () => toggleCart(false));
-        cartOverlay.addEventListener('click', () => toggleCart(false));
-
-        // --- INICIALIZACIÓN MAESTRA ---
-        const initialize = async () => {
-            const apiData = await fetchWebsiteData();
-            
-            // Variables locales para videos y logos (o puedes hacerlas globales arriba si prefieres)
-            let videosData = [];
-            let clientLogosData = [];
-
-            if (apiData) {
-                console.log("Datos recibidos:", apiData);
-
-                // --- MÓDULO 1: IDENTIDAD ---
-                const imgs = apiData.sysImages || {};
-                const ident = apiData.identity || {};
-                const about = apiData.about || {};
-
-                // (A. Logos del sistema, B. Quién Soy, C. Redes - CÓDIGO EXISTENTE SE MANTIENE IGUAL)
-                if (imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(el => el.src = imgs.logo_black);
-                if (imgs.logo_white) document.querySelectorAll('.logo-light').forEach(el => el.src = imgs.logo_white);
-                if (imgs.favicon) { const fav = document.querySelector("link[rel*='icon']"); if(fav) fav.href = imgs.favicon; }
-                
-                if (about.intro_phrase) { const el = document.getElementById('about-intro-phrase'); if(el) el.textContent = `"${about.intro_phrase}"`; }
-                if (about.bio) { const el = document.getElementById('about-bio'); if(el) el.innerHTML = about.bio; }
-                if (about.process) { const el = document.getElementById('about-process'); if(el) el.innerHTML = about.process; }
-                if (about.profile_image) { const img = document.querySelector('#about img'); if(img) img.src = about.profile_image; }
-
-                const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
-                updateLink('Instagram', ident.social_instagram);
-                updateLink('Facebook', ident.social_facebook);
-                updateLink('YouTube', ident.social_youtube);
-                updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
-                if (ident.social_maps) { const map = document.getElementById('google-map'); if(map && ident.social_maps.includes('http')) map.src = ident.social_maps.match(/src="([^"]+)"/)?.[1] || ident.social_maps; }
-
-                // --- MÓDULO 2: DATOS ---
-                portfolioData = apiData.portfolioGallery || [];
-                projectsData = apiData.projects || [];
-                
-                // NUEVO: Extraer Videos y Logos
-                videosData = apiData.videos || [];
-                clientLogosData = apiData.clientLogos || [];
-            }
-
-            // Renderizado
-            renderPortfolio(); 
-            renderProjects(); 
-            
-            // NUEVO: Renderizar Videos y Logos
-            renderVideos(videosData);
-            renderClientLogos(clientLogosData);
-
-            renderServicesGrid(); 
-            renderRentalPage();
-            renderCart(); 
-            updateCartIcon();
-
-            setTimeout(() => pageLoader.classList.add('hidden'), 1500);
-            
-            if(window.location.hash) {
-                const target = window.location.hash.substring(1);
-                const el = document.getElementById(target);
-                if(el) navigateTo(target);
+        const toggleCart = (show) => {
+            if (show) {
+                cartOverlay.classList.add('visible');
+                cartDrawer.classList.add('visible');
             } else {
-                const initialPage = document.getElementById('portfolio');
-                if(initialPage) {
-                    initialPage.classList.add('page-active');
-                    observeElements(initialPage);
-                    document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
-                }
+                cartOverlay.classList.remove('visible');
+                cartDrawer.classList.remove('visible');
             }
         };
 
+        const updateCartIcon = () => {
+            const count = cart.length;
+            // Escritorio
+            cartItemCount.textContent = count;
+            cartItemCount.classList.toggle('visible', count > 0);
+            // Móvil
+            mobileCartItemCount.textContent = count;
+            mobileCartItemCount.classList.toggle('visible', count > 0);
+        };
+
+         const renderCart = () => {
+            // Limpia el contenedor de items, pero mantiene el 'empty state'
+            const items = cartItemsContainer.querySelectorAll('.cart-item');
+            items.forEach(item => item.remove());
+
+            if (cart.length === 0) {
+                cartEmptyState.style.display = 'flex';
+                checkoutBtn.disabled = true;
+            } else {
+                cartEmptyState.style.display = 'none';
+                checkoutBtn.disabled = false;
+                cart.forEach(item => {
+                    const cartItemEl = document.createElement('div');
+                    cartItemEl.className = 'cart-item flex items-start space-x-4 py-4 border-b';
+                    cartItemEl.innerHTML = `
+                        <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover">
+                        <div class="flex-grow">
+                            <h4 class="font-bold">${item.name}</h4>
+                            <p class="text-sm text-gray-500">
+                                ${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}
+                            </p>
+                            <p class="text-sm text-gray-500">${item.totalDays} día(s)</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
+                            <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}">
+                                <i class="fas fa-trash-alt mr-1"></i>Eliminar
+                            </button>
+                        </div>
+                    `;
+                    cartItemsContainer.appendChild(cartItemEl);
+                });
+            }
+
+            const subtotal = cart.reduce((total, item) => total + (item.price * item.totalDays), 0);
+            cartSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+        };
+
+        
+        const addToCart = (item, startDate, endDate) => {
+            const totalDays = Math.ceil(Math.abs(new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+            const cartId = `${item.id}-${startDate}`; // ID único para el artículo y fecha
+
+            // Evitar duplicados
+            if (cart.some(cartItem => cartItem.cartId === cartId)) {
+                alert('Este artículo ya está en tu carrito para estas fechas.');
+                return;
+            }
+            
+            cart.push({
+                ...item,
+                cartId: cartId,
+                startDate: startDate,
+                endDate: endDate,
+                totalDays: totalDays,
+                image: item.images[0] // Usar la primera imagen para el carrito
+            });
+
+            renderCart();
+            updateCartIcon();
+            toggleCart(true);
+        };
+
+
+
+
+        
+
+        
         // Arrancamos
         initialize();
+
+       // Listeners Globales
+        document.addEventListener('click', function(e) {
+            const navLink = e.target.closest('.nav-link');
+            if (navLink) {
+                e.preventDefault();
+                const targetId = navLink.dataset.target;
+                if (cartDrawer.classList.contains('visible')) toggleCart(false);
+                if (mobileMenu.classList.contains('open')) toggleMobileMenu(false);
+                navigateTo(targetId);
+            }
+            
+            const galleryItem = e.target.closest('.gallery-item');
+            if(galleryItem) {
+                const clickedImg = galleryItem.querySelector('img');
+                const allVisibleItems = Array.from(document.querySelectorAll('.page-active .gallery-item'));
+                const imagesArray = allVisibleItems.map(item => ({
+                    src: item.querySelector('img').src,
+                    title: item.querySelector('.overlay p')?.textContent || item.querySelector('img').alt
+                }));
+                const currentIndex = allVisibleItems.indexOf(galleryItem);
+                openLightbox(clickedImg.src, imagesArray[currentIndex].title, imagesArray, currentIndex);
+            }
+        });
+
+        // (Asegurar que los listeners de carrito y lightbox estén conectados)
+        cartButton.addEventListener('click', () => toggleCart(true));
+        mobileCartButton.addEventListener('click', () => { toggleCart(true); toggleMobileMenu(false); });
+        cartCloseBtn.addEventListener('click', () => toggleCart(false));
+        cartOverlay.addEventListener('click', () => toggleCart(false));
+        checkoutBtn.addEventListener('click', () => { if(cart.length>0){ toggleCart(false); setTimeout(showCheckoutModal,500); }});
 
     });
     </script>
