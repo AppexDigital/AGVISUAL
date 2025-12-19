@@ -988,21 +988,31 @@
             if(!targetSection) return;
 
             // Transición CSS
-            document.querySelector('.page-active')?.classList.add('page-exiting');
-            document.querySelector('.page-active')?.classList.remove('page-active');
+            const activePage = document.querySelector('.page-active');
+            if (activePage) {
+                activePage.classList.add('page-exiting');
+                activePage.classList.remove('page-active');
+            }
             
             targetSection.style.display = 'block';
             setTimeout(() => {
                 targetSection.classList.add('page-active');
-                document.querySelector('.page-exiting')?.style.display = 'none';
-                document.querySelector('.page-exiting')?.classList.remove('page-exiting');
+                
+                // --- CORRECCIÓN AQUÍ ---
+                const exitingPage = document.querySelector('.page-exiting');
+                if (exitingPage) {
+                    exitingPage.style.display = 'none';
+                    exitingPage.classList.remove('page-exiting');
+                }
+                // -----------------------
+
             }, 50);
 
             // Scroll Top
             window.scrollTo(0,0);
             
-            // Header Logic (Dark mode en detalle de servicio/proyecto)
-            header.classList.remove('header-scrolled');
+            // Header Logic
+            if(header) header.classList.remove('header-scrolled');
         }
 
         navLinks.forEach(link => {
