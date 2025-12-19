@@ -1764,61 +1764,74 @@
             const initialize = async () => {
                 const apiData = await fetchSectionData('home');
                 
-                // Función auxiliar para convertir Lista de Sheets [{key: 'x', value: 'y'}] -> Objeto {x: 'y'}
-                const arrayToObject = (arr) => {
-                    if (Array.isArray(arr)) {
-                        return arr.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
-                    }
-                    return arr || {};
+                // --- ADAPTADOR UNIVERSAL (La solución al problema) ---
+                // Convierte la lista del Sheet en objeto, sin importar si las columnas
+                // se llaman 'key'/'value' o 'section'/'content'.
+                const normalizeData = (data) => {
+                    if (!data) return {};
+                    if (!Array.isArray(data)) return data; 
+                    
+                    return data.reduce((acc, item) => {
+                        // 1. Detectar la LLAVE (puede ser 'key' o 'section')
+                        // Usamos trim() y toLowerCase() para evitar errores de espacios o mayúsculas
+                        const rawKey = item.key || item.section || item.id;
+                        
+                        // 2. Detectar el VALOR (puede ser 'value' o 'content')
+                        const rawVal = item.value || item.content || item.description;
+                        
+                        if (rawKey) {
+                            // Limpiamos la llave para que coincida siempre (ej: " Bio " -> "bio")
+                            const cleanKey = String(rawKey).trim(); 
+                            acc[cleanKey] = rawVal;
+                        }
+                        return acc;
+                    }, {});
                 };
 
                 if (apiData) {
-                    const imgs = arrayToObject(apiData.sysImages); // Usamos el convertidor por seguridad
-                    const ident = arrayToObject(apiData.identity); // Usamos el convertidor
-                    const about = arrayToObject(apiData.about);    // AQUÍ ESTABA EL PROBLEMA
+                    const imgs = normalizeData(apiData.sysImages);
+                    const ident = normalizeData(apiData.identity);
                     
-                    // --- 1. IDENTIDAD VISUAL (Logos) ---
-                    // Nota: En sysImages la estructura suele ser key:'logo_black', imageUrl:'...'
-                    // Si apiData.sysImages viene con 'imageUrl' en vez de 'value', hacemos un map manual rápido:
-                    let imagesObj = {};
-                    if(Array.isArray(apiData.sysImages)) {
-                        apiData.sysImages.forEach(i => imagesObj[i.key] = i.imageUrl);
-                    } else {
-                        imagesObj = apiData.sysImages || {};
+                    // AQUI OCURRE LA MAGIA: Ahora leerá 'section'/'content' si así viene del Sheet
+                    const about = normalizeData(apiData.about); 
+                    
+                    // --- 1. IDENTIDAD VISUAL ---
+                    // Helper extra por si las imágenes vienen como lista de objetos
+                    let imagesObj = imgs;
+                    if (Array.isArray(apiData.sysImages) && apiData.sysImages[0]?.imageUrl) {
+                         imagesObj = apiData.sysImages.reduce((acc, item) => ({ ...acc, [item.key]: item.imageUrl }), {});
                     }
 
                     if(imagesObj.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imagesObj.logo_black);
                     if(imagesObj.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imagesObj.logo_white);
                     if(imagesObj.favicon) document.querySelector("link[rel*='icon']").href=imagesObj.favicon;
                     
-                    // --- 2. SECCIÓN: QUIÉN SOY ---
+                    // --- 2. SECCIÓN: QUIÉN SOY (Corregido) ---
                     
                     // A. Frase de Introducción
                     if(about.intro_phrase) { 
                         const el = document.getElementById('about-intro-phrase'); 
-                        if(el) {
-                            // Limpiamos comillas dobles extras si vienen del sheet o del HTML
-                            el.textContent = `"${about.intro_phrase.replace(/^"|"$/g, '')}"`; 
-                        }
+                        if(el) el.textContent = `"${about.intro_phrase.replace(/^"|"$/g, '')}"`; 
                     }
 
-                    // B. Mi Filosofía (Texto Rico)
+                    // B. Mi Filosofía
                     if(about.bio) { 
                         const el = document.getElementById('about-bio'); 
                         if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.bio}</div>`;
                     }
 
-                    // C. Mi Proceso (Texto Rico)
+                    // C. Mi Proceso
                     if(about.process) { 
                         const el = document.getElementById('about-process'); 
                         if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.process}</div>`;
                     }
 
-                    // D. Foto de Perfil
-                    if(imagesObj.profile_pic) { 
+                    // D. Foto de Perfil (Prioridad: imgs.profile_pic -> about.profile_pic)
+                    const profileSrc = imagesObj.profile_pic || about.profile_pic;
+                    if(profileSrc) { 
                         const el = document.querySelector('#about img'); 
                         if(el) {
-                            el.src = imagesObj.profile_pic;
+                            el.src = profileSrc;
                             el.removeAttribute('srcset'); 
                         }
                     }
@@ -1830,7 +1843,6 @@
                     updateLink('YouTube', ident.social_youtube);
                     updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
                     
-                    // Mapa Embebido
                     if (ident.social_maps) { 
                         const map = document.getElementById('google-map');
                         if(map && ident.social_maps.includes('embed')) map.src = ident.social_maps; 
@@ -1844,7 +1856,6 @@
                     globalData.allProjectImages = apiData.allProjectImages || [];
                 }
                 
-                // Renderizados iniciales
                 renderPortfolio(); 
                 renderVideos(globalData.videos); 
                 renderClientLogos(globalData.logos); 
@@ -1853,7 +1864,6 @@
                 
                 setTimeout(() => pageLoader.classList.add('hidden'), 1500);
                 
-                // Navegación Inicial
                 if(window.location.hash) {
                     const target = window.location.hash.substring(1);
                     navigateTo(target);
