@@ -5032,17 +5032,23 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
     <div id="admin-lightbox" class="fixed inset-0 z-[200] bg-black/95 hidden flex-col items-center justify-center select-none" onclick="if(event.target===this) UI.closeLightbox()">
-        <button class="absolute top-4 right-6 text-white text-5xl hover:text-gray-300 transition" onclick="UI.closeLightbox()">&times;</button>
+        <button class="absolute top-4 right-4 md:right-6 text-white text-4xl md:text-5xl hover:text-gray-300 transition z-50 p-2" onclick="UI.closeLightbox()">&times;</button>
         
-        <div class="flex items-center justify-between w-full px-4 md:px-12 h-full py-12">
-            <button class="text-white text-6xl hover:text-accent-primary transition p-4" onclick="UI.navLightbox(-1)">&#8249;</button>
+        <div class="relative w-full h-full flex items-center justify-center">
             
-            <div class="flex flex-col items-center justify-center max-h-full max-w-[80vw]">
-                <img id="admin-lb-img" class="max-h-[80vh] w-auto object-contain shadow-2xl border border-gray-800 bg-black" referrerpolicy="no-referrer" >
-                <p id="admin-lb-caption" class="text-white font-mono text-lg mt-4 text-center bg-black/50 px-4 py-2 rounded min-h-[3rem]"></p>
+            <button class="absolute left-2 md:left-8 z-50 text-white text-5xl md:text-7xl hover:text-accent-primary transition p-2 bg-black/10 md:bg-transparent rounded-full flex items-center justify-center h-16 w-16 md:h-auto md:w-auto pb-2" onclick="event.stopPropagation(); UI.navLightbox(-1)">
+                &#8249;
+            </button>
+            
+            <div class="flex flex-col items-center justify-center max-w-full max-h-full p-1 relative z-10" onclick="event.stopPropagation()">
+                <img id="admin-lb-img" class="max-h-[80vh] max-w-[90vw] object-contain shadow-2xl border border-gray-900 bg-black" referrerpolicy="no-referrer">
+                
+                <p id="admin-lb-caption" class="text-white/80 font-mono text-xs md:text-lg mt-3 text-center bg-black/40 px-4 py-1 rounded w-full max-w-lg backdrop-blur-sm"></p>
             </div>
 
-            <button class="text-white text-6xl hover:text-accent-primary transition p-4" onclick="UI.navLightbox(1)">&#8250;</button>
+            <button class="absolute right-2 md:right-8 z-50 text-white text-5xl md:text-7xl hover:text-accent-primary transition p-2 bg-black/10 md:bg-transparent rounded-full flex items-center justify-center h-16 w-16 md:h-auto md:w-auto pb-2" onclick="event.stopPropagation(); UI.navLightbox(1)">
+                &#8250;
+            </button>
         </div>
     </div>
 
@@ -5109,6 +5115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
