@@ -1457,7 +1457,7 @@ const UI = {
         
         } else if (view === 'identity') {
             const ident = (data.Identidad || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
-            const about = (data.About || []).reduce((acc, i) => ({...acc, [i.key]: i.value}), {});
+            const about = (data.About || []).reduce((acc, i) => ({...acc, [i.section]: i.content}), {});
             const sysImages = (data.ImagenesIdentidad || []).reduce((acc, i) => ({...acc, [i.key]: i.imageUrl}), {});
         
             if(sysImages.logo_black) document.getElementById('prev-logo_black').src = sysImages.logo_black;
@@ -5153,6 +5153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
