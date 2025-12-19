@@ -1422,17 +1422,16 @@
                             <div class="max-w-4xl mx-auto">
                                 <a href="#" data-target="services" class="nav-link text-gray-500 hover:text-black transition-colors mb-12 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver a Servicios</a>
                                 
-                                <div class="reveal mt-8 mb-12">
+                                <div class="reveal mt-6 mb-6">
                                     <div class="rich-text-content text-xl text-gray-700 leading-relaxed text-reveal">
                                         ${service.introText || ''}
                                     </div>
                                 </div>
     
-                                <div class="space-y-12">
+                                <div class="space-y-6">
                                     ${(service.contentBlocks||[]).map(b => `
                                         <div class="reveal">
-                                            <h3 class="text-3xl font-display text-black mb-4 text-reveal">${b.blockTitle}</h3>
-                                            
+                                            <h3 class="text-3xl font-display text-black mb-2 text-reveal">${b.blockTitle}</h3>
                                             <div class="rich-text-content text-gray-600 text-lg leading-relaxed text-reveal">
                                                 ${b.blockContentHtml}
                                             </div>
@@ -1440,9 +1439,9 @@
                                     `).join('')}
                                 </div>
     
-                                ${(service.images||[]).length ? `<div class="mt-24 reveal"><h3 class="text-3xl font-display text-black mb-12 text-center text-reveal">Galería</h3><div class="columns-1 md:columns-2 gap-8 space-y-8">${service.images.map(img=>`<div class="gallery-item break-inside-avoid overflow-hidden relative img-container shadow-lg"><img src="${img.imageUrl}" class="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"></div>`).join('')}</div></div>` : ''}
+                                ${(service.images||[]).length ? `<div class="mt-12 reveal"><h3 class="text-3xl font-display text-black mb-8 text-center text-reveal">Galería</h3><div class="columns-1 md:columns-2 gap-8 space-y-8">${service.images.map(img=>`<div class="gallery-item break-inside-avoid overflow-hidden relative img-container shadow-lg"><img src="${img.imageUrl}" class="w-full h-auto object-cover hover:scale-105 transition-transform duration-700"></div>`).join('')}</div></div>` : ''}
                                 
-                                <div class="text-center mt-24 reveal border-t pt-16">
+                                <div class="text-center mt-12 reveal border-t pt-12">
                                     <h3 class="text-4xl font-display text-gray-800 text-reveal mb-4">¿Interesado?</h3>
                                     <p class="text-gray-500 mb-8">Cuéntame sobre tu proyecto y hagamos magia.</p>
                                     <a href="#" data-target="contact" class="nav-link btn-primary inline-block bg-black text-white font-bold py-4 px-12 rounded-full text-lg hover:bg-gray-800 transition-all transform hover:-translate-y-1 shadow-lg">Contáctame</a>
