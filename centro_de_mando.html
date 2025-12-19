@@ -3465,7 +3465,11 @@ const App = {
         UI.showLoading('Guardando contenido...');
         try {
             const batch = [];
+            
+            // 1. Preparar Borrados para enviar
             pendingDeletions.forEach(b => batch.push({ sheet: 'ServiceContentBlocks', action: 'delete', criteria: { id: b.id } }));
+            
+            // 2. Preparar Guardados/Ediciones para enviar
             currentServiceBlocks.forEach(b => {
                 if (b._modified || b._isNew) {
                     const { _isNew, _modified, ...cleanData } = b;
@@ -3476,23 +3480,54 @@ const App = {
             });
 
             if (batch.length > 0) {
+                // A. Enviamos los datos a la nube (Backend)
                 await API.batchUpdate(batch, "Actualizando contenido...");
                 
-                // 1. Actualizar datos en memoria desde el servidor
-                await App.ensureDataForView('services', true);
+                // B. ACTUALIZACIÓN MANUAL DE MEMORIA (FIX DEL LAG)
+                // En lugar de descargar, actualizamos lo que ya tenemos en pantalla.
                 
-                // 2. AJUSTE CRÍTICO: Forzar repintado de la tabla para ver los contadores nuevos
+                // Aseguramos que el array global exista
+                if (!AppState.data.ServiceContentBlocks) AppState.data.ServiceContentBlocks = [];
+
+                // 1. Aplicar Borrados en Memoria Global
+                pendingDeletions.forEach(delItem => {
+                    AppState.data.ServiceContentBlocks = AppState.data.ServiceContentBlocks.filter(b => b.id !== delItem.id);
+                });
+
+                // 2. Aplicar Nuevos y Ediciones en Memoria Global
+                currentServiceBlocks.forEach(localBlock => {
+                    // Limpiamos banderas internas (_isNew, _modified) para guardar el dato limpio
+                    const { _isNew, _modified, ...realData } = localBlock;
+                    
+                    // Buscamos si ya existe este bloque en la memoria global
+                    const globalIndex = AppState.data.ServiceContentBlocks.findIndex(g => g.id === realData.id);
+                    
+                    if (globalIndex > -1) {
+                        // Si existe, lo actualizamos (EDICIÓN)
+                        AppState.data.ServiceContentBlocks[globalIndex] = realData;
+                    } else {
+                        // Si no existe, lo agregamos (NUEVO)
+                        AppState.data.ServiceContentBlocks.push(realData);
+                    }
+                });
+
+                // C. Recargar la tabla de Servicios para actualizar contadores (sin ir al servidor)
                 if (AppState.view === 'services') {
                     UI.renderView('services');
                 }
                 
-                UI.showToast('Contenido actualizado');
+                UI.showToast('Contenido actualizado correctamente');
                 UI.closeModal();
             } else {
-                UI.showToast('No hay cambios', 'info');
+                UI.showToast('No hay cambios pendientes', 'info');
                 UI.closeModal();
             }
-        } catch(e) { console.error(e); UI.showToast("Error: "+e.message, 'error'); } finally { UI.hideLoading(); }
+        } catch(e) { 
+            console.error(e); 
+            UI.showToast("Error: "+e.message, 'error'); 
+        } finally { 
+            UI.hideLoading(); 
+        }
     },
     
     async addServiceBlock(sid) {
@@ -5117,6 +5152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
