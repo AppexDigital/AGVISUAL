@@ -221,6 +221,33 @@
             body > *:not(#quote-editor-overlay) { display: none !important; }
         }
 
+
+        /* RESPONSIVE UTILS */
+
+        /* Tablas con scroll horizontal en móvil */
+        .bg-white.shadow-sm.border.rounded.overflow-hidden {
+            overflow-x: auto; /* Permite scroll lateral */
+            -webkit-overflow-scrolling: touch; /* Suavidad en iOS */
+        }
+        
+        /* Ajuste de Modales en Móvil */
+        .modal-content {
+            width: 95% !important; /* Casi todo el ancho */
+            max-height: 90vh !important; /* Casi toda la altura */
+            margin: 10px auto;
+        }
+        
+        /* Ajuste de Texto en Tablas Móviles */
+        @media (max-width: 640px) {
+            th, td {
+                white-space: nowrap; /* Evita que el texto se rompa feo */
+                padding: 0.75rem 0.5rem; /* Menos padding */
+            }
+            .view h1 { font-size: 1.5rem; } /* Títulos más pequeños */
+        }
+
+
+
         
         
     </style>
@@ -243,11 +270,23 @@
         </div>
     </div>
 
-    <div id="app-screen" class="hidden flex-1 flex h-full overflow-hidden">
-        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-sm z-20">
-            <div class="p-6 border-b border-gray-100">
+    <div id="app-screen" class="hidden flex-1 flex flex-col md:flex-row h-full overflow-hidden relative">
+    
+        <div class="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center z-30 flex-shrink-0">
+            <h2 class="font-display text-xl font-bold text-gray-800">AG Admin</h2>
+            <button onclick="App.toggleSidebar()" class="text-gray-600 focus:outline-none p-2 rounded hover:bg-gray-100">
+                <i class="fas fa-bars fa-lg"></i>
+            </button>
+        </div>
+    
+        <div id="sidebar-overlay" onclick="App.toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden transition-opacity"></div>
+    
+        <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transform -translate-x-full md:translate-x-0 md:relative transition-transform duration-300 ease-in-out shadow-xl md:shadow-sm">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                 <h2 class="font-display text-2xl font-bold">AG Admin</h2>
+                <button onclick="App.toggleSidebar()" class="md:hidden text-gray-400 hover:text-red-500"><i class="fas fa-times"></i></button>
             </div>
+            
             <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
                 <a href="#" class="sidebar-link active" data-view="dashboard"><i class="fas fa-home"></i>Inicio</a>
                 <a href="#" class="sidebar-link" data-view="projects"><i class="fas fa-camera"></i>Proyectos</a>
@@ -259,16 +298,14 @@
                 <a href="#" class="sidebar-link" data-view="client-logos"><i class="fas fa-star"></i>Logos Clientes</a>
                 <a href="#" class="sidebar-link" data-view="identity"><i class="fas fa-id-card"></i>Identidad</a>
             </nav>
+            
             <div class="p-4 border-t border-gray-100">
                 <button id="logout-btn" class="w-full text-left px-4 py-2 text-text-muted hover:text-red-600 transition-colors text-xs font-bold uppercase"><i class="fas fa-sign-out-alt mr-2"></i>Salir</button>
             </div>
         </aside>
-
-        <main class="flex-1 overflow-y-auto bg-gray-50 p-8 relative">
-
-
-            
-            
+    
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-4 md:p-8 relative w-full" id="main-content-area">
+                
             <div id="view-dashboard" class="view active">
                 
                 <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-6 gap-6">
@@ -1784,6 +1821,23 @@ const App = {
     /// NUEVO ESTADO: Guardamos el archivo pendiente en memoria, NO en Drive
     pendingLogoFile: null,
 
+    // Función para abrir/cerrar menú móvil
+    toggleSidebar() {
+        const sb = document.getElementById('main-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        // Toggle de clases de Tailwind
+        if (sb.classList.contains('-translate-x-full')) {
+            // ABRIR
+            sb.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+        } else {
+            // CERRAR
+            sb.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        }
+    },
+    
     // Función auxiliar para borrar archivos viejos al reemplazar (Usa tu backend actual)
     async deleteFileDirectly(fileId) {
         if (!fileId) return;
@@ -4833,10 +4887,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const link = e.target.closest('.sidebar-link'); 
             if(link) { 
                 e.preventDefault(); 
+                
+                // 1. Cambiar Vista
                 if (typeof App.switchView === 'function') {
                     App.switchView(link.dataset.view); 
                 } else {
                     UI.renderView(link.dataset.view);
+                }
+
+                // 2. NUEVO: Si estamos en móvil (pantalla pequeña), cerrar el menú automáticamente
+                if (window.innerWidth < 768) { 
+                    App.toggleSidebar();
                 }
             } 
         });
@@ -4936,6 +4997,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
