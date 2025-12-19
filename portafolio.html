@@ -2042,21 +2042,7 @@
         cartCloseBtn.addEventListener('click', () => toggleCart(false));
         cartOverlay.addEventListener('click', () => toggleCart(false));
         
-        // --- INICIALIZACIÓN ---
-        const initialize = () => {
-            renderPortfolio(); renderProjects(); renderServicesGrid(); renderRentalPage();
-            setTimeout(() => pageLoader.classList.add('hidden'), 1500);
-            const initialPage = document.getElementById('portfolio');
-            if(initialPage) {
-                initialPage.classList.add('page-active');
-                observeElements(initialPage);
-                document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
-            }
-            renderCart(); // Renderiza el carrito vacío al inicio
-            updateCartIcon(); // Actualiza el ícono del carrito
-        };
-        
-        initialize();
+
     });
     </script>
 </body>
