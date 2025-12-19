@@ -1204,35 +1204,90 @@
             // =================================================================
             
             const renderCart = () => {
-                if(!cartItemsContainer) return;
                 const items = cartItemsContainer.querySelectorAll('.cart-item');
                 items.forEach(item => item.remove());
     
                 if (cart.length === 0) {
-                    if(cartEmptyState) cartEmptyState.style.display = 'flex';
-                    if(checkoutBtn) checkoutBtn.disabled = true;
+                    cartEmptyState.style.display = 'flex';
+                    checkoutBtn.disabled = true;
+                    // Resetear montos visuales
+                    document.getElementById('cart-footer-details').innerHTML = `
+                        <div class="flex justify-between items-center font-bold text-lg mb-4">
+                            <span>Total:</span><span>$0.00</span>
+                        </div>`;
                 } else {
-                    if(cartEmptyState) cartEmptyState.style.display = 'none';
-                    if(checkoutBtn) checkoutBtn.disabled = false;
+                    cartEmptyState.style.display = 'none';
+                    checkoutBtn.disabled = false;
+                    
+                    let subtotalGlobal = 0;
+                    let taxGlobal = 0;
+    
                     cart.forEach(item => {
-                        const el = document.createElement('div');
-                        el.className = 'cart-item flex items-start space-x-4 py-4 border-b';
-                        el.innerHTML = `
-                            <img src="${item.image}" class="w-20 h-20 object-cover">
+                        const lineSubtotal = item.price * item.totalDays;
+                        const lineTax = item.hasTax ? (lineSubtotal * 0.13) : 0;
+                        
+                        subtotalGlobal += lineSubtotal;
+                        taxGlobal += lineTax;
+    
+                        const cartItemEl = document.createElement('div');
+                        cartItemEl.className = 'cart-item flex items-start space-x-4 py-4 border-b';
+                        cartItemEl.innerHTML = `
+                            <img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-cover">
                             <div class="flex-grow">
-                                <h4 class="font-bold">${item.name}</h4>
-                                <p class="text-sm text-gray-500">${new Date(item.startDate+'T00:00:00').toLocaleDateString()} - ${new Date(item.endDate+'T00:00:00').toLocaleDateString()}</p>
-                                <p class="text-sm text-gray-500">${item.totalDays} días</p>
+                                <h4 class="font-bold text-sm">${item.name}</h4>
+                                <p class="text-xs text-gray-500 my-1">
+                                    ${new Date(item.startDate + 'T00:00:00').toLocaleDateString('es-ES')} - ${new Date(item.endDate + 'T00:00:00').toLocaleDateString('es-ES')}
+                                </p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs bg-gray-100 px-2 py-1 rounded">${item.totalDays} días</span>
+                                    <div class="text-right">
+                                        <p class="font-bold text-sm">$${(lineSubtotal + lineTax).toFixed(2)}</p>
+                                        ${item.hasTax ? '<span class="text-[10px] text-gray-400 block">(Inc. IVA)</span>' : ''}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <p class="font-bold">$${(item.price * item.totalDays).toFixed(2)}</p>
-                                <button class="cart-item-remove-btn text-sm mt-2" data-cart-id="${item.cartId}"><i class="fas fa-trash-alt mr-1"></i> Eliminar</button>
-                            </div>`;
-                        cartItemsContainer.appendChild(el);
+                            <button class="cart-item-remove-btn text-gray-400 hover:text-red-500 ml-2" data-cart-id="${item.cartId}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        `;
+                        cartItemsContainer.appendChild(cartItemEl);
                     });
+    
+                    // ACTUALIZACIÓN DEL FOOTER DEL CARRITO (Desglose)
+                    const footerContainer = document.querySelector('#cart-drawer .border-t.bg-gray-50');
+                    
+                    // Nos aseguramos de tener un contenedor limpio para los totales
+                    let detailsDiv = document.getElementById('cart-footer-details');
+                    if (!detailsDiv) {
+                        detailsDiv = document.createElement('div');
+                        detailsDiv.id = 'cart-footer-details';
+                        // Insertamos antes del botón de checkout
+                        footerContainer.insertBefore(detailsDiv, checkoutBtn);
+                        // Eliminamos cualquier total viejo que existiera hardcodeado
+                        const oldTotal = footerContainer.querySelector('.flex.justify-between.font-bold');
+                        if(oldTotal) oldTotal.remove();
+                    }
+    
+                    // Renderizamos los totales
+                    const totalGlobal = subtotalGlobal + taxGlobal;
+                    if (taxGlobal > 0) {
+                        detailsDiv.innerHTML = `
+                            <div class="space-y-2 mb-4 text-sm text-gray-600">
+                                <div class="flex justify-between"><span>Subtotal:</span><span>$${subtotalGlobal.toFixed(2)}</span></div>
+                                <div class="flex justify-between text-black"><span>IVA (13%):</span><span>$${taxGlobal.toFixed(2)}</span></div>
+                                <div class="flex justify-between font-bold text-xl text-black border-t pt-2 mt-2">
+                                    <span>Total:</span><span>$${totalGlobal.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        detailsDiv.innerHTML = `
+                            <div class="flex justify-between items-center font-bold text-xl mb-4 text-black">
+                                <span>Total:</span><span>$${totalGlobal.toFixed(2)}</span>
+                            </div>
+                        `;
+                    }
                 }
-                const total = cart.reduce((t, i) => t + (i.price * i.totalDays), 0);
-                if(cartSubtotalEl) cartSubtotalEl.textContent = `$${total.toFixed(2)}`;
             };
     
             const addToCart = (item, startDate, endDate) => {
@@ -1639,13 +1694,15 @@
                     
                     rentalDataGlobal = {}; 
                     data.rentalCategories.forEach(cat => {
+                        // DENTRO DE loadSection -> if (sectionName === 'rental')
                         rentalDataGlobal[cat.name] = visibleItems
                             .filter(i => i.categoryId === cat.id)
                             .map(i => ({
                                 ...i, 
                                 price: parseFloat(i.pricePerDay), 
+                                // AJUSTE IVA: Convertimos el texto del sheet a Booleano (true/false)
+                                hasTax: String(i.hasTax).toLowerCase() === 'true' || String(i.hasTax).toLowerCase() === 'si',
                                 images: i.images || [],
-                                // Calendario corregido: usa getDatesInRange para bloquear todos los días
                                 bookedDates: data.blockedDates
                                     .filter(b => b.itemId === i.id)
                                     .flatMap(b => getDatesInRange(b.startDate, b.endDate))
@@ -1858,10 +1915,11 @@
                     }
                 };
                 
+                // DENTRO DE showCalendarModal
                 const updateSummary = () => {
                     addToCartBtn.disabled = !(selectedStartDate && selectedEndDate);
+                    
                     if (selectedStartDate && selectedEndDate) {
-                        // Formato visual para el usuario
                         const startObj = new Date(selectedStartDate + 'T00:00:00');
                         const endObj = new Date(selectedEndDate + 'T00:00:00');
                         
@@ -1870,16 +1928,43 @@
                         
                         const diffDays = Math.ceil((endObj - startObj) / (1000 * 60 * 60 * 24)) + 1;
                         summaryTotalDays.textContent = diffDays;
-                        summaryTotalPrice.textContent = `$${(diffDays * item.price).toFixed(2)}`;
-                    } else if (selectedStartDate) {
-                        const startObj = new Date(selectedStartDate + 'T00:00:00');
-                        summaryStartDate.textContent = startObj.toLocaleDateString('es-ES');
-                        summaryEndDate.textContent = '--/--/----';
-                        summaryTotalDays.textContent = '1';
-                        summaryTotalPrice.textContent = `$${item.price.toFixed(2)}`;
+    
+                        // --- CÁLCULO DE PRECIO E IMPUESTOS ---
+                        const subtotal = diffDays * item.price;
+                        const taxAmount = item.hasTax ? (subtotal * 0.13) : 0;
+                        const total = subtotal + taxAmount;
+    
+                        // Construimos el HTML del precio dinámicamente
+                        let priceHTML = '';
+                        if (item.hasTax) {
+                            priceHTML = `
+                                <div class="flex flex-col items-end w-full">
+                                    <div class="text-xs text-gray-500 font-normal">Subtotal: $${subtotal.toFixed(2)}</div>
+                                    <div class="text-xs text-gray-500 font-normal">IVA (13%): $${taxAmount.toFixed(2)}</div>
+                                    <div class="text-xl font-bold mt-1 text-black">Total: $${total.toFixed(2)}</div>
+                                </div>
+                            `;
+                        } else {
+                            priceHTML = `<span>Total:</span><span class="text-xl font-bold">$${total.toFixed(2)}</span>`;
+                        }
+                        
+                        // Inyectamos el HTML (reemplazamos el contenido simple anterior)
+                        const priceContainer = document.querySelector('.booking-summary .flex.items-center.text-xl');
+                        if(priceContainer) {
+                            // Si hay impuesto, cambiamos la estructura flex para alinear a la derecha
+                            priceContainer.className = item.hasTax ? "mt-2 pt-2 border-t flex justify-end" : "flex justify-between items-center text-xl font-bold mt-2";
+                            priceContainer.innerHTML = priceHTML;
+                        }
+    
                     } else {
                          summaryStartDate.textContent = '--/--/----'; summaryEndDate.textContent = '--/--/----';
-                         summaryTotalDays.textContent = '0'; summaryTotalPrice.textContent = '$0';
+                         summaryTotalDays.textContent = '0'; 
+                         // Reset visual
+                         const priceContainer = document.querySelector('.booking-summary .flex.justify-end') || document.querySelector('.booking-summary .flex.text-xl');
+                         if(priceContainer) {
+                             priceContainer.className = "flex justify-between items-center text-xl font-bold mt-2";
+                             priceContainer.innerHTML = `<span>Total a Pagar:</span><span>$0.00</span>`;
+                         }
                     }
                 };
                 
