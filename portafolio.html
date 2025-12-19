@@ -33,6 +33,14 @@
         #header.header-scrolled { padding: 0.5rem 0; background-color: rgba(253, 253, 253, 0.95); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
         .nav-link-underline { position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background-color: black; transition: width 0.3s ease; }
         .nav-link:hover .nav-link-underline, .nav-link.nav-active .nav-link-underline { width: 100%; }
+        
+        /* Header Dinámico */
+        #header.header-dark .logo-dark { display: none; }
+        #header.header-dark .logo-light { display: block; }
+        #header:not(.header-dark) .logo-light { display: none; }
+        #header:not(.header-dark) .logo-dark { display: block; }
+        #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon, #header.header-dark #cart-button { color: white; }
+        #header.header-dark .nav-link-underline { background-color: white; }
 
         /* Gallery & Images */
         .gallery-item { cursor: pointer; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s; position: relative; overflow: hidden; break-inside: avoid; margin-bottom: 1.5rem; }
@@ -86,18 +94,49 @@
         .service-icon { font-size: 2rem; color: var(--accent); transition: color 0.4s ease; }
         .service-grid-item:hover .service-icon { color: white; }
         
-        /* Header Dinámico (Estilos Extra para Logo) */
-        #header.header-dark .logo-dark { display: none; }
-        #header.header-dark .logo-light { display: block; }
-        #header:not(.header-dark) .logo-light { display: none; }
-        #header:not(.header-dark) .logo-dark { display: block; }
-        #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon, #header.header-dark #cart-button { color: white; }
-        #header.header-dark .nav-link-underline { background-color: white; }
-
         /* Text Reveal */
         .text-reveal { position: relative; overflow: hidden; }
         .text-reveal::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-main); transform: translateX(0); transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1); }
         .text-reveal.revealed::after { transform: translateX(101%); }
+        
+        /* Calendar Modal */
+        .calendar-modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 100; opacity: 0; transition: opacity 0.3s ease-in-out; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
+        .calendar-modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .calendar-modal-content { background-color: white; padding: 1.5rem; max-width: 400px; width: 100%; transform: scale(0.95); opacity: 0; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+        .calendar-modal-overlay.visible .calendar-modal-content { transform: scale(1); opacity: 1; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .calendar-nav-btn { background: none; border: 1px solid #d1d5db; width: 36px; height: 36px; border-radius: 50%; transition: all 0.2s ease; }
+        .calendar-nav-btn:hover { background-color: var(--text-dark); color: white; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; }
+        .calendar-day, .calendar-day-name { display: flex; justify-content: center; align-items: center; aspect-ratio: 1 / 1; text-align: center; }
+        .calendar-day-name { font-weight: bold; font-size: 0.75rem; color: #6b7280; }
+        .calendar-day { border: none; background-color: transparent; cursor: pointer; border-radius: 50%; transition: all 0.2s ease; }
+        .calendar-day:not(.disabled):hover { background-color: #f3f4f6; }
+        .calendar-day.disabled { color: #d1d5db; cursor: not-allowed; text-decoration: line-through; }
+        .calendar-day.selected, .calendar-day.in-range { background-color: var(--text-dark); color: white; }
+        .booking-summary { background-color: #f9fafb; padding: 1rem; margin-top: 1rem; }
+        
+        /* Checkout Modal */
+        #checkout-modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 110; opacity: 0; transition: opacity 0.4s ease; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
+        #checkout-modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        #checkout-modal-content { background-color: white; width: 100%; max-width: 600px; max-height: 90vh; display: flex; flex-direction: column; transform: translateY(20px); opacity: 0; transition: all 0.4s ease; }
+        #checkout-modal-overlay.visible #checkout-modal-content { transform: translateY(0); opacity: 1; }
+        .checkout-step { display: none; }
+        .checkout-step.active { display: block; }
+        .form-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #d1d5db; transition: border-color 0.3s, box-shadow 0.3s; }
+        .form-input:focus { outline: none; border-color: var(--text-dark); box-shadow: 0 0 0 2px rgba(26,26,26,0.2); }
+        .checkout-summary-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 1rem 0; border-bottom: 1px solid #e5e7eb; }
+        
+        /* Contacto */
+        .contact-icon-link { background-color: #f3f4f6; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
+        .contact-icon-link::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background-color: var(--accent); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.6s ease, height 0.6s ease; z-index: -1; }
+        .contact-icon-link:hover::before { width: 300px; height: 300px; }
+        .contact-icon-link:hover { color: white; transform: scale(1.1); }
+        #google-map { filter: grayscale(100%) contrast(90%) brightness(110%); transition: filter 0.5s ease; }
+        #google-map:hover { filter: grayscale(0%); }
+        .client-logo { filter: grayscale(100%); opacity: 0.6; transition: all 0.4s ease; }
+        .client-logo:hover { filter: grayscale(0%); opacity: 1; transform: scale(1.05); }
+
     </style>
 </head>
 <body class="antialiased">
@@ -319,6 +358,10 @@
         </div>
     </aside>
 
+    <div id="calendar-modal-container"></div>
+    
+    <div id="checkout-modal-container"></div>
+
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         
@@ -335,7 +378,8 @@
             portfolioGallery: [],
             clientLogos: [],
             settings: {},
-            about: {}
+            about: {},
+            blockedDates: []
         };
         
         // Estado del carrito y diccionarios para búsqueda rápida
@@ -430,16 +474,11 @@
             // 2. LOGOS DINÁMICOS (Desde la hoja ImagenesIdentidad o Settings)
             // Intentamos encontrar los logos en el objeto de logos de clientes o en identityImages si existen
             const sysImages = {};
-            // Si el backend devolvió 'identityImages' o 'ImagenesIdentidad' como array separado, úsalo aquí.
-            // Asumimos que pueden venir mezclados en clientLogos o en una propiedad específica si actualizas el backend
-            // Por ahora, buscamos en clientLogos por 'key'
             if (appData.clientLogos) {
                 appData.clientLogos.forEach(l => {
                     if (l.key) sysImages[l.key] = l.logoUrl;
                 });
             }
-            // Si tienes una propiedad dedicada 'identityImages' en el JSON del backend, descomenta esto:
-            // if (appData.identityImages) { ... }
 
             // Referencias al DOM
             const logoDark = document.getElementById('header-logo-dark');
@@ -820,6 +859,10 @@
                                 <button onclick="addToCart('${item.id}')" class="w-full bg-black text-white font-bold py-4 rounded hover:bg-gray-800 transition-all flex items-center justify-center gap-3">
                                     <i class="fas fa-cart-plus"></i> Agregar a la Reserva
                                 </button>
+                                
+                                <button onclick="showCalendarModal('${item.id}', '${item.name}', ${finalPrice})" class="w-full mt-4 bg-white border-2 border-black text-black font-bold py-4 rounded hover:bg-gray-100 transition-all flex items-center justify-center gap-3">
+                                    <i class="far fa-calendar-alt"></i> Ver Disponibilidad
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -830,7 +873,86 @@
             document.body.style.overflow = 'hidden'; 
         };
 
+        // --- LÓGICA DEL CALENDARIO ---
+        window.showCalendarModal = (itemId, itemName, itemPrice) => {
+            const blockedDates = appData.blockedDates.filter(b => b.itemId === itemId);
+            const modalContainer = document.getElementById('calendar-modal-container');
+            
+            modalContainer.innerHTML = `
+                <div id="calendar-modal-overlay" class="calendar-modal-overlay visible">
+                    <div class="calendar-modal-content">
+                        <div class="calendar-header">
+                            <button id="calendar-prev" class="calendar-nav-btn"><i class="fas fa-chevron-left"></i></button>
+                            <h3 id="calendar-month-year" class="font-display text-lg font-bold text-center flex-1"></h3>
+                            <button id="calendar-next" class="calendar-nav-btn"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="calendar-grid mb-2">
+                            <div class="calendar-day-name">D</div><div class="calendar-day-name">L</div><div class="calendar-day-name">M</div>
+                            <div class="calendar-day-name">M</div><div class="calendar-day-name">J</div><div class="calendar-day-name">V</div>
+                            <div class="calendar-day-name">S</div>
+                        </div>
+                        <div id="calendar-days" class="calendar-grid"></div>
+                        <div class="mt-4 pt-4 border-t border-gray-100 text-center">
+                            <p class="text-xs text-gray-500 mb-2">Días tachados no disponibles</p>
+                            <button onclick="document.getElementById('calendar-modal-overlay').remove()" class="text-sm font-bold text-black hover:underline">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let currentDate = new Date();
+            currentDate.setDate(1);
+
+            const renderMonth = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const daysContainer = document.getElementById('calendar-days');
+                document.getElementById('calendar-month-year').textContent = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
+                
+                daysContainer.innerHTML = '';
+                
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const today = new Date(); today.setHours(0,0,0,0);
+
+                // Espacios vacíos
+                for(let i=0; i<firstDay; i++) daysContainer.innerHTML += `<div></div>`;
+
+                for(let d=1; d<=daysInMonth; d++) {
+                    const date = new Date(year, month, d);
+                    const dateStr = date.toISOString().split('T')[0];
+                    
+                    // Verificar bloqueo
+                    const isBlocked = blockedDates.some(b => dateStr >= b.startDate && dateStr <= b.endDate);
+                    const isPast = date < today;
+                    
+                    const btn = document.createElement('button');
+                    btn.className = `calendar-day ${isBlocked || isPast ? 'disabled' : ''}`;
+                    btn.textContent = d;
+                    
+                    if(!isBlocked && !isPast) {
+                        btn.onclick = () => {
+                            document.getElementById('calendar-modal-overlay').remove();
+                            // Aquí podrías pre-seleccionar la fecha en el carrito si quisieras
+                            addToCart(itemId); 
+                        };
+                    }
+                    daysContainer.appendChild(btn);
+                }
+            };
+
+            document.getElementById('calendar-prev').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); renderMonth(); };
+            document.getElementById('calendar-next').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); renderMonth(); };
+            
+            renderMonth();
+        };
+
         window.closeDetail = () => {
+            const exitingPage = document.querySelector('.page-exiting');
+            if (exitingPage) {
+                exitingPage.style.display = 'none';
+                exitingPage.classList.remove('page-exiting');
+            }
             document.getElementById('detail-pages-container').innerHTML = '';
             document.body.style.overflow = 'auto';
         };
@@ -998,21 +1120,19 @@
             setTimeout(() => {
                 targetSection.classList.add('page-active');
                 
-                // --- CORRECCIÓN AQUÍ ---
+                // Solución al error de sintaxis: Verificar existencia antes de asignar
                 const exitingPage = document.querySelector('.page-exiting');
                 if (exitingPage) {
                     exitingPage.style.display = 'none';
                     exitingPage.classList.remove('page-exiting');
                 }
-                // -----------------------
-
             }, 50);
 
             // Scroll Top
             window.scrollTo(0,0);
             
-            // Header Logic
-            if(header) header.classList.remove('header-scrolled');
+            // Header Logic (Dark mode en detalle de servicio/proyecto)
+            header.classList.remove('header-scrolled');
         }
 
         navLinks.forEach(link => {
@@ -1035,7 +1155,6 @@
     </script>
 </body>
 </html>
-
 
 
 
