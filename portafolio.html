@@ -1770,12 +1770,16 @@
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 observeElements(targetPage);
             };
-    
+
+
+
+
+            
             const initialize = async () => {
                 const apiData = await fetchSectionData('home');
                 
                 // --- ADAPTADOR UNIVERSAL DE DATOS ---
-                // Permite leer el Excel sin importar si las columnas se llaman 'key', 'section', 'value' o 'content'
+                // Lee los datos sin importar si el sheet usa 'key' o 'section'
                 const normalizeData = (data) => {
                     if (!data) return {};
                     if (!Array.isArray(data)) return data; 
@@ -1792,14 +1796,23 @@
                     }, {});
                 };
 
+                // Helper de búsqueda profunda (Sabueso)
+                // Encuentra valores aunque estén anidados o con nombres raros
+                const findText = (data, keyName) => {
+                    if(!data) return '';
+                    if(!Array.isArray(data) && data[keyName]) return data[keyName];
+                    const norm = normalizeData(data);
+                    return norm[keyName] || '';
+                };
+
                 if (apiData) {
-                    // Procesamos todo con el adaptador para evitar errores
+                    // Procesamos los datos clave
                     const imgs = normalizeData(apiData.sysImages);
                     const ident = normalizeData(apiData.identity);
                     const about = normalizeData(apiData.about); 
                     
-                    // --- 1. IDENTIDAD VISUAL (Logos y Favicon) ---
-                    // Helper extra por si las imágenes vienen en formato complejo
+                    // --- 1. IDENTIDAD VISUAL ---
+                    // Helper extra para imágenes
                     let imagesObj = imgs;
                     if (Array.isArray(apiData.sysImages) && apiData.sysImages[0]?.imageUrl) {
                          imagesObj = apiData.sysImages.reduce((acc, item) => ({ ...acc, [item.key]: item.imageUrl }), {});
@@ -1809,79 +1822,107 @@
                     if(imagesObj.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imagesObj.logo_white);
                     if(imagesObj.favicon) document.querySelector("link[rel*='icon']").href=imagesObj.favicon;
                     
-                    // --- 2. SECCIÓN: QUIÉN SOY (Textos y Foto) ---
+                    // --- 2. SECCIÓN: QUIÉN SOY ---
                     
-                    // A. Frase de Introducción
+                    // A. Frase
                     if(about.intro_phrase) { 
                         const el = document.getElementById('about-intro-phrase'); 
                         if(el) el.textContent = `"${about.intro_phrase.replace(/^"|"$/g, '')}"`; 
                     }
 
-                    // B. Mi Filosofía
+                    // B. Bio y Proceso
                     if(about.bio) { 
                         const el = document.getElementById('about-bio'); 
                         if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.bio}</div>`;
                     }
-
-                    // C. Mi Proceso
                     if(about.process) { 
                         const el = document.getElementById('about-process'); 
                         if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.process}</div>`;
                     }
 
-                    // D. Foto de Perfil (Prioridad: ImagenesIdentidad > About)
+                    // D. Foto de Perfil
                     const profileSrc = imagesObj.profile_pic || about.profile_pic;
                     if(profileSrc) { 
                         const el = document.querySelector('#about img'); 
-                        if(el) {
-                            el.src = profileSrc;
-                            el.removeAttribute('srcset'); 
-                        }
+                        if(el) { el.src = profileSrc; el.removeAttribute('srcset'); }
                     }
     
-                    // --- 3. CONTACTO Y REDES (Mejorado) ---
+                    // --- 3. CONTACTO Y REDES (LÓGICA REPARADA Y MEJORADA) ---
                     
-                    // Función auxiliar para configurar acciones reales según el tipo
-                    const setContactAction = (ariaLabel, type, value) => {
-                        const linkEl = document.querySelector(`a[aria-label="${ariaLabel}"]`);
-                        if (!linkEl || !value) return;
+                    // Función maestra que actualiza Iconos (Header) y Cuadros Grandes (Contacto)
+                    const updateAllContactLinks = (type, value) => {
+                        if (!value) return;
 
-                        if (type === 'social') {
-                            linkEl.href = value;
-                            linkEl.target = '_blank';
-                        } else if (type === 'whatsapp') {
-                            // Limpiamos el número para que solo queden dígitos
-                            const cleanNum = value.replace(/[^0-9]/g, '');
-                            linkEl.href = `https://wa.me/${cleanNum}`;
-                            linkEl.target = '_blank';
-                        } else if (type === 'email') {
-                            linkEl.href = `mailto:${value}`; // Abre la app de correo
-                        } else if (type === 'phone') {
-                            // Protocolo 'tel:' abre el marcador en móviles
-                            const cleanNum = value.replace(/[^0-9+]/g, ''); 
-                            linkEl.href = `tel:${cleanNum}`;
-                            linkEl.title = value; // Tooltip para PC
+                        let href = value;
+                        let target = '_blank';
+                        let isSocial = true;
+                        
+                        // 1. Definir Protocolos (Qué hace el clic)
+                        if (type === 'WhatsApp') {
+                            href = `https://wa.me/${value.replace(/[^0-9]/g, '')}`;
+                        } else if (type === 'Email') {
+                            href = `mailto:${value}`;
+                            target = '_self'; // Abre la app de correo ahí mismo
+                            isSocial = false;
+                        } else if (type === 'Teléfono') {
+                            href = `tel:${value.replace(/[^0-9+]/g, '')}`; // Abre marcador
+                            target = '_self';
+                            isSocial = false;
                         }
+
+                        // 2. Actualizar ICONOS PEQUEÑOS (Header/Footer)
+                        // Buscamos por aria-label (ej: aria-label="Instagram")
+                        document.querySelectorAll(`a[aria-label="${type}"]`).forEach(a => {
+                            a.href = href;
+                            if (target === '_blank') a.target = '_blank';
+                            if (type === 'Teléfono') a.title = value; // Tooltip para PC
+                        });
+
+                        // 3. Actualizar CUADROS GRANDES (Sección Contacto)
+                        // Buscamos los cuadros que contienen la palabra clave (ej: "Instagram")
+                        document.querySelectorAll('.contact-icon-link').forEach(box => {
+                            // Usamos textContent para encontrar el cuadro correcto
+                            if (box.textContent.includes(type)) {
+                                box.href = href;
+                                if (target === '_blank') box.target = '_blank';
+                                
+                                // AJUSTE CLAVE: Mostrar el número/correo real en vez de la palabra "Teléfono"
+                                if (!isSocial) {
+                                    const textSpan = box.querySelector('span'); // El texto en negrita
+                                    if (textSpan) textSpan.textContent = value;
+                                }
+                            }
+                        });
                     };
 
-                    // Asignamos las acciones usando los datos normalizados 'ident'
-                    setContactAction('Instagram', 'social', ident.social_instagram);
-                    setContactAction('Facebook', 'social', ident.social_facebook);
-                    setContactAction('YouTube', 'social', ident.social_youtube);
-                    setContactAction('WhatsApp', 'whatsapp', ident.social_whatsapp);
-                    setContactAction('Email', 'email', ident.contact_email);
-                    setContactAction('Teléfono', 'phone', ident.contact_phone);
-                    
-                    // LÓGICA DEL MAPA
+                    // Ejecutamos la actualización para cada red usando los datos del Sheet
+                    updateAllContactLinks('Instagram', ident.social_instagram);
+                    updateAllContactLinks('Facebook', ident.social_facebook);
+                    updateAllContactLinks('YouTube', ident.social_youtube);
+                    updateAllContactLinks('WhatsApp', ident.social_whatsapp);
+                    updateAllContactLinks('Email', ident.contact_email); 
+                    updateAllContactLinks('Teléfono', ident.contact_phone); 
+
+                    // 4. MAPA (REPARACIÓN AUTOMÁTICA DE ENLACE)
                     const mapUrl = ident.social_maps;
                     const mapFrame = document.getElementById('google-map');
                     
                     if (mapFrame) {
-                        if (mapUrl && mapUrl.length > 10) { 
-                            mapFrame.src = mapUrl; 
+                        if (mapUrl && mapUrl.length > 5) {
+                            let finalSrc = mapUrl;
+                            
+                            // TRUCO: Si el link NO es de tipo "embed", Google lo bloquea.
+                            // Si detectamos un link normal, lo convertimos a un formato "legacy" que sí funciona.
+                            if (!mapUrl.includes('embed') && !mapUrl.includes('output=embed')) {
+                                // Convertimos el link normal en una búsqueda embebida
+                                finalSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapUrl)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+                            }
+                            
+                            mapFrame.src = finalSrc;
                             mapFrame.style.display = 'block';
                         } else {
-                            mapFrame.parentElement.style.display = 'none';
+                            // Si no hay mapa, ocultamos el cuadro gris feo
+                            mapFrame.style.display = 'none';
                         }
                     }
     
@@ -1914,7 +1955,12 @@
                     }
                 }
             };
-    
+
+
+
+
+
+            
             // =================================================================
             // 7. MODALES (CALENDARIO Y CHECKOUT)
             // =================================================================
