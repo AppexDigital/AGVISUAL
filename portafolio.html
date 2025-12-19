@@ -992,26 +992,19 @@
         document.addEventListener('DOMContentLoaded', function () {
         
             // =================================================================
-            // 1. VARIABLES GLOBALES Y MEMORIA
+            // 1. MEMORIA Y VARIABLES
             // =================================================================
             let globalData = {
-                portfolio: [],
-                videos: [],
-                logos: [],
-                allProjectImages: [], 
-                projects: [],         
-                services: [],         
-                rentals: { items: [], categories: [], dates: [] } 
+                portfolio: [], videos: [], logos: [], allProjectImages: [], 
+                projects: [], services: [], rentals: { items: [], categories: [], dates: [] } 
             };
             let rentalDataGlobal = {}; 
             let cart = [];
-            
-            // Lightbox vars
             let lightboxImages = [];
             let currentLbIndex = 0;
     
             // =================================================================
-            // 2. SELECTORES DEL DOM (DEFINIDOS PRIMERO - VITAL)
+            // 2. SELECTORES
             // =================================================================
             const header = document.getElementById('header');
             const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -1019,7 +1012,7 @@
             const allNavLinks = document.querySelectorAll('.nav-link');
             const pageLoader = document.getElementById('page-loader');
             
-            // Lightbox Elements
+            // Lightbox
             const lightbox = document.getElementById('lightbox');
             const lightboxImage = document.getElementById('lightbox-image');
             const lightboxCaption = document.getElementById('lightbox-caption');
@@ -1027,7 +1020,7 @@
             const lightboxPrev = document.getElementById('lightbox-prev');
             const lightboxNext = document.getElementById('lightbox-next');
             
-            // Carrito Elements
+            // Carrito y Modales
             const cartButton = document.getElementById('cart-button');
             const mobileCartButton = document.getElementById('mobile-cart-button');
             const cartItemCount = document.getElementById('cart-item-count');
@@ -1041,11 +1034,10 @@
             const checkoutBtn = document.getElementById('checkout-btn');
     
             // =================================================================
-            // 3. API FETCH (CONEXIÓN SEGURA)
+            // 3. API & UTILS
             // =================================================================
             const fetchSectionData = async (section) => {
                 try {
-                    // console.log(`📡 Descargando: ${section}...`); 
                     const res = await fetch(`/.netlify/functions/get-website-data?section=${section}`);
                     if (!res.ok) throw new Error('Error API');
                     return await res.json();
@@ -1055,8 +1047,20 @@
                 }
             };
     
+            // Función para expandir rangos de fechas (Para el calendario)
+            const getDatesInRange = (startDate, endDate) => {
+                const date = new Date(startDate + 'T00:00:00');
+                const end = new Date(endDate + 'T00:00:00');
+                const dates = [];
+                while (date <= end) {
+                    dates.push(new Date(date).toISOString().split('T')[0]);
+                    date.setDate(date.getDate() + 1);
+                }
+                return dates;
+            };
+    
             // =================================================================
-            // 4. FUNCIONES DE INTERFAZ (UI)
+            // 4. INTERFAZ (UI)
             // =================================================================
             const handleScrollHeader = () => {
                 const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
@@ -1077,13 +1081,8 @@
             };
     
             const toggleCart = (show) => {
-                if (show) {
-                    cartOverlay.classList.add('visible');
-                    cartDrawer.classList.add('visible');
-                } else {
-                    cartOverlay.classList.remove('visible');
-                    cartDrawer.classList.remove('visible');
-                }
+                if (show) { cartOverlay.classList.add('visible'); cartDrawer.classList.add('visible'); }
+                else { cartOverlay.classList.remove('visible'); cartDrawer.classList.remove('visible'); }
             };
     
             const updateCartIcon = () => {
@@ -1104,9 +1103,15 @@
                     });
                 }, { threshold: 0.1 });
                 container.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+                
+                // Observador simple para imágenes (quita la clase loading si existe)
+                container.querySelectorAll('img').forEach(img => {
+                    if(img.complete) img.parentElement.classList.add('loaded');
+                    else img.onload = () => img.parentElement.classList.add('loaded');
+                });
             };
     
-            // --- Lightbox Logic ---
+            // --- LIGHTBOX (Corregido) ---
             const openLightbox = (src, caption, imagesArr, index) => {
                 lightboxImages = imagesArr; currentLbIndex = index;
                 lightboxImage.src = src; 
@@ -1140,7 +1145,7 @@
             };
     
             // =================================================================
-            // 5. RENDERIZADORES (PINTAR HTML)
+            // 5. RENDERIZADORES
             // =================================================================
             
             const renderCart = () => {
@@ -1182,7 +1187,9 @@
                     alert('Este artículo ya está en tu carrito para estas fechas.');
                     return;
                 }
-                cart.push({ ...item, cartId: cartId, startDate: startDate, endDate: endDate, totalDays: totalDays, image: item.images[0] });
+                // FIX IMAGEN CARRITO: Usamos .imageUrl
+                const thumb = (item.images && item.images[0]) ? item.images[0].imageUrl : 'https://placehold.co/100?text=Sin+Foto';
+                cart.push({ ...item, cartId: cartId, startDate: startDate, endDate: endDate, totalDays: totalDays, image: thumb });
                 renderCart(); updateCartIcon(); toggleCart(true);
             };
     
@@ -1221,7 +1228,8 @@
             const renderProjects = () => {
                 const container = document.getElementById('projects-container');
                 if(!container) return;
-                container.style.display = 'block';
+                // Asegurar visibilidad
+                container.style.display = 'block'; 
                 
                 if (globalData.projects.length === 0) { container.innerHTML = '<div class="text-center py-20"><div class="loader-circle mx-auto mb-4"></div><p class="text-gray-400">Cargando proyectos...</p></div>'; return; }
                 container.innerHTML = globalData.projects.map((p, i) => `
@@ -1233,8 +1241,7 @@
                         </div>
                         <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl || 'https://placehold.co/600'}" alt="${p.title}" class="w-full h-full object-cover"></div>
                     </div>`).join('');
-
-                    observeElements(container);
+                observeElements(container);
             };
     
             const renderServicesGrid = () => {
@@ -1263,11 +1270,14 @@
                     if(catId !== 'Todo') items = items.filter(i => i.categoryId === catId);
                     
                     gridContainer.innerHTML = items.map(item => {
+                        // FIX RENTAL LIST: .map(img => img.imageUrl)
                         const imgs = item.images || [];
+                        const trackHTML = imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200 flex items-center justify-center">Sin foto</div>';
+                        
                         return `
                         <div class="rental-card reveal">
                              <div class="carousel-container aspect-w-4 aspect-h-3">
-                                <div class="carousel-track flex" data-current-index="0">${imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200"></div>'}</div>
+                                <div class="carousel-track flex" data-current-index="0">${trackHTML}</div>
                                 ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
@@ -1280,7 +1290,6 @@
                     observeElements(gridContainer);
                 };
                 
-                // Listeners locales
                 filtersContainer.onclick = (e) => { 
                     if (e.target.matches('.rental-category-btn')) { 
                         filtersContainer.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); renderItems(e.target.dataset.category); 
@@ -1322,10 +1331,9 @@
                         </div></div>
                     </section>`;
                 
-                // IMPORTANTE: Eliminamos la línea 'navigateTo(targetId);' que causaba el bucle.
-                // Solo necesitamos activar la página manualmente si no está activa.
+                // FIX RECURSION: No llamar a navigateTo aquí. Solo activar visualmente.
                 const page = document.getElementById(targetId);
-                if(page && !page.classList.contains('page-active')) {
+                if(page) {
                     document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
                     page.style.display='block';
                     setTimeout(()=>page.classList.add('page-active'), 10);
@@ -1350,10 +1358,10 @@
                             <div class="text-center mt-20 reveal"><a href="#" data-target="contact" class="nav-link btn-primary mt-6 inline-block bg-black text-white font-bold py-4 px-10 rounded-full">Contáctame</a></div>
                         </div></div>
                     </section>`;
-    
-                // Eliminamos recursión y activamos vista
+                
+                // FIX RECURSION
                 const page = document.getElementById(targetId);
-                if(page && !page.classList.contains('page-active')) {
+                if(page) {
                     document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
                     page.style.display='block';
                     setTimeout(()=>page.classList.add('page-active'), 10);
@@ -1367,14 +1375,16 @@
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
-                const trackHTML = item.images.map(src=>`<div class="carousel-item"><img src="${src}" class="w-full h-full object-cover"></div>`).join('');
+                // FIX RENTAL IMAGES: .map(img => img.imageUrl)
+                const trackHTML = item.images.map(img=>`<div class="carousel-item"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
+                
                 document.getElementById('rental-detail-pages').innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
                         <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
                             <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo</a>
                             <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
                                 <div class="lg:col-span-3"><div class="carousel-container sticky top-28"><div class="carousel-track">${trackHTML}</div><button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next"><i class="fas fa-chevron-right"></i></button></div></div>
-                                <div class="lg:col-span-2 reveal"><h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2><p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p><p class="text-gray-600 text-justify text-reveal mb-8">${item.long_desc}</p><button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white font-bold py-4 px-8 rounded-full border">Consultar Disponibilidad</button></div>
+                                <div class="lg:col-span-2 reveal"><h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2><p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p><p class="text-gray-600 text-justify text-reveal mb-8">${item.description}</p><button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white font-bold py-4 px-8 rounded-full border">Consultar Disponibilidad</button></div>
                             </div>
                         </div></div>
                     </section>`;
@@ -1386,9 +1396,9 @@
                 section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 section.querySelector('.prev').onclick = () => { idx=(idx-1+item.images.length)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 
-                // Eliminamos recursión
+                // FIX RECURSION
                 const page = document.getElementById(targetId);
-                if(page && !page.classList.contains('page-active')) {
+                if(page) {
                     document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
                     page.style.display='block';
                     setTimeout(()=>page.classList.add('page-active'), 10);
@@ -1397,7 +1407,7 @@
             };
     
             // =================================================================
-            // 6. ORQUESTACIÓN DE DATOS (LOGICA MAESTRA)
+            // 6. ORQUESTACIÓN
             // =================================================================
             const loadSection = async (sectionName) => {
                 if (sectionName === 'projects' && globalData.projects.length > 0) return;
@@ -1427,8 +1437,11 @@
                     
                     rentalDataGlobal = {}; 
                     data.rentalCategories.forEach(cat => {
+                        // FIX RENTAL DATE LOGIC
                         rentalDataGlobal[cat.name] = data.rentalItems.filter(i => i.categoryId === cat.id).map(i => ({
-                            ...i, price: parseFloat(i.pricePerDay), bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => [b.startDate, b.endDate])
+                            ...i, price: parseFloat(i.pricePerDay), 
+                            images: i.images || [],
+                            bookedDates: data.blockedDates.filter(b => b.itemId === i.id).flatMap(b => getDatesInRange(b.startDate, b.endDate))
                         }));
                     });
                     renderRentalPage();
@@ -1436,10 +1449,8 @@
             };
     
             const navigateTo = (targetId) => {
-                // A. CARGA INTELIGENTE
                 if (['projects', 'services', 'rental'].includes(targetId)) loadSection(targetId);
                 
-                // B. MANEJO DE DETALLES PROFUNDOS (Espera a tener datos)
                 if (targetId.startsWith('service-detail-')) {
                     if (globalData.services.length === 0) loadSection('services').then(() => renderServiceDetail(targetId));
                     else renderServiceDetail(targetId);
@@ -1453,7 +1464,6 @@
                     else renderProjectDetail(targetId);
                 }
     
-                // C. TRANSICIÓN VISUAL
                 const currentPage = document.querySelector('.page-active');
                 const targetPage = document.getElementById(targetId);
                 if (!targetPage || currentPage === targetPage) return;
@@ -1463,7 +1473,6 @@
                 setTimeout(() => { targetPage.classList.add('page-active'); handleScrollHeader(); }, 10);
                 if (currentPage) setTimeout(() => { currentPage.classList.remove('page-exiting'); currentPage.style.display = 'none'; }, 500);
     
-                // D. MENU
                 let active = targetId;
                 if(targetId.startsWith('project-detail-')) active='projects';
                 else if(targetId.startsWith('rental-detail-')) active='rental';
@@ -1484,8 +1493,6 @@
                     if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
                     if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
                     if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
-                    
-                    // Inserción de textos About
                     if(about.intro_phrase) { const el=document.getElementById('about-intro-phrase'); if(el) el.textContent=`"${about.intro_phrase}"`; }
                     if(about.bio) { const el=document.getElementById('about-bio'); if(el) el.innerHTML=about.bio; }
                     if(about.process) { const el=document.getElementById('about-process'); if(el) el.innerHTML=about.process; }
@@ -1495,12 +1502,11 @@
                     updateLink('Instagram', ident.social_instagram); updateLink('Facebook', ident.social_facebook); updateLink('YouTube', ident.social_youtube);
                     updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
                     
-                    // MAPA (Sanitizado)
                     if (ident.social_maps) { 
                         const map = document.getElementById('google-map');
                         let mapUrl = ident.social_maps;
                         if(map && mapUrl.includes('embed')) map.src = mapUrl; 
-                        else if(map) map.style.display = 'none'; // Ocultar si no es embed válido
+                        else if(map) map.style.display = 'none'; 
                     }
     
                     globalData.portfolio = apiData.portfolioGallery || [];
@@ -1521,7 +1527,7 @@
             };
     
             // =================================================================
-            // 7. MODALES (CALENDARIO Y CHECKOUT)
+            // 7. MODALES
             // =================================================================
             const showCheckoutModal = () => {
                 const container = document.getElementById('checkout-modal-container');
@@ -1594,7 +1600,7 @@
             // 8. LISTENERS GLOBALES (Event Delegation)
             // =================================================================
             document.addEventListener('click', function(e) {
-                // A. Navegación Menú
+                // A. Navegación
                 const navLink = e.target.closest('.nav-link');
                 if (navLink) { 
                     e.preventDefault(); 
@@ -1604,32 +1610,25 @@
                     return;
                 }
                 
-                // B. Lightbox
-                // B. Lightbox
-                // Simplificamos la detección: si es img dentro de gallery-item, abre lightbox
+                // B. Lightbox (CORREGIDO: DETECCIÓN MÁS AMPLIA)
                 const galleryItem = e.target.closest('.gallery-item');
                 if(galleryItem && !galleryItem.closest('.rental-card') && !e.target.closest('iframe')) {
+                    // Si hizo clic en la imagen O en el overlay
                     const img = galleryItem.querySelector('img');
-                    // IMPORTANTE: Detectamos si el click fue DIRECTAMENTE en la imagen o en el overlay
-                    if(img && (e.target === img || e.target.closest('.overlay'))) {
-                        // Recolectar todas las imagenes de la pagina actual para navegar
-                        const activePage = document.querySelector('.page-active');
-                        if(activePage) {
-                            const allItems = Array.from(activePage.querySelectorAll('.gallery-item img'));
-                            const imgs = allItems.map(i=>({
-                                src: i.src, 
-                                title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
-                            }));
-                            const idx = allItems.indexOf(img); 
-                            if(idx !== -1) openLightbox(img.src, imgs[idx].title, imgs, idx);
-                        }
+                    if(img) {
+                        const allItems = Array.from(document.querySelectorAll('.page-active .gallery-item img'));
+                        const imgs = allItems.map(i=>({
+                            src: i.src, 
+                            title: i.closest('.gallery-item').querySelector('.overlay p')?.textContent || i.alt || ''
+                        }));
+                        const idx = allItems.indexOf(img); 
+                        if(idx !== -1) openLightbox(img.src, imgs[idx].title, imgs, idx);
                     }
                 }
                 
                 // C. Carrito Eliminar
                 if (e.target.closest('.cart-item-remove-btn')) {
-                    const id = e.target.closest('.cart-item-remove-btn').dataset.cartId;
-                    cart = cart.filter(i => i.cartId !== id);
+                    cart = cart.filter(i => i.cartId !== e.target.closest('.cart-item-remove-btn').dataset.cartId);
                     renderCart(); updateCartIcon();
                 }
             });
@@ -1655,7 +1654,6 @@
                 }
             };
     
-            // Scroll
             window.addEventListener('scroll', handleScrollHeader, { passive: true });
     
             // ARRANCAR
