@@ -20,10 +20,15 @@ exports.handler = async (event, context) => {
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
     await doc.loadInfo();
 
-    // AJUSTE: Agregamos 'BlockedDates' a la lista de hojas requeridas
-    const sheetTitles = ['Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages', 'Services', 'ServiceContentBlocks', 'ServiceImages', 'RentalCategories', 'RentalItems', 'RentalItemImages', 'BlockedDates'];
+    // 1. AGREGAMOS LAS HOJAS DE IDENTIDAD QUE FALTABAN
+    const sheetTitles = [
+        'Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages', 
+        'Services', 'ServiceContentBlocks', 'ServiceImages', 
+        'RentalCategories', 'RentalItems', 'RentalItemImages', 'BlockedDates',
+        'Identidad', 'ImagenesIdentidad' // <--- NUEVAS
+    ];
+    
     const sheetsData = {};
-
     const promises = sheetTitles.map(async (title) => {
         try {
             const sheet = doc.sheetsByTitle[title];
@@ -42,11 +47,16 @@ exports.handler = async (event, context) => {
 
     await Promise.all(promises);
 
-    // Procesamiento de Datos
-    const portfolioImages = (sheetsData.ProjectImages||[]).filter(i => String(i.showInPortfolio).toLowerCase() === 'si').sort((a,b)=>(parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
-    const settings = (sheetsData.Settings||[]).reduce((acc, s) => { if (s.key) acc[s.key] = s.value; return acc; }, {});
-    const aboutContent = (sheetsData.About||[]).reduce((acc, i) => { if (i.section) acc[i.section] = i.content; return acc; }, {});
+    // --- PROCESAMIENTO DE DATOS ---
 
+    // A. Identidad y Textos Globales
+    const identity = (sheetsData.Identidad||[]).reduce((acc, i) => { if(i.key) acc[i.key] = i.value; return acc; }, {});
+    const sysImages = (sheetsData.ImagenesIdentidad||[]).reduce((acc, i) => { if(i.key) acc[i.key] = i.imageUrl; return acc; }, {});
+    const aboutContent = (sheetsData.About||[]).reduce((acc, i) => { if(i.section) acc[i.section] = i.content; return acc; }, {});
+
+    // B. Galerías y Listas
+    const portfolioImages = (sheetsData.ProjectImages||[]).filter(i => String(i.showInPortfolio).toLowerCase() === 'si').sort((a,b)=>(parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
+    
     const servicesWithContent = (sheetsData.Services||[]).map(service => ({
         ...service,
         contentBlocks: (sheetsData.ServiceContentBlocks||[]).filter(b => b.serviceId === service.id).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
@@ -64,8 +74,10 @@ exports.handler = async (event, context) => {
         return { ...project, coverImageUrl: project.coverImageUrl || cover?.imageUrl || pImages[0]?.imageUrl || '', images: pImages };
     }).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
 
+    // C. Empaquetado Final
     const websiteData = {
-      settings, 
+      identity,      // Datos de contacto, redes, legal
+      sysImages,     // Logos y foto de perfil
       about: aboutContent, 
       portfolioGallery: portfolioImages,
       videos: (sheetsData.Videos||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
@@ -74,7 +86,6 @@ exports.handler = async (event, context) => {
       services: servicesWithContent,
       rentalCategories: (sheetsData.RentalCategories||[]).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
       rentalItems: rentalItemsWithImages,
-      // AJUSTE: Entregamos los bloqueos al frontend para que el calendario pinte los días ocupados
       blockedDates: sheetsData.BlockedDates || [] 
     };
 
