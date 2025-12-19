@@ -1054,51 +1054,45 @@
 
         // --- INICIALIZACIÓN MAESTRA ---
         const initialize = async () => {
-            // 1. Descargar Datos Reales
             const apiData = await fetchWebsiteData();
             
             if (apiData) {
                 console.log("Datos recibidos:", apiData);
 
-                // --- MÓDULO 1: IDENTIDAD Y CONFIGURACIÓN ---
-                
-                // A. Inyectar Logos Reales
+                // --- MÓDULO 1: IDENTIDAD (Logos y Textos) ---
                 const imgs = apiData.sysImages || {};
+                const ident = apiData.identity || {};
+                const about = apiData.about || {};
+
+                // A. Logos
                 if (imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(el => el.src = imgs.logo_black);
                 if (imgs.logo_white) document.querySelectorAll('.logo-light').forEach(el => el.src = imgs.logo_white);
-                if (imgs.favicon) document.querySelector("link[rel*='icon']").href = imgs.favicon;
+                if (imgs.favicon) { const fav = document.querySelector("link[rel*='icon']"); if(fav) fav.href = imgs.favicon; }
 
-                // B. Inyectar Textos de "Quién Soy"
-                const about = apiData.about || {};
-                const imgProfile = document.querySelector('#about img');
-                
-                if (about.intro_phrase) document.getElementById('about-intro-phrase').textContent = `"${about.intro_phrase}"`;
-                if (about.bio) document.getElementById('about-bio').innerHTML = about.bio; 
-                if (about.process) document.getElementById('about-process').innerHTML = about.process; 
-                if (about.profile_image && imgProfile) imgProfile.src = about.profile_image;
+                // B. Quién Soy
+                if (about.intro_phrase) { const el = document.getElementById('about-intro-phrase'); if(el) el.textContent = `"${about.intro_phrase}"`; }
+                if (about.bio) { const el = document.getElementById('about-bio'); if(el) el.innerHTML = about.bio; }
+                if (about.process) { const el = document.getElementById('about-process'); if(el) el.innerHTML = about.process; }
+                if (about.profile_image) { const img = document.querySelector('#about img'); if(img) img.src = about.profile_image; }
 
-                // C. Inyectar Redes Sociales
-                const ident = apiData.identity || {};
-                const updateLink = (ariaLabel, url) => {
-                    if (!url) return;
-                    document.querySelectorAll(`a[aria-label="${ariaLabel}"]`).forEach(a => { a.href = url; a.target = "_blank"; });
-                };
-                
+                // C. Redes
+                const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
                 updateLink('Instagram', ident.social_instagram);
                 updateLink('Facebook', ident.social_facebook);
                 updateLink('YouTube', ident.social_youtube);
                 updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
+                if (ident.social_maps) { const map = document.getElementById('google-map'); if(map && ident.social_maps.includes('http')) map.src = ident.social_maps.match(/src="([^"]+)"/)?.[1] || ident.social_maps; }
+
+                // --- MÓDULO 2: DATOS DE PROYECTOS ---
+                // Asignamos los datos reales a las variables globales
+                portfolioData = apiData.portfolioGallery || [];
+                projectsData = apiData.projects || [];
                 
-                if (ident.social_maps) {
-                    const mapFrame = document.getElementById('google-map');
-                    if (ident.social_maps.includes('src="')) {
-                        const match = ident.social_maps.match(/src="([^"]+)"/);
-                        if (mapFrame && match) mapFrame.src = match[1];
-                    } else if(mapFrame) mapFrame.src = ident.social_maps;
-                }
+                // NOTA: 'projectDetails' ya no es necesario como objeto separado, 
+                // porque 'projectsData' ya contiene los detalles (imágenes) dentro.
             }
 
-            // --- RENDERIZADO INICIAL ---
+            // Renderizado
             renderPortfolio(); 
             renderProjects(); 
             renderServicesGrid(); 
@@ -1106,15 +1100,21 @@
             renderCart(); 
             updateCartIcon();
 
-            // Ocultar Loader
             setTimeout(() => pageLoader.classList.add('hidden'), 1500);
             
-            // Activar página inicial
-            const initialPage = document.getElementById('portfolio');
-            if(initialPage) {
-                initialPage.classList.add('page-active');
-                observeElements(initialPage);
-                document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
+            // Navegación inicial
+            if(window.location.hash) {
+                // Si hay un hash (ej. #projects), ir ahí
+                const target = window.location.hash.substring(1);
+                const el = document.getElementById(target);
+                if(el) navigateTo(target);
+            } else {
+                const initialPage = document.getElementById('portfolio');
+                if(initialPage) {
+                    initialPage.classList.add('page-active');
+                    observeElements(initialPage);
+                    document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
+                }
             }
         };
 
@@ -1463,34 +1463,50 @@
             observeElements(targetPage);
         };
         
-        const renderProjectDetail = (projectId) => {
-            const detailContainer = document.getElementById('project-detail-pages');
-            const project = projectDetails[projectId];
-            if (!project) return;
+        const renderProjectDetail = (targetId) => {
+            // targetId viene como "project-detail-ID_REAL"
+            // Extraemos el ID real cortando "project-detail-" (15 caracteres)
+            const realId = targetId.substring(15);
             
-            const imagesHTML = project.images.map(src => `
-                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container">
-                    <img src="${src}" alt="${project.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
+            // Buscamos en los datos reales
+            const project = projectsData.find(p => String(p.id) === String(realId));
+            
+            if (!project) {
+                console.error("Proyecto no encontrado:", realId);
+                return;
+            }
+            
+            const detailContainer = document.getElementById('project-detail-pages');
+            
+            // Usamos las imágenes del proyecto (project.images viene del backend)
+            const images = project.images || [];
+            
+            const imagesHTML = images.length > 0 ? images.map(img => `
+                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6 group">
+                    <img src="${img.imageUrl}" alt="${project.title}" loading="lazy" class="w-full h-auto object-cover shadow-sm transition-transform duration-500 group-hover:scale-105">
+                    ${img.caption ? `<div class="absolute bottom-0 left-0 w-full p-2 bg-black/50 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">${img.caption}</div>` : ''}
                 </div>
-            `).join('');
+            `).join('') : '<p class="text-center col-span-full text-gray-400">Sin imágenes adicionales.</p>';
             
             detailContainer.innerHTML = `
-                <section id="${projectId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
+                <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
                     <div class="container mx-auto px-6">
                         <div class="max-w-6xl mx-auto">
-                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block">
-                                <i class="fas fa-arrow-left mr-2"></i> Volver a Proyectos
+                            <a href="#" data-target="projects" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-flex items-center gap-2">
+                                <i class="fas fa-arrow-left"></i> Volver a Proyectos
                             </a>
                             <div class="text-center mb-16 reveal">
-                                <h2 class="text-4xl md:text-5xl font-display text-reveal">${project.title}</h2>
-                                <p class="text-lg text-gray-600 mt-4 max-w-2xl mx-auto text-reveal text-center">${project.description}</p>
+                                <h2 class="text-4xl md:text-6xl font-display text-reveal mb-4">${project.title}</h2>
+                                <p class="text-lg text-gray-600 mt-4 max-w-3xl mx-auto text-reveal text-center leading-relaxed">${project.description}</p>
                             </div>
-                            <div class="columns-2 md:columns-3 gap-8 space-y-8 reveal">${imagesHTML}</div>
+                            <div class="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6 reveal">
+                                ${imagesHTML}
+                            </div>
                         </div>
                     </div>
                 </section>`;
             
-            navigateTo(projectId);
+            navigateTo(targetId);
         };
 
         const renderServiceDetail = (serviceId) => {
@@ -1610,16 +1626,21 @@
         
         const renderPortfolio = () => {
             const portfolioGallery = document.getElementById('portfolio-gallery');
-            if(portfolioGallery) {
-                portfolioGallery.innerHTML = portfolioData.map(item => `
-                    <div class="gallery-item break-inside-avoid overflow-hidden relative img-container" data-category="${item.category}">
-                        <img src="${item.src}" alt="${item.title}" loading="lazy" class="w-full h-auto object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x600/ff0000/ffffff?text=Error';">
-                        <div class="overlay absolute inset-0 flex items-end p-4">
-                            <p class="text-white text-lg font-bold">${item.title}</p>
-                        </div>
-                    </div>
-                `).join('');
+            if(!portfolioGallery) return;
+            
+            if (portfolioData.length === 0) {
+                portfolioGallery.innerHTML = '<p class="text-center col-span-full text-gray-400 py-10">Cargando portafolio...</p>';
+                return;
             }
+
+            portfolioGallery.innerHTML = portfolioData.map(item => `
+                <div class="gallery-item break-inside-avoid overflow-hidden relative img-container mb-6">
+                    <img src="${item.imageUrl}" alt="${item.caption || 'Foto Portafolio'}" loading="lazy" class="w-full h-auto object-cover hover:scale-105 transition-transform duration-700">
+                    <div class="overlay absolute inset-0 flex items-end p-4 bg-gradient-to-t from-black/60 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
+                        <p class="text-white text-lg font-bold translate-y-4 transition-transform duration-300">${item.caption || ''}</p>
+                    </div>
+                </div>
+            `).join('');
         };
 
         const renderServicesGrid = () => {
@@ -1704,22 +1725,27 @@
         
         const renderProjects = () => {
             const projectsContainer = document.getElementById('projects-container');
-            if(projectsContainer) {
-                projectsContainer.innerHTML = projectsData.map((project, index) => `
-                    <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal">
-                        <div class="p-8 ${index % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
-                            <h3 class="text-4xl font-display mb-4 text-reveal">${project.title}</h3>
-                            <p class="text-gray-600 leading-relaxed mb-6 text-reveal">${project.description}</p>
-                            <a href="#" data-target="project-detail-${project.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block">
-                                Ver Galería Completa <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
-                            </a>
-                        </div>
-                        <div class="overflow-hidden gallery-item img-container h-full">
-                            <img src="${project.img}" alt="${project.title}" class="w-full h-full object-cover">
-                        </div>
-                    </div>
-                `).join('');
+            if(!projectsContainer) return;
+
+            if (projectsData.length === 0) {
+                projectsContainer.innerHTML = '<p class="text-center text-gray-400 py-10">Pronto publicaremos nuevos proyectos.</p>';
+                return;
             }
+
+            projectsContainer.innerHTML = projectsData.map((project, index) => `
+                <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal gap-8 md:gap-12">
+                    <div class="p-4 md:p-8 ${index % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
+                        <h3 class="text-3xl md:text-4xl font-display mb-4 text-reveal">${project.title}</h3>
+                        <p class="text-gray-600 leading-relaxed mb-6 text-reveal line-clamp-3">${project.description}</p>
+                        <a href="#" data-target="project-detail-${project.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-all">
+                            Ver Galería Completa
+                        </a>
+                    </div>
+                    <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg">
+                        <img src="${project.coverImageUrl}" alt="${project.title}" class="w-full h-full object-cover">
+                    </div>
+                </div>
+            `).join('');
         };
 
         // --- LÓGICA DEL MODAL DEL CALENDARIO ---
