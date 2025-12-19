@@ -284,12 +284,22 @@
             color: white; 
             transform: scale(1.1);
         }
+        /* --- ESTILO DEL MAPA (Efecto Gris a Color) --- */
         #google-map { 
-            filter: grayscale(100%) contrast(90%) brightness(110%); 
+            width: 100%;
+            height: 450px; /* Asegura altura para que no desaparezca */
+            filter: grayscale(100%) contrast(90%); 
             transition: filter 0.5s ease;
+            border: 0;
         }
         #google-map:hover { 
-            filter: grayscale(0%);
+            filter: grayscale(0%) contrast(100%);
+        }
+
+        /* Contenedor del mapa para asegurar márgenes */
+        .map-container {
+            margin-top: 0; /* Ajusta según necesidad */
+            overflow: hidden;
         }
         
         /* --- Logos de Marcas --- */
@@ -1762,119 +1772,127 @@
             };
     
             const initialize = async () => {
-                // 1. Descarga de datos
                 const apiData = await fetchSectionData('home');
                 
-                // --- DIAGNÓSTICO (MIRA LA CONSOLA CON F12) ---
-                console.log("🔥 DATOS RECIBIDOS DEL SHEET:", apiData);
-                console.log("📂 ESTRUCTURA ABOUT:", apiData ? apiData.about : "Sin datos");
-                console.log("🖼️ ESTRUCTURA IMÁGENES:", apiData ? apiData.sysImages : "Sin datos");
-
-                // --- HELPER: BUSCADOR TIPO SABUESO ---
-                // Busca el valor deseado sin importar cómo se llamen las columnas (Key, Section, ID, etc.)
-                const findText = (list, keyToFind) => {
-                    if (!list) return null;
-                    // Si es un objeto plano (fila horizontal), devolvemos la propiedad directa
-                    if (!Array.isArray(list)) return list[keyToFind];
-
-                    // Si es una lista (filas verticales), buscamos la fila correcta
-                    const foundRow = list.find(item => {
-                        // Normalizamos para evitar errores de mayúsculas/minúsculas o espacios
-                        const k = String(item.key || item.section || item.id || '').toLowerCase().trim();
-                        return k === keyToFind.toLowerCase();
-                    });
-
-                    if (foundRow) {
-                        // Si encontramos la fila, devolvemos el contenido de la columna de valor
-                        return foundRow.value || foundRow.content || foundRow.description || foundRow.text || '';
-                    }
-                    return null;
-                };
-
-                // --- HELPER: MAPEO DE IMÁGENES ---
-                const getImagesMap = (list) => {
-                    if (!list) return {};
-                    if (!Array.isArray(list)) return list;
-                    return list.reduce((acc, item) => {
-                        const k = item.key || item.section || item.id;
-                        const v = item.imageUrl || item.value || item.url; // A veces es imageUrl, a veces value
-                        if (k) acc[k] = v;
+                // --- ADAPTADOR UNIVERSAL DE DATOS ---
+                // Permite leer el Excel sin importar si las columnas se llaman 'key', 'section', 'value' o 'content'
+                const normalizeData = (data) => {
+                    if (!data) return {};
+                    if (!Array.isArray(data)) return data; 
+                    
+                    return data.reduce((acc, item) => {
+                        const rawKey = item.key || item.section || item.id;
+                        const rawVal = item.value || item.content || item.description || item.text;
+                        
+                        if (rawKey) {
+                            const cleanKey = String(rawKey).trim(); 
+                            acc[cleanKey] = rawVal;
+                        }
                         return acc;
                     }, {});
                 };
 
                 if (apiData) {
-                    const imagesObj = getImagesMap(apiData.sysImages);
-                    const ident = apiData.identity; // Se procesará puntualmente abajo
+                    // Procesamos todo con el adaptador para evitar errores
+                    const imgs = normalizeData(apiData.sysImages);
+                    const ident = normalizeData(apiData.identity);
+                    const about = normalizeData(apiData.about); 
                     
-                    // --- 1. LOGOS Y FAVICON ---
+                    // --- 1. IDENTIDAD VISUAL (Logos y Favicon) ---
+                    // Helper extra por si las imágenes vienen en formato complejo
+                    let imagesObj = imgs;
+                    if (Array.isArray(apiData.sysImages) && apiData.sysImages[0]?.imageUrl) {
+                         imagesObj = apiData.sysImages.reduce((acc, item) => ({ ...acc, [item.key]: item.imageUrl }), {});
+                    }
+
                     if(imagesObj.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imagesObj.logo_black);
                     if(imagesObj.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imagesObj.logo_white);
                     if(imagesObj.favicon) document.querySelector("link[rel*='icon']").href=imagesObj.favicon;
                     
-                    // --- 2. SECCIÓN: QUIÉN SOY (Usando el buscador 'Sabueso') ---
-                    // Buscamos en apiData.about las claves exactas que me diste
-                    const txtIntro = findText(apiData.about, 'intro_phrase');
-                    const txtBio = findText(apiData.about, 'bio');
-                    const txtProcess = findText(apiData.about, 'process');
-
-                    // A. Frase Intro
-                    if(txtIntro) { 
+                    // --- 2. SECCIÓN: QUIÉN SOY (Textos y Foto) ---
+                    
+                    // A. Frase de Introducción
+                    if(about.intro_phrase) { 
                         const el = document.getElementById('about-intro-phrase'); 
-                        if(el) el.textContent = `"${txtIntro.replace(/^"|"$/g, '')}"`; 
+                        if(el) el.textContent = `"${about.intro_phrase.replace(/^"|"$/g, '')}"`; 
                     }
 
-                    // B. Bio
-                    if(txtBio) { 
+                    // B. Mi Filosofía
+                    if(about.bio) { 
                         const el = document.getElementById('about-bio'); 
-                        if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${txtBio}</div>`;
+                        if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.bio}</div>`;
                     }
 
-                    // C. Proceso
-                    if(txtProcess) { 
+                    // C. Mi Proceso
+                    if(about.process) { 
                         const el = document.getElementById('about-process'); 
-                        if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${txtProcess}</div>`;
+                        if(el) el.innerHTML = `<div class="rich-text-content text-gray-600 text-lg leading-relaxed text-justify">${about.process}</div>`;
                     }
 
-                    // D. Foto de Perfil (Prioridad: ImagenesIdentidad -> Key: profile_pic)
-                    // Buscamos directamente en el mapa de imágenes que creamos arriba
-                    if(imagesObj.profile_pic) { 
+                    // D. Foto de Perfil (Prioridad: ImagenesIdentidad > About)
+                    const profileSrc = imagesObj.profile_pic || about.profile_pic;
+                    if(profileSrc) { 
                         const el = document.querySelector('#about img'); 
                         if(el) {
-                            el.src = imagesObj.profile_pic;
+                            el.src = profileSrc;
                             el.removeAttribute('srcset'); 
                         }
-                    } else {
-                        console.warn("⚠️ No se encontró 'profile_pic' en ImagenesIdentidad");
                     }
     
-                    // --- 3. CONTACTO Y REDES ---
-                    // Usamos el buscador también aquí por seguridad
-                    const getIdent = (k) => findText(apiData.identity, k);
+                    // --- 3. CONTACTO Y REDES (Mejorado) ---
                     
-                    const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
+                    // Función auxiliar para configurar acciones reales según el tipo
+                    const setContactAction = (ariaLabel, type, value) => {
+                        const linkEl = document.querySelector(`a[aria-label="${ariaLabel}"]`);
+                        if (!linkEl || !value) return;
+
+                        if (type === 'social') {
+                            linkEl.href = value;
+                            linkEl.target = '_blank';
+                        } else if (type === 'whatsapp') {
+                            // Limpiamos el número para que solo queden dígitos
+                            const cleanNum = value.replace(/[^0-9]/g, '');
+                            linkEl.href = `https://wa.me/${cleanNum}`;
+                            linkEl.target = '_blank';
+                        } else if (type === 'email') {
+                            linkEl.href = `mailto:${value}`; // Abre la app de correo
+                        } else if (type === 'phone') {
+                            // Protocolo 'tel:' abre el marcador en móviles
+                            const cleanNum = value.replace(/[^0-9+]/g, ''); 
+                            linkEl.href = `tel:${cleanNum}`;
+                            linkEl.title = value; // Tooltip para PC
+                        }
+                    };
+
+                    // Asignamos las acciones usando los datos normalizados 'ident'
+                    setContactAction('Instagram', 'social', ident.social_instagram);
+                    setContactAction('Facebook', 'social', ident.social_facebook);
+                    setContactAction('YouTube', 'social', ident.social_youtube);
+                    setContactAction('WhatsApp', 'whatsapp', ident.social_whatsapp);
+                    setContactAction('Email', 'email', ident.contact_email);
+                    setContactAction('Teléfono', 'phone', ident.contact_phone);
                     
-                    updateLink('Instagram', getIdent('social_instagram')); 
-                    updateLink('Facebook', getIdent('social_facebook')); 
-                    updateLink('YouTube', getIdent('social_youtube'));
+                    // LÓGICA DEL MAPA
+                    const mapUrl = ident.social_maps;
+                    const mapFrame = document.getElementById('google-map');
                     
-                    const wpp = getIdent('social_whatsapp');
-                    updateLink('WhatsApp', wpp ? `https://wa.me/${wpp.replace(/[^0-9]/g, '')}` : null);
-                    
-                    const mapUrl = getIdent('social_maps');
-                    if (mapUrl) { 
-                        const map = document.getElementById('google-map');
-                        if(map && mapUrl.includes('embed')) map.src = mapUrl; 
-                        else if(map) map.style.display = 'none';
+                    if (mapFrame) {
+                        if (mapUrl && mapUrl.length > 10) { 
+                            mapFrame.src = mapUrl; 
+                            mapFrame.style.display = 'block';
+                        } else {
+                            mapFrame.parentElement.style.display = 'none';
+                        }
                     }
     
-                    // --- 4. DATOS GLOBALES ---
+                    // --- 4. DATOS GLOBALES (Portafolio, Videos, etc.) ---
                     globalData.portfolio = apiData.portfolioGallery || [];
                     globalData.videos = apiData.videos || [];
                     globalData.logos = apiData.clientLogos || [];
                     globalData.allProjectImages = apiData.allProjectImages || [];
                 }
                 
+                // Renderizados iniciales
                 renderPortfolio(); 
                 renderVideos(globalData.videos); 
                 renderClientLogos(globalData.logos); 
@@ -1883,6 +1901,7 @@
                 
                 setTimeout(() => pageLoader.classList.add('hidden'), 1500);
                 
+                // Navegación Inicial (Manejo de Hash)
                 if(window.location.hash) {
                     const target = window.location.hash.substring(1);
                     navigateTo(target);
