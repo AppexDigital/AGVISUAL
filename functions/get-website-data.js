@@ -1,5 +1,5 @@
 // functions/get-website-data.js
-// v13.0 - ESTRATEGIA BARRIDO MASIVO (Web Pública)
+// v14.0 - INCLUSIÓN DE BLOQUEOS PARA DISPONIBILIDAD REAL
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
@@ -20,7 +20,8 @@ exports.handler = async (event, context) => {
     const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID, auth);
     await doc.loadInfo();
 
-    const sheetTitles = ['Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages', 'Services', 'ServiceContentBlocks', 'ServiceImages', 'RentalCategories', 'RentalItems', 'RentalItemImages'];
+    // AJUSTE: Agregamos 'BlockedDates' a la lista de hojas requeridas
+    const sheetTitles = ['Settings', 'About', 'Videos', 'ClientLogos', 'Projects', 'ProjectImages', 'Services', 'ServiceContentBlocks', 'ServiceImages', 'RentalCategories', 'RentalItems', 'RentalItemImages', 'BlockedDates'];
     const sheetsData = {};
 
     const promises = sheetTitles.map(async (title) => {
@@ -41,7 +42,7 @@ exports.handler = async (event, context) => {
 
     await Promise.all(promises);
 
-    // Procesamiento Estándar (Sin Hidratación)
+    // Procesamiento de Datos
     const portfolioImages = (sheetsData.ProjectImages||[]).filter(i => String(i.showInPortfolio).toLowerCase() === 'si').sort((a,b)=>(parseInt(a.portfolioOrder)||99)-(parseInt(b.portfolioOrder)||99));
     const settings = (sheetsData.Settings||[]).reduce((acc, s) => { if (s.key) acc[s.key] = s.value; return acc; }, {});
     const aboutContent = (sheetsData.About||[]).reduce((acc, i) => { if (i.section) acc[i.section] = i.content; return acc; }, {});
@@ -64,12 +65,17 @@ exports.handler = async (event, context) => {
     }).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0));
 
     const websiteData = {
-      settings, about: aboutContent, portfolioGallery: portfolioImages,
+      settings, 
+      about: aboutContent, 
+      portfolioGallery: portfolioImages,
       videos: (sheetsData.Videos||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
       clientLogos: (sheetsData.ClientLogos||[]).sort((a,b)=>(parseInt(a.order)||0)-(parseInt(b.order)||0)),
-      projects: projectsWithImages, services: servicesWithContent,
+      projects: projectsWithImages, 
+      services: servicesWithContent,
       rentalCategories: (sheetsData.RentalCategories||[]).sort((a,b)=>(parseInt(a.order)||99)-(parseInt(b.order)||0)),
       rentalItems: rentalItemsWithImages,
+      // AJUSTE: Entregamos los bloqueos al frontend para que el calendario pinte los días ocupados
+      blockedDates: sheetsData.BlockedDates || [] 
     };
 
     return { statusCode: 200, headers, body: JSON.stringify(websiteData) };
