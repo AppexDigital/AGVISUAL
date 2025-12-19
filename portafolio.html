@@ -827,20 +827,8 @@
 
             <div class="bg-zinc-700 text-white py-20 mt-24 reveal">
                 <div class="container mx-auto px-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
-                            <img src="https://placehold.co/1280x720/333333/ffffff?text=Cinematic+Wedding+Film" class="w-full h-full object-cover" alt="Cinematic Wedding Film">
+                    <div id="videos-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
                         </div>
-                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
-                            <img src="https://placehold.co/1280x720/cccccc/333333?text=Branding+Short+Film" class="w-full h-full object-cover" alt="Branding Short Film">
-                        </div>
-                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
-                            <img src="https://placehold.co/1280x720/444444/ffffff?text=Travel+Diary" class="w-full h-full object-cover" alt="Travel Diary">
-                        </div>
-                        <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container">
-                            <img src="https://placehold.co/1280x720/bbbbbb/333333?text=Product+Reel" class="w-full h-full object-cover" alt="Product Reel">
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -849,13 +837,8 @@
                     <div class="text-center mb-12">
                          <h2 class="text-4xl font-display text-gray-800 text-reveal">Confianza y Colaboración</h2>
                     </div>
-                    <div class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto">
-                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+1" alt="Logo Cliente 1" class="client-logo">
-                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+2" alt="Logo Cliente 2" class="client-logo">
-                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+3" alt="Logo Cliente 3" class="client-logo">
-                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+4" alt="Logo Cliente 4" class="client-logo">
-                        <img src="https://placehold.co/150x80/cccccc/888888?text=MARCA+5" alt="Logo Cliente 5" class="client-logo">
-                    </div>
+                    <div id="client-logos-container" class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto">
+                        </div>
                 </div>
             </div>
             
@@ -1586,6 +1569,49 @@
             if(prevButton) prevButton.addEventListener('click', () => { currentIndex = (currentIndex - 1 + slides.length) % slides.length; updateSlidePosition(); });
         };
         
+        
+        const renderVideos = (videosList) => {
+            const container = document.getElementById('videos-container');
+            if(!container) return;
+
+            if (!videosList || videosList.length === 0) {
+                // Ocultar la sección entera si no hay videos, o mostrar mensaje
+                container.parentElement.parentElement.style.display = 'none'; 
+                return;
+            }
+
+            container.innerHTML = videosList.map(video => {
+                // Convertir URL normal de YouTube a Embed si es necesario
+                let embedSrc = video.embedUrl;
+                if (embedSrc.includes('watch?v=')) {
+                    embedSrc = embedSrc.replace('watch?v=', 'embed/');
+                } else if (embedSrc.includes('youtu.be/')) {
+                    embedSrc = embedSrc.replace('youtu.be/', 'www.youtube.com/embed/');
+                }
+
+                return `
+                <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container group rounded-lg bg-black">
+                    <iframe src="${embedSrc}" title="${video.title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full object-cover"></iframe>
+                </div>
+                `;
+            }).join('');
+        };
+
+        const renderClientLogos = (logosList) => {
+            const container = document.getElementById('client-logos-container');
+            if(!container) return;
+
+            if (!logosList || logosList.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 w-full">Nuestros clientes.</p>';
+                return;
+            }
+
+            container.innerHTML = logosList.map(logo => `
+                <img src="${logo.logoUrl}" alt="${logo.clientName}" class="client-logo h-16 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 hover:scale-110">
+            `).join('');
+        };
+        
+        
         const renderPortfolio = () => {
             const portfolioGallery = document.getElementById('portfolio-gallery');
             if(!portfolioGallery) return;
@@ -2008,26 +2034,28 @@
         const initialize = async () => {
             const apiData = await fetchWebsiteData();
             
+            // Variables locales para videos y logos (o puedes hacerlas globales arriba si prefieres)
+            let videosData = [];
+            let clientLogosData = [];
+
             if (apiData) {
                 console.log("Datos recibidos:", apiData);
 
-                // --- MÓDULO 1: IDENTIDAD (Logos y Textos) ---
+                // --- MÓDULO 1: IDENTIDAD ---
                 const imgs = apiData.sysImages || {};
                 const ident = apiData.identity || {};
                 const about = apiData.about || {};
 
-                // A. Logos
+                // (A. Logos del sistema, B. Quién Soy, C. Redes - CÓDIGO EXISTENTE SE MANTIENE IGUAL)
                 if (imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(el => el.src = imgs.logo_black);
                 if (imgs.logo_white) document.querySelectorAll('.logo-light').forEach(el => el.src = imgs.logo_white);
                 if (imgs.favicon) { const fav = document.querySelector("link[rel*='icon']"); if(fav) fav.href = imgs.favicon; }
-
-                // B. Quién Soy
+                
                 if (about.intro_phrase) { const el = document.getElementById('about-intro-phrase'); if(el) el.textContent = `"${about.intro_phrase}"`; }
                 if (about.bio) { const el = document.getElementById('about-bio'); if(el) el.innerHTML = about.bio; }
                 if (about.process) { const el = document.getElementById('about-process'); if(el) el.innerHTML = about.process; }
                 if (about.profile_image) { const img = document.querySelector('#about img'); if(img) img.src = about.profile_image; }
 
-                // C. Redes
                 const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
                 updateLink('Instagram', ident.social_instagram);
                 updateLink('Facebook', ident.social_facebook);
@@ -2035,18 +2063,23 @@
                 updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
                 if (ident.social_maps) { const map = document.getElementById('google-map'); if(map && ident.social_maps.includes('http')) map.src = ident.social_maps.match(/src="([^"]+)"/)?.[1] || ident.social_maps; }
 
-                // --- MÓDULO 2: DATOS DE PROYECTOS ---
-                // Asignamos los datos reales a las variables globales
+                // --- MÓDULO 2: DATOS ---
                 portfolioData = apiData.portfolioGallery || [];
                 projectsData = apiData.projects || [];
-                rentalDataGlobal = {};
-                // NOTA: 'projectDetails' ya no es necesario como objeto separado, 
-                // porque 'projectsData' ya contiene los detalles (imágenes) dentro.
+                
+                // NUEVO: Extraer Videos y Logos
+                videosData = apiData.videos || [];
+                clientLogosData = apiData.clientLogos || [];
             }
 
             // Renderizado
             renderPortfolio(); 
             renderProjects(); 
+            
+            // NUEVO: Renderizar Videos y Logos
+            renderVideos(videosData);
+            renderClientLogos(clientLogosData);
+
             renderServicesGrid(); 
             renderRentalPage();
             renderCart(); 
@@ -2054,9 +2087,7 @@
 
             setTimeout(() => pageLoader.classList.add('hidden'), 1500);
             
-            // Navegación inicial
             if(window.location.hash) {
-                // Si hay un hash (ej. #projects), ir ahí
                 const target = window.location.hash.substring(1);
                 const el = document.getElementById(target);
                 if(el) navigateTo(target);
