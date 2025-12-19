@@ -193,18 +193,64 @@
         #quote-editor-scroll {
             flex: 1; overflow-y: auto; padding: 2rem; display: flex; justify-content: center;
         }
-        /* AJUSTE VISUAL: Editor Transparente e Infinito */
+
+
+
+        
+        /* --- AJUSTES RESPONSIVOS MÓVILES --- */
+        
+        /* 1. Botones compactos en móvil */
+        @media (max-width: 640px) {
+            .btn {
+                padding: 0.4rem 0.6rem !important; /* Más pequeños */
+                font-size: 0.65rem !important;     /* Texto más chico */
+                width: auto !important;
+                flex-shrink: 0;                    /* Evitar que se aplasten */
+            }
+            /* Forzar que los grupos de botones salten de línea si no caben */
+            .flex.justify-between.items-center.w-full {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .flex.justify-between.items-center.w-full > div {
+                width: 100%; /* Botones ocupan ancho completo en grupos apilados */
+                display: flex;
+                justify-content: space-between;
+            }
+        }
+        
+        /* 2. Editor de Cotización: Hoja Ajustable */
         #quote-editor-page {
-            background: transparent !important; /* Fondo transparente */
-            box-shadow: none !important;        /* Sin sombra */
+            background: transparent !important;
+            box-shadow: none !important;
             width: 100%; 
             max-width: 800px; 
-            min-height: auto !important;        /* Altura automática */
-            height: auto !important;            /* Crece con el contenido */
+            min-height: auto !important;
+            height: auto !important;
             padding: 20px 0; 
             color: #000;
             margin: 0 auto;
+            
+            /* TRUCO MOVIL: Escalar la hoja para que quepa en pantalla pequeña */
+            @media (max-width: 768px) {
+                font-size: 10px !important; /* Reducir fuente base */
+                padding: 10px !important;
+                overflow-x: scroll; /* Permitir ver lo que no cabe */
+            }
         }
+        
+        /* 3. Toolbar del Editor: Permitir varias filas */
+        #editor-toolbar-strip {
+            flex-wrap: wrap !important;
+            height: auto !important;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            justify-content: center;
+        }
+
+
+
+        
 
         /* Asegura que el contenedor permita scroll sin cortes */
         #quote-editor-scroll {
@@ -776,23 +822,21 @@
    <template id="reservation-modal-template">
         <div id="reservation-modal-content" class="w-full h-full flex flex-col relative bg-[#0a0a0a] text-white overflow-hidden p-0">
             
-            <div class="flex justify-between items-center bg-[#111] border-b border-white/10 p-4 px-6 flex-shrink-0 z-20">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-[#111] border-b border-white/10 p-4 gap-3 flex-shrink-0 z-20">
                 <div>
-                    <h2 class="modal-title font-display text-2xl text-accent-gold text-white">Gestión de Reserva</h2>
+                    <h2 class="modal-title font-display text-xl md:text-2xl text-accent-gold text-white">Reserva</h2>
                     <div class="flex items-center gap-2 mt-1">
                         <span class="text-[10px] text-gray-500 uppercase tracking-widest">REF:</span>
                         <span id="header-ref-display" class="font-mono text-xs font-bold text-accent-primary tracking-wider">---</span>
                     </div>
                 </div>
                 
-                <div class="flex items-center gap-2">
-                    <button type="button" onclick="App.openQuoteEditor()" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10 mr-2" title="Generar Documento / Factura">
+                <div class="flex items-center gap-2 self-end md:self-auto">
+                    <button type="button" onclick="App.openQuoteEditor()" class="text-gray-400 hover:text-white transition p-2 rounded hover:bg-white/10" title="Ver Documento">
                         <i class="fas fa-file-invoice-dollar fa-lg"></i>
                     </button>
-                    
-                    <div class="h-6 w-px bg-white/10"></div>
-
-                    <button type="button" onclick="UI.closeModal()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10 ml-2" title="Cerrar">
+                    <div class="h-6 w-px bg-white/10 mx-2"></div>
+                    <button type="button" onclick="App.attemptCloseBooking()" class="text-gray-400 hover:text-red-500 transition p-2 rounded hover:bg-white/10">
                         <i class="fas fa-times fa-lg"></i>
                     </button>
                 </div>
@@ -801,17 +845,17 @@
             <form id="reservation-form" onsubmit="App.handleSaveBooking(event)" class="flex flex-col flex-grow overflow-hidden">
                 <input type="hidden" name="id" id="input-reserva-id">
                 
-                <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-6">
                     
                     <div class="bg-white/5 p-4 rounded-lg border border-white/10">
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                            <div class="md:col-span-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-4">
+                            <div class="sm:col-span-2 md:col-span-6">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Cliente</label>
-                                <input type="text" id="c-customerName" class="grid-input font-bold text-xl w-full bg-transparent border-b border-gray-600 focus-gold outline-none py-1" placeholder="Nombre del Cliente" required>
+                                <input type="text" id="c-customerName" class="grid-input font-bold text-lg md:text-xl w-full bg-transparent border-b border-gray-600 focus-gold outline-none py-1" placeholder="Nombre..." required>
                             </div>
                             <div class="md:col-span-3">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Cédula / ID</label>
-                                <input type="text" id="c-customerCedula" class="grid-input bg-transparent border-b border-gray-600 w-full text-base py-1 font-mono text-gray-300" placeholder="---">
+                                <input type="text" id="c-customerCedula" class="grid-input bg-transparent border-b border-gray-600 w-full text-base py-1 font-mono text-gray-300">
                             </div>
                             <div class="md:col-span-3">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Estado</label>
@@ -824,47 +868,50 @@
                             </div>
                             <div class="md:col-span-4">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Teléfono</label>
-                                <input type="text" id="c-customerPhone" class="grid-input bg-transparent border-b border-gray-600 w-full text-sm py-1 focus-gold" placeholder="---">
+                                <input type="text" id="c-customerPhone" class="grid-input bg-transparent border-b border-gray-600 w-full text-sm py-1">
                             </div>
                             <div class="md:col-span-4">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Email</label>
-                                <input type="email" id="c-customerEmail" class="grid-input bg-transparent border-b border-gray-600 w-full text-sm py-1 focus-gold" placeholder="---">
+                                <input type="email" id="c-customerEmail" class="grid-input bg-transparent border-b border-gray-600 w-full text-sm py-1">
                             </div>
-                            <div class="md:col-span-4">
+                            <div class="md:col-span-4 sm:col-span-2">
                                 <label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Dirección</label>
-                                <input type="text" id="c-customerAddress" class="grid-input bg-transparent border-b border-gray-600 w-full text-sm py-1 focus-gold" placeholder="Dirección (Opcional)...">
+                                <input type="text" id="c-customerAddress" class="grid-input bg-transparent border-b border-gray-600 w-full text-sm py-1">
                             </div>
                         </div>
                     </div>
     
                     <div class="border border-white/10 rounded-lg bg-[#0f0f0f] overflow-hidden">
-                        <div class="grid grid-cols-12 gap-2 bg-[#1a1a1a] p-3 booking-grid-header border-b border-white/10 pr-4">
-                            <div class="col-span-4">Artículo / Nota</div>
-                            <div class="col-span-3">Vigencia</div>
-                            <div class="col-span-3">Descuento</div>
-                            <div class="col-span-1 text-right">Total</div>
-                            <div class="col-span-1 text-center">Borrar</div>
+                        <div class="overflow-x-auto">
+                            <div class="min-w-[600px]"> <div class="grid grid-cols-12 gap-2 bg-[#1a1a1a] p-3 booking-grid-header border-b border-white/10 pr-4">
+                                    <div class="col-span-4">Artículo / Nota</div>
+                                    <div class="col-span-3">Vigencia</div>
+                                    <div class="col-span-3">Descuento</div>
+                                    <div class="col-span-1 text-right">Total</div>
+                                    <div class="col-span-1 text-center">x</div>
+                                </div>
+                                <div id="lines-container" class="p-2 space-y-1"></div>
+                            </div>
                         </div>
-                        <div id="lines-container" class="p-2 space-y-1"></div>
                         <div class="p-3 border-t border-white/10 bg-[#141414] text-center">
-                            <button type="button" id="btn-add-line" class="text-gray-500 hover:text-white text-xs font-bold border border-gray-700 hover:border-white rounded px-6 py-2 transition-all hover:bg-white/5">
+                            <button type="button" id="btn-add-line" class="text-gray-500 hover:text-white text-xs font-bold border border-gray-700 hover:border-white rounded px-6 py-2 transition-all w-full md:w-auto">
                                 <i class="fas fa-plus mr-1"></i> AGREGAR ARTÍCULO
                             </button>
                         </div>
                     </div>
     
                     <div class="bg-[#121212] border border-white/10 rounded-lg flex flex-col md:flex-row overflow-hidden mb-4">
-                        <div class="w-full md:w-1/2 border-r border-white/10 p-5">
+                        <div class="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-white/10 p-5">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-[10px] uppercase font-bold text-gray-500">Notas Generales</label>
                                 <i class="fas fa-pen text-[10px] text-gray-600"></i>
                             </div>
-                            <textarea id="c-globalNotes" class="w-full h-32 bg-transparent text-gray-300 text-sm resize-none outline-none subtle-scrollbar placeholder-gray-700 leading-relaxed" placeholder="Detalles..."></textarea>
+                            <textarea id="c-globalNotes" class="w-full h-24 bg-transparent text-gray-300 text-sm resize-none outline-none placeholder-gray-700 leading-relaxed" placeholder="Detalles..."></textarea>
                         </div>
                         <div class="w-full md:w-1/2 p-5 bg-[#161616] space-y-3">
                             <div class="flex justify-between items-center mb-3">
                                 <label class="text-xs uppercase font-bold text-gray-500">Desc. Global</label>
-                                <div class="flex rounded bg-[#1a1a1a] border border-white/10 w-36 h-8">
+                                <div class="flex rounded bg-[#1a1a1a] border border-white/10 w-32 h-8">
                                     <select id="c-globalDiscType" class="dark-select text-xs px-2 border-r border-white/10 outline-none h-full bg-transparent text-white">
                                         <option value="percent">%</option>
                                         <option value="money">$</option>
@@ -880,19 +927,19 @@
                                 <div class="text-xs text-gray-600 text-left leading-tight">Rango: <span id="disp-date-range" class="text-gray-500">--</span></div>
                                 <div class="text-right">
                                     <span class="block text-xs text-gray-500 uppercase font-bold mb-1">Total Final</span>
-                                    <span id="lbl-global-total" class="font-total text-5xl text-white leading-none tracking-tight">$0.00</span>
+                                    <span id="lbl-global-total" class="font-total text-4xl md:text-5xl text-white leading-none tracking-tight">$0.00</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
     
-                <div class="flex justify-end items-center p-4 bg-[#111] border-t border-white/10 gap-3 flex-shrink-0 z-20">
-                    <button type="button" id="btn-delete-booking" class="text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider mr-auto hidden px-2 transition-colors">
+                <div class="flex flex-col-reverse md:flex-row justify-end items-center p-4 bg-[#111] border-t border-white/10 gap-3 flex-shrink-0 z-20">
+                    <button type="button" id="btn-delete-booking" class="w-full md:w-auto text-red-500 hover:text-red-400 text-xs font-bold uppercase tracking-wider md:mr-auto hidden px-2 py-2">
                         <i class="fas fa-trash-alt mr-1"></i> Eliminar
                     </button>
-                    <button type="button" class="px-6 py-2 rounded text-sm font-bold text-gray-400 hover:text-white transition-colors" onclick="UI.closeModal()">Cancelar</button>
-                    <button type="submit" class="bg-white text-black font-bold py-2 px-8 rounded shadow hover:bg-gray-200 transition-all text-sm uppercase tracking-wide">Guardar</button>
+                    <button type="button" class="w-full md:w-auto px-6 py-3 md:py-2 rounded text-sm font-bold text-gray-400 hover:text-white border border-gray-700 md:border-transparent" onclick="App.attemptCloseBooking()">Cancelar</button>
+                    <button type="submit" class="w-full md:w-auto bg-white text-black font-bold py-3 md:py-2 px-8 rounded shadow hover:bg-gray-200 transition-all text-sm uppercase tracking-wide">Guardar</button>
                 </div>
             </form>
         </div>
@@ -2244,16 +2291,18 @@ const App = {
         // CUERPO: Ahora es 100% limpio, solo la lista de imágenes
         const html = `<div id="gallery-list-container"></div>`;
 
-        // FOOTER: Botón de Subir a la izquierda, Acciones a la derecha
+        // AJUSTE RESPONSIVO: 'flex-col md:flex-row' y 'gap-3' para separar en móvil
         const footer = `
-            <div class="flex justify-between items-center w-full">
-                <div>
+            <div class="flex flex-col md:flex-row justify-between items-center w-full gap-3">
+                <div class="w-full md:w-auto">
                     <input type="file" id="up-imgs-modal" multiple accept="image/*" class="hidden" onchange="App.uploadImages(this, '${parentId}', '${title.replace(/'/g,"")}', '${type}')">
-                    <button class="btn btn-primary" onclick="document.getElementById('up-imgs-modal').click()"><i class="fas fa-upload mr-2"></i> Subir Imágenes</button>
+                    <button class="btn btn-primary w-full md:w-auto justify-center" onclick="document.getElementById('up-imgs-modal').click()">
+                        <i class="fas fa-upload mr-2"></i> Subir Imágenes
+                    </button>
                 </div>
-                <div class="flex gap-2">
-                    <button class="btn btn-secondary" onclick="UI.closeModal()">Cancelar</button>
-                    <button class="btn btn-primary" onclick="App.saveGalleryChanges('${parentId}', '${sheetTarget}')">Guardar Cambios</button>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button class="btn btn-secondary flex-1 md:flex-none justify-center" onclick="UI.closeModal()">Cancelar</button>
+                    <button class="btn btn-primary flex-1 md:flex-none justify-center" onclick="App.saveGalleryChanges('${parentId}', '${sheetTarget}')">Guardar</button>
                 </div>
             </div>`;
 
@@ -4997,6 +5046,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
