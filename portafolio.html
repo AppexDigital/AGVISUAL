@@ -1052,75 +1052,6 @@
             }
         };
 
-        // --- INICIALIZACIÓN MAESTRA ---
-        const initialize = async () => {
-            const apiData = await fetchWebsiteData();
-            
-            if (apiData) {
-                console.log("Datos recibidos:", apiData);
-
-                // --- MÓDULO 1: IDENTIDAD (Logos y Textos) ---
-                const imgs = apiData.sysImages || {};
-                const ident = apiData.identity || {};
-                const about = apiData.about || {};
-
-                // A. Logos
-                if (imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(el => el.src = imgs.logo_black);
-                if (imgs.logo_white) document.querySelectorAll('.logo-light').forEach(el => el.src = imgs.logo_white);
-                if (imgs.favicon) { const fav = document.querySelector("link[rel*='icon']"); if(fav) fav.href = imgs.favicon; }
-
-                // B. Quién Soy
-                if (about.intro_phrase) { const el = document.getElementById('about-intro-phrase'); if(el) el.textContent = `"${about.intro_phrase}"`; }
-                if (about.bio) { const el = document.getElementById('about-bio'); if(el) el.innerHTML = about.bio; }
-                if (about.process) { const el = document.getElementById('about-process'); if(el) el.innerHTML = about.process; }
-                if (about.profile_image) { const img = document.querySelector('#about img'); if(img) img.src = about.profile_image; }
-
-                // C. Redes
-                const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
-                updateLink('Instagram', ident.social_instagram);
-                updateLink('Facebook', ident.social_facebook);
-                updateLink('YouTube', ident.social_youtube);
-                updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
-                if (ident.social_maps) { const map = document.getElementById('google-map'); if(map && ident.social_maps.includes('http')) map.src = ident.social_maps.match(/src="([^"]+)"/)?.[1] || ident.social_maps; }
-
-                // --- MÓDULO 2: DATOS DE PROYECTOS ---
-                // Asignamos los datos reales a las variables globales
-                portfolioData = apiData.portfolioGallery || [];
-                projectsData = apiData.projects || [];
-                
-                // NOTA: 'projectDetails' ya no es necesario como objeto separado, 
-                // porque 'projectsData' ya contiene los detalles (imágenes) dentro.
-            }
-
-            // Renderizado
-            renderPortfolio(); 
-            renderProjects(); 
-            renderServicesGrid(); 
-            renderRentalPage();
-            renderCart(); 
-            updateCartIcon();
-
-            setTimeout(() => pageLoader.classList.add('hidden'), 1500);
-            
-            // Navegación inicial
-            if(window.location.hash) {
-                // Si hay un hash (ej. #projects), ir ahí
-                const target = window.location.hash.substring(1);
-                const el = document.getElementById(target);
-                if(el) navigateTo(target);
-            } else {
-                const initialPage = document.getElementById('portfolio');
-                if(initialPage) {
-                    initialPage.classList.add('page-active');
-                    observeElements(initialPage);
-                    document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
-                }
-            }
-        };
-
-        // Arrancamos
-        initialize();
-
 
         // --- FUNCIONES DEL CARRITO ---
         const toggleCart = (show) => {
@@ -2041,7 +1972,75 @@
         });
         cartCloseBtn.addEventListener('click', () => toggleCart(false));
         cartOverlay.addEventListener('click', () => toggleCart(false));
-        
+
+        // --- INICIALIZACIÓN MAESTRA ---
+        const initialize = async () => {
+            const apiData = await fetchWebsiteData();
+            
+            if (apiData) {
+                console.log("Datos recibidos:", apiData);
+
+                // --- MÓDULO 1: IDENTIDAD (Logos y Textos) ---
+                const imgs = apiData.sysImages || {};
+                const ident = apiData.identity || {};
+                const about = apiData.about || {};
+
+                // A. Logos
+                if (imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(el => el.src = imgs.logo_black);
+                if (imgs.logo_white) document.querySelectorAll('.logo-light').forEach(el => el.src = imgs.logo_white);
+                if (imgs.favicon) { const fav = document.querySelector("link[rel*='icon']"); if(fav) fav.href = imgs.favicon; }
+
+                // B. Quién Soy
+                if (about.intro_phrase) { const el = document.getElementById('about-intro-phrase'); if(el) el.textContent = `"${about.intro_phrase}"`; }
+                if (about.bio) { const el = document.getElementById('about-bio'); if(el) el.innerHTML = about.bio; }
+                if (about.process) { const el = document.getElementById('about-process'); if(el) el.innerHTML = about.process; }
+                if (about.profile_image) { const img = document.querySelector('#about img'); if(img) img.src = about.profile_image; }
+
+                // C. Redes
+                const updateLink = (aria, url) => { if(!url) return; document.querySelectorAll(`a[aria-label="${aria}"]`).forEach(a => { a.href = url; a.target = "_blank"; }); };
+                updateLink('Instagram', ident.social_instagram);
+                updateLink('Facebook', ident.social_facebook);
+                updateLink('YouTube', ident.social_youtube);
+                updateLink('WhatsApp', ident.social_whatsapp ? `https://wa.me/${ident.social_whatsapp.replace(/[^0-9]/g, '')}` : null);
+                if (ident.social_maps) { const map = document.getElementById('google-map'); if(map && ident.social_maps.includes('http')) map.src = ident.social_maps.match(/src="([^"]+)"/)?.[1] || ident.social_maps; }
+
+                // --- MÓDULO 2: DATOS DE PROYECTOS ---
+                // Asignamos los datos reales a las variables globales
+                portfolioData = apiData.portfolioGallery || [];
+                projectsData = apiData.projects || [];
+                
+                // NOTA: 'projectDetails' ya no es necesario como objeto separado, 
+                // porque 'projectsData' ya contiene los detalles (imágenes) dentro.
+            }
+
+            // Renderizado
+            renderPortfolio(); 
+            renderProjects(); 
+            renderServicesGrid(); 
+            renderRentalPage();
+            renderCart(); 
+            updateCartIcon();
+
+            setTimeout(() => pageLoader.classList.add('hidden'), 1500);
+            
+            // Navegación inicial
+            if(window.location.hash) {
+                // Si hay un hash (ej. #projects), ir ahí
+                const target = window.location.hash.substring(1);
+                const el = document.getElementById(target);
+                if(el) navigateTo(target);
+            } else {
+                const initialPage = document.getElementById('portfolio');
+                if(initialPage) {
+                    initialPage.classList.add('page-active');
+                    observeElements(initialPage);
+                    document.querySelectorAll('.nav-link[data-target="portfolio"]').forEach(l => l.classList.add('nav-active'));
+                }
+            }
+        };
+
+        // Arrancamos
+        initialize();
 
     });
     </script>
