@@ -837,7 +837,7 @@
                     <div class="text-center mb-12">
                          <h2 class="text-4xl font-display text-gray-800 text-reveal">Confianza y Colaboración</h2>
                     </div>
-                    <div id="client-logos-container" class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto">
+                    <div id="client-logos-container" class="flex justify-center items-center flex-wrap gap-x-12 gap-y-8 max-w-4xl mx-auto min-h-[100px]">
                         </div>
                 </div>
             </div>
@@ -1575,23 +1575,26 @@
             if(!container) return;
 
             if (!videosList || videosList.length === 0) {
-                // Ocultar la sección entera si no hay videos, o mostrar mensaje
                 container.parentElement.parentElement.style.display = 'none'; 
                 return;
             }
 
             container.innerHTML = videosList.map(video => {
-                // Convertir URL normal de YouTube a Embed si es necesario
-                let embedSrc = video.embedUrl;
+                let embedSrc = video.embedUrl || "";
+                // Normalizar URL de YouTube
                 if (embedSrc.includes('watch?v=')) {
                     embedSrc = embedSrc.replace('watch?v=', 'embed/');
                 } else if (embedSrc.includes('youtu.be/')) {
                     embedSrc = embedSrc.replace('youtu.be/', 'www.youtube.com/embed/');
                 }
 
+                // AJUSTES VISUALES: 
+                // 1. 'aspect-w-4 aspect-h-3': Más alto (casi cuadrado).
+                // 2. Sin 'rounded-lg': Esquinas cuadradas.
+                // 3. Sin 'img-container': Elimina el reflejo/brillo de carga.
                 return `
-                <div class="aspect-w-16 aspect-h-9 overflow-hidden shadow-xl gallery-item img-container group rounded-lg bg-black">
-                    <iframe src="${embedSrc}" title="${video.title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full object-cover"></iframe>
+                <div class="aspect-w-4 aspect-h-3 overflow-hidden shadow-2xl gallery-item group bg-black border border-gray-800">
+                    <iframe src="${embedSrc}" title="${video.title || 'Video'}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full object-cover"></iframe>
                 </div>
                 `;
             }).join('');
