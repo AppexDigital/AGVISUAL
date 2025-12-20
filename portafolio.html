@@ -2200,15 +2200,25 @@
 
                         // 3. ENVIAR AL SERVIDOR
                         // Nota: Si esto da 401, el backend requiere permisos públicos
+                        // 3. ENVIAR AL SERVIDOR (Con detección de conflictos)
                         const response = await fetch('/.netlify/functions/update-sheet-data', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(batch)
                         });
 
+                        const resData = await response.json();
+
                         if (!response.ok) {
-                            if(response.status === 401) throw new Error('Error de permisos (401). Contacta al administrador.');
-                            throw new Error('Error de red o servidor');
+                            // Detectar si es error de conflicto (Doble Reserva)
+                            // El backend envía "CONFLICTO: ..." en el mensaje de error
+                            if (resData.error && resData.error.includes('CONFLICTO')) {
+                                throw new Error('¡Vaya! Alguien acaba de reservar uno de los equipos seleccionados para esas fechas hace unos segundos. Por favor, refresca la página para ver la disponibilidad actualizada.');
+                            }
+                            
+                            if (response.status === 401) throw new Error('Error de permisos (401). Contacta al administrador.');
+                            
+                            throw new Error(resData.error || 'Error desconocido del servidor');
                         }
 
                         // 4. ÉXITO
