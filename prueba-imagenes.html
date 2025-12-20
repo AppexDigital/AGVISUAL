@@ -3,267 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba Aislada: Módulo de Evidencias - Appex</title>
+    <title>Validación Técnica de Imágenes - Appex</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
-        :root {
-            --bg-dark: #1F1F1F;
-            --accent-gold: #B8860B;
-            --text-light: #FBF9F3;
+        body { background-color: #1a1a1a; color: #e5e5e5; font-family: monospace; }
+        .section-box { border: 1px solid #333; padding: 20px; margin-bottom: 20px; border-radius: 8px; background: #222; }
+        .img-preview { 
+            width: 100%; height: 200px; 
+            background: #000; border: 1px dashed #555; 
+            display: flex; align-items: center; justify-content: center;
+            object-fit: contain; margin-top: 10px;
         }
-        body { font-family: sans-serif; background-color: var(--bg-dark); color: var(--text-light); }
-        .input-dark {
-            background-color: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2);
-            color: white; padding: 8px 12px; border-radius: 6px; width: 100%;
+        .img-preview img { max-width: 100%; max-height: 100%; }
+        input[type="text"], input[type="email"] {
+            width: 100%; background: #333; border: 1px solid #444; color: #fff; padding: 8px; margin-top: 5px;
         }
-        .btn-gold {
-            background-color: var(--accent-gold); color: black; font-weight: bold;
-            padding: 10px 20px; border-radius: 6px; transition: all 0.2s;
-        }
-        .btn-gold:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .status { font-size: 12px; margin-top: 5px; color: #aaa; }
         
-        /* Estilo para el contenedor que se convertirá en PDF */
-        #pdf-container {
-            background-color: #ffffff; 
-            color: #000000;
-            padding: 20px;
-            border-radius: 8px;
-            /* Oculto visualmente en modo oscuro, pero usado para generar el PDF limpio */
-            display: none; 
-        }
-        /* Contenedor visual en pantalla (Modo Oscuro) */
-        #screen-container .img-box {
-            aspect-ratio: 16/9; background-color: #000; border: 1px dashed #444;
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
-            border-radius: 6px;
-        }
-        #screen-container img { width: 100%; height: 100%; object-fit: cover; }
+        /* Estilos para el PDF (Oculto en pantalla) */
+        #pdf-layout { display: none; background: white; color: black; padding: 40px; }
+        #pdf-layout img { max-width: 100%; height: auto; margin-bottom: 20px; border: 1px solid #ccc; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-8">
+<body class="p-8 max-w-4xl mx-auto">
 
-    <div class="w-full max-w-3xl space-y-8">
-        
-        <header class="text-center border-b border-white/10 pb-6">
-            <h1 class="text-3xl font-bold text-[#B8860B]">Validación de Evidencias</h1>
-            <p class="text-gray-400 text-sm mt-1">Prueba aislada de flujo de carga y reporte</p>
-        </header>
+    <h1 class="text-2xl font-bold text-[#B8860B] mb-6">PROTOCOLO DE VALIDACIÓN DE IMÁGENES</h1>
 
-        <div class="bg-white/5 p-6 rounded-xl border border-white/10">
-            <label class="block text-sm font-bold text-gray-300 mb-2">1. Cargar Imágenes (API Segura)</label>
-            <div class="flex gap-4">
-                <input type="file" id="fileInput" multiple class="input-dark cursor-pointer" accept="image/*">
-                <button id="uploadBtn" class="btn-gold whitespace-nowrap">
-                    <i class="fas fa-cloud-upload-alt mr-2"></i>Procesar
-                </button>
-            </div>
-            <p id="statusMsg" class="text-xs text-gray-500 mt-2 h-4"></p>
+    <div class="section-box">
+        <h2 class="text-green-500 font-bold mb-2">1. LINK GOOGLE DRIVE (Manual)</h2>
+        <p class="text-xs text-gray-400 mb-2">Pega el link de compartir de Drive. El sistema intentará convertirlo a vista directa.</p>
+        <input type="text" id="driveInput" placeholder="https://drive.google.com/file/d/..." oninput="renderDriveImage()">
+        <div class="img-preview" id="driveContainer">
+            <span class="text-gray-600">Vista Previa Drive</span>
         </div>
-
-        <div id="screen-container" class="space-y-6">
-            
-            <div class="bg-white/5 p-4 rounded-xl border border-white/10 flex gap-4 items-start">
-                <div class="w-1/3">
-                    <div class="img-box" id="preview-box-1">
-                        <span class="text-gray-600 text-xs">Sin imagen</span>
-                    </div>
-                </div>
-                <div class="w-2/3 space-y-2">
-                    <label class="text-xs font-bold text-[#B8860B]">LINK EVIDENCIA #1</label>
-                    <input type="text" id="link-input-1" class="input-dark text-sm font-mono text-green-400" readonly placeholder="Esperando carga...">
-                </div>
-            </div>
-
-            <div class="bg-white/5 p-4 rounded-xl border border-white/10 flex gap-4 items-start">
-                <div class="w-1/3">
-                    <div class="img-box" id="preview-box-2">
-                        <span class="text-gray-600 text-xs">Sin imagen</span>
-                    </div>
-                </div>
-                <div class="w-2/3 space-y-2">
-                    <label class="text-xs font-bold text-[#B8860B]">LINK EVIDENCIA #2</label>
-                    <input type="text" id="link-input-2" class="input-dark text-sm font-mono text-green-400" readonly placeholder="Esperando carga...">
-                </div>
-            </div>
-
-            <div class="bg-white/5 p-4 rounded-xl border border-white/10 flex gap-4 items-start">
-                <div class="w-1/3">
-                    <div class="img-box" id="preview-box-3">
-                        <span class="text-gray-600 text-xs">Sin imagen</span>
-                    </div>
-                </div>
-                <div class="w-2/3 space-y-2">
-                    <label class="text-xs font-bold text-[#B8860B]">LINK EVIDENCIA #3</label>
-                    <input type="text" id="link-input-3" class="input-dark text-sm font-mono text-green-400" readonly placeholder="Esperando carga...">
-                </div>
-            </div>
-
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-            
-            <div class="bg-white/5 p-6 rounded-xl border border-white/10">
-                <label class="block text-sm font-bold text-gray-300 mb-2">Destinatario del Reporte</label>
-                <div class="space-y-3">
-                    <input type="email" id="emailInput" class="input-dark" placeholder="cliente@ejemplo.com">
-                    <button id="sendEmailBtn" class="w-full bg-[#22c55e] text-white font-bold py-2 rounded-md hover:bg-green-600 transition-colors">
-                        <i class="fas fa-paper-plane mr-2"></i>Enviar Reporte
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-white/5 p-6 rounded-xl border border-white/10 flex flex-col justify-between">
-                <div>
-                    <label class="block text-sm font-bold text-gray-300 mb-1">Descargar Documento</label>
-                    <p class="text-xs text-gray-500 mb-4">Genera un PDF oficial con las 3 evidencias.</p>
-                </div>
-                <button id="generatePdfBtn" class="w-full bg-[#ef4444] text-white font-bold py-2 rounded-md hover:bg-red-600 transition-colors">
-                    <i class="fas fa-file-pdf mr-2"></i>Generar PDF
-                </button>
-            </div>
-
-        </div>
-
+        <p class="status" id="driveStatus">Esperando link...</p>
     </div>
 
-    <div id="pdf-template" style="display: none;">
-        <div style="padding: 40px; font-family: sans-serif; color: #000;">
-            <h1 style="color: #B8860B; border-bottom: 2px solid #B8860B; padding-bottom: 10px;">Reporte de Evidencias</h1>
-            <p style="margin-top: 10px; color: #666;">Fecha: <span id="pdf-date"></span></p>
-            
-            <div style="margin-top: 30px;">
-                <h3 style="background: #eee; padding: 5px;">Evidencia #1</h3>
-                <img id="pdf-img-1" src="" style="width: 100%; max-height: 300px; object-fit: contain; margin: 10px 0; border: 1px solid #ddd;">
-                <p style="font-size: 12px; color: blue; word-break: break-all;" id="pdf-link-1"></p>
-            </div>
+    <div class="section-box">
+        <h2 class="text-green-500 font-bold mb-2">2. LINK LH3 GOOGLE (Manual)</h2>
+        <p class="text-xs text-gray-400 mb-2">Pega el link formato lh3.googleusercontent.com/d/{ID}</p>
+        <input type="text" id="lh3Input" placeholder="https://lh3.googleusercontent.com/d/..." oninput="renderLh3Image()">
+        <div class="img-preview" id="lh3Container">
+            <span class="text-gray-600">Vista Previa LH3</span>
+        </div>
+        <p class="status" id="lh3Status">Esperando link...</p>
+    </div>
 
-            <div style="margin-top: 30px;">
-                <h3 style="background: #eee; padding: 5px;">Evidencia #2</h3>
-                <img id="pdf-img-2" src="" style="width: 100%; max-height: 300px; object-fit: contain; margin: 10px 0; border: 1px solid #ddd;">
-                <p style="font-size: 12px; color: blue; word-break: break-all;" id="pdf-link-2"></p>
-            </div>
+    <div class="section-box">
+        <h2 class="text-blue-500 font-bold mb-2">3. CARGA IMGBB (API Automática)</h2>
+        <p class="text-xs text-gray-400 mb-2">Selecciona archivo -> Sube a API -> Obtiene Link -> Muestra Imagen</p>
+        <div class="flex gap-4 mb-2">
+            <input type="file" id="imgbbFile" class="text-sm">
+            <button onclick="uploadToImgbb()" class="bg-blue-600 px-4 py-1 rounded hover:bg-blue-500 text-sm">Cargar a API</button>
+        </div>
+        <label class="text-xs text-gray-500">Link Retornado por API:</label>
+        <input type="text" id="imgbbOutputLink" readonly placeholder="El link aparecerá aquí automáticamente..." class="text-blue-300">
+        <div class="img-preview" id="imgbbContainer">
+            <span class="text-gray-600">Vista Previa ImgBB</span>
+        </div>
+        <p class="status" id="imgbbStatus">Esperando archivo...</p>
+    </div>
 
-            <div style="margin-top: 30px;">
-                <h3 style="background: #eee; padding: 5px;">Evidencia #3</h3>
-                <img id="pdf-img-3" src="" style="width: 100%; max-height: 300px; object-fit: contain; margin: 10px 0; border: 1px solid #ddd;">
-                <p style="font-size: 12px; color: blue; word-break: break-all;" id="pdf-link-3"></p>
-            </div>
-            
-            <div style="margin-top: 50px; text-align: center; font-size: 10px; color: #999;">
-                Generado automáticamente por Appex System
-            </div>
+    <hr class="border-gray-700 my-8">
+
+    <div class="grid grid-cols-2 gap-6">
+        
+        <div class="section-box">
+            <h3 class="font-bold text-white mb-4">Enviar por Correo</h3>
+            <label class="text-xs">Correo del Cliente:</label>
+            <input type="email" id="clientEmail" placeholder="cliente@ejemplo.com">
+            <button onclick="sendEmail()" class="w-full mt-4 bg-[#B8860B] text-black font-bold py-2 rounded hover:bg-yellow-600">
+                <i class="fas fa-paper-plane mr-2"></i>Enviar Reporte
+            </button>
+            <p class="status" id="emailStatus"></p>
+        </div>
+
+        <div class="section-box">
+            <h3 class="font-bold text-white mb-4">Generar Documento</h3>
+            <p class="text-xs text-gray-400 mb-4">Descarga un PDF compilando las 3 imágenes visualizadas arriba.</p>
+            <button onclick="generatePDF()" class="w-full bg-red-600 text-white font-bold py-2 rounded hover:bg-red-500">
+                <i class="fas fa-file-pdf mr-2"></i>Descargar PDF
+            </button>
+        </div>
+    </div>
+
+    <div id="pdf-layout">
+        <h1 style="border-bottom: 2px solid #000; padding-bottom: 10px;">Reporte de Evidencias</h1>
+        <p>Fecha: <span id="pdfDate"></span></p>
+        
+        <div style="margin-top: 20px;">
+            <h3>1. Evidencia Drive</h3>
+            <img id="pdf-img-1" src="">
+            <p style="font-size: 10px; color: blue;" id="pdf-link-1"></p>
+        </div>
+        <div style="margin-top: 20px;">
+            <h3>2. Evidencia LH3</h3>
+            <img id="pdf-img-2" src="">
+            <p style="font-size: 10px; color: blue;" id="pdf-link-2"></p>
+        </div>
+        <div style="margin-top: 20px;">
+            <h3>3. Evidencia ImgBB</h3>
+            <img id="pdf-img-3" src="">
+            <p style="font-size: 10px; color: blue;" id="pdf-link-3"></p>
         </div>
     </div>
 
     <script>
-        // REFERENCIAS
-        const uploadBtn = document.getElementById('uploadBtn');
-        const fileInput = document.getElementById('fileInput');
-        const statusMsg = document.getElementById('statusMsg');
-        
-        // 1. LÓGICA DE CARGA (SIMULADA CON LINKS REALES PARA PRUEBA)
-        uploadBtn.addEventListener('click', async () => {
-            statusMsg.textContent = "Conectando con API...";
-            statusMsg.className = "text-xs text-yellow-500 mt-2 h-4";
-            
-            // NOTA PARA EL USUARIO: Aquí llamamos a tu función de Netlify.
-            // Si estás en local sin 'netlify dev', esto fallará, así que puse un fallback.
+        // --- 1. LÓGICA DRIVE ---
+        function renderDriveImage() {
+            const input = document.getElementById('driveInput').value;
+            const container = document.getElementById('driveContainer');
+            const status = document.getElementById('driveStatus');
+
+            // Intento básico de extraer ID y convertir a link directo
             try {
-                // INTENTO DE LLAMADA REAL
-                /* const formData = new FormData();
-                for (const file of fileInput.files) { formData.append('images', file); }
-                const response = await fetch('/.netlify/functions/upload-photos', { method: 'POST', body: formData });
-                const data = await response.json(); 
-                */
-
-                // --- MOCKUP (SIMULACIÓN) PARA QUE VEAS QUE EL HTML FUNCIONA YA MISMO ---
-                // Esto simula que el servidor te devolvió 3 links de Cloudinary/ImgBB
-                await new Promise(r => setTimeout(r, 1500)); // Espera falsa de 1.5s
-                const fakeData = {
-                    urls: [
-                        "https://images.unsplash.com/photo-1585409677983-0f6c41ca9c3b?w=600&auto=format&fit=crop", // Foto Ejemplo 1
-                        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop", // Foto Ejemplo 2
-                        "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop"  // Foto Ejemplo 3
-                    ]
-                };
+                let directLink = input;
+                // Regex para extraer ID de Drive
+                const idMatch = input.match(/[-\w]{25,}/);
+                if (idMatch) {
+                    // Convertir a formato de visualización directa
+                    directLink = `https://lh3.googleusercontent.com/d/${idMatch[0]}`;
+                }
                 
-                // LLENAR CAMPOS EN PANTALLA
-                updateEvidence(1, fakeData.urls[0]);
-                updateEvidence(2, fakeData.urls[1]);
-                updateEvidence(3, fakeData.urls[2]);
+                container.innerHTML = `<img src="${directLink}" onerror="this.src=''; this.parentElement.innerHTML='<span class=\'text-red-500\'>Error al cargar</span>'">`;
+                status.textContent = "Intentando renderizar...";
+            } catch (e) {
+                status.textContent = "Link inválido";
+            }
+        }
 
-                statusMsg.textContent = "¡Carga completada exitosamente!";
-                statusMsg.className = "text-xs text-green-500 mt-2 h-4";
+        // --- 2. LÓGICA LH3 ---
+        function renderLh3Image() {
+            const input = document.getElementById('lh3Input').value;
+            const container = document.getElementById('lh3Container');
+            
+            if(input.length > 10) {
+                container.innerHTML = `<img src="${input}" onerror="this.src=''; this.parentElement.innerHTML='<span class=\'text-red-500\'>Error: Link roto o sin permisos</span>'">`;
+                document.getElementById('lh3Status').textContent = "Link detectado";
+            }
+        }
+
+        // --- 3. LÓGICA IMGBB (API) ---
+        async function uploadToImgbb() {
+            const fileInput = document.getElementById('imgbbFile');
+            const status = document.getElementById('imgbbStatus');
+            const outputInput = document.getElementById('imgbbOutputLink');
+            const container = document.getElementById('imgbbContainer');
+
+            if (fileInput.files.length === 0) {
+                alert("Selecciona un archivo primero");
+                return;
+            }
+
+            status.textContent = "Subiendo a ImgBB vía Backend...";
+            
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            try {
+                // LLAMADA A TU FUNCIÓN SERVERLESS
+                // Esta función debe existir en tu carpeta /functions/upload-imgbb.js
+                // y usar process.env.IMGBB_API_KEY
+                const response = await fetch('/.netlify/functions/upload-imgbb', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error("Error en el servidor");
+
+                const result = await response.json();
+                
+                // Asumiendo que tu función devuelve { url: "..." }
+                if (result.url) {
+                    outputInput.value = result.url;
+                    container.innerHTML = `<img src="${result.url}">`;
+                    status.textContent = "¡Carga exitosa! Link obtenido.";
+                    status.classList.add('text-green-500');
+                } else {
+                    throw new Error("Respuesta de API inesperada");
+                }
 
             } catch (error) {
                 console.error(error);
-                statusMsg.textContent = "Error en la conexión.";
-                statusMsg.className = "text-xs text-red-500 mt-2 h-4";
+                status.textContent = "Fallo en la carga. ¿Está configurada la función backend?";
+                status.classList.add('text-red-500');
+                
+                // MOCKUP PARA QUE VEAS EL FUNCIONAMIENTO SI NO TIENES EL BACKEND LISTO AÚN
+                // Comenta esto cuando tengas el backend real
+                /*
+                setTimeout(() => {
+                    const mockUrl = "https://i.ibb.co/wzn25F2/ejemplo.jpg"; 
+                    outputInput.value = mockUrl;
+                    container.innerHTML = `<img src="${mockUrl}">`;
+                    status.textContent = "(Simulación) Imagen cargada";
+                }, 1000);
+                */
             }
-        });
-
-        function updateEvidence(index, url) {
-            // Actualizar vista en pantalla (Oscuro)
-            document.getElementById(`link-input-${index}`).value = url;
-            const box = document.getElementById(`preview-box-${index}`);
-            box.innerHTML = `<img src="${url}" alt="Evidencia ${index}">`;
-
-            // Actualizar vista oculta para PDF (Blanco)
-            document.getElementById(`pdf-img-${index}`).src = url;
-            document.getElementById(`pdf-link-${index}`).textContent = url;
         }
 
-        // 2. LÓGICA DE PDF (html2pdf)
-        document.getElementById('generatePdfBtn').addEventListener('click', () => {
-            const element = document.getElementById('pdf-template');
+        // --- 4. ENVÍO DE CORREO ---
+        async function sendEmail() {
+            const email = document.getElementById('clientEmail').value;
+            const link1 = document.getElementById('driveContainer').querySelector('img')?.src || "Sin imagen";
+            const link2 = document.getElementById('lh3Container').querySelector('img')?.src || "Sin imagen";
+            const link3 = document.getElementById('imgbbOutputLink').value || "Sin imagen";
+            const status = document.getElementById('emailStatus');
+
+            if (!email) { alert("Pon un correo"); return; }
+
+            status.textContent = "Enviando correo...";
+
+            try {
+                // LLAMADA A TU FUNCIÓN SERVERLESS DE CORREO
+                // Esta función debe existir en /functions/send-email.js
+                // y usar tus credenciales SMTP o API de email guardadas
+                const response = await fetch('/.netlify/functions/send-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: email,
+                        subject: "Reporte de Evidencias - Appex",
+                        links: [link1, link2, link3]
+                    })
+                });
+
+                if (response.ok) {
+                    status.textContent = "Correo enviado correctamente.";
+                    status.classList.add('text-green-500');
+                } else {
+                    throw new Error("Error en el envío");
+                }
+            } catch (e) {
+                console.error(e);
+                status.textContent = "Error al enviar. Verifica tu función de backend.";
+                status.classList.add('text-red-500');
+            }
+        }
+
+        // --- 5. GENERACIÓN DE PDF ---
+        function generatePDF() {
+            const element = document.getElementById('pdf-layout');
             
-            // Poner fecha actual
-            document.getElementById('pdf-date').textContent = new Date().toLocaleDateString();
+            // Preparar datos para el PDF
+            document.getElementById('pdfDate').textContent = new Date().toLocaleString();
             
+            const img1 = document.getElementById('driveContainer').querySelector('img')?.src;
+            const img2 = document.getElementById('lh3Container').querySelector('img')?.src;
+            const img3 = document.getElementById('imgbbContainer').querySelector('img')?.src; // Usa la del contenedor, no el input
+
+            if(img1) { document.getElementById('pdf-img-1').src = img1; document.getElementById('pdf-link-1').textContent = img1; }
+            if(img2) { document.getElementById('pdf-img-2').src = img2; document.getElementById('pdf-link-2').textContent = img2; }
+            if(img3) { document.getElementById('pdf-img-3').src = img3; document.getElementById('pdf-link-3').textContent = document.getElementById('imgbbOutputLink').value; }
+
             // Mostrar temporalmente para renderizar
             element.style.display = 'block';
-            
-            const opt = {
-                margin:       0.5,
-                filename:     'reporte_evidencias.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
 
-            // Generar y luego ocultar
-            html2pdf().set(opt).from(element).save().then(() => {
-                element.style.display = 'none';
-            });
-        });
-
-        // 3. LÓGICA DE CORREO (Simulación)
-        document.getElementById('sendEmailBtn').addEventListener('click', () => {
-            const email = document.getElementById('emailInput').value;
-            if(!email.includes('@')) {
-                alert("Por favor ingresa un correo válido.");
-                return;
-            }
-            
-            // Aquí llamarías a tu API de envío de correos
-            const btn = document.getElementById('sendEmailBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enviando...';
-            
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fas fa-check mr-2"></i>¡Enviado!';
-                btn.classList.replace('bg-[#22c55e]', 'bg-blue-600');
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.classList.replace('bg-blue-600', 'bg-[#22c55e]');
-                }, 3000);
-            }, 1500);
-        });
-
+            html2pdf()
+                .set({ margin: 10, filename: 'evidencias.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } })
+                .from(element)
+                .save()
+                .then(() => {
+                    element.style.display = 'none';
+                });
+        }
     </script>
 </body>
 </html>
