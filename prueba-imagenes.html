@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Total: Email + PDF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-gray-800 text-white min-h-screen p-8 font-sans">
+
+    <div class="max-w-4xl mx-auto bg-gray-900 p-8 rounded-xl shadow-2xl border border-gray-700">
+        <h1 class="text-3xl font-bold mb-2 text-center text-white">
+            🧪 Laboratorio de Validación (Email + PDF)
+        </h1>
+        <p class="text-center text-gray-400 mb-8 border-b border-gray-700 pb-4">
+            Prueba de resistencia de enlaces de imagen
+        </p>
+
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+            <label class="block text-sm font-bold text-gray-400 mb-2">1. Link Drive Original (Google)</label>
+            <input type="text" id="driveLink" placeholder="Pega el link largo de Drive..." class="w-full p-3 bg-gray-900 border border-gray-600 rounded text-white text-sm focus:border-blue-500 outline-none transition">
+        </div>
+
+        <div class="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+            <label class="block text-sm font-bold text-yellow-500 mb-2">2. Link Google CDN (Manual)</label>
+            <div class="flex gap-2">
+                <span class="p-3 bg-gray-700 rounded text-gray-400 text-xs flex items-center select-all">https://lh3.googleusercontent.com/d/</span>
+                <input type="text" id="cdnLink" placeholder="{PEGAR_ID_AQUI}" class="flex-1 p-3 bg-gray-900 border border-gray-600 rounded text-white text-sm focus:border-yellow-500 outline-none transition">
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Solo pega el ID de la foto.</p>
+        </div>
+
+        <div class="mb-8 p-4 bg-gray-800 rounded-lg border border-green-900">
+            <label class="block text-sm font-bold text-green-400 mb-2">3. ImgBB (Hosting Externo)</label>
+            <div class="flex gap-4 items-start">
+                <div class="flex-1">
+                    <input type="file" id="imgbbFile" accept="image/*" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-green-900 file:text-green-300 hover:file:bg-green-800 mb-3"/>
+                    <button onclick="uploadToImgBB()" id="btnUpload" class="bg-green-700 hover:bg-green-600 text-white text-xs py-2 px-4 rounded transition flex items-center gap-2">
+                        <i class="fas fa-cloud-upload-alt"></i> Subir y Obtener Link
+                    </button>
+                </div>
+                <div class="w-24 h-24 bg-gray-900 rounded border border-gray-700 flex items-center justify-center overflow-hidden relative">
+                    <img id="previewImgbb" class="w-full h-full object-cover hidden">
+                    <span id="placeholderImgbb" class="text-xs text-gray-600">Vista</span>
+                </div>
+            </div>
+            <input type="text" id="imgbbResult" placeholder="El link aparecerá aquí..." readonly class="w-full mt-3 p-3 bg-gray-900 border border-green-800 rounded text-green-400 text-sm font-mono">
+        </div>
+
+        <div class="border-t border-gray-700 pt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div>
+                <label class="block text-sm font-bold text-blue-400 mb-2">Prueba de Correo</label>
+                <input type="email" id="clientEmail" placeholder="tu_correo_personal@gmail.com" class="w-full p-3 bg-gray-900 border border-blue-900 rounded text-white text-sm focus:border-blue-500 outline-none transition mb-4">
+                <button onclick="sendTestEmail()" id="btnSendEmail" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg flex justify-center items-center gap-2">
+                    <i class="fas fa-paper-plane"></i> Enviar Correo
+                </button>
+                <p id="statusMsg" class="text-center mt-2 text-xs font-bold hidden"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-red-400 mb-2">Prueba de PDF</label>
+                <p class="text-xs text-gray-400 mb-4">Genera un PDF ahora mismo con los links de arriba para ver si cargan.</p>
+                <button onclick="generatePDF()" id="btnPdf" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-lg shadow-lg flex justify-center items-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Descargar PDF
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="pdf-template" style="display: none;">
+        <div style="padding: 40px; font-family: sans-serif; color: #000; background: #fff;">
+            <h1 style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px;">Reporte de Prueba PDF</h1>
+            <p style="text-align: center; color: #666;">Validación de renderizado de imágenes externas.</p>
+            
+            <div style="margin-top: 30px;">
+                <h3>1. Drive Original</h3>
+                <p style="font-size: 10px; color: #666;" id="pdf-link-1"></p>
+                <div style="width: 200px; height: 200px; background: #eee; border: 1px solid #ccc;">
+                    <img id="pdf-img-1" src="" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3>2. Google CDN + Proxy</h3>
+                <p style="font-size: 10px; color: #666;" id="pdf-link-2"></p>
+                <div style="width: 200px; height: 200px; background: #eee; border: 1px solid #ccc;">
+                    <img id="pdf-img-2" src="" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h3>3. ImgBB (Externo)</h3>
+                <p style="font-size: 10px; color: #666;" id="pdf-link-3"></p>
+                <div style="width: 200px; height: 200px; background: #eee; border: 1px solid #ccc;">
+                    <img id="pdf-img-3" src="" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const IMGBB_API_KEY = 'PEGAR_TU_API_KEY_AQUI'; 
+
+        // 1. SUBIR A IMGBB
+        async function uploadToImgBB() {
+            const fileInput = document.getElementById('imgbbFile');
+            const btn = document.getElementById('btnUpload');
+            const output = document.getElementById('imgbbResult');
+            const preview = document.getElementById('previewImgbb');
+            const ph = document.getElementById('placeholderImgbb');
+
+            if(fileInput.files.length === 0) { alert("Selecciona foto"); return; }
+            const formData = new FormData(); formData.append('image', fileInput.files[0]);
+
+            btn.disabled = true; btn.innerHTML = '...';
+            try {
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
+                const data = await res.json();
+                if(data.success) {
+                    output.value = data.data.url;
+                    preview.src = data.data.url;
+                    preview.classList.remove('hidden'); ph.classList.add('hidden');
+                    btn.innerHTML = '¡OK!';
+                } else { alert("Error ImgBB"); }
+            } catch(e) { alert("Error Red"); } finally { btn.disabled = false; }
+        }
+
+        // 2. GENERAR PDF
+        function generatePDF() {
+            const btn = document.getElementById('btnPdf');
+            btn.innerHTML = 'Generando...';
+            
+            // Obtener Links
+            const link1 = document.getElementById('driveLink').value;
+            let cdnVal = document.getElementById('cdnLink').value.trim();
+            if(cdnVal && !cdnVal.startsWith('http')) cdnVal = `https://lh3.googleusercontent.com/d/${cdnVal}`;
+            const link2 = cdnVal ? `https://wsrv.nl/?url=${encodeURIComponent(cdnVal)}&w=400&output=jpg` : '';
+            const link3 = document.getElementById('imgbbResult').value;
+
+            // Llenar Plantilla Oculta
+            document.getElementById('pdf-link-1').textContent = link1 || '(Vacío)';
+            document.getElementById('pdf-img-1').src = link1; // Drive directo suele fallar aquí por CORS
+
+            document.getElementById('pdf-link-2').textContent = link2 || '(Vacío)';
+            document.getElementById('pdf-img-2').src = link2; // Proxy ayuda con CORS
+
+            document.getElementById('pdf-link-3').textContent = link3 || '(Vacío)';
+            document.getElementById('pdf-img-3').src = link3;
+
+            // Mostrar temporalmente para renderizar (truco html2pdf)
+            const element = document.getElementById('pdf-template');
+            element.style.display = 'block';
+
+            // Configuración
+            const opt = {
+                margin:       10,
+                filename:     'prueba_imagenes.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, // ¡CRÍTICO PARA IMÁGENES EXTERNAS!
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Generar y Descargar
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.style.display = 'none'; // Ocultar de nuevo
+                btn.innerHTML = '<i class="fas fa-file-pdf"></i> Descargar PDF';
+            });
+        }
+
+        // 3. ENVIAR CORREO (Backend)
+        async function sendTestEmail() {
+            const btn = document.getElementById('btnSendEmail');
+            const status = document.getElementById('statusMsg');
+            
+            // Construir link CDN
+            let cdnVal = document.getElementById('cdnLink').value.trim();
+            if(cdnVal && !cdnVal.startsWith('http')) cdnVal = `https://lh3.googleusercontent.com/d/${cdnVal}`;
+
+            const payload = {
+                driveLink: document.getElementById('driveLink').value,
+                cdnLink: cdnVal,
+                imgbbLink: document.getElementById('imgbbResult').value,
+                clientEmail: document.getElementById('clientEmail').value
+            };
+
+            if(!payload.clientEmail) { alert("Falta correo"); return; }
+
+            btn.disabled = true; btn.innerHTML = 'Enviando...';
+            status.textContent = "Procesando..."; status.classList.remove('hidden');
+
+            try {
+                const res = await fetch('/.netlify/functions/test-massive', { method: 'POST', body: JSON.stringify(payload) });
+                if(res.ok) {
+                    status.textContent = "✅ Enviado. Revisa tu correo.";
+                    status.className = "text-center mt-2 text-xs font-bold text-green-400";
+                } else { throw new Error("Error server"); }
+            } catch(e) {
+                status.textContent = "❌ Falló el envío.";
+                status.className = "text-center mt-2 text-xs font-bold text-red-400";
+            } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Correo'; }
+        }
+    </script>
+</body>
+</html>
