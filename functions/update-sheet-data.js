@@ -89,29 +89,42 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
             } catch (e) { console.warn("Log: Identidad texto no leída, usando defaults."); }
         };
 
-        // Tarea 2: Leer Logo (Link Eterno)
+        
+        // Tarea 2: Leer Logo usando EXCLUSIVAMENTE el link directo del Sheet
+        
         const loadLogoData = async () => {
             try {
                 const imgSheet = doc.sheetsByTitle['ImagenesIdentidad'];
-                if (imgSheet) {
-                    await imgSheet.loadHeaderRow();
-                    const rows = await imgSheet.getRows();
-                    // Buscamos el logo blanco para el fondo oscuro
-                    const whiteRow = rows.find(r => r.get('key') === 'logo_white');
-                    
-                    if (whiteRow) {
-                        // Intentamos usar el ID para enlace permanente
-                        let fId = null;
-                        try { fId = whiteRow.get('fileId'); } catch(err) {} 
-                        
-                        if (fId) {
-                            config.logoWhiteUrl = `https://drive.google.com/thumbnail?id=${fId}&sz=w800`;
-                        } else {
-                            config.logoWhiteUrl = whiteRow.get('imageUrl');
-                        }
+                if (!imgSheet) {
+                    console.warn("⚠️ Hoja 'ImagenesIdentidad' no encontrada.");
+                    return;
+                }
+        
+                await imgSheet.loadHeaderRow();
+                const rows = await imgSheet.getRows();
+        
+                // Mapeo dinámico de encabezados para evitar errores de mayúsculas/minúsculas
+                const hKey = getRealHeader(imgSheet, 'key');
+                const hUrl = getRealHeader(imgSheet, 'imageUrl');
+        
+                if (hKey && hUrl) {
+                    // Buscamos la fila donde 'key' sea exactamente 'logo_white'
+                    const logoRow = rows.find(r => {
+                        const val = r.get(hKey);
+                        return val && String(val).trim().toLowerCase() === 'logo_white';
+                    });
+        
+                    if (logoRow) {
+                        // USAMOS DIRECTAMENTE EL LINK DE DRIVE QUE ESTÁ EN LA CELDA
+                        config.logoWhiteUrl = logoRow.get(hUrl);
+                        console.log("✅ Logo cargado con link directo:", config.logoWhiteUrl);
+                    } else {
+                        console.warn("⚠️ No se encontró la fila 'logo_white' en la columna 'key'.");
                     }
                 }
-            } catch (e) { console.warn("Log: Logo no encontrado, usando texto."); }
+            } catch (e) {
+                console.error("❌ Error cargando logo desde Identidad:", e.message);
+            }
         };
 
         // ¡AQUÍ ESTÁ EL TRUCO! Esperamos ambas al mismo tiempo (Ahorra 50% de tiempo)
