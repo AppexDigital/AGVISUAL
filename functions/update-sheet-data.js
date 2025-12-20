@@ -60,7 +60,7 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
         let config = {
             adminEmail: process.env.SMTP_USER,
             companyName: "AG Visual",
-            logoWhiteUrl: "", 
+            logoWhiteUrl: bookingData.bookingLogo || "",
             adminUrl: "#", 
             webUrl: "#",   
             contactEmail: ""
