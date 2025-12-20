@@ -2113,10 +2113,9 @@
                     btn.disabled = true;
                     btn.querySelector('span').textContent = 'Procesando...';
                     spinner.classList.remove('hidden');
-
+                
                     try {
                         const now = new Date();
-                        // Generar ID formato Centro de Mando: RES-AAMMMM-RAND
                         const bookingId = `RES-${now.getFullYear().toString().slice(-2)}${(now.getMonth()+1).toString().padStart(2,'0')}-${Math.floor(1000 + Math.random() * 9000)}`;
                         
                         const customer = {
@@ -2126,21 +2125,19 @@
                             email: document.getElementById('co-email').value,
                             address: document.getElementById('co-address').value
                         };
-
-                        // Calcular fechas globales de la reserva
+                
                         const starts = cart.map(i => new Date(i.startDate));
                         const ends = cart.map(i => new Date(i.endDate));
                         const minDate = new Date(Math.min(...starts)).toISOString().split('T')[0];
                         const maxDate = new Date(Math.max(...ends)).toISOString().split('T')[0];
-
-                        // Resumen de items
+                
                         const itemNames = cart.map(i => i.name);
                         const summaryName = itemNames.length > 1 ? `${itemNames[0]} + ${itemNames.length-1} más` : itemNames[0];
-
+                
                         const batch = [];
-
-                        // 1. REGISTRAR CABECERA DE RESERVA
-                        
+                
+                        // 1. REGISTRAR CABECERA DE RESERVA (CORREGIDO)
+                        batch.push({
                             sheet: 'Bookings',
                             action: 'add',
                             data: {
@@ -2158,12 +2155,9 @@
                                 bookingTimestamp: now.toISOString(),
                                 globalDiscountVal: 0,
                                 globalNotes: ''
-
-                                
-                                
                             }
                         });
-
+                
                         // 2. REGISTRAR DETALLES Y BLOQUEOS POR ITEM
                         cart.forEach((item, idx) => {
                             const detailId = `bd_${Date.now()}_${idx}`;
@@ -2179,16 +2173,13 @@
                                     startDate: item.startDate,
                                     endDate: item.endDate,
                                     basePrice: item.price,
-                                    // Guardamos el total de la línea ya con impuesto si aplica
                                     lineTotal: (item.price * item.totalDays) * (item.hasTax ? 1.13 : 1),
                                     lineNote: '',
-                                    // NUEVO: Enviamos la foto y si tiene impuesto para el correo
                                     itemImage: item.image || '', 
                                     itemHasTax: item.hasTax ? 'Si' : 'No'  
                                 }
                             });
-
-                            // Bloqueo de Calendario
+                
                             batch.push({
                                 sheet: 'BlockedDates',
                                 action: 'add',
@@ -2202,43 +2193,31 @@
                                 }
                             });
                         });
-
+                
                         // 3. ENVIAR AL SERVIDOR
-                        // Nota: Si esto da 401, el backend requiere permisos públicos
-                        // 3. ENVIAR AL SERVIDOR (Con detección de conflictos)
                         const response = await fetch('/.netlify/functions/update-sheet-data', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(batch)
                         });
-
+                
                         const resData = await response.json();
-
+                
                         if (!response.ok) {
-                            // Detectar si es error de conflicto (Doble Reserva)
-                            // El backend envía "CONFLICTO: ..." en el mensaje de error
                             if (resData.error && resData.error.includes('CONFLICTO')) {
-                                throw new Error('¡Vaya! Alguien acaba de reservar uno de los equipos seleccionados para esas fechas hace unos segundos. Por favor, refresca la página para ver la disponibilidad actualizada.');
+                                throw new Error('¡Vaya! Alguien acaba de reservar uno de los equipos seleccionados para esas fechas.');
                             }
-                            
-                            if (response.status === 401) throw new Error('Error de permisos (401). Contacta al administrador.');
-                            
                             throw new Error(resData.error || 'Error desconocido del servidor');
                         }
-
-                        // 4. ÉXITO
+                
                         document.getElementById('final-res-id').textContent = bookingId;
-                        
-                        // Limpiar Memoria y Carrito
                         cart = [];
-                        if(typeof saveCartToMemory === 'function') saveCartToMemory(); 
+                        saveCartToMemory(); 
                         renderCart();
                         updateCartIcon();
-
-                        // Avanzar
                         step2.classList.remove('active');
                         step3.classList.add('active');
-
+                
                     } catch (error) {
                         console.error(error);
                         alert(`No se pudo procesar la reserva: ${error.message}`);
