@@ -2166,14 +2166,7 @@
                         // 2. REGISTRAR DETALLES Y BLOQUEOS POR ITEM
                         cart.forEach((item, idx) => {
                             const detailId = `bd_${Date.now()}_${idx}`;
-
-                            // Lógica para obtener Link Permanente (No caduca)
-                            let permanentImgUrl = item.image || '';
-                            // Si el ítem tiene datos originales de Drive con fileId, construimos el link eterno
-                            if (item.images && item.images.length > 0 && item.images[0].fileId) {
-                                permanentImgUrl = `https://drive.google.com/thumbnail?id=${item.images[0].fileId}&sz=w500`;
-                            }
-
+                            
                             // Detalle Contable
                             batch.push({
                                 sheet: 'BookingsDetails',
@@ -2190,7 +2183,7 @@
                                     lineTotal: (item.price * item.totalDays) * (item.hasTax ? 1.13 : 1),
                                     lineNote: '',
                                     // NUEVO: Enviamos la foto y si tiene impuesto para el correo
-                                    itemImage: permanentImgUrl,
+                                    itemImage: item.image || '', 
                                     itemHasTax: item.hasTax ? 'Si' : 'No'  
                                 }
                             });
