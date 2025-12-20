@@ -2158,6 +2158,8 @@
                                 bookingTimestamp: now.toISOString(),
                                 globalDiscountVal: 0,
                                 globalNotes: ''
+
+                                
                             }
                         });
 
@@ -2180,6 +2182,9 @@
                                     // Guardamos el total de la línea ya con impuesto si aplica
                                     lineTotal: (item.price * item.totalDays) * (item.hasTax ? 1.13 : 1),
                                     lineNote: ''
+                                    // NUEVO: Enviamos la foto y si tiene impuesto para el correo
+                                    itemImage: item.image || '', 
+                                    itemHasTax: item.hasTax ? 'Si' : 'No'  
                                 }
                             });
 
