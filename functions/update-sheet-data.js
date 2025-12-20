@@ -1,4 +1,6 @@
-// functions/update-sheet-data.js  v5.1
+// functions/update-sheet-data.js
+// v6.0 - PRO EMAILS: Diseño Editorial para Admin + Logo Negro + Desglose Fiscal
+
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 const { google } = require('googleapis');
@@ -44,7 +46,7 @@ async function deleteChildRows(doc, childSheetName, parentIdHeader, parentIdValu
     } catch (e) { console.warn(`Error cascada ${childSheetName}:`, e.message); }
 }
 
-// --- 2. SISTEMA DE CORREOS PRO ---
+// --- 2. SISTEMA DE CORREOS PRO (V6.0) ---
 async function sendReservationEmails(doc, bookingData, allOperations) {
     try {
         if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -57,11 +59,12 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
             auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
         });
 
-        // --- A. OBTENER IDENTIDAD DEL NEGOCIO (Lógica Multi-Hoja) ---
+        // --- A. OBTENER IDENTIDAD DEL NEGOCIO ---
         let config = {
             adminEmail: process.env.SMTP_USER,
             companyName: "AG Visual",
-            logoUrl: "", 
+            logoWhiteUrl: "", 
+            logoBlackUrl: "", // Nuevo: Para fondo blanco
             adminUrl: "#", 
             webUrl: "#",   
             phone: "",
@@ -69,18 +72,15 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
         };
         
         try {
-            // 1. Hoja 'Identidad' (Texto: key, value)
+            // 1. Hoja 'Identidad' (Texto)
             const idSheet = doc.sheetsByTitle['Identidad'];
             if (idSheet) {
                 await idSheet.loadHeaderRow();
                 const rows = await idSheet.getRows();
-                
-                // Helper para buscar valor por key
                 const getVal = (k) => {
                     const r = rows.find(row => row.get('key') === k);
                     return r ? r.get('value') : "";
                 };
-
                 const emailSheet = getVal('contact_email');
                 if(emailSheet && emailSheet.includes('@')) config.adminEmail = emailSheet;
                 
@@ -91,21 +91,22 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
                 config.contactEmail = getVal('contact_email');
             }
 
-            // 2. Hoja 'ImagenesIdentidad' (Logo: key='logo_white', imageUrl)
+            // 2. Hoja 'ImagenesIdentidad' (Logos)
             const imgSheet = doc.sheetsByTitle['ImagenesIdentidad'];
             if (imgSheet) {
                 await imgSheet.loadHeaderRow();
                 const rows = await imgSheet.getRows();
-                // Buscamos la fila donde 'key' sea 'logo_white'
-                const logoRow = rows.find(r => r.get('key') === 'logo_white');
-                if (logoRow) {
-                    config.logoUrl = logoRow.get('imageUrl');
-                }
+                
+                const whiteRow = rows.find(r => r.get('key') === 'logo_white');
+                if (whiteRow) config.logoWhiteUrl = whiteRow.get('imageUrl');
+
+                const blackRow = rows.find(r => r.get('key') === 'logo_black');
+                if (blackRow) config.logoBlackUrl = blackRow.get('imageUrl');
             }
         } catch (e) { console.warn("Error leyendo Identidad:", e.message); }
 
 
-        // --- B. PROCESAR ITEMS (Fotos, Fechas y Precios) ---
+        // --- B. PROCESAMIENTO DE ITEMS Y CÁLCULOS ---
         const detailsOps = allOperations.filter(op => 
             op.sheet === 'BookingsDetails' && op.action === 'add' && String(op.data.bookingId) === String(bookingData.id)
         );
@@ -113,12 +114,10 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
         let subtotalGeneral = 0;
         let ivaGeneral = 0;
 
-        const generateRows = (isAdmin) => detailsOps.map(d => {
+        // Calculamos totales primero para tenerlos listos
+        detailsOps.forEach(d => {
             const price = parseFloat(d.data.lineTotal || 0);
-            const imgUrl = d.data.itemImage || ""; 
             const hasTax = String(d.data.itemHasTax).toLowerCase() === 'si';
-            
-            // Desglose de IVA inverso
             let lineBase = price;
             let lineTax = 0;
 
@@ -126,123 +125,130 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
                 lineBase = price / 1.13;
                 lineTax = price - lineBase;
             }
-
             subtotalGeneral += lineBase;
             ivaGeneral += lineTax;
+        });
 
+        // Generador de filas HTML
+        const generateRows = (isAdmin) => detailsOps.map(d => {
+            const price = parseFloat(d.data.lineTotal || 0);
+            const imgUrl = d.data.itemImage || ""; 
             const dateStr = `${new Date(d.data.startDate).toLocaleDateString()} - ${new Date(d.data.endDate).toLocaleDateString()}`;
             
             const imgHtml = imgUrl 
-                ? `<img src="${imgUrl}" alt="img" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">` 
-                : `<div style="width: 50px; height: 50px; background: #eee; border-radius: 4px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#999;">Sin Foto</div>`;
+                ? `<img src="${imgUrl}" alt="img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; display: block;">` 
+                : `<div style="width: 40px; height: 40px; background: #eee; border-radius: 4px;"></div>`;
 
-            if (isAdmin) {
-                return `
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${imgHtml}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                        <strong>${d.data.itemName}</strong><br>
-                        <span style="font-size: 12px; color: #666;">${dateStr}</span>
-                    </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">$${price.toFixed(2)}</td>
-                </tr>`;
-            } else {
-                return `
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #333;">${imgHtml}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #333; color: #fff;">
-                        ${d.data.itemName}
-                    </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #333; text-align: right; color: #fff;">$${price.toFixed(2)}</td>
-                </tr>`;
-            }
+            // Estilos sutilmente diferentes
+            const borderColor = isAdmin ? "#eee" : "#333";
+            const textColor = isAdmin ? "#333" : "#fff";
+            const subTextColor = isAdmin ? "#666" : "#aaa";
+
+            return `
+            <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid ${borderColor}; width: 50px;">${imgHtml}</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid ${borderColor}; color: ${textColor};">
+                    <span style="font-weight: 600; font-size: 14px;">${d.data.itemName}</span><br>
+                    <span style="font-size: 11px; color: ${subTextColor};">${dateStr}</span>
+                </td>
+                <td style="padding: 12px 0; border-bottom: 1px solid ${borderColor}; text-align: right; color: ${textColor}; font-weight: 500;">$${price.toFixed(2)}</td>
+            </tr>`;
         }).join('');
 
         const rowsAdmin = generateRows(true);
-        // Reiniciamos contadores para recalcular correctamente o usamos los valores ya acumulados
-        // Nota: Como map() corre la función, los acumuladores se sumarían doble si llamamos a generateRows dos veces.
-        // Corrección: Reiniciamos a 0 antes de generar para cliente.
-        subtotalGeneral = 0; ivaGeneral = 0;
         const rowsClient = generateRows(false); 
 
 
-        // --- C. PLANTILLA CLIENTE (Oscuro + Logo Blanco) ---
-        const logoHeader = config.logoUrl 
-            ? `<img src="${config.logoUrl}" alt="${config.companyName}" style="max-width: 150px; height: auto;">`
-            : `<h1 style="margin: 0; font-family: 'Garamond', serif; letter-spacing: 2px; color: #fff;">${config.companyName}</h1>`;
+        // --- C. PLANTILLA CLIENTE (Oscuro - Elegante) ---
+        const logoHeaderClient = config.logoWhiteUrl 
+            ? `<img src="${config.logoWhiteUrl}" alt="${config.companyName}" style="max-width: 160px; height: auto;">`
+            : `<h1 style="color: #fff; font-family: serif;">${config.companyName}</h1>`;
 
         const clientHtml = `
             <div style="font-family: 'Helvetica', sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff;">
-                <div style="padding: 40px 20px; text-align: center; border-bottom: 1px solid #333;">
-                    ${logoHeader}
+                <div style="padding: 40px 20px; text-align: center; border-bottom: 1px solid #222;">
+                    ${logoHeaderClient}
                 </div>
-                <div style="padding: 30px;">
-                    <h2 style="color: #fff; margin-top: 0; text-align: center; font-weight: 300;">Solicitud Recibida</h2>
-                    <p style="text-align: center; color: #aaa; margin-bottom: 30px;">
-                        Hola <strong>${bookingData.customerName}</strong>, hemos recibido tu solicitud. 
-                        Validaremos la disponibilidad y te contactaremos pronto.
-                    </p>
-                    <div style="background-color: #111; padding: 15px; border-radius: 8px; margin-bottom: 30px; text-align: center; border: 1px solid #333;">
-                        <span style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Código de Reserva</span><br>
-                        <span style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">${bookingData.id}</span>
+                <div style="padding: 40px 30px;">
+                    <h2 style="color: #fff; margin: 0 0 10px 0; text-align: center; font-family: 'Garamond', serif; font-size: 28px; font-weight: 400;">Solicitud Recibida</h2>
+                    <p style="text-align: center; color: #888; margin-bottom: 40px; font-size: 14px;">Hemos recibido tu solicitud. Validaremos disponibilidad y te contactaremos.</p>
+                    
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <span style="display: inline-block; border: 1px solid #333; padding: 10px 20px; border-radius: 4px; letter-spacing: 2px; font-weight: bold;">${bookingData.id}</span>
                     </div>
+
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                         ${rowsClient}
                     </table>
-                    <div style="text-align: right; border-top: 1px solid #333; padding-top: 15px;">
-                        <p style="margin: 5px 0; color: #aaa; font-size: 14px;">Subtotal: $${subtotalGeneral.toFixed(2)}</p>
-                        <p style="margin: 5px 0; color: #aaa; font-size: 14px;">I.V.A.: $${ivaGeneral.toFixed(2)}</p>
-                        <p style="margin: 10px 0; font-size: 24px; font-weight: bold;">Total: $${parseFloat(bookingData.totalPrice).toFixed(2)}</p>
+
+                    <div style="text-align: right; border-top: 1px solid #333; padding-top: 20px;">
+                        <p style="margin: 3px 0; color: #888; font-size: 13px;">Subtotal: $${subtotalGeneral.toFixed(2)}</p>
+                        <p style="margin: 3px 0; color: #888; font-size: 13px;">I.V.A.: $${ivaGeneral.toFixed(2)}</p>
+                        <p style="margin: 10px 0 0 0; font-size: 22px; font-weight: bold;">$${parseFloat(bookingData.totalPrice).toFixed(2)}</p>
                     </div>
-                    <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
-                        <a href="${config.webUrl}" style="background-color: #fff; color: #000; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 50px;">Volver a la Web</a>
+
+                    <div style="text-align: center; margin-top: 50px;">
+                        <a href="${config.webUrl}" style="background-color: #fff; color: #000; padding: 14px 30px; text-decoration: none; font-weight: bold; border-radius: 50px; font-size: 14px;">Volver a la Web</a>
                     </div>
-                    <div style="margin-top: 40px; border-top: 1px solid #333; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
-                        <p>${config.companyName}</p>
-                        <p>${config.phone} | ${config.contactEmail}</p>
-                    </div>
+                </div>
+                <div style="background: #111; padding: 20px; text-align: center; color: #555; font-size: 11px;">
+                    <p style="margin: 0;">${config.companyName} | ${config.contactEmail}</p>
                 </div>
             </div>
         `;
 
-        // --- D. PLANTILLA ADMIN (Datos completos + Link Admin) ---
+        // --- D. PLANTILLA ADMIN (Claro - Editorial - Completo) ---
+        // Usa Logo Negro. Si no hay, usa texto negro.
+        const logoHeaderAdmin = config.logoBlackUrl 
+            ? `<img src="${config.logoBlackUrl}" alt="${config.companyName}" style="max-width: 140px; height: auto;">`
+            : `<h1 style="color: #000; font-family: serif; margin: 0;">${config.companyName}</h1>`;
+
         const adminHtml = `
-            <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #f4f4f4; padding: 15px; border-bottom: 1px solid #ddd;">
-                    <h3 style="margin: 0; color: #000;">🔔 Nueva Reserva: ${bookingData.id}</h3>
+            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; color: #1a1a1a; border: 1px solid #eaeaea;">
+                
+                <div style="padding: 40px 0; text-align: center;">
+                    ${logoHeaderAdmin}
                 </div>
-                <div style="padding: 20px;">
-                    <div style="background-color: #eef; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                        <h4 style="margin-top: 0; color: #337;">👤 Información del Cliente</h4>
-                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
-                            <li style="margin-bottom: 5px;"><strong>Nombre:</strong> ${bookingData.customerName}</li>
-                            <li style="margin-bottom: 5px;"><strong>Cédula/ID:</strong> ${bookingData.customerCedula || 'N/A'}</li>
-                            <li style="margin-bottom: 5px;"><strong>Email:</strong> <a href="mailto:${bookingData.customerEmail}">${bookingData.customerEmail}</a></li>
-                            <li style="margin-bottom: 5px;"><strong>Teléfono:</strong> <a href="tel:${bookingData.customerPhone}">${bookingData.customerPhone}</a></li>
-                            <li style="margin-bottom: 5px;"><strong>Dirección:</strong> ${bookingData.customerAddress || 'N/A'}</li>
-                        </ul>
+                
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <h2 style="font-family: 'Garamond', Georgia, serif; font-weight: 400; font-size: 26px; margin: 0; color: #111;">Nueva Reserva Recibida</h2>
+                    <p style="color: #666; font-size: 14px; margin-top: 5px;">ID: <strong>${bookingData.id}</strong></p>
+                </div>
+
+                <div style="padding: 0 40px 40px 40px;">
+                    
+                    <div style="background-color: #f9f9f9; padding: 25px; border-radius: 2px; margin-bottom: 30px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888;">Detalles del Cliente</h3>
+                        <div style="font-size: 14px; line-height: 1.8;">
+                            <div style="margin-bottom: 4px;"><strong>${bookingData.customerName}</strong></div>
+                            <div style="color: #444;">ID: ${bookingData.customerCedula || 'N/A'}</div>
+                            <div style="color: #444;"><a href="tel:${bookingData.customerPhone}" style="color: #1a1a1a; text-decoration: none;">${bookingData.customerPhone}</a></div>
+                            <div style="color: #444;"><a href="mailto:${bookingData.customerEmail}" style="color: #1a1a1a; text-decoration: none;">${bookingData.customerEmail}</a></div>
+                            <div style="color: #444; margin-top: 5px; font-style: italic;">${bookingData.customerAddress || 'Sin dirección'}</div>
+                        </div>
                     </div>
-                    <h4 style="border-bottom: 2px solid #333; padding-bottom: 5px;">📋 Equipos Solicitados</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
-                        <thead>
-                            <tr style="background-color: #f9f9f9; text-align: left;">
-                                <th style="padding: 8px; border-bottom: 2px solid #ddd;">Img</th>
-                                <th style="padding: 8px; border-bottom: 2px solid #ddd;">Equipo / Fechas</th>
-                                <th style="padding: 8px; border-bottom: 2px solid #ddd; text-align: right;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsAdmin}</tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="2" style="padding: 10px; text-align: right; font-weight: bold;">Total Reserva:</td>
-                                <td style="padding: 10px; text-align: right; font-weight: bold; font-size: 16px;">$${parseFloat(bookingData.totalPrice).toFixed(2)}</td>
-                            </tr>
-                        </tfoot>
+
+                    <h3 style="margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888; border-bottom: 1px solid #eee; padding-bottom: 10px;">Equipos Solicitados</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                        ${rowsAdmin}
                     </table>
-                    <div style="text-align: center; margin-top: 30px;">
-                        <a href="${config.adminUrl}" style="background-color: #000; color: #fff; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 6px; display: inline-block;">Ir al Centro de Mando</a>
-                        <p style="font-size: 11px; color: #999; margin-top: 10px;">(Requiere inicio de sesión)</p>
+
+                    <div style="text-align: right; margin-top: 20px;">
+                        <p style="margin: 3px 0; color: #666; font-size: 13px;">Subtotal: $${subtotalGeneral.toFixed(2)}</p>
+                        <p style="margin: 3px 0; color: #666; font-size: 13px;">I.V.A.: $${ivaGeneral.toFixed(2)}</p>
+                        <p style="margin: 10px 0 0 0; font-size: 20px; font-weight: 600; font-family: 'Garamond', serif;">Total: $${parseFloat(bookingData.totalPrice).toFixed(2)}</p>
                     </div>
+
+                    <div style="text-align: center; margin-top: 45px;">
+                        <a href="${config.adminUrl}" style="background-color: #1a1a1a; color: #ffffff; padding: 15px 35px; text-decoration: none; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; border-radius: 2px;">
+                            IR AL CENTRO DE MANDO
+                        </a>
+                    </div>
+
+                </div>
+                
+                <div style="background-color: #fcfcfc; border-top: 1px solid #eaeaea; padding: 15px; text-align: center; color: #999; font-size: 11px;">
+                    Notificación automática del sistema de reservas
                 </div>
             </div>
         `;
@@ -251,19 +257,19 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
         await transporter.sendMail({
             from: `"${config.companyName}" <${process.env.SMTP_USER}>`,
             to: bookingData.customerEmail,
-            subject: `Solicitud Recibida #${bookingData.id} - ${config.companyName}`,
+            subject: `Solicitud Recibida #${bookingData.id}`,
             html: clientHtml,
             replyTo: config.adminEmail
         });
 
         await transporter.sendMail({
-            from: `"Web System" <${process.env.SMTP_USER}>`,
+            from: `"Notificaciones Web" <${process.env.SMTP_USER}>`,
             to: config.adminEmail,
-            subject: `🔔 Nueva Reserva: ${bookingData.customerName} ($${parseFloat(bookingData.totalPrice).toFixed(2)})`,
+            subject: `Reserva Web: ${bookingData.customerName}`,
             html: adminHtml
         });
 
-        console.log(`✅ Correos PRO enviados: ${bookingData.id}`);
+        console.log(`✅ Correos V6 enviados: ${bookingData.id}`);
 
     } catch (e) {
         console.error("❌ Error enviando correos:", e);
@@ -271,7 +277,7 @@ async function sendReservationEmails(doc, bookingData, allOperations) {
 }
 
 
-// --- 3. HANDLER PRINCIPAL ---
+// --- 3. HANDLER PRINCIPAL (Sin cambios en lógica) ---
 exports.handler = async (event, context) => {
   if (event.httpMethod === 'OPTIONS') {
       return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
@@ -348,13 +354,13 @@ exports.handler = async (event, context) => {
             Object.keys(op.data).forEach(k => { const h = getRealHeader(sheet, k); if (h) rowData[h] = op.data[k]; });
             await sheet.addRow(rowData); 
             
-            // ENVÍO DE CORREO
+            // ENVÍO DE CORREO PRO (V6)
             if (sheetName === 'Bookings' && !hasAdminToken) {
                 await sendReservationEmails(doc, op.data, operations);
             }
         }
         
-        // El resto de updates/deletes (código Drive, renombrar carpetas, etc.) se mantiene intacto.
+        // (Resto de la lógica updates/deletes se mantiene igual)
         if (updates.length > 0) {
             const rows = await sheet.getRows(); 
             for (const op of updates) {
