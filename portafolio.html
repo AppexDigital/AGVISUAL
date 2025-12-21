@@ -314,26 +314,39 @@
             transform: scale(1.05);
         }
         
-        /* --- Botones y Enlaces Mejorados --- */
+        /* Ajuste: Hover Gris Elegante y Layout Flexible */
         .btn-primary {
             position: relative;
             overflow: hidden;
             z-index: 1;
             transition: all 0.3s ease;
         }
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.2);
-            transition: left 0.5s ease;
-            z-index: -1;
+        [cite_start]
+        .btn-primary:hover {
+            background-color: #4a4a4a !important;
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
         }
-        .btn-primary:hover::before {
-            left: 100%;
+
+        #services-grid, #videos-container {
+            display: flex !important;
+            flex-wrap: wrap;
+            justify-content: center; /* Pirámide Invertida */
+            gap: 2rem;
+        }
+
+        .service-grid-item, .video-card {
+            flex: 0 1 350px; /* Tamaño fijo para no estirarse */
+        }
+
+        @media (max-width: 768px) {
+            .service-grid-item {
+                flex: 0 1 calc(50% - 1rem); /* 2 Columnas en móvil */
+                min-width: 150px;
+            }
+            #portfolio-gallery, #project-images-grid {
+                columns: 2 !important; /* Forzar 2 columnas en galerías móviles */
+            }
         }
         
         /* --- Animación de aparición de texto --- */
@@ -806,11 +819,17 @@
                     </button>
                 </div>
 
-                <button id="mobile-menu-button" class="lg:hidden z-50 w-8 h-6 flex flex-col justify-between ml-6" aria-label="Menú móvil" aria-expanded="false">
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                </button>
+                <div class="flex items-center gap-4 lg:hidden">
+                    <button id="mobile-cart-button-header" class="cart-button text-gray-700 relative">
+                        <i class="fas fa-shopping-bag fa-lg"></i>
+                        <span class="cart-item-count absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center font-bold visible">0</span>
+                    </button>
+                    <button id="mobile-menu-button" class="z-50 w-8 h-6 flex flex-col justify-between" aria-label="Menú móvil">
+                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -840,8 +859,7 @@
             <div class="container mx-auto px-4 sm:px-6">
                 <!-- El contenedor de la galería ahora es el elemento principal -->
                 <div class="reveal">
-                    <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-4 gap-6 space-y-6">
-                        <!-- Las ~200 imágenes se insertan aquí desde JS -->
+                    <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-3 gap-6 space-y-6">
                     </div>
                 </div>
             </div>
@@ -939,11 +957,11 @@
              <div class="container mx-auto px-6 pb-20 md:pb-24">
                 <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fab fa-instagram fa-3x mb-3"></i>
+                        <i class="fas fa-camera-retro fa-3x mb-3">
                         <span class="font-bold">Instagram</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fab fa-whatsapp fa-3x mb-3"></i>
+                        </i> <i class="fas fa-phone-alt fa-3x mb-3"></i>
                         <span class="font-bold">WhatsApp</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
@@ -1126,7 +1144,11 @@
                 
                 mobileMenu.classList.toggle('open', isOpen);
                 mobileMenuButton.classList.toggle('open', isOpen);
-                mobileMenuButton.setAttribute('aria-expanded', isOpen);
+                
+                // Bloqueo de Scroll en el Body para evitar descuadres
+                document.body.style.overflow = isOpen ? 'hidden' : '';
+                document.body.style.height = isOpen ? '100vh' : '';
+    
     
                 // RESTAURADO: Bucle que hace aparecer los textos uno por uno
                 const links = mobileMenu.querySelectorAll('.mobile-nav-link');
@@ -1510,10 +1532,14 @@
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
                                 <div class="flex justify-between items-baseline mb-2">
+                                    // Ajuste: Descripción Corta (afuera) y Larga (adentro) + IVA condicional
                                     <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
-                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.pricePerDay}<span class="text-sm font-normal text-gray-500">/día</span></p>
-                                </div>
-                                <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.description}</p>
+                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">
+                                        $${item.price}<span class="text-sm font-normal text-gray-500">/día</span>
+                                        ${item.hasTax ? '<span class="text-[10px] text-blue-600 block">+ IVA</span>' : ''}
+                                    </p>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.shortDescription || item.description}</p>
                                 <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
                                     Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
                                 </a>
