@@ -314,39 +314,38 @@
             transform: scale(1.05);
         }
         
-        /* Ajuste: Hover Gris Elegante y Layout Flexible */
+        /* --- Botones y Enlaces Mejorados --- */
         .btn-primary {
             position: relative;
             overflow: hidden;
             z-index: 1;
             transition: all 0.3s ease;
         }
-        [cite_start]
-        .btn-primary:hover {
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
             background-color: #4a4a4a !important;
-            transform: translateY(-2px);
-            transition: all 0.3s ease;
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
         }
 
-        #services-grid, #videos-container {
+
+        /* Estructura de Pirámide Invertida para Servicios, Videos y Alquiler */
+        #services-grid, #videos-container, #rental-grid-categorized {
             display: flex !important;
             flex-wrap: wrap;
-            justify-content: center; /* Pirámide Invertida */
+            justify-content: center;
             gap: 2rem;
         }
-
-        .service-grid-item, .video-card {
-            flex: 0 1 350px; /* Tamaño fijo para no estirarse */
-        }
-
-        @media (max-width: 768px) {
-            .service-grid-item {
-                flex: 0 1 calc(50% - 1rem); /* 2 Columnas en móvil */
-                min-width: 150px;
-            }
-            #portfolio-gallery, #project-images-grid {
-                columns: 2 !important; /* Forzar 2 columnas en galerías móviles */
-            }
+        .service-grid-item, .video-card, .rental-card {
+            flex: 0 1 350px; /* Tamaño fijo */
         }
         
         /* --- Animación de aparición de texto --- */
@@ -485,6 +484,9 @@
             transform: translateY(-10px);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
             border-color: var(--accent);
+        }
+        .service-grid-item, .video-card, .rental-card {
+            flex: 0 1 350px; /* Tamaño fijo para no deformarse al centrar */
         }
         .service-icon-wrapper {
             width: 70px;
@@ -645,8 +647,8 @@
             position: absolute;
             top: -5px;
             right: -10px;
-            background-color: var(--text-dark);
-            color: white;
+            background-color: #ff0000 !important;
+            color: white !important
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -760,7 +762,18 @@
         .rich-text-content .ql-align-right, .rich-text-content[style*="text-align: right"] { text-align: right; }
         .rich-text-content .ql-align-justify, .rich-text-content[style*="text-align: justify"] { text-align: justify; }
 
-        
+        @media (max-width: 768px) {
+            .service-grid-item, .rental-card {
+                flex: 0 1 calc(50% - 1rem); /* 2 Columnas en móvil */
+                min-width: 150px;
+            }
+            #portfolio-gallery, #project-images-grid {
+                columns: 2 !important; /* Forzar 2 columnas en galerías móviles */
+            }
+        }
+
+        /* Scroll Lock (Ajuste 16) */
+        .lock-scroll { overflow: hidden !important; height: 100vh !important; }
     </style>
 </head>
 <body class="antialiased">
@@ -810,8 +823,8 @@
                 </nav>
 
                 <div class="hidden lg:flex items-center space-x-4 ml-8">
-                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
-                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
+                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-lg"></i></a>
+                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-camera-retro fa-lg"></i></a>
                     <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
                     <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2">
                         <i class="fas fa-shopping-bag fa-lg"></i>
@@ -820,11 +833,11 @@
                 </div>
 
                 <div class="flex items-center gap-4 lg:hidden">
-                    <button id="mobile-cart-button-header" class="cart-button text-gray-700 relative">
+                    <button id="mobile-cart-header" class="cart-button text-gray-700 relative" onclick="toggleCart(true)">
                         <i class="fas fa-shopping-bag fa-lg"></i>
-                        <span class="cart-item-count absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center font-bold visible">0</span>
+                        <span class="cart-item-count absolute -top-2 -right-2 rounded-full w-5 h-5 text-[10px] flex items-center justify-center">0</span>
                     </button>
-                    <button id="mobile-menu-button" class="z-50 w-8 h-6 flex flex-col justify-between" aria-label="Menú móvil">
+                    <button id="mobile-menu-button" class="z-50 w-8 h-6 flex flex-col justify-between" aria-label="Menú">
                         <span class="block w-full h-0.5 bg-black icon-bar"></span>
                         <span class="block w-full h-0.5 bg-black icon-bar"></span>
                         <span class="block w-full h-0.5 bg-black icon-bar"></span>
@@ -844,8 +857,8 @@
             <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
         <div class="flex justify-center items-center space-x-8 pb-12">
-            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-2x"></i></a>
-            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-2x"></i></a>
+            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-2x"></i></a>
+            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-camera-retro fa-2x"></i></a>
             <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-2x"></i></a>
             <button id="mobile-cart-button" aria-label="Ver carrito de compras" class="cart-button text-gray-700 hover:text-black transition-colors">
                 <i class="fas fa-shopping-bag fa-2x"></i>
@@ -859,7 +872,8 @@
             <div class="container mx-auto px-4 sm:px-6">
                 <!-- El contenedor de la galería ahora es el elemento principal -->
                 <div class="reveal">
-                    <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-3 gap-6 space-y-6">
+                    <div id="portfolio-gallery" class="columns-2 sm:columns-3 lg:columns-4 gap-6 space-y-6">
+                        <!-- Las ~200 imágenes se insertan aquí desde JS -->
                     </div>
                 </div>
             </div>
@@ -961,7 +975,7 @@
                         <span class="font-bold">Instagram</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        </i> <i class="fas fa-phone-alt fa-3x mb-3"></i>
+                        <i class="fas fa-phone-alt fa-3x mb-3"></i>
                         <span class="font-bold">WhatsApp</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
@@ -1141,14 +1155,18 @@
     
             const toggleMobileMenu = (forceState) => {
                 const isOpen = typeof forceState === 'boolean' ? forceState : !mobileMenu.classList.contains('open');
-                
                 mobileMenu.classList.toggle('open', isOpen);
-                mobileMenuButton.classList.toggle('open', isOpen);
                 
-                // Bloqueo de Scroll en el Body para evitar descuadres
-                document.body.style.overflow = isOpen ? 'hidden' : '';
-                document.body.style.height = isOpen ? '100vh' : '';
-    
+                // SCROLL LOCK: Bloqueo de fondo al abrir menú
+                if (isOpen) {
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.height = '100vh';
+                } else {
+                    document.body.style.overflow = '';
+                    document.body.style.height = '';
+                }
+                mobileMenuButton.classList.toggle('open', isOpen);
+                mobileMenuButton.setAttribute('aria-expanded', isOpen);
     
                 // RESTAURADO: Bucle que hace aparecer los textos uno por uno
                 const links = mobileMenu.querySelectorAll('.mobile-nav-link');
@@ -1498,6 +1516,18 @@
                 filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
                     cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
     
+                
+                // Ajuste (7, 8, 10): Inteligencia de Carrito y Disponibilidad
+                const localBlocked = cart
+                    .filter(c => String(c.id) === String(item.id))
+                    .flatMap(c => getDatesInRange(c.startDate, c.endDate));
+                const allBlocked = [...new Set([...bookedDates, ...localBlocked])]; // Ajuste 8
+                
+                // Renderizado con IVA condicional y Descripciones (Ajuste 7 y 10)
+                const taxBadge = item.hasTax ? '<span class="text-[10px] text-blue-600 block">+ IVA</span>' : '';
+                const shortDesc = item.shortDescription || item.description; // Ajuste 7
+                
+        
                 let activeCategory = 'Todo';
     
                 const renderItems = () => {
@@ -1532,14 +1562,10 @@
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
                                 <div class="flex justify-between items-baseline mb-2">
-                                    
                                     <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
-                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">
-                                        $${item.price}<span class="text-sm font-normal text-gray-500">/día</span>
-                                        ${item.hasTax ? '<span class="text-[10px] text-blue-600 block">+ IVA</span>' : ''}
-                                    </p>
-                                    </div>
-                                    <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.shortDescription || item.description}</p>
+                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.pricePerDay}<span class="text-sm font-normal text-gray-500">/día</span></p>
+                                </div>
+                                <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.description}</p>
                                 <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
                                     Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
                                 </a>
