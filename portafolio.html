@@ -1406,7 +1406,7 @@
                 renderCart(); 
                 updateCartIcon(); 
                 toggleCart(true);
-            };;
+            };
     
             const renderPortfolio = () => {
                 const gallery = document.getElementById('portfolio-gallery');
@@ -1865,16 +1865,19 @@
 
 
             
-            const initialize = async () => {
-                // 1. Descarga inmediata de activos de marca (Punto de verdad)
+           const initialize = async () => {
+                // 1. Descarga prioritaria de la sección 'home' (Ajuste #12)
                 const brandData = await fetchSectionData('home');
+                
+                // 2. Asignación directa de activos de marca (Blindaje contra TypeError)
                 if (brandData && brandData.sysImages) {
-                    const imgs = brandData.sysImages.reduce((acc, item) => ({ ...acc, [item.key]: item.imageUrl }), {});
+                    const imgs = brandData.sysImages; // No hace falta reduce, ya es un objeto
                     if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
                     if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
                     if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
                 }
                 
+                // 3. Reutilizar la descarga fraccionada
                 const apiData = brandData;
                 
                 // --- ADAPTADOR UNIVERSAL DE DATOS ---
