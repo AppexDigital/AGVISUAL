@@ -261,13 +261,7 @@
             background-color: #f3f4f6; 
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem !important;
-            min-width: 0; /* Permite que el contenedor se encoja */
+            overflow: hidden;    
         }
         .contact-icon-link::before {
             content: '';
@@ -292,12 +286,12 @@
         }
 
         .contact-icon-link span {
-            font-size: clamp(0.6rem, 1.8vw, 0.9rem); /* Se encoge automáticamente */
-            font-weight: 700;
-            white-space: nowrap; /* PROHIBIDO el salto de línea */
-            text-overflow: ellipsis; /* Pone "..." si el tamaño mínimo no es suficiente */
-            max-width: 100%;
             display: block;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: clamp(0.6rem, 2.5vw, 1rem); /* Escala dinámica mínima 0.6rem */
         }
         /* --- ESTILO DEL MAPA (Efecto Gris a Color) --- */
         #google-map { 
@@ -952,6 +946,20 @@
                     </div>
                 </div>
             </div>
+
+            <div class="container mx-auto px-6 mt-20 pt-12 border-t border-gray-100 reveal">
+                <div class="max-w-md mx-auto text-center">
+                    <h3 class="font-display text-2xl mb-4">¿Ya tienes una reserva?</h3>
+                    <p class="text-sm text-gray-500 mb-6">Ingresa tu código para consultar el estado actual.</p>
+                    <div class="flex bg-gray-100 rounded-full p-1 border border-gray-200">
+                        <input type="text" id="booking-id-input" placeholder="RES-XXXX" class="flex-grow bg-transparent border-none px-4 py-2 text-sm font-mono focus:ring-0 text-black">
+                        <button id="check-booking-btn" class="bg-black text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-gray-800 transition-colors">CONSULTAR</button>
+                    </div>
+                    <div id="booking-status-result" class="mt-6 p-4 rounded-lg hidden transition-all duration-300"></div>
+                </div>
+            </div>
+
+            
         </section>
         <!-- ===== PROJECTS PAGE ===== -->
         <section id="projects" class="page-container pt-28 md:pt-36 pb-20 md:pb-24 bg-gray-50" aria-label="Proyectos">
@@ -2597,6 +2605,41 @@
             // ARRANCAR
             initialize();
         });
+
+        // Ajuste #26: Lógica de búsqueda puntual
+        document.getElementById('check-booking-btn').onclick = async () => {
+            const resId = document.getElementById('booking-id-input').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('booking-status-result');
+            if(!resId) return;
+        
+            resultDiv.innerHTML = '<p class="text-xs animate-pulse">Consultando base de datos...</p>';
+            resultDiv.classList.remove('hidden');
+        
+            try {
+                // Petición fraccionada bajo demanda (Arquitectura del Integrador)
+                const response = await fetch(`/.netlify/functions/get-website-data?section=booking_status&id=${resId}`);
+                const data = await response.json();
+        
+                if (data.found) {
+                    resultDiv.className = "mt-6 p-6 bg-zinc-700 text-white rounded-lg text-left shadow-xl";
+                    resultDiv.innerHTML = `
+                        <div class="flex justify-between items-center mb-4 border-b border-white/20 pb-2">
+                            <span class="font-mono text-xs opacity-70">${resId}</span>
+                            <span class="bg-white text-black px-2 py-0.5 rounded-full text-[10px] font-bold">${data.status}</span>
+                        </div>
+                        <p class="font-bold text-lg">${data.customerName}</p>
+                        <p class="text-sm opacity-80">${data.itemName}</p>
+                        <div class="mt-4 text-[10px] uppercase tracking-widest opacity-60">Vigencia: ${data.startDate} al ${data.endDate}</div>
+                    `;
+                } else {
+                    resultDiv.className = "mt-6 p-4 bg-red-50 text-red-600 rounded-lg text-sm";
+                    resultDiv.innerHTML = "Código de reserva no encontrado. Verifique e intente de nuevo.";
+                }
+            } catch (e) {
+                resultDiv.innerHTML = "Error al conectar con el servidor.";
+            }
+        };
+        
     </script>
 </body>
 </html>
