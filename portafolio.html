@@ -671,6 +671,14 @@
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             pointer-events: none;
         }
+
+        .tax-badge-inline {
+            font-size: 10px;
+            color: #6b7280; /* Gris */
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
         .cart-item-count.visible { opacity: 1; transform: scale(1); }
         #cart-item-count { /* Escritorio */
             width: 20px;
@@ -813,6 +821,51 @@
             .service-grid-item h3 { font-size: 1.2rem; }
         }
 
+        /* Ajuste 5, 6, 7: IVA Negro/Gris y 2 Columnas Estrictas en todo Móvil */
+        .tax-badge-inline {
+            font-size: 10px;
+            color: #6b7280; /* Gris */
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        /* Forzado de 2 columnas incluso en pantallas de 320px */
+        @media (max-width: 640px) {
+            #services-grid, #rental-grid-categorized, #projects-container > .grid {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 0.5rem !important;
+            }
+            .service-grid-item, .rental-card, #projects-container .grid > div {
+                flex: 0 1 calc(50% - 0.25rem) !important;
+                min-width: 0 !important; /* Permite que se encojan */
+                padding: 0.75rem !important;
+            }
+            .service-icon-wrapper { width: 40px; height: 40px; margin-bottom: 0.5rem; }
+            .service-grid-item h3 { font-size: 1rem; }
+            #portfolio-gallery { columns: 2 !important; column-gap: 0.5rem; }
+        }
+
+        /* Ajuste 3: Carrusel de miniaturas */
+        .thumb-nav {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        .thumb-nav img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        .thumb-nav img.active { opacity: 1; border: 2px solid black; }
+        
+
         /* Scroll Lock (Ajuste 16) */
         .lock-scroll { overflow: hidden !important; height: 100vh !important; }
     </style>
@@ -864,10 +917,12 @@
                 </nav>
 
                 <div class="hidden lg:flex items-center space-x-4 ml-8">
-                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-lg"></i></a>
+                   <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
                     <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-camera-retro fa-lg"></i></a>
                     <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
-                    <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2">
+                    <a href="#" aria-label="Email" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-envelope fa-lg"></i></a>
+                    <a href="#" aria-label="Teléfono" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-lg"></i></a>
+                    <button id="cart-button" class="cart-button social-icon text-gray-700 hover:text-black ml-2">
                         <i class="fas fa-shopping-bag fa-lg"></i>
                         <span id="cart-item-count" class="cart-item-count">0</span>
                     </button>
@@ -1184,19 +1239,36 @@
             // 4. FUNCIONES DE INTERFAZ (UI)
             // =================================================================
             const handleScrollHeader = () => {
-                const isDetailPage = !!document.querySelector('.page-active[id*="-detail-"]');
+                // Ajuste 8 & 9: Blanco SOLO en Service Detail cuando está arriba
+                const isServiceDetail = !!document.querySelector('.page-active[id^="service-detail-"]');
                 const menuOpen = mobileMenu.classList.contains('open');
                 
                 if (window.scrollY > 50 || menuOpen) {
                     header.classList.add('header-scrolled');
                     header.classList.remove('header-white-icons');
-                    // Logo Negro e iconos negros
+                    // Forzamos logo negro en scroll
+                    document.querySelectorAll('.logo-dark').forEach(el => el.style.display = 'block');
+                    document.querySelectorAll('.logo-light').forEach(el => el.style.display = 'none');
                 } else {
                     header.classList.remove('header-scrolled');
-                    if (isDetailPage) {
+                    if (isServiceDetail) {
                         header.classList.add('header-white-icons');
+                        document.querySelectorAll('.logo-dark').forEach(el => el.style.display = 'none');
+                        document.querySelectorAll('.logo-light').forEach(el => el.style.display = 'block');
+                    } else {
+                        header.classList.remove('header-white-icons');
+                        document.querySelectorAll('.logo-dark').forEach(el => el.style.display = 'block');
+                        document.querySelectorAll('.logo-light').forEach(el => el.style.display = 'none');
                     }
                 }
+            };
+
+            // Ajuste 11: Bloqueo persistente local (Carrito + Memoria)
+            const getLocalBlockedDates = (itemId) => {
+                const savedCart = JSON.parse(localStorage.getItem('ag_rental_cart') || '[]');
+                return savedCart
+                    .filter(c => String(c.id) === String(itemId))
+                    .flatMap(c => getDatesInRange(c.startDate, c.endDate));
             };
     
             // Inyectar Botones de Regreso al final de Proyectos y Servicios
@@ -1708,50 +1780,37 @@
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
-                // AJUSTE: Asegurar clases de altura completa (h-full) en los items
                 const trackHTML = item.images.map(img=>`<div class="carousel-item w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
+                const thumbsHTML = item.images.map((img, idx)=>`<img src="${img.imageUrl}" onclick="moveCarousel('${targetId}', ${idx})" class="${idx===0?'active':''}">`).join('');
                 
                 document.getElementById('rental-detail-pages').innerHTML = `
-                    <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
-                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
-                            <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo</a>
-                            
+                    <section id="${targetId}" class="page-container pt-32 pb-24 bg-white">
+                        <div class="container mx-auto px-6">
+                            <a href="#" data-target="rental" class="nav-link text-gray-500 mb-8 inline-block"><i class="fas fa-arrow-left"></i> Volver al Catálogo</a>
                             <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
                                 <div class="lg:col-span-3">
-                                    <div class="carousel-container h-[400px] md:h-[500px] w-full relative rounded-none border border-gray-100 shadow-sm sticky top-28">
+                                    <div class="carousel-container h-[400px] relative">
                                         <div class="carousel-track flex h-full">${trackHTML}</div>
-                                        <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
-                                        <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
                                     </div>
-                                </div>
-                                
-                                <div class="lg:col-span-2 reveal">
-                                    <h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2>
-                                    <p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p>
-                                    <p class="text-gray-600 text-justify text-reveal mb-8 leading-relaxed">${item.description}</p>
-                                    <button id="calendar-btn-${item.id}" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300 transition-transform hover:-translate-y-1 shadow-lg">
-                                        <i class="fas fa-calendar-alt mr-2"></i> Consultar Disponibilidad
+                                    <div class="thumb-nav">${thumbsHTML}</div> </div>
+                                <div class="lg:col-span-2">
+                                    <h2 class="text-4xl font-display mb-2">${item.name}</h2>
+                                    <p class="text-3xl font-bold mb-6">$${item.price}<span class="tax-badge-inline">${item.hasTax?' + IVA':''}</span></p>
+                                    <div class="rich-text-content mb-8">${item.longDescription || item.description}</div> <button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white py-4 rounded-full mb-4">
+                                        Consultar Disponibilidad
                                     </button>
-                                </div>
+                                    <button onclick="navigateTo('rental')" class="w-full border border-gray-300 py-3 rounded-full hover:bg-gray-50 transition">SEGUIR EXPLORANDO</button> </div>
                             </div>
-                        </div></div>
+                        </div>
                     </section>`;
                 
-                // ... (Resto de la lógica del slider y navegación igual que antes) ...
                 const section = document.getElementById(targetId);
-                section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates || []);
-                const track = section.querySelector('.carousel-track');
-                let idx = 0;
-                section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
-                section.querySelector('.prev').onclick = () => { idx=(idx-1+item.images.length)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
+                // Bloqueo persistente Ajuste 11
+                const allBooked = [...(item.bookedDates || []), ...getLocalBlockedDates(item.id)];
+                section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, allBooked);
                 
-                const page = document.getElementById(targetId);
-                if(page) {
-                    document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
-                    page.style.display='block';
-                    setTimeout(()=>page.classList.add('page-active'), 10);
-                    window.scrollTo(0,0);
-                }
+                // Forzar Flatpickr en móviles para evitar el nativo (Ajuste 11)
+                setTimeout(() => { navigateTo(targetId); }, 10);
             };
     
             // =================================================================
