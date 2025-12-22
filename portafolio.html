@@ -124,6 +124,15 @@
         #header:not(.header-dark) .logo-light { display: none !important; }
         /* Asegurar transición suave del fondo */
         #header { transition: background-color 0.3s ease, padding 0.3s ease; }
+
+
+        .social-icon i, .mobile-nav-link i, .contact-icon-link i {
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+
         
         /* --- Menú Móvil Mejorado --- */
         #mobile-menu {
@@ -132,6 +141,7 @@
             -webkit-backdrop-filter: blur(20px);
             transform: translateX(100%);
             transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+            overflow-x: hidden;
         }
         #mobile-menu.open {
             transform: translateX(0);
@@ -261,7 +271,14 @@
             background-color: #f3f4f6; 
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
-            overflow: hidden;    
+            overflow: hidden;
+            /* Volvemos al formato original de cuadros grandes */
+            padding: 2rem !important; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         .contact-icon-link::before {
             content: '';
@@ -286,12 +303,16 @@
         }
 
         .contact-icon-link span {
-            display: block;
-            width: 100%;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            /* Solo encogemos la letra si es necesario, sin romper el cuadro */
+            font-size: clamp(0.55rem, 2vw, 0.9rem); 
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-size: clamp(0.6rem, 2.5vw, 1rem); /* Escala dinámica mínima 0.6rem */
+            width: 100%;
+            display: block;
+            text-align: center;
         }
         /* --- ESTILO DEL MAPA (Efecto Gris a Color) --- */
         #google-map { 
@@ -858,10 +879,12 @@
                     </a>
                 </nav>
             <div class="hidden lg:flex items-center space-x-5 ml-8">
-                <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp fa-fw"></i></a>
-                <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram fa-fw"></i></a>
-                <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-f fa-fw"></i></a>
-                <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-fw"></i></a>
+                <div class="hidden lg:flex items-center space-x-5 ml-8">
+                    <a href="#" class="social-icon text-gray-700 hover:text-black"><i class="fa-brands fa-whatsapp fa-lg"></i></a>
+                    <a href="#" class="social-icon text-gray-700 hover:text-black"><i class="fa-brands fa-instagram fa-lg"></i></a>
+                    <a href="#" class="social-icon text-gray-700 hover:text-black"><i class="fa-brands fa-facebook-f fa-lg"></i></a>
+                    <a href="#" class="social-icon text-gray-700 hover:text-black"><i class="fa-brands fa-youtube fa-lg"></i></a>
+                </div>
                 <button id="cart-button" aria-label="Ver carrito" class="text-gray-700 hover:text-black transition-colors ml-2 relative">
                     <i class="fa-solid fa-bag-shopping fa-fw"></i>
                     <span id="cart-item-count" class="cart-item-count">0</span>
@@ -893,16 +916,12 @@
             <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
         <div class="flex justify-center items-center space-x-6 pb-12 flex-wrap gap-y-6 px-4">
-            <a href="#" aria-label="Teléfono" class="text-gray-700 hover:text-black transition-colors"><i class="fa-light fa-phone-flip fa-lg"></i></a>
-            <a href="#" aria-label="Email" class="text-gray-700 hover:text-black transition-colors"><i class="fa-light fa-envelope fa-lg"></i></a>
-            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp fa-lg"></i></a>
-            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram fa-lg"></i></a>
-            <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-f fa-lg"></i></a>
-            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-lg"></i></a>
-            
-            <a href="#" id="mobile-location-pin" target="_blank" aria-label="Ubicación" class="text-gray-700 hover:text-black transition-colors">
-                <i class="fa-light fa-location-dot fa-2x"></i>
-            </a>
+            <a href="#" class="text-gray-700"><i class="fa-brands fa-whatsapp fa-2x"></i></a>
+            <a href="#" class="text-gray-700"><i class="fa-brands fa-instagram fa-2x"></i></a>
+            <a href="#" class="text-gray-700"><i class="fa-brands fa-facebook-f fa-2x"></i></a>
+            <a href="#" class="text-gray-700"><i class="fa-solid fa-phone-flip fa-2x"></i></a>
+            <a href="#" class="text-gray-700"><i class="fa-regular fa-envelope fa-2x"></i></a>
+            <a href="#" class="text-gray-700"><i class="fa-solid fa-location-dot fa-2x"></i></a>
         </div>
     </div>
     <main id="main-content">
@@ -947,17 +966,7 @@
                 </div>
             </div>
 
-            <div class="container mx-auto px-6 mt-20 pt-12 border-t border-gray-100 reveal">
-                <div class="max-w-md mx-auto text-center">
-                    <h3 class="font-display text-2xl mb-4">¿Ya tienes una reserva?</h3>
-                    <p class="text-sm text-gray-500 mb-6">Ingresa tu código para consultar el estado actual.</p>
-                    <div class="flex bg-gray-100 rounded-full p-1 border border-gray-200">
-                        <input type="text" id="booking-id-input" placeholder="RES-XXXX" class="flex-grow bg-transparent border-none px-4 py-2 text-sm font-mono focus:ring-0 text-black">
-                        <button id="check-booking-btn" class="bg-black text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-gray-800 transition-colors">CONSULTAR</button>
-                    </div>
-                    <div id="booking-status-result" class="mt-6 p-4 rounded-lg hidden transition-all duration-300"></div>
-                </div>
-            </div>
+            
 
             
         </section>
@@ -1024,27 +1033,27 @@
              <div class="container mx-auto px-6 pb-20 md:pb-24">
                 <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fa-brands fa-instagram fa-fw"></i>
+                        <i class="fa-brands fa-instagram fa-3x mb-3"></i>
                         <span class="font-bold">Instagram</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fa-brands fa-whatsapp fa-fw"></i>
+                        <i class="fa-brands fa-whatsapp fa-3x mb-3"></i>
                         <span class="font-bold">WhatsApp</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fa-regular fa-envelope fa-fw"></i>
+                        <i class="fa-regular fa-envelope fa-3x mb-3"></i>
                         <span class="font-bold">Email</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fa-brands fa-facebook-f fa-fw"></i>
+                        <i class="fa-brands fa-facebook-f fa-3x mb-3"></i>
                         <span class="font-bold">Facebook</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fa-brands fa-youtube fa-fw"></i>
+                        <i class="fa-brands fa-youtube fa-3x mb-3"></i>
                         <span class="font-bold">YouTube</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fa-solid fa-phone-flip fa-fw"></i>
+                        <i class="fa-solid fa-phone-flip fa-3x mb-3"></i>
                         <span class="font-bold">Teléfono</span>
                     </a>
                 </div>
@@ -1055,6 +1064,26 @@
             <div class="reveal">
                 <iframe id="google-map" src="https://www.google.com/maps/embed?pb=!1m18!m12!1m3!1d31431.83101261831!2d-84.0101680513672!3d10.023880900000004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8fa0f3c43dd70743%3A0x18258b381d58552a!2sV%C3%A1squez%20de%20Coronado!5e0!3m2!1ses-419!2scr!4v1722547858413!5m2!1ses-419!2scr" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
+
+            <div class="max-w-xl mx-auto mt-20 pt-12 border-t border-gray-100 reveal">
+                <div class="text-center">
+                    <h3 class="font-display text-3xl mb-4 text-gray-800">Rastrear mi Sesión</h3>
+                    <p class="text-sm text-gray-500 mb-8">Ingresa tu código para verificar el estado de tu reserva en tiempo real.</p>
+                    
+                    <div class="flex p-1 bg-gray-100 rounded-full border border-gray-200 shadow-inner max-w-sm mx-auto">
+                        <input type="text" id="booking-id-input" placeholder="RES-XXXX" 
+                               class="flex-grow bg-transparent border-none px-6 py-3 text-sm font-mono focus:ring-0 text-black uppercase">
+                        <button id="check-booking-btn" 
+                                class="bg-black text-white px-8 py-3 rounded-full text-xs font-bold hover:bg-gray-800 transition-all transform hover:scale-105">
+                            BUSCAR
+                        </button>
+                    </div>
+                    
+                    <div id="booking-status-result" class="mt-8 transition-all duration-500 hidden"></div>
+                </div>
+            </div>
+
+            
         </section>
         <!-- PROJECT DETAIL PAGES CONTAINER -->
         <div id="project-detail-pages"></div>
