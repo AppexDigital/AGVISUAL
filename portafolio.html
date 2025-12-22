@@ -393,15 +393,22 @@
             background-color: #f3f4f6;
         }
 
+        /* Categorías de Alquiler (Ajuste: No etiquetas, sino botones elegantes) */
+        #rental-filters {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px;
+            gap: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
         /* --- Estilos para la sección de Alquiler (Rediseño) --- */
         .rental-category-btn {
-            padding: 0.5rem 1.5rem;
-            border: 1px solid #d1d5db; /* gray-300 */
-            border-radius: 0; /* Cambio a esquinas cuadradas */
-            transition: all 0.3s ease;
-            font-weight: 500;
-            white-space: nowrap; /* Evita que el texto se parta */
-            flex-shrink: 0; 
+            border: 1px solid var(--text-dark);
+            background: white;
+            padding: 8px 20px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         .rental-category-btn.active, .rental-category-btn:hover {
             background-color: var(--text-dark);
@@ -643,19 +650,23 @@
         .cart-button { /* Clase común para ambos botones de carrito */
             position: relative;
         }
-        .cart-item-count { /* Clase común para ambos contadores */
+        .cart-item-count {
             position: absolute;
-            top: -5px;
-            right: -10px;
+            top: -8px;
+            right: -8px;
             background-color: #ff0000 !important;
-            color: white !important
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
+            color: #ffffff !important;
+            border-radius: 50% !important;
+            width: 20px !important;
+            height: 20px !important;
+            display: flex !important;
             align-items: center;
-            font-weight: bold;
-            transform: scale(0);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            justify-content: center;
+            font-size: 10px !important;
+            font-weight: 800;
+            border: 2px solid #FDFDFD; /* Para que resalte sobre el fondo */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transform: scale(1) !important; /* Siempre visible si hay items */
         }
         #cart-item-count { /* Escritorio */
             width: 20px;
@@ -762,14 +773,24 @@
         .rich-text-content .ql-align-right, .rich-text-content[style*="text-align: right"] { text-align: right; }
         .rich-text-content .ql-align-justify, .rich-text-content[style*="text-align: justify"] { text-align: justify; }
 
+        /* Colores del Header Mobile (Ajuste Solicitado) */
+        .header-white-icons #mobile-cart-header, 
+        .header-white-icons #mobile-menu-button .icon-bar {
+            color: white !important;
+            background-color: white; /* Para las líneas de la hamburguesa */
+        }
+
+        
+        /* 2 Columnas en Móvil para Servicios y Proyectos (Ajuste Solicitado) */
         @media (max-width: 768px) {
-            .service-grid-item, .rental-card {
-                flex: 0 1 calc(50% - 1rem); /* 2 Columnas en móvil */
-                min-width: 150px;
+            .service-grid-item, .video-card {
+                flex: 0 1 calc(50% - 1rem); 
+                min-width: 140px;
+                padding: 1rem !important; /* Más compacto */
             }
-            #portfolio-gallery, #project-images-grid {
-                columns: 2 !important; /* Forzar 2 columnas en galerías móviles */
-            }
+            .service-icon-wrapper { width: 50px; height: 50px; }
+            .service-icon { font-size: 1.5rem; }
+            .service-grid-item h3 { font-size: 1.2rem; }
         }
 
         /* Scroll Lock (Ajuste 16) */
@@ -1143,14 +1164,33 @@
             // 4. FUNCIONES DE INTERFAZ (UI)
             // =================================================================
             const handleScrollHeader = () => {
-                const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
-                if (window.scrollY > 50) {
-                    header.classList.add('header-scrolled'); header.classList.remove('header-dark'); 
-                } else { 
+                const isDetailPage = !!document.querySelector('.page-active[id*="-detail-"]');
+                const menuOpen = mobileMenu.classList.contains('open');
+                
+                if (window.scrollY > 50 || menuOpen) {
+                    header.classList.add('header-scrolled');
+                    header.classList.remove('header-white-icons');
+                    // Logo Negro e iconos negros
+                } else {
                     header.classList.remove('header-scrolled');
-                    if (isServicePage) header.classList.add('header-dark');
-                    else header.classList.remove('header-dark');
+                    if (isDetailPage) {
+                        header.classList.add('header-white-icons');
+                    }
                 }
+            };
+    
+            // Inyectar Botones de Regreso al final de Proyectos y Servicios
+            const addBackButtons = () => {
+                const containers = ['projects-container', 'service-detail-pages'];
+                containers.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && !el.querySelector('.back-footer-btn')) {
+                        const btn = document.createElement('div');
+                        btn.className = 'flex justify-center mt-12 mb-8 back-footer-btn';
+                        btn.innerHTML = `<button onclick="navigateTo('${id.includes('service') ? 'services' : 'projects'}')" class="btn-primary bg-zinc-700 text-white px-8 py-3 rounded-full font-bold">VOLVER</button>`;
+                        el.appendChild(btn);
+                    }
+                });
             };
     
             const toggleMobileMenu = (forceState) => {
@@ -1792,23 +1832,19 @@
                     renderServicesGrid();
                 } 
                 else if (sectionName === 'rental') {
-                    // Filtramos equipos: solo "active"
                     const visibleItems = (data.rentalItems || []).filter(isVisible);
-                    
                     globalData.rentals.items = visibleItems;
                     globalData.rentals.categories = data.rentalCategories || [];
                     globalData.rentals.dates = data.blockedDates || [];
                     
                     rentalDataGlobal = {}; 
                     data.rentalCategories.forEach(cat => {
-                        // DENTRO DE loadSection -> if (sectionName === 'rental')
                         rentalDataGlobal[cat.name] = visibleItems
                             .filter(i => i.categoryId === cat.id)
                             .map(i => ({
                                 ...i, 
                                 price: parseFloat(i.pricePerDay), 
-                                // AJUSTE IVA: Convertimos el texto del sheet a Booleano (true/false)
-                                hasTax: String(i.hasTax).toLowerCase() === 'true' || String(i.hasTax).toLowerCase() === 'si',
+                                hasTax: String(i.hasTax).toLowerCase() === 'true',
                                 images: i.images || [],
                                 bookedDates: data.blockedDates
                                     .filter(b => b.itemId === i.id)
