@@ -3,220 +3,751 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Versión actualizada a 12.4 -->
     <title>Adán Gómez | Fotógrafo Profesional (v12.4)</title>
-    
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="https://placehold.co/32x32/1a1a1a/FDFDFD?text=AG">
-    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (ACTUALIZADO) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
     <style>
-        /* ============================================================
-           1. BASES, VARIABLES Y TIPOGRAFÍA (ORIGINALES E INTACTAS)
-           ============================================================ */
         :root {
             --bg-main: #FDFDFD;
             --text-dark: #1a1a1a;
             --text-light: #f8f9fa;
             --accent: #3a3a3a;
         }
-        html { scroll-behavior: smooth; }
+        html { 
+            scroll-behavior: smooth; 
+        }
         body {
             font-family: 'Montserrat', sans-serif;
             background-color: var(--bg-main);
             color: var(--text-dark);
             overflow-x: hidden;
         }
+        /* TIPOGRAFÍA DE TÍTULOS ACTUALIZADA */
         h1, h2, h3, h4, .font-display { 
             font-family: 'Cormorant Garamond', serif; 
             line-height: 1.4; 
         }
         
-        /* ============================================================
-           2. ARQUITECTURA DE TRANSICIÓN Y CARGA (CROSSFADE)
-           ============================================================ */
-        .page-container { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
-        .page-active { display: block; opacity: 1; }
-        .page-exiting { display: block; opacity: 0; }
-        .reveal { opacity: 0; transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1); }
-        .reveal.visible { opacity: 1; }
-        
-        .loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-main); z-index: 9999;
-            display: flex; justify-content: center; align-items: center;
+        /* --- Arquitectura de Transición (Crossfade) --- */
+        .page-container { 
+            display: none; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out;
         }
-        .loader.hidden { opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease; }
+        .page-active { 
+            display: block; 
+            opacity: 1;
+        }
+        .page-exiting {
+            display: block;
+            opacity: 0;
+        }
+        
+        /* --- Animación de carga de imágenes (Fade-in) --- */
+        .reveal {
+            opacity: 0;
+            transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+        }
+        
+        /* --- Indicador de carga --- */
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
         .loader-circle {
-            width: 50px; height: 50px; border: 3px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%; border-top-color: var(--accent);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
             animation: spin 1s ease-in-out infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
         
-        /* ============================================================
-           3. HEADER Y NAVEGACIÓN DINÁMICA (REPARADO: AJUSTE 8, 9, 16)
-           ============================================================ */
-        #header { transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); padding-top: 1.5rem; padding-bottom: 1.5rem; background-color: transparent; }
+        /* --- Header Dinámico Mejorado --- */
+        #header {
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            padding-top: 1.5rem; 
+            padding-bottom: 1.5rem;
+            background-color: transparent;
+        }
+        #header.header-scrolled, #header.header-dark {
+            padding-top: 0.5rem; 
+            padding-bottom: 0.5rem;
+        }
         #header.header-scrolled {
             background-color: rgba(253, 253, 253, 0.95);
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-            padding-top: 0.5rem; padding-bottom: 0.5rem;
         }
+        #header.header-dark {
+            background-color: #52525b; /* bg-zinc-700 */
+            box-shadow: none;
+        }
+        #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon, #header.header-dark #cart-button {
+            color: white;
+        }
+         #header.header-dark .nav-link-underline {
+            background-color: white;
+        }
+         #header.header-dark .logo-dark { display: none !important; }
+        #header.header-dark .logo-light { display: block !important; }
+        #header:not(.header-dark) .logo-dark { display: block !important; }
+        #header:not(.header-dark) .logo-light { display: none !important; }
+        /* Asegurar transición suave del fondo */
+        #header { transition: background-color 0.3s ease, padding 0.3s ease; }
         
-        /* Lógica exclusiva para Servicios: Logo Blanco arriba */
-        .header-white-icons .nav-link-text, .header-white-icons .social-icon, 
-        .header-white-icons #mobile-cart-header, .header-white-icons #mobile-menu-button .icon-bar {
-            color: white !important;
-        }
-        .header-white-icons .logo-dark { display: none !important; }
-        .header-white-icons .logo-light { display: block !important; }
-        .header-white-icons .icon-bar { background-color: white !important; }
-
-        /* Forzado a Negro: Scroll o Menú abierto (AJUSTE 7) */
-        .header-scrolled .logo-dark, #mobile-menu.open ~ #header .logo-dark { display: block !important; }
-        .header-scrolled .logo-light, #mobile-menu.open ~ #header .logo-light { display: none !important; }
-        .header-scrolled .nav-link-text, .header-scrolled .social-icon, 
-        .header-scrolled #mobile-cart-header, #mobile-menu.open ~ #header .nav-link-text,
-        #mobile-menu.open ~ #header #mobile-menu-button .icon-bar { color: black !important; }
-        .header-scrolled .icon-bar, #mobile-menu.open ~ #header .icon-bar { background-color: black !important; }
-
-        /* ============================================================
-           4. MENÚ MÓVIL Y SCROLL LOCK (CONSERVADO + AJUSTE 16)
-           ============================================================ */
+        /* --- Menú Móvil Mejorado --- */
         #mobile-menu {
-            background-color: rgba(253, 253, 253, 0.95); backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px); transform: translateX(100%);
+            background-color: rgba(253, 253, 253, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transform: translateX(100%);
             transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
         }
-        #mobile-menu.open { transform: translateX(0); }
+        #mobile-menu.open {
+            transform: translateX(0);
+        }
         .mobile-nav-link {
-            font-family: 'Cormorant Garamond', serif; color: var(--text-dark);
-            opacity: 0; transform: translateY(30px);
-            transition: opacity 0.5s ease, transform 0.5s ease; position: relative;
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--text-dark);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            position: relative;
         }
         .mobile-nav-link::after {
-            content: ''; position: absolute; bottom: -5px; left: 0; width: 0;
-            height: 2px; background-color: var(--accent); transition: width 0.4s ease;
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent);
+            transition: width 0.4s ease;
         }
-        .mobile-nav-link:hover::after, .mobile-nav-link.nav-active::after { width: 100%; }
-        #mobile-menu-button .icon-bar { transition: all 0.3s ease-in-out; }
+        .mobile-nav-link:hover::after, .mobile-nav-link.nav-active::after {
+            width: 100%;
+        }
+        #mobile-menu-button .icon-bar {
+            transition: all 0.3s ease-in-out;
+        }
         #mobile-menu-button.open .icon-bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
         #mobile-menu-button.open .icon-bar:nth-child(2) { opacity: 0; }
         #mobile-menu-button.open .icon-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-        .lock-scroll { overflow: hidden !important; height: 100vh !important; }
-
-        /* ============================================================
-           5. GALERÍA Y LIGHTBOX (CONSERVADOS INTEGROS)
-           ============================================================ */
-        .gallery-item { cursor: pointer; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
-        .gallery-item:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); }
-        .gallery-item img { transition: transform 0.8s ease; }
-        .gallery-item:hover img { transform: scale(1.05); }
-        .gallery-item .overlay { opacity: 0; transition: opacity 0.5s ease; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%); }
-        .gallery-item:hover .overlay { opacity: 1; }
-        .gallery-item .overlay p { transform: translateY(20px); transition: transform 0.5s ease; }
-        .gallery-item:hover .overlay p { transform: translateY(0); }
         
-        #lightbox { background-color: rgba(10, 10, 10, 0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.4s ease-in-out; }
-        #lightbox-image { transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); transform: scale(0.9); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); max-height: 80vh; }
-        #lightbox.visible #lightbox-image { transform: scale(1); }
-        #lightbox.visible { opacity: 1; pointer-events: auto; }
-        #lightbox-close { transition: all 0.3s ease; }
-        #lightbox-close:hover { transform: rotate(90deg); color: #ff5252; }
-        .lightbox-nav {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.1); color: white; border: none; width: 50px; height: 50px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;
-            cursor: pointer; transition: all 0.3s ease; z-index: 101;
+        /* --- Estilo para el enlace de navegación activo --- */
+        .nav-link.nav-active > .nav-link-underline {
+            width: 100%;
         }
-        .lightbox-nav:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-50%) scale(1.1); }
+
+        /* --- Galería Mejorada --- */
+        .gallery-item { 
+            cursor: pointer; 
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative;
+            overflow: hidden;
+        }
+        .gallery-item:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        .gallery-item img {
+            transition: transform 0.8s ease;
+        }
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+        .gallery-item .overlay { 
+            opacity: 0; 
+            transition: opacity 0.5s ease; 
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%);
+        }
+        .gallery-item:hover .overlay { 
+            opacity: 1; 
+        }
+        .gallery-item .overlay p {
+            transform: translateY(20px);
+            transition: transform 0.5s ease;
+        }
+        .gallery-item:hover .overlay p {
+            transform: translateY(0);
+        }
+        
+        /* --- Lightbox Mejorado --- */
+        #lightbox { 
+            background-color: rgba(10, 10, 10, 0.95); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: opacity 0.4s ease-in-out;
+        }
+        #lightbox-image { 
+            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); 
+            transform: scale(0.9);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            max-height: 80vh;
+        }
+        #lightbox.visible #lightbox-image { 
+            transform: scale(1); 
+        }
+
+        #lightbox.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #lightbox-close {
+            transition: all 0.3s ease;
+        }
+        #lightbox-close:hover {
+            transform: rotate(90deg);
+            color: #ff5252;
+        }
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 101;
+        }
+        .lightbox-nav:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
         #lightbox-prev { left: 20px; }
         #lightbox-next { right: 20px; }
-
-        /* ============================================================
-           6. GRIDS Y DISEÑO RESPONSIVO (PIRÁMIDE INVERTIDA + MOSAICO)
-           ============================================================ */
-        #services-grid, #videos-container, #rental-grid-categorized {
-            display: flex !important; flex-wrap: wrap; justify-content: center; gap: 2rem;
-        }
-        .service-grid-item, .video-card, .rental-card { flex: 0 1 350px; }
-
-        @media (max-width: 640px) {
-            /* Mosaico Masonry para Galerías (AJUSTE 2, 7) */
-            #portfolio-gallery, .gallery-mosaico-mobile {
-                display: block !important; column-count: 2 !important; column-gap: 0.5rem !important;
-            }
-            .gallery-item { break-inside: avoid; margin-bottom: 0.5rem; }
-            
-            /* Tarjetas Alquiler (AJUSTE 5, 6) */
-            #rental-grid-categorized { gap: 0.75rem !important; }
-            .rental-card { flex: 0 1 calc(50% - 0.4rem) !important; }
-            .rental-card h3 { font-size: 0.95rem !important; }
-            .rental-card .p-6 { padding: 0.5rem !important; }
-
-            /* Grid Servicios */
-            .service-grid-item { flex: 0 1 calc(50% - 0.5rem) !important; padding: 1rem !important; }
-            .service-icon-wrapper { width: 45px; height: 45px; margin-bottom: 0.5rem; }
-            .service-icon { font-size: 1.2rem; }
-        }
-
-        /* ============================================================
-           7. ESTÉTICA DE ALQUILER Y CARRUSELES (CONSERVADO + AJUSTE 5)
-           ============================================================ */
-        .rental-card {
-            background-color: white; border: 1px solid #e5e7eb !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        
+        /* --- Contacto y Mapa --- */
+        .contact-icon-link { 
+            background-color: #f3f4f6; 
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            opacity: 0; transform: translateY(20px); overflow: hidden;
-            display: flex; flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
-        .rental-card.visible { opacity: 1; transform: translateY(0); }
-        .tax-badge-inline { font-size: 10px; color: #6b7280; font-weight: bold; margin-left: 5px; }
-
-        .carousel-container { width: 100%; overflow: hidden; position: relative; background-color: #f3f4f6; }
-        .carousel-track { display: flex; transition: transform 0.5s ease-in-out; }
-        .carousel-item { min-width: 100%; height: 100%; }
-        .carousel-item img { width: 100%; height: 100%; object-fit: cover; }
-        .thumb-nav img { width: 60px; height: 60px; object-fit: cover; cursor: pointer; opacity: 0.5; transition: opacity 0.3s; border: 1px solid #eee; }
-        .thumb-nav img.active { opacity: 1; border: 2px solid black; }
-
-        /* ============================================================
-           8. MODALES Y CARRITO (NOTIFICACIÓN ROJA - AJUSTE 13)
-           ============================================================ */
-        .calendar-modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 100; opacity: 0; transition: opacity 0.3s ease-in-out; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
-        .calendar-modal-overlay.visible { opacity: 1; pointer-events: auto; }
-        .calendar-modal-content { background-color: white; padding: 1.5rem; max-width: 400px; width: 100%; transform: scale(0.95); opacity: 0; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
-        .calendar-modal-overlay.visible .calendar-modal-content { transform: scale(1); opacity: 1; }
-
-        .cart-item-count {
-            position: absolute; top: -8px; right: -8px; background-color: #ff0000 !important;
-            color: #ffffff !important; border-radius: 50% !important; width: 20px !important; height: 20px !important;
-            display: flex !important; align-items: center; justify-content: center;
-            font-size: 10px !important; font-weight: 800; border: 2px solid #FDFDFD;
-            opacity: 0; transform: scale(0); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .contact-icon-link::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background-color: var(--accent);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+            z-index: -1;
         }
-        .cart-item-count.visible { opacity: 1; transform: scale(1); }
+        .contact-icon-link:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        .contact-icon-link:hover { 
+            color: white; 
+            transform: scale(1.1);
+        }
+        /* --- ESTILO DEL MAPA (Efecto Gris a Color) --- */
+        #google-map { 
+            width: 100%;
+            height: 450px; /* Asegura altura para que no desaparezca */
+            filter: grayscale(100%) contrast(90%); 
+            transition: filter 0.5s ease;
+            border: 0;
+        }
+        #google-map:hover { 
+            filter: grayscale(0%) contrast(100%);
+        }
 
-        /* ============================================================
-           9. RICH TEXT Y CONTENIDO DEL EDITOR (INTACTO)
-           ============================================================ */
+        /* Contenedor del mapa para asegurar márgenes */
+        .map-container {
+            margin-top: 0; /* Ajusta según necesidad */
+            overflow: hidden;
+        }
+        
+        /* --- Logos de Marcas --- */
+        .client-logo {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            transition: all 0.4s ease;
+        }
+        .client-logo:hover {
+            filter: grayscale(0%);
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        
+        /* --- Botones y Enlaces Mejorados --- */
+        .btn-primary {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        /* --- Animación de aparición de texto --- */
+        .text-reveal {
+            position: relative;
+            overflow: hidden;
+        }
+        .text-reveal::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            transform: translateX(0);
+            transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .text-reveal.revealed::after {
+            transform: translateX(101%);
+        }
+        
+        /* --- Efecto parallax suave --- */
+        .parallax {
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* --- Mejoras de accesibilidad --- */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        /* --- Animación de carga de imágenes con placeholder --- */
+        .img-container {
+            position: relative;
+            overflow: hidden;
+            background-color: #f3f4f6;
+        }
+
+        /* --- Estilos para la sección de Alquiler (Rediseño) --- */
+        .rental-category-btn {
+            padding: 0.5rem 1.5rem;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 0; /* Cambio a esquinas cuadradas */
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap; /* Evita que el texto se parta */
+            flex-shrink: 0; 
+        }
+        .rental-category-btn.active, .rental-category-btn:hover {
+            background-color: var(--text-dark);
+            color: white;
+            border-color: var(--text-dark);
+        }
+        .rental-card {
+            background-color: white;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(20px);
+            display: flex;
+            flex-direction: column;
+        }
+         .rental-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .rental-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .carousel-container {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            background-color: #f3f4f6; /* Fondo gris pálido por si la imagen no carga */
+        }
+        .carousel-track {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        .carousel-item {
+            min-width: 100%;
+            height: 100%; /* Forzar altura del padre */
+        }
+        .carousel-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* "cover" recorta para llenar, "contain" ajusta para ver completa */
+        }
+        .carousel-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0,0,0,0.4);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .carousel-container:hover .carousel-button {
+            opacity: 1;
+        }
+        .carousel-button:hover {
+            background-color: rgba(0,0,0,0.7);
+        }
+        .carousel-button.prev { left: 10px; }
+        .carousel-button.next { right: 10px; }
+        
+        /* --- Estilos para la nueva sección de Servicios (Reemplazo) --- */
+        .service-grid-item {
+            background-color: white;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0; /* Cambio de rounded-lg a esquinas cuadradas */
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+        .service-grid-item:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            border-color: var(--accent);
+        }
+        .service-icon-wrapper {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f3f4f6; /* gray-100 */
+            margin-bottom: 1.5rem;
+            transition: all 0.4s ease;
+        }
+        .service-grid-item:hover .service-icon-wrapper {
+            background-color: var(--accent);
+            transform: rotate(15deg) scale(1.1);
+        }
+        .service-icon {
+            font-size: 2rem;
+            color: var(--accent);
+            transition: color 0.4s ease;
+        }
+        .service-grid-item:hover .service-icon {
+            color: white;
+        }
+        .service-grid-item h3 {
+            margin-bottom: 0.5rem;
+            transition: color 0.4s ease;
+        }
+
+        /* --- NUEVOS ESTILOS PARA EL MODAL DEL CALENDARIO --- */
+        .calendar-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            pointer-events: none;
+        }
+        .calendar-modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .calendar-modal-content {
+            background-color: white;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 100%;
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        .calendar-modal-overlay.visible .calendar-modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .calendar-nav-btn {
+            background: none;
+            border: 1px solid #d1d5db;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .calendar-nav-btn:hover {
+            background-color: var(--text-dark);
+            color: white;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.25rem;
+        }
+        .calendar-day, .calendar-day-name {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            aspect-ratio: 1 / 1;
+            text-align: center;
+        }
+        .calendar-day-name {
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        .calendar-day {
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+        .calendar-day:not(.disabled):hover {
+            background-color: #f3f4f6;
+        }
+        .calendar-day.disabled {
+            color: #d1d5db;
+            cursor: not-allowed;
+            text-decoration: line-through;
+        }
+        .calendar-day.selected, .calendar-day.in-range {
+            background-color: var(--text-dark);
+            color: white;
+        }
+        .booking-summary {
+            background-color: #f9fafb;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* --- NUEVOS ESTILOS PARA EL CARRITO DE COMPRAS --- */
+        #cart-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 60;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+        #cart-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #cart-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            max-width: 450px;
+            height: 100%;
+            background-color: white;
+            z-index: 70;
+            transform: translateX(100%);
+            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+        }
+        #cart-drawer.visible {
+            transform: translateX(0);
+        }
+        .cart-button { /* Clase común para ambos botones de carrito */
+            position: relative;
+        }
+        .cart-item-count { /* Clase común para ambos contadores */
+            position: absolute;
+            top: -5px;
+            right: -10px;
+            background-color: var(--text-dark);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            transform: scale(0);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #cart-item-count { /* Escritorio */
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+        }
+        #mobile-cart-item-count { /* Móvil */
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            top: -8px;
+            right: -12px;
+        }
+        .cart-item-count.visible {
+            transform: scale(1);
+        }
+        .cart-item-remove-btn {
+            color: #9ca3af;
+            transition: color 0.2s;
+        }
+        .cart-item-remove-btn:hover {
+            color: #ef4444;
+        }
+        #cart-empty-state {
+            display: none; /* Oculto por defecto */
+        }
+        
+        /* --- NUEVOS ESTILOS PARA EL MODAL DE CHECKOUT --- */
+        #checkout-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 110;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            pointer-events: none;
+        }
+        #checkout-modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #checkout-modal-content {
+            background-color: white;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+        #checkout-modal-overlay.visible #checkout-modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .checkout-step {
+            display: none;
+        }
+        .checkout-step.active {
+            display: block;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--text-dark);
+            box-shadow: 0 0 0 2px rgba(26,26,26,0.2);
+        }
+        .checkout-summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 1rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+
+        /* --- ESTILOS PARA CONTENIDO DEL EDITOR (CENTRO DE MANDO) --- */
         .rich-text-content h1, .rich-text-content h2, .rich-text-content h3 { font-family: 'Cormorant Garamond', serif; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.2; }
+        .rich-text-content h1 { font-size: 2.25rem; }
+        .rich-text-content h2 { font-size: 1.875rem; }
+        .rich-text-content h3 { font-size: 1.5rem; }
         .rich-text-content p { margin-bottom: 1em; line-height: 1.8; }
         .rich-text-content ul { list-style-type: disc; padding-left: 0; margin-bottom: 1em; list-style-position: inside; }
+        .rich-text-content ol { list-style-type: decimal; padding-left: 0; margin-bottom: 1em; list-style-position: inside; }
+        .rich-text-content li { margin-bottom: 0.5em; }
         .rich-text-content strong, .rich-text-content b { font-weight: 700; color: #000; }
+        .rich-text-content em, .rich-text-content i { font-style: italic; }
+        .rich-text-content u { text-decoration: underline; }
+        .rich-text-content blockquote { border-left: 4px solid #ccc; padding-left: 1em; font-style: italic; color: #555; margin-left: 0; margin-right: 0; }
+        .rich-text-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 1em 0; }
+        /* Clases de alineación estándar que suelen usar los editores */
+        .rich-text-content .ql-align-center, .rich-text-content[style*="text-align: center"] { text-align: center; }
+        .rich-text-content .ql-align-right, .rich-text-content[style*="text-align: right"] { text-align: right; }
+        .rich-text-content .ql-align-justify, .rich-text-content[style*="text-align: justify"] { text-align: justify; }
+
         
-        /* ============================================================
-           10. CONTACTO, MAPA Y EXCEPCIONES (INTACTO)
-           ============================================================ */
-        .contact-icon-link { background-color: #f3f4f6; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
-        #google-map { width: 100%; height: 450px; filter: grayscale(100%) contrast(90%); transition: filter 0.5s ease; border: 0; }
-        #google-map:hover { filter: grayscale(0%) contrast(100%); }
-        .btn-primary:hover { background-color: #4a4a4a !important; transform: translateY(-2px); transition: all 0.3s ease; }
     </style>
 </head>
 <body class="antialiased">
@@ -266,28 +797,20 @@
                 </nav>
 
                 <div class="hidden lg:flex items-center space-x-4 ml-8">
-                   <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
-                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-camera-retro fa-lg"></i></a>
+                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
+                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
                     <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
-                    <a href="#" aria-label="Email" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-envelope fa-lg"></i></a>
-                    <a href="#" aria-label="Teléfono" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-lg"></i></a>
-                    <button id="cart-button" class="cart-button social-icon text-gray-700 hover:text-black ml-2">
+                    <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2">
                         <i class="fas fa-shopping-bag fa-lg"></i>
                         <span id="cart-item-count" class="cart-item-count">0</span>
                     </button>
                 </div>
 
-                <div class="flex items-center gap-4 lg:hidden">
-                    <button id="mobile-cart-header" class="cart-button text-gray-700 relative" onclick="toggleCart(true)">
-                        <i class="fas fa-shopping-bag fa-lg"></i>
-                        <span class="cart-item-count absolute -top-2 -right-2 rounded-full w-5 h-5 text-[10px] flex items-center justify-center">0</span>
-                    </button>
-                    <button id="mobile-menu-button" class="z-50 w-8 h-6 flex flex-col justify-between" aria-label="Menú">
-                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                    </button>
-                </div>
+                <button id="mobile-menu-button" class="lg:hidden z-50 w-8 h-6 flex flex-col justify-between ml-6" aria-label="Menú móvil" aria-expanded="false">
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                </button>
             </div>
         </div>
     </header>
@@ -301,13 +824,14 @@
             <a href="#" data-target="about" class="nav-link mobile-nav-link uppercase">Quién Soy</a>
             <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
-        <div class="flex justify-center items-center flex-wrap gap-6 pb-12 px-6">
-            <a href="#" aria-label="WhatsApp" class="text-gray-900"><i class="fab fa-whatsapp fa-2x"></i></a>
-            <a href="#" aria-label="Instagram" class="text-gray-900"><i class="fas fa-camera-retro fa-2x"></i></a>
-            <a href="#" aria-label="Facebook" class="text-gray-900"><i class="fab fa-facebook-f fa-2x"></i></a>
-            <a href="#" aria-label="YouTube" class="text-gray-900"><i class="fab fa-youtube fa-2x"></i></a>
-            <a href="#" aria-label="Email" class="text-gray-900"><i class="fas fa-envelope fa-2x"></i></a>
-            <a href="#" aria-label="Teléfono" class="text-gray-900"><i class="fas fa-phone-alt fa-2x"></i></a>
+        <div class="flex justify-center items-center space-x-8 pb-12">
+            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-2x"></i></a>
+            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-2x"></i></a>
+            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-2x"></i></a>
+            <button id="mobile-cart-button" aria-label="Ver carrito de compras" class="cart-button text-gray-700 hover:text-black transition-colors">
+                <i class="fas fa-shopping-bag fa-2x"></i>
+                <span id="mobile-cart-item-count" class="cart-item-count">0</span>
+            </button>
         </div>
     </div>
     <main id="main-content">
@@ -415,11 +939,11 @@
              <div class="container mx-auto px-6 pb-20 md:pb-24">
                 <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fas fa-camera-retro fa-3x mb-3"></i>
+                        <i class="fab fa-instagram fa-3x mb-3"></i>
                         <span class="font-bold">Instagram</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fas fa-phone-alt fa-3x mb-3"></i>
+                        <i class="fab fa-whatsapp fa-3x mb-3"></i>
                         <span class="font-bold">WhatsApp</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
@@ -587,64 +1111,20 @@
             // 4. FUNCIONES DE INTERFAZ (UI)
             // =================================================================
             const handleScrollHeader = () => {
-                // Ajuste 8 & 9: Blanco SOLO en Service Detail cuando está arriba
-                const isServiceDetail = !!document.querySelector('.page-active[id^="service-detail-"]');
-                const menuOpen = mobileMenu.classList.contains('open');
-                
-                if (window.scrollY > 50 || menuOpen) {
-                    header.classList.add('header-scrolled');
-                    header.classList.remove('header-white-icons');
-                    // Forzamos logo negro en scroll
-                    document.querySelectorAll('.logo-dark').forEach(el => el.style.display = 'block');
-                    document.querySelectorAll('.logo-light').forEach(el => el.style.display = 'none');
-                } else {
+                const isServicePage = !!document.querySelector('.page-active[id^="service-detail-"]');
+                if (window.scrollY > 50) {
+                    header.classList.add('header-scrolled'); header.classList.remove('header-dark'); 
+                } else { 
                     header.classList.remove('header-scrolled');
-                    if (isServiceDetail) {
-                        header.classList.add('header-white-icons');
-                        document.querySelectorAll('.logo-dark').forEach(el => el.style.display = 'none');
-                        document.querySelectorAll('.logo-light').forEach(el => el.style.display = 'block');
-                    } else {
-                        header.classList.remove('header-white-icons');
-                        document.querySelectorAll('.logo-dark').forEach(el => el.style.display = 'block');
-                        document.querySelectorAll('.logo-light').forEach(el => el.style.display = 'none');
-                    }
+                    if (isServicePage) header.classList.add('header-dark');
+                    else header.classList.remove('header-dark');
                 }
-            };
-
-            // Ajuste 11: Bloqueo persistente local (Carrito + Memoria)
-            const getLocalBlockedDates = (itemId) => {
-                const savedCart = JSON.parse(localStorage.getItem('ag_rental_cart') || '[]');
-                return savedCart
-                    .filter(c => String(c.id) === String(itemId))
-                    .flatMap(c => getDatesInRange(c.startDate, c.endDate));
-            };
-    
-            // Inyectar Botones de Regreso al final de Proyectos y Servicios
-            const addBackButtons = () => {
-                const containers = ['projects-container', 'service-detail-pages'];
-                containers.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el && !el.querySelector('.back-footer-btn')) {
-                        const btn = document.createElement('div');
-                        btn.className = 'flex justify-center mt-12 mb-8 back-footer-btn';
-                        btn.innerHTML = `<button onclick="navigateTo('${id.includes('service') ? 'services' : 'projects'}')" class="btn-primary bg-zinc-700 text-white px-8 py-3 rounded-full font-bold">VOLVER</button>`;
-                        el.appendChild(btn);
-                    }
-                });
             };
     
             const toggleMobileMenu = (forceState) => {
                 const isOpen = typeof forceState === 'boolean' ? forceState : !mobileMenu.classList.contains('open');
-                mobileMenu.classList.toggle('open', isOpen);
                 
-                // SCROLL LOCK: Bloqueo de fondo al abrir menú
-                if (isOpen) {
-                    document.body.style.overflow = 'hidden';
-                    document.body.style.height = '100vh';
-                } else {
-                    document.body.style.overflow = '';
-                    document.body.style.height = '';
-                }
+                mobileMenu.classList.toggle('open', isOpen);
                 mobileMenuButton.classList.toggle('open', isOpen);
                 mobileMenuButton.setAttribute('aria-expanded', isOpen);
     
@@ -885,7 +1365,7 @@
                 renderCart(); 
                 updateCartIcon(); 
                 toggleCart(true);
-            };
+            };;
     
             const renderPortfolio = () => {
                 const gallery = document.getElementById('portfolio-gallery');
@@ -924,28 +1404,24 @@
                 container.innerHTML = list.map(l => `<img src="${l.logoUrl}" alt="Cliente" class="client-logo h-24 md:h-32 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 hover:scale-110">`).join('');
             };
     
-            // Ajuste 1: Zig-Zag Proyectos y Botón Regresar (Ajuste 4)
             const renderProjects = () => {
                 const container = document.getElementById('projects-container');
                 if(!container) return;
+                container.style.display = 'block';
                 
-                let html = globalData.projects.map((p, i) => `
+                if (globalData.projects.length === 0) { container.innerHTML = '<div class="text-center py-20"><div class="loader-circle mx-auto mb-4"></div><p class="text-gray-400">Cargando proyectos...</p></div>'; return; }
+                container.innerHTML = globalData.projects.map((p, i) => `
                     <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal gap-8 md:gap-12">
                         <div class="p-4 md:p-8 ${i % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
-                            <h3 class="text-3xl md:text-4xl font-display mb-4">${p.title}</h3>
-                            <p class="text-gray-600 mb-6 line-clamp-3">${p.description}</p>
-                            <a href="#" data-target="project-detail-${p.id}" class="nav-link text-black font-bold uppercase border-b-2 border-black pb-1">Ver Galería Completa</a>
+                            <h3 class="text-3xl md:text-4xl font-display mb-4 text-reveal">${p.title}</h3>
+                            <p class="text-gray-600 leading-relaxed mb-6 text-reveal line-clamp-3">${p.description}</p>
+                            <a href="#" data-target="project-detail-${p.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-all">Ver Galería Completa</a>
                         </div>
-                        <div class="overflow-hidden h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl}" class="w-full h-full object-cover"></div>
+                        <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl || 'https://placehold.co/600'}" alt="${p.title}" class="w-full h-full object-cover"></div>
                     </div>`).join('');
-                
-                // Botón Seguir Explorando al final (Ajuste 4)
-                html += `<div class="flex justify-center mt-12"><button onclick="navigateTo('portfolio')" class="btn-primary bg-black text-white px-10 py-4 rounded-full font-bold">VOLVER AL INICIO</button></div>`;
-                container.innerHTML = html;
-                observeElements(container);
+
+                    observeElements(container);
             };
-
-
 
 
             
@@ -971,62 +1447,82 @@
                 observeElements(container);
             };
 
-            // Función auxiliar para el carrusel de miniaturas (Ajuste 3)
-            window.moveCarousel = (targetId, index) => {
-                const section = document.getElementById(targetId);
-                if (!section) return;
-                const track = section.querySelector('.carousel-track');
-                const thumbs = section.querySelectorAll('.thumb-nav img');
-                
-                track.style.transform = `translateX(-${index * 100}%)`;
-                thumbs.forEach((t, i) => t.classList.toggle('active', i === index));
-            };
 
+
+            
             const renderRentalPage = () => {
                 const filtersContainer = document.getElementById('rental-filters');
                 const gridContainer = document.getElementById('rental-grid-categorized');
+                const wrapper = document.getElementById('rental-filters-wrapper');
+                
                 if (!filtersContainer || !gridContainer) return;
-
-                if (globalData.rentals.categories.length === 0) { 
-                    gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando...</p>'; 
-                    return; 
+    
+                // 1. INYECCIÓN DEL BUSCADOR (Corregido: Sin clase 'reveal')
+                let searchInput = document.getElementById('rental-search-input');
+                if (!searchInput && wrapper) {
+                    const searchHTML = `
+                        <div class="w-full max-w-md mx-auto mb-8 relative">
+                            <input type="text" id="rental-search-input" placeholder="Buscar equipo (ej: Sony, Lente...)" class="w-full py-3 px-6 rounded-full border border-gray-300 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all text-sm shadow-sm bg-white text-black">
+                            <i class="fas fa-search absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    `;
+                    wrapper.insertAdjacentHTML('afterbegin', searchHTML);
+                    searchInput = document.getElementById('rental-search-input');
                 }
-
+    
+                if (globalData.rentals.categories.length === 0) { gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando equipos...</p>'; return; }
+    
                 const cats = globalData.rentals.categories;
                 filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
                     cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
-
+    
                 let activeCategory = 'Todo';
-
+    
                 const renderItems = () => {
+                    const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
                     let items = globalData.rentals.items;
-                    if(activeCategory !== 'Todo') items = items.filter(i => i.categoryId === activeCategory);
+    
+                    if(activeCategory !== 'Todo') {
+                        items = items.filter(i => i.categoryId === activeCategory);
+                    }
+    
+                    if (term) {
+                        items = items.filter(i => 
+                            i.name.toLowerCase().includes(term) || 
+                            (i.description && i.description.toLowerCase().includes(term))
+                        );
+                    }
                     
-                    gridContainer.innerHTML = items.map(currentItem => {
-                        const taxBadge = String(currentItem.hasTax).toLowerCase() === 'true' ? '<span class="tax-badge-inline"> + IVA</span>' : '';
-                        const imgs = currentItem.images || [];
-                        const firstImg = imgs.length ? imgs[0].imageUrl : 'https://placehold.co/400?text=Sin+Foto';
-
+                    if (items.length === 0) {
+                        gridContainer.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400 italic">No se encontraron equipos.</div>';
+                        return;
+                    }
+                    
+                    gridContainer.innerHTML = items.map(item => {
+                        const imgs = item.images || [];
+                        const trackHTML = imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full h-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">Sin foto</div>';
+                        
                         return `
                         <div class="rental-card reveal flex flex-col h-full"> 
-                            <div class="carousel-container h-80 w-full relative">
-                                <div class="carousel-track flex h-full">
-                                    <div class="carousel-item w-full"><img src="${firstImg}" class="w-full h-full object-cover"></div>
-                                </div>
+                             <div class="carousel-container h-80 w-full relative group">
+                                <div class="carousel-track flex h-full" data-current-index="0">${trackHTML}</div>
+                                ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
                                 <div class="flex justify-between items-baseline mb-2">
-                                    <h3 class="font-display text-2xl">${currentItem.name}</h3>
-                                    <p class="font-bold text-xl">$${currentItem.pricePerDay}${taxBadge}</p>
+                                    <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
+                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.pricePerDay}<span class="text-sm font-normal text-gray-500">/día</span></p>
                                 </div>
-                                <p class="text-gray-600 text-sm mb-4 line-clamp-3">${currentItem.shortDescription || currentItem.description}</p>
-                                <a href="#" data-target="rental-detail-${currentItem.id}" class="nav-link text-sm font-bold text-black uppercase mt-auto">Ver Detalles</a>
+                                <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.description}</p>
+                                <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
+                                    Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
+                                </a>
                             </div>
                         </div>`;
                     }).join('');
                     observeElements(gridContainer);
                 };
-
+                
                 filtersContainer.onclick = (e) => { 
                     if (e.target.matches('.rental-category-btn')) { 
                         filtersContainer.querySelector('.active').classList.remove('active'); 
@@ -1035,13 +1531,26 @@
                         renderItems(); 
                     }
                 };
+    
+                if(searchInput) {
+                    searchInput.oninput = () => renderItems();
+                }
+    
+                gridContainer.onclick = (e) => { 
+                    const btn = e.target.closest('.rental-carousel-button');
+                    if(btn) { 
+                        e.preventDefault(); e.stopPropagation(); 
+                        const track = btn.closest('.carousel-container').querySelector('.carousel-track');
+                        const slides = Array.from(track.children);
+                        let idx = parseInt(track.dataset.currentIndex || 0);
+                        idx = (idx + parseInt(btn.dataset.direction) + slides.length) % slides.length;
+                        track.style.transform = `translateX(-${idx * 100}%)`;
+                        track.dataset.currentIndex = idx;
+                    }
+                };
+                
                 renderItems();
             };
-
-
-
-            
-         
 
 
 
@@ -1147,46 +1656,42 @@
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
-                const trackHTML = item.images.map(img => `<div class="carousel-item w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
-                
-                // Generar miniaturas con evento de clic para el carrusel (Ajuste 3)
-                const thumbsHTML = item.images.map((img, idx) => `
-                    <img src="${img.imageUrl}" 
-                         onclick="moveCarousel('${targetId}', ${idx})" 
-                         class="${idx === 0 ? 'active' : ''} cursor-pointer hover:opacity-100 transition-opacity" 
-                         style="width:60px; height:60px; object-fit:cover; margin-right:5px; border:1px solid #eee;">
-                `).join('');
+                // AJUSTE: Asegurar clases de altura completa (h-full) en los items
+                const trackHTML = item.images.map(img=>`<div class="carousel-item w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
                 
                 document.getElementById('rental-detail-pages').innerHTML = `
-                    <section id="${targetId}" class="page-container pt-32 pb-24 bg-white">
-                        <div class="container mx-auto px-6">
-                            <a href="#" data-target="rental" class="nav-link text-gray-500 mb-8 inline-block"><i class="fas fa-arrow-left"></i> Volver al Catálogo</a>
+                    <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
+                        <div class="container mx-auto px-6"><div class="max-w-6xl mx-auto">
+                            <a href="#" data-target="rental" class="nav-link text-gray-500 hover:text-black transition-colors mb-8 inline-block"><i class="fas fa-arrow-left mr-2"></i> Volver al Catálogo</a>
+                            
                             <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
                                 <div class="lg:col-span-3">
-                                    <div class="carousel-container h-[400px] relative overflow-hidden">
-                                        <div class="carousel-track flex h-full transition-transform duration-500">${trackHTML}</div>
+                                    <div class="carousel-container h-[400px] md:h-[500px] w-full relative rounded-none border border-gray-100 shadow-sm sticky top-28">
+                                        <div class="carousel-track flex h-full">${trackHTML}</div>
+                                        <button class="carousel-button prev"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="carousel-button next"><i class="fas fa-chevron-right"></i></button>
                                     </div>
-                                    <div class="thumb-nav mt-4 flex overflow-x-auto pb-2">${thumbsHTML}</div>
                                 </div>
-                                <div class="lg:col-span-2">
-                                    <h2 class="text-4xl font-display mb-2">${item.name}</h2>
-                                    <p class="text-3xl font-bold mb-6">$${item.price}<span class="tax-badge-inline">${item.hasTax?' + IVA':''}</span></p>
-                                    <div class="rich-text-content mb-8 text-gray-600 leading-relaxed">
-                                        ${item.longDescription || item.description}
-                                    </div>
-                                    <button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white py-4 rounded-full mb-4 font-bold tracking-widest uppercase text-sm">
-                                        Consultar Disponibilidad
+                                
+                                <div class="lg:col-span-2 reveal">
+                                    <h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2>
+                                    <p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p>
+                                    <p class="text-gray-600 text-justify text-reveal mb-8 leading-relaxed">${item.description}</p>
+                                    <button id="calendar-btn-${item.id}" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300 transition-transform hover:-translate-y-1 shadow-lg">
+                                        <i class="fas fa-calendar-alt mr-2"></i> Consultar Disponibilidad
                                     </button>
-                                    <button onclick="navigateTo('rental')" class="w-full border border-black py-3 rounded-full hover:bg-gray-50 transition font-bold text-xs tracking-widest uppercase">Seguir Explorando</button>
                                 </div>
                             </div>
-                        </div>
+                        </div></div>
                     </section>`;
                 
+                // ... (Resto de la lógica del slider y navegación igual que antes) ...
                 const section = document.getElementById(targetId);
-                // Bloqueo persistente que suma Sheets + Carrito Local (Ajuste 11)
-                const allBooked = [...new Set([...(item.bookedDates || []), ...getLocalBlockedDates(item.id)])];
-                section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, allBooked);
+                section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, item.bookedDates || []);
+                const track = section.querySelector('.carousel-track');
+                let idx = 0;
+                section.querySelector('.next').onclick = () => { idx=(idx+1)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
+                section.querySelector('.prev').onclick = () => { idx=(idx-1+item.images.length)%item.images.length; track.style.transform=`translateX(${-100*idx}%)`; };
                 
                 const page = document.getElementById(targetId);
                 if(page) {
@@ -1195,8 +1700,6 @@
                     setTimeout(()=>page.classList.add('page-active'), 10);
                     window.scrollTo(0,0);
                 }
-                // Forzar Flatpickr en móviles para evitar el nativo (Ajuste 11)
-                setTimeout(() => { navigateTo(targetId); }, 10);
             };
     
             // =================================================================
@@ -1237,19 +1740,23 @@
                     renderServicesGrid();
                 } 
                 else if (sectionName === 'rental') {
+                    // Filtramos equipos: solo "active"
                     const visibleItems = (data.rentalItems || []).filter(isVisible);
+                    
                     globalData.rentals.items = visibleItems;
                     globalData.rentals.categories = data.rentalCategories || [];
                     globalData.rentals.dates = data.blockedDates || [];
                     
                     rentalDataGlobal = {}; 
                     data.rentalCategories.forEach(cat => {
+                        // DENTRO DE loadSection -> if (sectionName === 'rental')
                         rentalDataGlobal[cat.name] = visibleItems
                             .filter(i => i.categoryId === cat.id)
                             .map(i => ({
                                 ...i, 
                                 price: parseFloat(i.pricePerDay), 
-                                hasTax: String(i.hasTax).toLowerCase() === 'true',
+                                // AJUSTE IVA: Convertimos el texto del sheet a Booleano (true/false)
+                                hasTax: String(i.hasTax).toLowerCase() === 'true' || String(i.hasTax).toLowerCase() === 'si',
                                 images: i.images || [],
                                 bookedDates: data.blockedDates
                                     .filter(b => b.itemId === i.id)
