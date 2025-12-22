@@ -3,885 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Versión actualizada a 12.4 -->
     <title>Adán Gómez | Fotógrafo Profesional (v12.4)</title>
-    <!-- Favicon -->
+    
     <link rel="icon" type="image/png" href="https://placehold.co/32x32/1a1a1a/FDFDFD?text=AG">
-    <!-- Tailwind CSS -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts (ACTUALIZADO) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
     <style>
+        /* ============================================================
+           1. BASES, VARIABLES Y TIPOGRAFÍA (ORIGINALES E INTACTAS)
+           ============================================================ */
         :root {
             --bg-main: #FDFDFD;
             --text-dark: #1a1a1a;
             --text-light: #f8f9fa;
             --accent: #3a3a3a;
         }
-        html { 
-            scroll-behavior: smooth; 
-        }
+        html { scroll-behavior: smooth; }
         body {
             font-family: 'Montserrat', sans-serif;
             background-color: var(--bg-main);
             color: var(--text-dark);
             overflow-x: hidden;
         }
-        /* TIPOGRAFÍA DE TÍTULOS ACTUALIZADA */
         h1, h2, h3, h4, .font-display { 
             font-family: 'Cormorant Garamond', serif; 
             line-height: 1.4; 
         }
         
-        /* --- Arquitectura de Transición (Crossfade) --- */
-        .page-container { 
-            display: none; 
-            opacity: 0; 
-            transition: opacity 0.5s ease-in-out;
-        }
-        .page-active { 
-            display: block; 
-            opacity: 1;
-        }
-        .page-exiting {
-            display: block;
-            opacity: 0;
-        }
+        /* ============================================================
+           2. ARQUITECTURA DE TRANSICIÓN Y CARGA (CROSSFADE)
+           ============================================================ */
+        .page-container { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
+        .page-active { display: block; opacity: 1; }
+        .page-exiting { display: block; opacity: 0; }
+        .reveal { opacity: 0; transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1); }
+        .reveal.visible { opacity: 1; }
         
-        /* --- Animación de carga de imágenes (Fade-in) --- */
-        .reveal {
-            opacity: 0;
-            transition: opacity 1.2s cubic-bezier(0.165, 0.84, 0.44, 1);
-        }
-        .reveal.visible {
-            opacity: 1;
-        }
-        
-        /* --- Indicador de carga --- */
         .loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-main);
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-main); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
         }
-        .loader.hidden {
-            opacity: 0;
-            visibility: hidden;
-        }
+        .loader.hidden { opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease; }
         .loader-circle {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top-color: var(--accent);
+            width: 50px; height: 50px; border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%; border-top-color: var(--accent);
             animation: spin 1s ease-in-out infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
-        /* --- Header Dinámico Mejorado --- */
-        #header {
-            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-            padding-top: 1.5rem; 
-            padding-bottom: 1.5rem;
-            background-color: transparent;
-        }
-        #header.header-scrolled, #header.header-dark {
-            padding-top: 0.5rem; 
-            padding-bottom: 0.5rem;
-        }
+        /* ============================================================
+           3. HEADER Y NAVEGACIÓN DINÁMICA (REPARADO: AJUSTE 8, 9, 16)
+           ============================================================ */
+        #header { transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); padding-top: 1.5rem; padding-bottom: 1.5rem; background-color: transparent; }
         #header.header-scrolled {
             background-color: rgba(253, 253, 253, 0.95);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            padding-top: 0.5rem; padding-bottom: 0.5rem;
         }
-        #header.header-dark {
-            background-color: #52525b; /* bg-zinc-700 */
-            box-shadow: none;
-        }
-        #header.header-dark .nav-link-text, #header.header-dark #mobile-menu-button .icon-bar, #header.header-dark .social-icon, #header.header-dark #cart-button {
-            color: white;
-        }
-         #header.header-dark .nav-link-underline {
-            background-color: white;
-        }
-         #header.header-dark .logo-dark { display: none !important; }
-        #header.header-dark .logo-light { display: block !important; }
-        #header:not(.header-dark) .logo-dark { display: block !important; }
-        #header:not(.header-dark) .logo-light { display: none !important; }
-        /* Asegurar transición suave del fondo */
-        #header { transition: background-color 0.3s ease, padding 0.3s ease; }
         
-        /* --- Menú Móvil Mejorado --- */
+        /* Lógica exclusiva para Servicios: Logo Blanco arriba */
+        .header-white-icons .nav-link-text, .header-white-icons .social-icon, 
+        .header-white-icons #mobile-cart-header, .header-white-icons #mobile-menu-button .icon-bar {
+            color: white !important;
+        }
+        .header-white-icons .logo-dark { display: none !important; }
+        .header-white-icons .logo-light { display: block !important; }
+        .header-white-icons .icon-bar { background-color: white !important; }
+
+        /* Forzado a Negro: Scroll o Menú abierto (AJUSTE 7) */
+        .header-scrolled .logo-dark, #mobile-menu.open ~ #header .logo-dark { display: block !important; }
+        .header-scrolled .logo-light, #mobile-menu.open ~ #header .logo-light { display: none !important; }
+        .header-scrolled .nav-link-text, .header-scrolled .social-icon, 
+        .header-scrolled #mobile-cart-header, #mobile-menu.open ~ #header .nav-link-text,
+        #mobile-menu.open ~ #header #mobile-menu-button .icon-bar { color: black !important; }
+        .header-scrolled .icon-bar, #mobile-menu.open ~ #header .icon-bar { background-color: black !important; }
+
+        /* ============================================================
+           4. MENÚ MÓVIL Y SCROLL LOCK (CONSERVADO + AJUSTE 16)
+           ============================================================ */
         #mobile-menu {
-            background-color: rgba(253, 253, 253, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            transform: translateX(100%);
+            background-color: rgba(253, 253, 253, 0.95); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); transform: translateX(100%);
             transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
         }
-        #mobile-menu.open {
-            transform: translateX(0);
-        }
+        #mobile-menu.open { transform: translateX(0); }
         .mobile-nav-link {
-            font-family: 'Cormorant Garamond', serif;
-            color: var(--text-dark);
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
-            position: relative;
+            font-family: 'Cormorant Garamond', serif; color: var(--text-dark);
+            opacity: 0; transform: translateY(30px);
+            transition: opacity 0.5s ease, transform 0.5s ease; position: relative;
         }
-
-
-        
         .mobile-nav-link::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background-color: var(--accent);
-            transition: width 0.4s ease;
+            content: ''; position: absolute; bottom: -5px; left: 0; width: 0;
+            height: 2px; background-color: var(--accent); transition: width 0.4s ease;
         }
-        .mobile-nav-link:hover::after, .mobile-nav-link.nav-active::after {
-            width: 100%;
-        }
-        #mobile-menu-button .icon-bar {
-            transition: all 0.3s ease-in-out;
-        }
+        .mobile-nav-link:hover::after, .mobile-nav-link.nav-active::after { width: 100%; }
+        #mobile-menu-button .icon-bar { transition: all 0.3s ease-in-out; }
         #mobile-menu-button.open .icon-bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
         #mobile-menu-button.open .icon-bar:nth-child(2) { opacity: 0; }
         #mobile-menu-button.open .icon-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-        
-        /* --- Estilo para el enlace de navegación activo --- */
-        .nav-link.nav-active > .nav-link-underline {
-            width: 100%;
-        }
+        .lock-scroll { overflow: hidden !important; height: 100vh !important; }
 
-        /* --- Galería Mejorada --- */
-        .gallery-item { 
-            cursor: pointer; 
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            position: relative;
-            overflow: hidden;
-        }
-        .gallery-item:hover { 
-            transform: translateY(-8px); 
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-        }
-        .gallery-item img {
-            transition: transform 0.8s ease;
-        }
-        .gallery-item:hover img {
-            transform: scale(1.05);
-        }
-        .gallery-item .overlay { 
-            opacity: 0; 
-            transition: opacity 0.5s ease; 
-            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%);
-        }
-        .gallery-item:hover .overlay { 
-            opacity: 1; 
-        }
-        .gallery-item .overlay p {
-            transform: translateY(20px);
-            transition: transform 0.5s ease;
-        }
-        .gallery-item:hover .overlay p {
-            transform: translateY(0);
-        }
+        /* ============================================================
+           5. GALERÍA Y LIGHTBOX (CONSERVADOS INTEGROS)
+           ============================================================ */
+        .gallery-item { cursor: pointer; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
+        .gallery-item:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15); }
+        .gallery-item img { transition: transform 0.8s ease; }
+        .gallery-item:hover img { transform: scale(1.05); }
+        .gallery-item .overlay { opacity: 0; transition: opacity 0.5s ease; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 80%); }
+        .gallery-item:hover .overlay { opacity: 1; }
+        .gallery-item .overlay p { transform: translateY(20px); transition: transform 0.5s ease; }
+        .gallery-item:hover .overlay p { transform: translateY(0); }
         
-        /* --- Lightbox Mejorado --- */
-        #lightbox { 
-            background-color: rgba(10, 10, 10, 0.95); 
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            transition: opacity 0.4s ease-in-out;
-        }
-        #lightbox-image { 
-            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); 
-            transform: scale(0.9);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-            max-height: 80vh;
-        }
-        #lightbox.visible #lightbox-image { 
-            transform: scale(1); 
-        }
-
-        #lightbox.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        
-        #lightbox-close {
-            transition: all 0.3s ease;
-        }
-        #lightbox-close:hover {
-            transform: rotate(90deg);
-            color: #ff5252;
-        }
+        #lightbox { background-color: rgba(10, 10, 10, 0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); transition: opacity 0.4s ease-in-out; }
+        #lightbox-image { transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1); transform: scale(0.9); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); max-height: 80vh; }
+        #lightbox.visible #lightbox-image { transform: scale(1); }
+        #lightbox.visible { opacity: 1; pointer-events: auto; }
+        #lightbox-close { transition: all 0.3s ease; }
+        #lightbox-close:hover { transform: rotate(90deg); color: #ff5252; }
         .lightbox-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 101;
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1); color: white; border: none; width: 50px; height: 50px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px;
+            cursor: pointer; transition: all 0.3s ease; z-index: 101;
         }
-        .lightbox-nav:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-50%) scale(1.1);
-        }
+        .lightbox-nav:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-50%) scale(1.1); }
         #lightbox-prev { left: 20px; }
         #lightbox-next { right: 20px; }
-        
-        /* --- Contacto y Mapa --- */
-        .contact-icon-link { 
-            background-color: #f3f4f6; 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-        }
-        .contact-icon-link::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background-color: var(--accent);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.6s ease, height 0.6s ease;
-            z-index: -1;
-        }
-        .contact-icon-link:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-        .contact-icon-link:hover { 
-            color: white; 
-            transform: scale(1.1);
-        }
-        /* --- ESTILO DEL MAPA (Efecto Gris a Color) --- */
-        #google-map { 
-            width: 100%;
-            height: 450px; /* Asegura altura para que no desaparezca */
-            filter: grayscale(100%) contrast(90%); 
-            transition: filter 0.5s ease;
-            border: 0;
-        }
-        #google-map:hover { 
-            filter: grayscale(0%) contrast(100%);
-        }
 
-        /* Contenedor del mapa para asegurar márgenes */
-        .map-container {
-            margin-top: 0; /* Ajusta según necesidad */
-            overflow: hidden;
-        }
-        
-        /* --- Logos de Marcas --- */
-        .client-logo {
-            filter: grayscale(100%);
-            opacity: 0.6;
-            transition: all 0.4s ease;
-        }
-        .client-logo:hover {
-            filter: grayscale(0%);
-            opacity: 1;
-            transform: scale(1.05);
-        }
-        
-        /* --- Botones y Enlaces Mejorados --- */
-        .btn-primary {
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-            transition: all 0.3s ease;
-        }
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background-color: #4a4a4a !important;
-            transition: left 0.5s ease;
-            z-index: -1;
-        }
-        .btn-primary:hover::before {
-            left: 100%;
-        }
-
-
-        /* Estructura de Pirámide Invertida para Servicios, Videos y Alquiler */
+        /* ============================================================
+           6. GRIDS Y DISEÑO RESPONSIVO (PIRÁMIDE INVERTIDA + MOSAICO)
+           ============================================================ */
         #services-grid, #videos-container, #rental-grid-categorized {
-            display: flex !important;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 2rem;
+            display: flex !important; flex-wrap: wrap; justify-content: center; gap: 2rem;
         }
-        .service-grid-item, .video-card, .rental-card {
-            flex: 0 1 350px; /* Tamaño fijo */
-        }
-        
-        /* --- Animación de aparición de texto --- */
-        .text-reveal {
-            position: relative;
-            overflow: hidden;
-        }
-        .text-reveal::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-main);
-            transform: translateX(0);
-            transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
-        }
-        .text-reveal.revealed::after {
-            transform: translateX(101%);
-        }
-        
-        /* --- Efecto parallax suave --- */
-        .parallax {
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        
-        /* --- Mejoras de accesibilidad --- */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border-width: 0;
-        }
-        
-        /* --- Animación de carga de imágenes con placeholder --- */
-        .img-container {
-            position: relative;
-            overflow: hidden;
-            background-color: #f3f4f6;
+        .service-grid-item, .video-card, .rental-card { flex: 0 1 350px; }
+
+        @media (max-width: 640px) {
+            /* Mosaico Masonry para Galerías (AJUSTE 2, 7) */
+            #portfolio-gallery, .gallery-mosaico-mobile {
+                display: block !important; column-count: 2 !important; column-gap: 0.5rem !important;
+            }
+            .gallery-item { break-inside: avoid; margin-bottom: 0.5rem; }
+            
+            /* Tarjetas Alquiler (AJUSTE 5, 6) */
+            #rental-grid-categorized { gap: 0.75rem !important; }
+            .rental-card { flex: 0 1 calc(50% - 0.4rem) !important; }
+            .rental-card h3 { font-size: 0.95rem !important; }
+            .rental-card .p-6 { padding: 0.5rem !important; }
+
+            /* Grid Servicios */
+            .service-grid-item { flex: 0 1 calc(50% - 0.5rem) !important; padding: 1rem !important; }
+            .service-icon-wrapper { width: 45px; height: 45px; margin-bottom: 0.5rem; }
+            .service-icon { font-size: 1.2rem; }
         }
 
-        /* Categorías de Alquiler (Ajuste: No etiquetas, sino botones elegantes) */
-        #rental-filters {
-            display: flex;
-            overflow-x: auto;
-            padding: 10px;
-            gap: 10px;
-            -webkit-overflow-scrolling: touch;
-        }
-        /* --- Estilos para la sección de Alquiler (Rediseño) --- */
-        .rental-category-btn {
-            border: 1px solid var(--text-dark);
-            background: white;
-            padding: 8px 20px;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .rental-category-btn.active, .rental-category-btn:hover {
-            background-color: var(--text-dark);
-            color: white;
-            border-color: var(--text-dark);
-        }
+        /* ============================================================
+           7. ESTÉTICA DE ALQUILER Y CARRUSELES (CONSERVADO + AJUSTE 5)
+           ============================================================ */
         .rental-card {
-            background-color: white;
-            border: 1px solid #e5e7eb; /* gray-200 */
+            background-color: white; border: 1px solid #e5e7eb !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            opacity: 0;
-            transform: translateY(20px);
-            display: flex;
-            flex-direction: column;
+            opacity: 0; transform: translateY(20px); overflow: hidden;
+            display: flex; flex-direction: column;
         }
-         .rental-card.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .rental-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-        }
-        .carousel-container {
-            width: 100%;
-            overflow: hidden;
-            position: relative;
-            background-color: #f3f4f6; /* Fondo gris pálido por si la imagen no carga */
-        }
-        .carousel-track {
-            display: flex;
-            transition: transform 0.5s ease-in-out;
-        }
-        .carousel-item {
-            min-width: 100%;
-            height: 100%; /* Forzar altura del padre */
-        }
-        .carousel-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* "cover" recorta para llenar, "contain" ajusta para ver completa */
-        }
-        .carousel-button {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background-color: rgba(0,0,0,0.4);
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .carousel-container:hover .carousel-button {
-            opacity: 1;
-        }
-        .carousel-button:hover {
-            background-color: rgba(0,0,0,0.7);
-        }
-        .carousel-button.prev { left: 10px; }
-        .carousel-button.next { right: 10px; }
-        
-        /* --- Estilos para la nueva sección de Servicios (Reemplazo) --- */
-        .service-grid-item {
-            background-color: white;
-            border: 1px solid #e5e7eb; /* gray-200 */
-            border-radius: 0; /* Cambio de rounded-lg a esquinas cuadradas */
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            padding: 2rem;
-        }
-        .service-grid-item:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-            border-color: var(--accent);
-        }
-        .service-grid-item, .video-card, .rental-card {
-            flex: 0 1 350px; /* Tamaño fijo para no deformarse al centrar */
-        }
-        .service-icon-wrapper {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #f3f4f6; /* gray-100 */
-            margin-bottom: 1.5rem;
-            transition: all 0.4s ease;
-        }
-        .service-grid-item:hover .service-icon-wrapper {
-            background-color: var(--accent);
-            transform: rotate(15deg) scale(1.1);
-        }
-        .service-icon {
-            font-size: 2rem;
-            color: var(--accent);
-            transition: color 0.4s ease;
-        }
-        .service-grid-item:hover .service-icon {
-            color: white;
-        }
-        .service-grid-item h3 {
-            margin-bottom: 0.5rem;
-            transition: color 0.4s ease;
-        }
+        .rental-card.visible { opacity: 1; transform: translateY(0); }
+        .tax-badge-inline { font-size: 10px; color: #6b7280; font-weight: bold; margin-left: 5px; }
 
-        /* --- NUEVOS ESTILOS PARA EL MODAL DEL CALENDARIO --- */
-        .calendar-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
-            z-index: 100;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-            pointer-events: none;
-        }
-        .calendar-modal-overlay.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .calendar-modal-content {
-            background-color: white;
-            padding: 1.5rem;
-            max-width: 400px;
-            width: 100%;
-            transform: scale(0.95);
-            opacity: 0;
-            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
-        }
-        .calendar-modal-overlay.visible .calendar-modal-content {
-            transform: scale(1);
-            opacity: 1;
-        }
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-        .calendar-nav-btn {
-            background: none;
-            border: 1px solid #d1d5db;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            transition: all 0.2s ease;
-        }
-        .calendar-nav-btn:hover {
-            background-color: var(--text-dark);
-            color: white;
-        }
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 0.25rem;
-        }
-        .calendar-day, .calendar-day-name {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            aspect-ratio: 1 / 1;
-            text-align: center;
-        }
-        .calendar-day-name {
-            font-weight: bold;
-            font-size: 0.75rem;
-            color: #6b7280;
-        }
-        .calendar-day {
-            border: none;
-            background-color: transparent;
-            cursor: pointer;
-            border-radius: 50%;
-            transition: all 0.2s ease;
-        }
-        .calendar-day:not(.disabled):hover {
-            background-color: #f3f4f6;
-        }
-        .calendar-day.disabled {
-            color: #d1d5db;
-            cursor: not-allowed;
-            text-decoration: line-through;
-        }
-        .calendar-day.selected, .calendar-day.in-range {
-            background-color: var(--text-dark);
-            color: white;
-        }
-        .booking-summary {
-            background-color: #f9fafb;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
+        .carousel-container { width: 100%; overflow: hidden; position: relative; background-color: #f3f4f6; }
+        .carousel-track { display: flex; transition: transform 0.5s ease-in-out; }
+        .carousel-item { min-width: 100%; height: 100%; }
+        .carousel-item img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-nav img { width: 60px; height: 60px; object-fit: cover; cursor: pointer; opacity: 0.5; transition: opacity 0.3s; border: 1px solid #eee; }
+        .thumb-nav img.active { opacity: 1; border: 2px solid black; }
 
-        /* --- NUEVOS ESTILOS PARA EL CARRITO DE COMPRAS --- */
-        #cart-overlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 60;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            pointer-events: none;
-        }
-        #cart-overlay.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        #cart-drawer {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 100%;
-            max-width: 450px;
-            height: 100%;
-            background-color: white;
-            z-index: 70;
-            transform: translateX(100%);
-            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
-            display: flex;
-            flex-direction: column;
-            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
-        }
-        #cart-drawer.visible {
-            transform: translateX(0);
-        }
-        .cart-button { /* Clase común para ambos botones de carrito */
-            position: relative;
-        }
+        /* ============================================================
+           8. MODALES Y CARRITO (NOTIFICACIÓN ROJA - AJUSTE 13)
+           ============================================================ */
+        .calendar-modal-overlay { position: fixed; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 100; opacity: 0; transition: opacity 0.3s ease-in-out; display: flex; justify-content: center; align-items: center; padding: 1rem; pointer-events: none; }
+        .calendar-modal-overlay.visible { opacity: 1; pointer-events: auto; }
+        .calendar-modal-content { background-color: white; padding: 1.5rem; max-width: 400px; width: 100%; transform: scale(0.95); opacity: 0; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+        .calendar-modal-overlay.visible .calendar-modal-content { transform: scale(1); opacity: 1; }
+
         .cart-item-count {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background-color: #ff0000 !important;
-            color: #ffffff !important;
-            border-radius: 50% !important;
-            width: 20px !important;
-            height: 20px !important;
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px !important;
-            font-weight: 800;
-            border: 2px solid #FDFDFD;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            opacity: 0; 
-            transform: scale(0);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
+            position: absolute; top: -8px; right: -8px; background-color: #ff0000 !important;
+            color: #ffffff !important; border-radius: 50% !important; width: 20px !important; height: 20px !important;
+            display: flex !important; align-items: center; justify-content: center;
+            font-size: 10px !important; font-weight: 800; border: 2px solid #FDFDFD;
+            opacity: 0; transform: scale(0); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
-        .tax-badge-inline {
-            font-size: 10px;
-            color: #6b7280; /* Gris */
-            font-weight: bold;
-            margin-left: 5px;
-        }
-        
         .cart-item-count.visible { opacity: 1; transform: scale(1); }
-        #cart-item-count { /* Escritorio */
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
-        }
-        #mobile-cart-item-count { /* Móvil */
-            width: 24px;
-            height: 24px;
-            font-size: 14px;
-            top: -8px;
-            right: -12px;
-        }
-        .cart-item-count.visible {
-            transform: scale(1);
-        }
-        .cart-item-remove-btn {
-            color: #9ca3af;
-            transition: color 0.2s;
-        }
-        .cart-item-remove-btn:hover {
-            color: #ef4444;
-        }
-        #cart-empty-state {
-            display: none; /* Oculto por defecto */
-        }
-        
-        /* --- NUEVOS ESTILOS PARA EL MODAL DE CHECKOUT --- */
-        #checkout-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px);
-            z-index: 110;
-            opacity: 0;
-            transition: opacity 0.4s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 1rem;
-            pointer-events: none;
-        }
-        #checkout-modal-overlay.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        #checkout-modal-content {
-            background-color: white;
-            width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            transform: translateY(20px);
-            opacity: 0;
-            transition: all 0.4s ease;
-        }
-        #checkout-modal-overlay.visible #checkout-modal-content {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .checkout-step {
-            display: none;
-        }
-        .checkout-step.active {
-            display: block;
-        }
-        .form-input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid #d1d5db;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        .form-input:focus {
-            outline: none;
-            border-color: var(--text-dark);
-            box-shadow: 0 0 0 2px rgba(26,26,26,0.2);
-        }
-        .checkout-summary-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 1rem 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
 
-
-        /* --- ESTILOS PARA CONTENIDO DEL EDITOR (CENTRO DE MANDO) --- */
+        /* ============================================================
+           9. RICH TEXT Y CONTENIDO DEL EDITOR (INTACTO)
+           ============================================================ */
         .rich-text-content h1, .rich-text-content h2, .rich-text-content h3 { font-family: 'Cormorant Garamond', serif; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.2; }
-        .rich-text-content h1 { font-size: 2.25rem; }
-        .rich-text-content h2 { font-size: 1.875rem; }
-        .rich-text-content h3 { font-size: 1.5rem; }
         .rich-text-content p { margin-bottom: 1em; line-height: 1.8; }
         .rich-text-content ul { list-style-type: disc; padding-left: 0; margin-bottom: 1em; list-style-position: inside; }
-        .rich-text-content ol { list-style-type: decimal; padding-left: 0; margin-bottom: 1em; list-style-position: inside; }
-        .rich-text-content li { margin-bottom: 0.5em; }
         .rich-text-content strong, .rich-text-content b { font-weight: 700; color: #000; }
-        .rich-text-content em, .rich-text-content i { font-style: italic; }
-        .rich-text-content u { text-decoration: underline; }
-        .rich-text-content blockquote { border-left: 4px solid #ccc; padding-left: 1em; font-style: italic; color: #555; margin-left: 0; margin-right: 0; }
-        .rich-text-content img { max-width: 100%; height: auto; border-radius: 4px; margin: 1em 0; }
-        /* Clases de alineación estándar que suelen usar los editores */
-        .rich-text-content .ql-align-center, .rich-text-content[style*="text-align: center"] { text-align: center; }
-        .rich-text-content .ql-align-right, .rich-text-content[style*="text-align: right"] { text-align: right; }
-        .rich-text-content .ql-align-justify, .rich-text-content[style*="text-align: justify"] { text-align: justify; }
-
-
-        /* Header Dinámico: Solo afecta a Servicios Detail */
-        .header-white-icons .nav-link-text, 
-        .header-white-icons .social-icon, 
-        .header-white-icons #mobile-cart-header,
-        .header-white-icons #mobile-menu-button .icon-bar {
-            color: white !important;
-        }
-        .header-white-icons .icon-bar { background-color: white !important; }
-
-        /* Forzado de Negro al abrir Menú o en el resto de la web */
-        .header-scrolled .nav-link-text, .header-scrolled .social-icon,
-        .header-scrolled #mobile-cart-header,
-        #mobile-menu.open ~ #header .nav-link-text,
-        #mobile-menu.open ~ #header .social-icon {
-            color: black !important;
-        }
-        #mobile-menu.open ~ #header .icon-bar { background-color: black !important; }
         
-        /* 2 Columnas en Móvil para Servicios y Proyectos (Ajuste Solicitado) */
-        @media (max-width: 768px) {
-            .service-grid-item, .video-card {
-                flex: 0 1 calc(50% - 1rem); 
-                min-width: 140px;
-                padding: 1rem !important; /* Más compacto */
-            }
-            .service-icon-wrapper { width: 50px; height: 50px; }
-            .service-icon { font-size: 1.5rem; }
-            .service-grid-item h3 { font-size: 1.2rem; }
-        }
-
-        /* Ajuste 5, 6, 7: IVA Negro/Gris y 2 Columnas Estrictas en todo Móvil */
-        .tax-badge-inline {
-            font-size: 10px;
-            color: #6b7280; /* Gris */
-            font-weight: bold;
-            margin-left: 5px;
-        }
-
-        /* Forzado de 2 columnas incluso en pantallas de 320px */
-        @media (max-width: 640px) {
-            #services-grid, #rental-grid-categorized, #projects-container > .grid {
-                display: flex !important;
-                flex-direction: row !important;
-                flex-wrap: wrap !important;
-                gap: 0.5rem !important;
-            }
-            .rental-card, .service-grid-item, .img-container {
-                border: none !important; /* Elimina remarcos blancos (Ajuste 2 y 5) */
-                box-shadow: none !important;
-                padding: 0 !important;
-                ackground: transparent !important;
-            }
-            .service-grid-item, .rental-card, #projects-container .grid > div {
-                flex: 0 1 calc(50% - 0.25rem) !important;
-                min-width: 0 !important; /* Permite que se encojan */
-                padding: 0.75rem !important;
-            }
-            .service-icon-wrapper { width: 40px; height: 40px; margin-bottom: 0.5rem; }
-            .service-grid-item h3 { font-size: 1rem; }
-            #service-detail-pages .columns-1 {
-                display: grid !important;
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 0.5rem !important;
-            }
-            rental-card { flex: 0 1 calc(50% - 0.5rem) !important; }
-        }
-
-
-
-
-        
-
-        /* Ajuste 3: Carrusel de miniaturas */
-        .thumb-nav {
-            display: flex;
-            gap: 5px;
-            margin-top: 10px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-        }
-        .thumb-nav img {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
-            cursor: pointer;
-            opacity: 0.6;
-            transition: opacity 0.3s;
-        }
-        .thumb-nav img.active { opacity: 1; border: 2px solid black; }
-        
-
-        /* Scroll Lock (Ajuste 16) */
-        .lock-scroll { overflow: hidden !important; height: 100vh !important; }
+        /* ============================================================
+           10. CONTACTO, MAPA Y EXCEPCIONES (INTACTO)
+           ============================================================ */
+        .contact-icon-link { background-color: #f3f4f6; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
+        #google-map { width: 100%; height: 450px; filter: grayscale(100%) contrast(90%); transition: filter 0.5s ease; border: 0; }
+        #google-map:hover { filter: grayscale(0%) contrast(100%); }
+        .btn-primary:hover { background-color: #4a4a4a !important; transform: translateY(-2px); transition: all 0.3s ease; }
     </style>
 </head>
 <body class="antialiased">
