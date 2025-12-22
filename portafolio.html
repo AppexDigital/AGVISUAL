@@ -262,6 +262,12 @@
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem !important;
+            min-width: 0; /* Permite que el contenedor se encoja */
         }
         .contact-icon-link::before {
             content: '';
@@ -283,6 +289,15 @@
         .contact-icon-link:hover { 
             color: white; 
             transform: scale(1.1);
+        }
+
+        .contact-icon-link span {
+            font-size: clamp(0.6rem, 1.8vw, 0.9rem); /* Se encoge automáticamente */
+            font-weight: 700;
+            white-space: nowrap; /* PROHIBIDO el salto de línea */
+            text-overflow: ellipsis; /* Pone "..." si el tamaño mínimo no es suficiente */
+            max-width: 100%;
+            display: block;
         }
         /* --- ESTILO DEL MAPA (Efecto Gris a Color) --- */
         #google-map { 
@@ -849,12 +864,12 @@
                     </a>
                 </nav>
             <div class="hidden lg:flex items-center space-x-5 ml-8">
-                <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp fa-lg"></i></a>
-                <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram fa-lg"></i></a>
-                <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-f fa-lg"></i></a>
-                <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-lg"></i></a>
+                <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp fa-fw"></i></a>
+                <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram fa-fw"></i></a>
+                <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-f fa-fw"></i></a>
+                <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-fw"></i></a>
                 <button id="cart-button" aria-label="Ver carrito" class="text-gray-700 hover:text-black transition-colors ml-2 relative">
-                    <i class="fa-solid fa-bag-shopping fa-lg"></i>
+                    <i class="fa-solid fa-bag-shopping fa-fw"></i>
                     <span id="cart-item-count" class="cart-item-count">0</span>
                 </button>
             </div>
@@ -884,15 +899,15 @@
             <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
         <div class="flex justify-center items-center space-x-6 pb-12 flex-wrap gap-y-6 px-4">
-            <a href="#" aria-label="Teléfono" class="text-gray-700 hover:text-black transition-colors"><i class="fa-solid fa-phone fa-2x"></i></a>
-            <a href="#" aria-label="Email" class="text-gray-700 hover:text-black transition-colors"><i class="fa-regular fa-envelope fa-2x"></i></a>
-            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp fa-2x"></i></a>
-            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram fa-2x"></i></a>
-            <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-f fa-2x"></i></a>
-            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-2x"></i></a>
+            <a href="#" aria-label="Teléfono" class="text-gray-700 hover:text-black transition-colors"><i class="fa-solid fa-phone-flip fa-fw"></i></a>
+            <a href="#" aria-label="Email" class="text-gray-700 hover:text-black transition-colors"><i class="fa-regular fa-envelope fa-fw"></i></a>
+            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp fa-fw"></i></a>
+            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram fa-fw"></i></a>
+            <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-f fa-fw"></i></a>
+            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-fw"></i></a>
             
             <a href="#" id="mobile-location-pin" target="_blank" aria-label="Ubicación" class="text-gray-700 hover:text-black transition-colors">
-                <i class="fa-solid fa-location-dot fa-2x"></i>
+                <i class="fa-regular fa-map-marker-alt fa-fw">
             </a>
         </div>
     </div>
@@ -1001,27 +1016,27 @@
              <div class="container mx-auto px-6 pb-20 md:pb-24">
                 <div class="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 text-center reveal">
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fab fa-instagram fa-3x mb-3"></i>
+                        <i class="fa-brands fa-instagram fa-fw"></i>
                         <span class="font-bold">Instagram</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fab fa-whatsapp fa-3x mb-3"></i>
+                        <i class="fa-brands fa-whatsapp fa-fw"></i>
                         <span class="font-bold">WhatsApp</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fas fa-envelope fa-3x mb-3"></i>
+                        <i class="fa-regular fa-envelope fa-fw"></i>
                         <span class="font-bold">Email</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fab fa-facebook-f fa-3x mb-3"></i>
+                        <i class="fa-brands fa-facebook-f fa-fw"></i>
                         <span class="font-bold">Facebook</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fab fa-youtube fa-3x mb-3"></i>
+                        <i class="fa-brands fa-youtube fa-fw"></i>
                         <span class="font-bold">YouTube</span>
                     </a>
                     <a href="#" class="contact-icon-link p-8 flex flex-col items-center justify-center">
-                        <i class="fas fa-phone fa-3x mb-3"></i>
+                        <i class="fa-solid fa-phone-flip fa-fw"></i>
                         <span class="font-bold">Teléfono</span>
                     </a>
                 </div>
