@@ -1610,30 +1610,7 @@
                 observeElements(container);
             };
 
-            // FIX CRÍTICO ALQUILER (Ajuste 5): Reparación de variable 'item' indefinida
-            const renderRentalPage = () => {
-                const gridContainer = document.getElementById('rental-grid-categorized');
-                if (!gridContainer || globalData.rentals.items.length === 0) return;
 
-                gridContainer.innerHTML = globalData.rentals.items.map(currentItem => {
-                    const taxBadge = String(currentItem.hasTax).toLowerCase() === 'true' ? '<span class="tax-badge-inline"> + IVA</span>' : '';
-                    return `
-                    <div class="rental-card reveal flex flex-col h-full"> 
-                        <div class="carousel-container h-80 w-full relative">
-                            <div class="carousel-track flex h-full"><div class="carousel-item w-full"><img src="${currentItem.images[0]?.imageUrl || ''}" class="w-full h-full object-cover"></div></div>
-                        </div>
-                        <div class="p-6 flex flex-grow flex-col">
-                            <div class="flex justify-between items-baseline mb-2">
-                                <h3 class="font-display text-2xl">${currentItem.name}</h3>
-                                <p class="font-bold text-xl">$${currentItem.pricePerDay}${taxBadge}</p>
-                            </div>
-                            <p class="text-gray-600 text-sm mb-4 line-clamp-3">${currentItem.shortDescription || currentItem.description}</p>
-                            <a href="#" data-target="rental-detail-${currentItem.id}" class="nav-link text-sm font-bold text-black uppercase mt-auto">Ver Detalles</a>
-                        </div>
-                    </div>`;
-                }).join('');
-                observeElements(gridContainer);
-            };
 
 
             
@@ -1659,42 +1636,77 @@
                 observeElements(container);
             };
 
+            // Función auxiliar para el carrusel de miniaturas (Ajuste 3)
+            window.moveCarousel = (targetId, index) => {
+                const section = document.getElementById(targetId);
+                if (!section) return;
+                const track = section.querySelector('.carousel-track');
+                const thumbs = section.querySelectorAll('.thumb-nav img');
+                
+                track.style.transform = `translateX(-${index * 100}%)`;
+                thumbs.forEach((t, i) => t.classList.toggle('active', i === index));
+            };
+
+            const renderRentalPage = () => {
+                const filtersContainer = document.getElementById('rental-filters');
+                const gridContainer = document.getElementById('rental-grid-categorized');
+                if (!filtersContainer || !gridContainer) return;
+
+                if (globalData.rentals.categories.length === 0) { 
+                    gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando...</p>'; 
+                    return; 
+                }
+
+                const cats = globalData.rentals.categories;
+                filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
+                    cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
+
+                let activeCategory = 'Todo';
+
+                const renderItems = () => {
+                    let items = globalData.rentals.items;
+                    if(activeCategory !== 'Todo') items = items.filter(i => i.categoryId === activeCategory);
+                    
+                    gridContainer.innerHTML = items.map(currentItem => {
+                        const taxBadge = String(currentItem.hasTax).toLowerCase() === 'true' ? '<span class="tax-badge-inline"> + IVA</span>' : '';
+                        const imgs = currentItem.images || [];
+                        const firstImg = imgs.length ? imgs[0].imageUrl : 'https://placehold.co/400?text=Sin+Foto';
+
+                        return `
+                        <div class="rental-card reveal flex flex-col h-full"> 
+                            <div class="carousel-container h-80 w-full relative">
+                                <div class="carousel-track flex h-full">
+                                    <div class="carousel-item w-full"><img src="${firstImg}" class="w-full h-full object-cover"></div>
+                                </div>
+                            </div>
+                            <div class="p-6 flex flex-col flex-grow">
+                                <div class="flex justify-between items-baseline mb-2">
+                                    <h3 class="font-display text-2xl">${currentItem.name}</h3>
+                                    <p class="font-bold text-xl">$${currentItem.pricePerDay}${taxBadge}</p>
+                                </div>
+                                <p class="text-gray-600 text-sm mb-4 line-clamp-3">${currentItem.shortDescription || currentItem.description}</p>
+                                <a href="#" data-target="rental-detail-${currentItem.id}" class="nav-link text-sm font-bold text-black uppercase mt-auto">Ver Detalles</a>
+                            </div>
+                        </div>`;
+                    }).join('');
+                    observeElements(gridContainer);
+                };
+
+                filtersContainer.onclick = (e) => { 
+                    if (e.target.matches('.rental-category-btn')) { 
+                        filtersContainer.querySelector('.active').classList.remove('active'); 
+                        e.target.classList.add('active'); 
+                        activeCategory = e.target.dataset.category; 
+                        renderItems(); 
+                    }
+                };
+                renderItems();
+            };
+
 
 
             
-            // FIX CRÍTICO: Reparación de variable 'item' y Pantalla en Blanco
-            const renderRentalPage = () => {
-                const gridContainer = document.getElementById('rental-grid-categorized');
-                if (!gridContainer || !globalData.rentals.items) return;
-
-                gridContainer.innerHTML = globalData.rentals.items.map(currentItem => {
-                    // La lógica de bloqueo local se ejecuta por cada 'currentItem'
-                    const localBlocked = cart
-                        .filter(c => String(c.id) === String(currentItem.id))
-                        .flatMap(c => getDatesInRange(c.startDate, c.endDate));
-                    
-                    const allBooked = [...(currentItem.bookedDates || []), ...localBlocked];
-                    const taxBadge = String(currentItem.hasTax).toLowerCase() === 'true' ? '<span class="tax-badge-inline"> + IVA</span>' : '';
-
-                    return `
-                    <div class="rental-card reveal flex flex-col h-full"> 
-                        <div class="carousel-container h-80 w-full relative">
-                            <div class="carousel-track flex h-full">
-                                <div class="carousel-item w-full"><img src="${currentItem.images[0]?.imageUrl || ''}" class="w-full h-full object-cover"></div>
-                            </div>
-                        </div>
-                        <div class="p-6 flex flex-col flex-grow">
-                            <div class="flex justify-between items-baseline mb-2">
-                                <h3 class="font-display text-2xl">${currentItem.name}</h3>
-                                <p class="font-bold text-xl">$${currentItem.pricePerDay}${taxBadge}</p>
-                            </div>
-                            <p class="text-gray-600 text-sm mb-4 line-clamp-3">${currentItem.shortDescription || currentItem.description}</p>
-                            <a href="#" data-target="rental-detail-${currentItem.id}" class="nav-link text-sm font-bold text-black uppercase mt-auto">Ver Detalles</a>
-                        </div>
-                    </div>`;
-                }).join('');
-                observeElements(gridContainer);
-            };
+         
 
 
 
@@ -1800,8 +1812,15 @@
                 for(const cat in rentalDataGlobal) { item = rentalDataGlobal[cat].find(i=>String(i.id)===itemId); if(item) break; }
                 if(!item) return;
                 
-                const trackHTML = item.images.map(img=>`<div class="carousel-item w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
-                const thumbsHTML = item.images.map((img, idx)=>`<img src="${img.imageUrl}" onclick="moveCarousel('${targetId}', ${idx})" class="${idx===0?'active':''}">`).join('');
+                const trackHTML = item.images.map(img => `<div class="carousel-item w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
+                
+                // Generar miniaturas con evento de clic para el carrusel (Ajuste 3)
+                const thumbsHTML = item.images.map((img, idx) => `
+                    <img src="${img.imageUrl}" 
+                         onclick="moveCarousel('${targetId}', ${idx})" 
+                         class="${idx === 0 ? 'active' : ''} cursor-pointer hover:opacity-100 transition-opacity" 
+                         style="width:60px; height:60px; object-fit:cover; margin-right:5px; border:1px solid #eee;">
+                `).join('');
                 
                 document.getElementById('rental-detail-pages').innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 pb-24 bg-white">
@@ -1809,26 +1828,38 @@
                             <a href="#" data-target="rental" class="nav-link text-gray-500 mb-8 inline-block"><i class="fas fa-arrow-left"></i> Volver al Catálogo</a>
                             <div class="grid grid-cols-1 lg:grid-cols-5 gap-12">
                                 <div class="lg:col-span-3">
-                                    <div class="carousel-container h-[400px] relative">
-                                        <div class="carousel-track flex h-full">${trackHTML}</div>
+                                    <div class="carousel-container h-[400px] relative overflow-hidden">
+                                        <div class="carousel-track flex h-full transition-transform duration-500">${trackHTML}</div>
                                     </div>
-                                    <div class="thumb-nav">${thumbsHTML}</div> </div>
+                                    <div class="thumb-nav mt-4 flex overflow-x-auto pb-2">${thumbsHTML}</div>
+                                </div>
                                 <div class="lg:col-span-2">
                                     <h2 class="text-4xl font-display mb-2">${item.name}</h2>
                                     <p class="text-3xl font-bold mb-6">$${item.price}<span class="tax-badge-inline">${item.hasTax?' + IVA':''}</span></p>
-                                    <div class="rich-text-content mb-8">${item.longDescription || item.description}</div> <button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white py-4 rounded-full mb-4">
+                                    <div class="rich-text-content mb-8 text-gray-600 leading-relaxed">
+                                        ${item.longDescription || item.description}
+                                    </div>
+                                    <button id="calendar-btn-${item.id}" class="btn-primary w-full bg-black text-white py-4 rounded-full mb-4 font-bold tracking-widest uppercase text-sm">
                                         Consultar Disponibilidad
                                     </button>
-                                    <button onclick="navigateTo('rental')" class="w-full border border-gray-300 py-3 rounded-full hover:bg-gray-50 transition">SEGUIR EXPLORANDO</button> </div>
+                                    <button onclick="navigateTo('rental')" class="w-full border border-black py-3 rounded-full hover:bg-gray-50 transition font-bold text-xs tracking-widest uppercase">Seguir Explorando</button>
+                                </div>
                             </div>
                         </div>
                     </section>`;
                 
                 const section = document.getElementById(targetId);
-                // Bloqueo persistente Ajuste 11
-                const allBooked = [...(item.bookedDates || []), ...getLocalBlockedDates(item.id)];
+                // Bloqueo persistente que suma Sheets + Carrito Local (Ajuste 11)
+                const allBooked = [...new Set([...(item.bookedDates || []), ...getLocalBlockedDates(item.id)])];
                 section.querySelector(`#calendar-btn-${item.id}`).onclick = () => showCalendarModal(item, allBooked);
                 
+                const page = document.getElementById(targetId);
+                if(page) {
+                    document.querySelectorAll('.page-active').forEach(p => { p.classList.remove('page-active'); p.style.display='none'; });
+                    page.style.display='block';
+                    setTimeout(()=>page.classList.add('page-active'), 10);
+                    window.scrollTo(0,0);
+                }
                 // Forzar Flatpickr en móviles para evitar el nativo (Ajuste 11)
                 setTimeout(() => { navigateTo(targetId); }, 10);
             };
