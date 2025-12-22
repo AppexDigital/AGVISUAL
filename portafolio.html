@@ -397,19 +397,26 @@
             border-radius: 0;
             font-size: 0.85rem;
             font-weight: 600;
+            
             transition: all 0.3s ease;
+            color: #4b5563;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            
         }
         .rental-category-btn.active, .rental-category-btn:hover {
             background-color: var(--text-dark);
             color: white;
             border-color: var(--text-dark);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
         #rental-filters {
             display: flex;
             overflow-x: auto; /* Permite scroll horizontal en móvil */
-            padding: 10px 0;
-            gap: 10px;
+            padding: 10px 4;
+            gap: 8px;
+            justify-content: flex-start; /* Permite scroll a la derecha */
+            scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
         }
         #rental-filters::-webkit-scrollbar { display: none; }
@@ -841,13 +848,15 @@
                         <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
                     </a>
                 </nav>
-            <div class="hidden lg:flex items-center space-x-4 ml-8">
-                <a href="#" aria-label="Teléfono" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-lg"></i></a>
-                <a href="#" aria-label="Email" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-envelope fa-lg"></i></a>
-                <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
-                <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
-                <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
-                <button id="cart-button" aria-label="Ver carrito" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2 relative">
+            <div class="hidden lg:flex items-center space-x-5 ml-8">
+                <a href="#" aria-label="Teléfono" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-lg"></i></a>
+                <a href="#" aria-label="Email" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-envelope fa-lg"></i></a>
+                <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp-square fa-lg"></i></a>
+                <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram-square fa-lg"></i></a>
+                <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-square fa-lg"></i></a>
+                <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube-square fa-lg"></i></a>
+                
+                <button id="cart-button" aria-label="Ver carrito" class="text-gray-700 hover:text-black transition-colors ml-2 relative">
                     <i class="fas fa-shopping-bag fa-lg"></i>
                     <span id="cart-item-count" class="cart-item-count">0</span>
                 </button>
@@ -877,12 +886,18 @@
             <a href="#" data-target="about" class="nav-link mobile-nav-link uppercase">Quién Soy</a>
             <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
-        <div class="flex justify-center items-center space-x-6 pb-12 flex-wrap gap-y-4">
+        <div class="flex justify-center items-center space-x-6 pb-12 flex-wrap gap-y-6 px-4">
+           
+            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp-square fa-lg"></i></a>
+            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram-square fa-lg"></i></a>
+            <a href="#" aria-label="Facebook" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-facebook-square fa-2x"></i></a>
+            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube-square fa-2x"></i></a>
             <a href="#" aria-label="Teléfono" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-2x"></i></a>
             <a href="#" aria-label="Email" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-envelope fa-2x"></i></a>
-            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp-square fa-2x"></i></a>
-            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram-square fa-2x"></i></a>
-            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-2x"></i></a>
+            
+            <a href="#" id="mobile-location-pin" target="_blank" aria-label="Ubicación" class="text-gray-700 hover:text-black transition-colors">
+                <i class="fas fa-map-marker-alt fa-2x"></i>
+            </a>
         </div>
     </div>
     <main id="main-content">
@@ -1557,18 +1572,20 @@
                         const imgs = item.images || [];
                         const trackHTML = imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full h-full"><img src="${img.imageUrl}" alt="${item.name}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">Sin foto</div>';
                         
+                        // AJUSTE #1: Definimos taxLabel aquí para que cada tarjeta sepa si mostrarlo o no
+                        const taxLabel = item.hasTax ? '<span class="text-[10px] ml-1 font-bold text-gray-400">+IVA</span>' : '';
+                    
                         return `
                         <div class="rental-card reveal flex flex-col h-full"> 
-                            <div class="carousel-container ...">
+                             <div class="carousel-container h-80 w-full relative group">
                                 <div class="carousel-track flex h-full" data-current-index="0">${trackHTML}</div>
                                 ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
-                                <div class="p-6 flex flex-col flex-grow">
-                                    <div class="flex justify-between items-baseline mb-2">
-                                        <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
-                                        <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.pricePerDay}${taxLabel}<span class="text-sm font-normal text-gray-500">/día</span></p>
-                                    </div>
+                                <div class="flex justify-between items-baseline mb-2">
+                                    <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
+                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.pricePerDay}${taxLabel}<span class="text-sm font-normal text-gray-500">/día</span></p>
+                                </div>
                                 <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.description}</p>
                                 <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
                                     Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
