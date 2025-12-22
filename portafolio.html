@@ -335,6 +335,13 @@
         .btn-primary:hover::before {
             left: 100%;
         }
+
+        .btn-primary:hover, .nav-link.btn-primary:hover {
+            background-color: #333333 !important;
+            transform: translateY(-2px);
+        }
+
+        
         
         /* --- Animación de aparición de texto --- */
         .text-reveal {
@@ -632,16 +639,20 @@
             position: absolute;
             top: -5px;
             right: -10px;
-            background-color: var(--text-dark);
-            color: white;
+            background-color: #ff0000 !important; /* ROJO PURO */
+            color: #ffffff !important; /* LETRA BLANCA */
             border-radius: 50%;
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             font-weight: bold;
-            transform: scale(0);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            z-index: 10;
         }
+       
+        
         #cart-item-count { /* Escritorio */
             width: 20px;
             height: 20px;
@@ -655,7 +666,7 @@
             right: -12px;
         }
         .cart-item-count.visible {
-            transform: scale(1);
+            display: flex;
         }
         .cart-item-remove-btn {
             color: #9ca3af;
@@ -747,6 +758,31 @@
         .rich-text-content .ql-align-right, .rich-text-content[style*="text-align: right"] { text-align: right; }
         .rich-text-content .ql-align-justify, .rich-text-content[style*="text-align: justify"] { text-align: justify; }
 
+        body.modal-open { overflow: hidden; }
+
+        /* Ajuste #15: Chips de Categoría con Scroll */
+        .category-chips-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .category-chip {
+            flex: 0 0 auto;
+            padding: 0.6rem 1.2rem;
+            background: #f3f4f6;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .category-chip.active {
+            background: var(--text-dark);
+            color: white;
+        }
+                
         
     </style>
 </head>
@@ -795,22 +831,27 @@
                         <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
                     </a>
                 </nav>
-
-                <div class="hidden lg:flex items-center space-x-4 ml-8">
-                    <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
-                    <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
-                    <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
-                    <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2">
-                        <i class="fas fa-shopping-bag fa-lg"></i>
-                        <span id="cart-item-count" class="cart-item-count">0</span>
+            <div class="hidden lg:flex items-center space-x-4 ml-8">
+                <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp-square fa-lg"></i></a>
+                <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram-square fa-lg"></i></a>
+                <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-lg"></i></a>
+                <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2 relative">
+                    <i class="fas fa-shopping-bag fa-lg"></i>
+                    <span id="cart-item-count" class="cart-item-count">0</span>
+                </button>
+            </div>
+                <div class="flex items-center lg:hidden gap-4">
+                    <button id="mobile-cart-button" aria-label="Ver carrito" class="cart-button text-gray-700 hover:text-black transition-colors relative">
+                        <i class="fas fa-shopping-bag fa-xl"></i>
+                        <span id="mobile-cart-item-count" class="cart-item-count">0</span>
+                    </button>
+                
+                    <button id="mobile-menu-button" class="z-50 w-8 h-6 flex flex-col justify-between" aria-label="Menú móvil" aria-expanded="false">
+                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
+                        <span class="block w-full h-0.5 bg-black icon-bar"></span>
                     </button>
                 </div>
-
-                <button id="mobile-menu-button" class="lg:hidden z-50 w-8 h-6 flex flex-col justify-between ml-6" aria-label="Menú móvil" aria-expanded="false">
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                    <span class="block w-full h-0.5 bg-black icon-bar"></span>
-                </button>
             </div>
         </div>
     </header>
@@ -1427,16 +1468,20 @@
             
             const renderServicesGrid = () => {
                 const container = document.getElementById('services-grid');
-                if(!container) return;
+                container.className = "flex flex-wrap justify-center gap-8 max-w-6xl mx-auto reveal";
                 
-                // Si por error se creó el buscador antes, lo eliminamos del DOM
+                if(!container) return;
+
                 const searchBar = document.getElementById('service-search-container');
                 if (searchBar) searchBar.remove();
-    
+                
                 if (globalData.services.length === 0) { 
-                    container.innerHTML = '<div class="col-span-full text-center py-10 text-gray-400">Cargando servicios...</div>'; 
+                    // Cambio puntual: Usamos 'w-full' en lugar de 'col-span-full'
+                    container.innerHTML = '<div class="w-full text-center py-10 text-gray-400">Cargando servicios...</div>'; 
                     return; 
                 }
+
+                container.className = "flex flex-wrap justify-center gap-8 max-w-6xl mx-auto reveal";
     
                 container.innerHTML = globalData.services.map(s => `
                     <a href="#" data-target="service-detail-${s.id}" class="nav-link service-grid-item items-center justify-center text-center py-12 reveal">
@@ -1504,15 +1549,16 @@
                         
                         return `
                         <div class="rental-card reveal flex flex-col h-full"> 
-                             <div class="carousel-container h-80 w-full relative group">
+                            <div class="carousel-container ...">
                                 <div class="carousel-track flex h-full" data-current-index="0">${trackHTML}</div>
                                 ${imgs.length > 1 ? '<button class="carousel-button prev rental-carousel-button" data-direction="-1"><i class="fas fa-chevron-left"></i></button><button class="carousel-button next rental-carousel-button" data-direction="1"><i class="fas fa-chevron-right"></i></button>' : ''}
                             </div>
                             <div class="p-6 flex flex-col flex-grow">
-                                <div class="flex justify-between items-baseline mb-2">
-                                    <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
-                                    <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.pricePerDay}<span class="text-sm font-normal text-gray-500">/día</span></p>
-                                </div>
+                                <div class="p-6 flex flex-col flex-grow">
+                                    <div class="flex justify-between items-baseline mb-2">
+                                        <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
+                                        <p class="font-bold text-xl text-gray-800 whitespace-nowrap ml-4">$${item.pricePerDay}${taxLabel}<span class="text-sm font-normal text-gray-500">/día</span></p>
+                                    </div>
                                 <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.description}</p>
                                 <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group inline-block mt-auto">
                                     Ver Detalles <span class="block max-w-0 group-hover:max-w-full transition-all duration-500 h-0.5 bg-black"></span>
@@ -1658,6 +1704,8 @@
                 
                 // AJUSTE: Asegurar clases de altura completa (h-full) en los items
                 const trackHTML = item.images.map(img=>`<div class="carousel-item w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('');
+                // ... primero defines la variable antes del template string
+                const taxLabel = item.hasTax ? '<span class="text-sm ml-1 font-bold text-gray-400">+IVA</span>' : '';
                 
                 document.getElementById('rental-detail-pages').innerHTML = `
                     <section id="${targetId}" class="page-container pt-32 md:pt-40 pb-20 md:pb-24 bg-white">
@@ -1675,7 +1723,7 @@
                                 
                                 <div class="lg:col-span-2 reveal">
                                     <h2 class="text-4xl md:text-5xl font-display mb-2 text-reveal">${item.name}</h2>
-                                    <p class="text-3xl font-bold mb-6 text-reveal">$${item.price}<span class="text-lg font-normal">/día</span></p>
+                                    <p class="text-3xl font-bold mb-6 text-reveal">$${item.price}${taxLabel}<span class="text-lg font-normal">/día</span></p>
                                     <p class="text-gray-600 text-justify text-reveal mb-8 leading-relaxed">${item.description}</p>
                                     <button id="calendar-btn-${item.id}" class="btn-primary w-full text-center inline-block bg-black text-white font-bold py-4 px-8 rounded-full text-lg hover:bg-gray-800 border border-gray-300 transition-transform hover:-translate-y-1 shadow-lg">
                                         <i class="fas fa-calendar-alt mr-2"></i> Consultar Disponibilidad
@@ -1818,7 +1866,16 @@
 
             
             const initialize = async () => {
-                const apiData = await fetchSectionData('home');
+                // 1. Descarga inmediata de activos de marca (Punto de verdad)
+                const brandData = await fetchSectionData('home');
+                if (brandData && brandData.sysImages) {
+                    const imgs = brandData.sysImages.reduce((acc, item) => ({ ...acc, [item.key]: item.imageUrl }), {});
+                    if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
+                    if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
+                    if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
+                }
+                
+                const apiData = brandData;;
                 
                 // --- ADAPTADOR UNIVERSAL DE DATOS ---
                 // Lee los datos sin importar si el sheet usa 'key' o 'section'
