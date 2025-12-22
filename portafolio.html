@@ -390,19 +390,29 @@
 
         /* --- Estilos para la sección de Alquiler (Rediseño) --- */
         .rental-category-btn {
-            padding: 0.5rem 1.5rem;
-            border: 1px solid #d1d5db; /* gray-300 */
-            border-radius: 0; /* Cambio a esquinas cuadradas */
+            flex: 0 0 auto;
+            padding: 8px 20px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 0;
+            font-size: 0.85rem;
+            font-weight: 600;
             transition: all 0.3s ease;
-            font-weight: 500;
-            white-space: nowrap; /* Evita que el texto se parta */
-            flex-shrink: 0; 
         }
         .rental-category-btn.active, .rental-category-btn:hover {
             background-color: var(--text-dark);
             color: white;
             border-color: var(--text-dark);
         }
+
+        #rental-filters {
+            display: flex;
+            overflow-x: auto; /* Permite scroll horizontal en móvil */
+            padding: 10px 0;
+            gap: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        #rental-filters::-webkit-scrollbar { display: none; }
         .rental-card {
             background-color: white;
             border: 1px solid #e5e7eb; /* gray-200 */
@@ -831,11 +841,13 @@
                         <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 bg-black transition-all duration-300 group-hover:w-full"></span>
                     </a>
                 </nav>
-            <div class="hidden lg:flex items-center space-x-4 ml-8">
-                <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-whatsapp-square fa-lg"></i></a>
-                <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-instagram-square fa-lg"></i></a>
-                <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fa-brands fa-youtube fa-lg"></i></a>
-                <button id="cart-button" aria-label="Ver carrito de compras" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2 relative">
+            <<div class="hidden lg:flex items-center space-x-4 ml-8">
+                <a href="#" aria-label="Teléfono" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-lg"></i></a>
+                <a href="#" aria-label="Email" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fas fa-envelope fa-lg"></i></a>
+                <a href="#" aria-label="WhatsApp" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-whatsapp fa-lg"></i></a>
+                <a href="#" aria-label="Instagram" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-instagram fa-lg"></i></a>
+                <a href="#" aria-label="YouTube" class="social-icon text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-lg"></i></a>
+                <button id="cart-button" aria-label="Ver carrito" class="cart-button social-icon text-gray-700 hover:text-black transition-colors ml-2 relative">
                     <i class="fas fa-shopping-bag fa-lg"></i>
                     <span id="cart-item-count" class="cart-item-count">0</span>
                 </button>
@@ -1465,19 +1477,17 @@
             };
 
 
-            
+            container.className = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6";
             const renderServicesGrid = () => {
                 const container = document.getElementById('services-grid');
-                container.className = "flex flex-wrap justify-center gap-8 max-w-6xl mx-auto reveal";
-                
                 if(!container) return;
-
-                const searchBar = document.getElementById('service-search-container');
-                if (searchBar) searchBar.remove();
+                container.innerHTML = ''; // Limpieza previa
+                
+                // Forzamos 2 columnas en móvil (grid-cols-2)
+                container.className = "grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 max-w-6xl mx-auto reveal opacity-100 visible";
                 
                 if (globalData.services.length === 0) { 
-                    // Cambio puntual: Usamos 'w-full' en lugar de 'col-span-full'
-                    container.innerHTML = '<div class="w-full text-center py-10 text-gray-400">Cargando servicios...</div>'; 
+                    container.innerHTML = '<div class="w-full text-center py-10">Cargando...</div>'; 
                     return; 
                 }
 
@@ -1871,10 +1881,14 @@
                 
                 // 2. Asignación directa de activos de marca (Blindaje contra TypeError)
                 if (brandData && brandData.sysImages) {
-                    const imgs = brandData.sysImages; // No hace falta reduce, ya es un objeto
+                    const imgs = brandData.sysImages; // Ya es un objeto llave-valor
                     if(imgs.logo_black) document.querySelectorAll('.logo-dark').forEach(e=>e.src=imgs.logo_black);
                     if(imgs.logo_white) document.querySelectorAll('.logo-light').forEach(e=>e.src=imgs.logo_white);
-                    if(imgs.favicon) document.querySelector("link[rel*='icon']").href=imgs.favicon;
+                    if(imgs.favicon) {
+                        const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+                        link.rel = 'icon'; link.href = imgs.favicon;
+                        document.getElementsByTagName('head')[0].appendChild(link);
+                    }
                 }
                 
                 // 3. Reutilizar la descarga fraccionada
