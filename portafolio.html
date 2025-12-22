@@ -144,6 +144,9 @@
             transition: opacity 0.5s ease, transform 0.5s ease;
             position: relative;
         }
+
+
+        
         .mobile-nav-link::after {
             content: '';
             position: absolute;
@@ -786,28 +789,23 @@
         .rich-text-content .ql-align-justify, .rich-text-content[style*="text-align: justify"] { text-align: justify; }
 
 
-        /* Ajuste 16: Header Transparente con Iconos Blancos */
-        .header-white-icons .nav-link-text,
-        .header-white-icons .social-icon,
-        .header-white-icons #mobile-menu-button .icon-bar,
-        
-        /* Colores del Header Mobile (Ajuste Solicitado) */
-        .header-white-icons #mobile-cart-header {
-            color: white !important;
-        }
+        /* Header Dinámico: Solo afecta a Servicios Detail */
+        .header-white-icons .nav-link-text, 
+        .header-white-icons .social-icon, 
+        .header-white-icons #mobile-cart-header,
         .header-white-icons #mobile-menu-button .icon-bar {
             color: white !important;
-            background-color: white; /* Para las líneas de la hamburguesa */
         }
-
         .header-white-icons .icon-bar { background-color: white !important; }
-        
-        /* Cuando el menú se abre o hay scroll, forzamos negro */
+
+        /* Forzado de Negro al abrir Menú o en el resto de la web */
         .header-scrolled .nav-link-text, .header-scrolled .social-icon,
-        .header-scrolled #mobile-cart-header, .header-scrolled .icon-bar,
-        #mobile-menu.open ~ #header .nav-link-text {
+        .header-scrolled #mobile-cart-header,
+        #mobile-menu.open ~ #header .nav-link-text,
+        #mobile-menu.open ~ #header .social-icon {
             color: black !important;
         }
+        #mobile-menu.open ~ #header .icon-bar { background-color: black !important; }
         
         /* 2 Columnas en Móvil para Servicios y Proyectos (Ajuste Solicitado) */
         @media (max-width: 768px) {
@@ -837,6 +835,12 @@
                 flex-wrap: wrap !important;
                 gap: 0.5rem !important;
             }
+            .rental-card, .service-grid-item, .img-container {
+                border: none !important; /* Elimina remarcos blancos (Ajuste 2 y 5) */
+                box-shadow: none !important;
+                padding: 0 !important;
+                ackground: transparent !important;
+            }
             .service-grid-item, .rental-card, #projects-container .grid > div {
                 flex: 0 1 calc(50% - 0.25rem) !important;
                 min-width: 0 !important; /* Permite que se encojan */
@@ -844,8 +848,18 @@
             }
             .service-icon-wrapper { width: 40px; height: 40px; margin-bottom: 0.5rem; }
             .service-grid-item h3 { font-size: 1rem; }
-            #portfolio-gallery { columns: 2 !important; column-gap: 0.5rem; }
+            #service-detail-pages .columns-1 {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.5rem !important;
+            }
+            rental-card { flex: 0 1 calc(50% - 0.5rem) !important; }
         }
+
+
+
+
+        
 
         /* Ajuste 3: Carrusel de miniaturas */
         .thumb-nav {
@@ -952,14 +966,13 @@
             <a href="#" data-target="about" class="nav-link mobile-nav-link uppercase">Quién Soy</a>
             <a href="#" data-target="contact" class="nav-link mobile-nav-link uppercase">Contacto</a>
         </nav>
-        <div class="flex justify-center items-center space-x-8 pb-12">
-            <a href="#" aria-label="WhatsApp" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-phone-alt fa-2x"></i></a>
-            <a href="#" aria-label="Instagram" class="text-gray-700 hover:text-black transition-colors"><i class="fas fa-camera-retro fa-2x"></i></a>
-            <a href="#" aria-label="YouTube" class="text-gray-700 hover:text-black transition-colors"><i class="fab fa-youtube fa-2x"></i></a>
-            <button id="mobile-cart-button" aria-label="Ver carrito de compras" class="cart-button text-gray-700 hover:text-black transition-colors">
-                <i class="fas fa-shopping-bag fa-2x"></i>
-                <span id="mobile-cart-item-count" class="cart-item-count">0</span>
-            </button>
+        <div class="flex justify-center items-center flex-wrap gap-6 pb-12 px-6">
+            <a href="#" aria-label="WhatsApp" class="text-gray-900"><i class="fab fa-whatsapp fa-2x"></i></a>
+            <a href="#" aria-label="Instagram" class="text-gray-900"><i class="fas fa-camera-retro fa-2x"></i></a>
+            <a href="#" aria-label="Facebook" class="text-gray-900"><i class="fab fa-facebook-f fa-2x"></i></a>
+            <a href="#" aria-label="YouTube" class="text-gray-900"><i class="fab fa-youtube fa-2x"></i></a>
+            <a href="#" aria-label="Email" class="text-gray-900"><i class="fas fa-envelope fa-2x"></i></a>
+            <a href="#" aria-label="Teléfono" class="text-gray-900"><i class="fas fa-phone-alt fa-2x"></i></a>
         </div>
     </div>
     <main id="main-content">
@@ -1576,23 +1589,50 @@
                 container.innerHTML = list.map(l => `<img src="${l.logoUrl}" alt="Cliente" class="client-logo h-24 md:h-32 w-auto object-contain transition-all duration-300 grayscale hover:grayscale-0 opacity-70 hover:opacity-100 hover:scale-110">`).join('');
             };
     
+            // Ajuste 1: Zig-Zag Proyectos y Botón Regresar (Ajuste 4)
             const renderProjects = () => {
                 const container = document.getElementById('projects-container');
                 if(!container) return;
-                container.style.display = 'block';
                 
-                if (globalData.projects.length === 0) { container.innerHTML = '<div class="text-center py-20"><div class="loader-circle mx-auto mb-4"></div><p class="text-gray-400">Cargando proyectos...</p></div>'; return; }
-                container.innerHTML = globalData.projects.map((p, i) => `
+                let html = globalData.projects.map((p, i) => `
                     <div class="grid grid-cols-1 md:grid-cols-2 items-center reveal gap-8 md:gap-12">
                         <div class="p-4 md:p-8 ${i % 2 === 0 ? 'md:text-right' : 'md:order-last md:text-left'}">
-                            <h3 class="text-3xl md:text-4xl font-display mb-4 text-reveal">${p.title}</h3>
-                            <p class="text-gray-600 leading-relaxed mb-6 text-reveal line-clamp-3">${p.description}</p>
-                            <a href="#" data-target="project-detail-${p.id}" class="nav-link text-black font-bold uppercase tracking-widest text-sm group inline-block border-b-2 border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-all">Ver Galería Completa</a>
+                            <h3 class="text-3xl md:text-4xl font-display mb-4">${p.title}</h3>
+                            <p class="text-gray-600 mb-6 line-clamp-3">${p.description}</p>
+                            <a href="#" data-target="project-detail-${p.id}" class="nav-link text-black font-bold uppercase border-b-2 border-black pb-1">Ver Galería Completa</a>
                         </div>
-                        <div class="overflow-hidden gallery-item img-container h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl || 'https://placehold.co/600'}" alt="${p.title}" class="w-full h-full object-cover"></div>
+                        <div class="overflow-hidden h-64 md:h-96 shadow-lg"><img src="${p.coverImageUrl}" class="w-full h-full object-cover"></div>
                     </div>`).join('');
+                
+                // Botón Seguir Explorando al final (Ajuste 4)
+                html += `<div class="flex justify-center mt-12"><button onclick="navigateTo('portfolio')" class="btn-primary bg-black text-white px-10 py-4 rounded-full font-bold">VOLVER AL INICIO</button></div>`;
+                container.innerHTML = html;
+                observeElements(container);
+            };
 
-                    observeElements(container);
+            // FIX CRÍTICO ALQUILER (Ajuste 5): Reparación de variable 'item' indefinida
+            const renderRentalPage = () => {
+                const gridContainer = document.getElementById('rental-grid-categorized');
+                if (!gridContainer || globalData.rentals.items.length === 0) return;
+
+                gridContainer.innerHTML = globalData.rentals.items.map(currentItem => {
+                    const taxBadge = String(currentItem.hasTax).toLowerCase() === 'true' ? '<span class="tax-badge-inline"> + IVA</span>' : '';
+                    return `
+                    <div class="rental-card reveal flex flex-col h-full"> 
+                        <div class="carousel-container h-80 w-full relative">
+                            <div class="carousel-track flex h-full"><div class="carousel-item w-full"><img src="${currentItem.images[0]?.imageUrl || ''}" class="w-full h-full object-cover"></div></div>
+                        </div>
+                        <div class="p-6 flex flex-grow flex-col">
+                            <div class="flex justify-between items-baseline mb-2">
+                                <h3 class="font-display text-2xl">${currentItem.name}</h3>
+                                <p class="font-bold text-xl">$${currentItem.pricePerDay}${taxBadge}</p>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-4 line-clamp-3">${currentItem.shortDescription || currentItem.description}</p>
+                            <a href="#" data-target="rental-detail-${currentItem.id}" class="nav-link text-sm font-bold text-black uppercase mt-auto">Ver Detalles</a>
+                        </div>
+                    </div>`;
+                }).join('');
+                observeElements(gridContainer);
             };
 
 
@@ -1622,58 +1662,38 @@
 
 
             
+            // FIX CRÍTICO: Reparación de variable 'item' y Pantalla en Blanco
             const renderRentalPage = () => {
-                const filtersContainer = document.getElementById('rental-filters');
                 const gridContainer = document.getElementById('rental-grid-categorized');
-                const wrapper = document.getElementById('rental-filters-wrapper');
-                
-                if (!filtersContainer || !gridContainer) return;
+                if (!gridContainer || !globalData.rentals.items) return;
 
-                if (globalData.rentals.categories.length === 0) { 
-                    gridContainer.innerHTML = '<p class="text-center col-span-full text-gray-400">Cargando...</p>'; 
-                    return; 
-                }
-
-                // Ajuste 6: Formato de Botones de Categoría
-                const cats = globalData.rentals.categories;
-                filtersContainer.innerHTML = `<button class="rental-category-btn active" data-category="Todo">Todo</button>` + 
-                    cats.map(c => `<button class="rental-category-btn" data-category="${c.id}">${c.name}</button>`).join('');
-
-                let activeCategory = 'Todo';
-
-                const renderItems = () => {
-                    let items = globalData.rentals.items;
-                    if(activeCategory !== 'Todo') items = items.filter(i => i.categoryId === activeCategory);
+                gridContainer.innerHTML = globalData.rentals.items.map(currentItem => {
+                    // La lógica de bloqueo local se ejecuta por cada 'currentItem'
+                    const localBlocked = cart
+                        .filter(c => String(c.id) === String(currentItem.id))
+                        .flatMap(c => getDatesInRange(c.startDate, c.endDate));
                     
-                    gridContainer.innerHTML = items.map(item => {
-                        // FIX: Bloqueo de fechas movido AQUÍ dentro del map
-                        const localBlocked = cart
-                            .filter(c => String(c.id) === String(item.id))
-                            .flatMap(c => getDatesInRange(c.startDate, c.endDate));
-                        
-                        const imgs = item.images || [];
-                        const trackHTML = imgs.length ? imgs.map(img => `<div class="carousel-item flex-shrink-0 w-full h-full"><img src="${img.imageUrl}" class="w-full h-full object-cover"></div>`).join('') : '<div class="w-full h-full bg-gray-200"></div>';
-                        
-                        const taxBadge = (String(item.hasTax).toLowerCase() === 'true') ? '<span class="text-[10px] text-blue-600 block">+ IVA</span>' : '';
+                    const allBooked = [...(currentItem.bookedDates || []), ...localBlocked];
+                    const taxBadge = String(currentItem.hasTax).toLowerCase() === 'true' ? '<span class="tax-badge-inline"> + IVA</span>' : '';
 
-                        return `
-                        <div class="rental-card reveal flex flex-col h-full"> 
-                             <div class="carousel-container h-80 w-full relative group">
-                                <div class="carousel-track flex h-full" data-current-index="0">${trackHTML}</div>
+                    return `
+                    <div class="rental-card reveal flex flex-col h-full"> 
+                        <div class="carousel-container h-80 w-full relative">
+                            <div class="carousel-track flex h-full">
+                                <div class="carousel-item w-full"><img src="${currentItem.images[0]?.imageUrl || ''}" class="w-full h-full object-cover"></div>
                             </div>
-                            <div class="p-6 flex flex-col flex-grow">
-                                <div class="flex justify-between items-baseline mb-2">
-                                    <h3 class="font-display text-2xl leading-tight">${item.name}</h3>
-                                    <p class="font-bold text-xl text-gray-800 ml-4">$${item.pricePerDay}${taxBadge}</p>
-                                </div>
-                                <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${item.shortDescription || item.description}</p>
-                                <a href="#" data-target="rental-detail-${item.id}" class="nav-link text-sm font-bold text-black uppercase tracking-wider group mt-auto">Ver Detalles</a>
+                        </div>
+                        <div class="p-6 flex flex-col flex-grow">
+                            <div class="flex justify-between items-baseline mb-2">
+                                <h3 class="font-display text-2xl">${currentItem.name}</h3>
+                                <p class="font-bold text-xl">$${currentItem.pricePerDay}${taxBadge}</p>
                             </div>
-                        </div>`;
-                    }).join('');
-                    observeElements(gridContainer);
-                };
-                renderItems();
+                            <p class="text-gray-600 text-sm mb-4 line-clamp-3">${currentItem.shortDescription || currentItem.description}</p>
+                            <a href="#" data-target="rental-detail-${currentItem.id}" class="nav-link text-sm font-bold text-black uppercase mt-auto">Ver Detalles</a>
+                        </div>
+                    </div>`;
+                }).join('');
+                observeElements(gridContainer);
             };
 
 
